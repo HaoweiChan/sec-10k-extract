@@ -103,11 +103,15 @@ Evidence-deepening, not feature-adding:
 ## Commit strategy
 
 Commits map to the task list in eval-first pairs — `eval: add <cases> (red)`
-then `feat: <stage>; <cases> green`. Docs/ADR commits stay small and separate.
-Milestone eval runs commit their `evals/report/` JSON in the same commit.
-Baseline moves are their own commit referencing an ADR (hard rule 1). Expect
-~15–20 real commits to B with a legible red→green narrative; the story is the
-deliverable — never squash it away.
+then `feat: <stage>; <cases> green`. Docs/ADR commits stay separate but
+consolidated: a coherent decision batch, never per-file dribbles. Consolidate
+before every commit (CLAUDE.md hard rule 7): verify the batch first — diff
+re-read, relevant audits — so the history reads as settled progress, not
+fix-commits chasing mistakes. Milestone eval runs commit their
+`evals/report/` JSON in the same commit. Baseline moves are their own commit
+referencing an ADR (hard rule 1). Expect ~15–20 real commits to B with a
+legible red→green narrative; the story is the deliverable — never squash it
+away.
 
 ## Prompt curation for this task
 

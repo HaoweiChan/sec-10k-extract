@@ -57,6 +57,12 @@ python3 -m evals.run --suite fast --update-baseline   # deliberate baseline move
    `prompts/`. Do not curate routine coding, formatting, or trivial debugging
    interactions. Raw transcripts may be auto-dumped; `prompts/` curated records
    should capture decisions worth reviewing.
+7. **Commits are consolidated milestones.** The assignment evaluators read the
+   history. Commit only settled, coherent progress — no micro-commits, and no
+   quick fix-commit chasing the commit it patches. Verify the batch first
+   (re-read the diff, run the relevant audits); a defect found in an unpushed
+   commit is amended into it, and once pushed, the fix rides the next
+   consolidated commit with its own honest message.
 
 ## Per-feature loop
 

@@ -1,26 +1,29 @@
-# Task 2 Planning and Evaluation Design
+# 001 — Task 2 planning: prompt record
 
 ## Purpose
-Initial planning prompt used before implementation.
 
-## Context
-Used to define:
-- problem scope
-- failure taxonomy
-- evaluation methodology
-- auditor subagent
-- repo structure
-- specs / plans / tasks
-- B-level baseline
-- A-level hardening strategy
+The planning prompt used before any implementation — the input side of this
+record pair. What it produced, what the human constrained, and what got
+corrected live in `002-task2-planning-outcome.md`; the
+Assumption → Eval contradiction → Correction chain lives there too, so this
+file carries none (single source of truth).
 
 ## Human decisions before prompting
-- Evaluation must be designed before implementation.
-- Auditor should be independent from the implementation agent.
-- Task 2 should first reach a legitimate B-level baseline, then be hardened toward A-level.
-- Assignment requirements such as `prompts/`, frontend, README, analysis report, and public deployment must be part of the repo design from the beginning.
 
-## Prompt
+1. Evaluation must be designed before implementation.
+2. The auditor must be independent from the implementation agent.
+3. Reach a legitimate B-level baseline first, then harden toward A-level.
+4. Assignment requirements (`prompts/`, frontend, README, analysis report,
+   public deployment) are part of the repo design from the beginning.
+
+## Outcome
+
+Executed 2026-08-15. Produced the planning batch: `docs/` design docs,
+contract v2 (+ ADR-001..003), the `extraction-auditor` agent, the
+`case-authoring` skill, and the first methodology audit — see `002` for the
+full record.
+
+## Prompt (verbatim)
 
 You are responsible for planning the implementation of **Task 2: SEC 10-K Item-level Structured Extraction** for the Whaleforce AI Coding Test.
 
