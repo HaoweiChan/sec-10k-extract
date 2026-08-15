@@ -11,8 +11,9 @@ description: How to run, read, and extend the eval harness. Use whenever adding 
   PostToolUse hook after every src/ edit. Must stay fast (< ~10s total).
 - `fast` — the pre-commit gate suite. Golden + adversarial cases cheap enough
   to run on every commit (< ~60s total). No paid API calls here.
-- `full` — everything, including slow/expensive cases. Run before a milestone,
-  not on every commit.
+- `full` — a tag for slow/expensive cases (e.g. cached-LLM ones), selected via
+  `--suite full`; run before a milestone, not on every commit. To run
+  *everything* regardless of tags, use `--suite all`.
 
 Tag cases via `"suites": [...]` in the case JSON; default is `["fast"]`.
 
