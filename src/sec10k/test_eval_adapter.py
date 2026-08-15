@@ -136,8 +136,29 @@ def test_no_empty_success():
     assert eval_check(r, {"type": "no_empty_success"}) is not None
 
 
+def test_norm_checks():
+    r = {"normalized_text": "UNITED STATES\n\nFORM 10-K\n\nMicrosoft was founded in 1975.",
+         "items": []}
+    assert eval_check(r, {"type": "norm_contains", "value": "FORM 10-K"}) is None
+    assert eval_check(r, {"type": "norm_contains", "value": "us-gaap:"}) is not None
+    assert eval_check(r, {"type": "norm_not_contains", "value": "us-gaap:"}) is None
+
+    reason = eval_check(r, {"type": "norm_not_contains", "value": "FORM 10-K"})
+    assert reason is not None and "1x" in reason, reason
+
+    # these judge normalized_text alone — an empty items list must not make
+    # them vacuous, which is exactly why they can go red before segmentation
+    empty = {"normalized_text": "", "items": []}
+    assert eval_check(empty, {"type": "norm_contains", "value": "anything"}) is not None
+    # a newline where a space belongs is a failure, not a match
+    wrapped = {"normalized_text": "Microsoft was\nfounded in 1975.", "items": []}
+    assert eval_check(wrapped, {"type": "norm_contains",
+                                "value": "Microsoft was founded in 1975"}) is not None
+
+
 TESTS = [
     test_doc_status,
+    test_norm_checks,
     test_max_chars,
     test_text_checks_non_extracted,
     test_min_chars_null_offsets,

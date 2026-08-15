@@ -44,3 +44,13 @@ Format per invariant:
   omitted) — a consumer must be able to distinguish "not in filing" from
   "extractor missed it".
 - Enforced by: evals/adversarial/ge-1994-oldformat.json
+
+## INV-S5: normalized_text is the readable filing, not machine metadata
+- Rationale: offsets are the unit of provenance, so anything in
+  `normalized_text` that a human reading the filing would never see displaces
+  every offset after it and poisons every ratio measured against document
+  length (coverage, gap analysis, numeric density). iXBRL context headers are
+  the concrete case: 15.4% of JPM 2024's normalized text, ahead of the first
+  readable word. Stated positively so it cannot be satisfied by deleting
+  content — readable text must survive intact.
+- Enforced by: evals/adversarial/ixbrl-hidden-metadata.json (ADR-006)

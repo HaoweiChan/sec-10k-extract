@@ -77,6 +77,15 @@ def eval_check(result, chk, path=None):
         n = entry["end"] - entry["start"]
         if n > chk["value"]:
             return f"item {chk['item']} has {n} chars > {chk['value']}"
+    elif t == "norm_contains":
+        # normalized_text-level, item-independent: lets a normalization defect be
+        # caught before segmentation exists to carry it into an item span
+        if chk["value"] not in result["normalized_text"]:
+            return f"normalized_text missing {chk['value']!r}"
+    elif t == "norm_not_contains":
+        n = result["normalized_text"].count(chk["value"])
+        if n:
+            return f"normalized_text contains {chk['value']!r} ({n}x)"
     elif t == "known_items_only":
         bad = [i["item"] for i in result["items"] if i["item"] not in CANONICAL]
         bad += [i["item"] for i in result["items"] if i["status"] not in STATUSES]
