@@ -16,8 +16,31 @@ Format per invariant:
 ## INV-0: The pipeline never reports success with empty output
 - Rationale: silent failure is the #1 graded failure mode; an empty result
   must surface as an explicit failure/low-confidence signal, never a green run.
-- Enforced by: (pending — first task-specific case must cover this)
+- Enforced by: evals/golden/aapl-2025-structure.json (`no_empty_success` check)
 
 ---
 
-Task-specific invariants live below a `## <task>` heading as tasks are added.
+## sec10k
+
+## INV-S1: Extracted item ranges are non-overlapping and in document order
+- Rationale: overlap means double-attribution of text; disorder means the
+  splitter matched a TOC entry or a stray reference instead of a real heading.
+- Enforced by: evals/golden/aapl-2025-structure.json
+
+## INV-S2: Every extracted item's text is a verbatim slice of normalized_text
+- Rationale: no paraphrase, no LLM rewriting, no dropped characters — offsets
+  must reproduce the item exactly, or provenance is lost.
+- Enforced by: evals/golden/aapl-2025-structure.json
+
+## INV-S3: Only canonical item codes, valid for the filing's taxonomy era
+- Rationale: "Item 405 of Regulation S-K" and "Item 601" appear as prose in
+  real filings (GE 1994) and must never surface as items; pre-2003 filings
+  have no Item 1A/9A, so emitting one there means the splitter hallucinated.
+- Enforced by: evals/adversarial/ge-1994-oldformat.json
+
+## INV-S4: Expected items are never silently absent
+- Rationale: every item in the era's expected set appears in the output with
+  an explicit status (extracted / missing / incorporated_by_reference /
+  omitted) — a consumer must be able to distinguish "not in filing" from
+  "extractor missed it".
+- Enforced by: evals/adversarial/ge-1994-oldformat.json

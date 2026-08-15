@@ -1,0 +1,17 @@
+{
+  "id": "aapl-2025-content",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {"path": "evals/fixtures/aapl-2025/filing.htm"},
+  "expect": {
+    "checks": [
+      {"type": "text_contains", "item": "1", "value": "Company Background"},
+      {"type": "text_contains", "item": "1A", "value": "macroeconomic"},
+      {"type": "min_chars", "item": "1A", "value": 20000},
+      {"type": "text_contains", "item": "8", "value": "CONSOLIDATED STATEMENTS OF OPERATIONS"},
+      {"type": "min_chars", "item": "8", "value": 50000},
+      {"type": "text_not_contains", "item": "1", "value": "Risk Factors"}
+    ]
+  },
+  "provenance": "Anchors hand-verified by grepping the fixture 2026-08-15: 'Company Background' appears once (Item 1 body); item headings appear exactly twice (TOC + body) so the TOC trap breaks these checks. text_not_contains guards Item 1 bleeding into 1A; min_chars guards TOC-truncated stub items."
+}

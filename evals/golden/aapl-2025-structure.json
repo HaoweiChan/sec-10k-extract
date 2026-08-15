@@ -1,0 +1,21 @@
+{
+  "id": "aapl-2025-structure",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/aapl-2025/filing.htm"},
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "known_items_only"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "item_present", "item": "1"},
+      {"type": "item_present", "item": "1A"},
+      {"type": "item_present", "item": "1C"},
+      {"type": "item_present", "item": "7"},
+      {"type": "item_present", "item": "8"},
+      {"type": "item_present", "item": "15"}
+    ]
+  },
+  "provenance": "AAPL FY2025 10-K (iXBRL), EDGAR accession 0000320193-25-000079, filed 2025-10-31. Structural checks only; enforces INV-0/S1/S2."
+}

@@ -1,0 +1,21 @@
+{
+  "id": "ge-1994-oldformat",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {"path": "evals/fixtures/ge-1994/filing.txt"},
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "known_items_only"},
+      {"type": "no_overlap_ordered"},
+      {"type": "item_present", "item": "1"},
+      {"type": "item_present", "item": "7"},
+      {"type": "item_present", "item": "14"},
+      {"type": "item_absent", "item": "1A"},
+      {"type": "item_absent", "item": "9A"},
+      {"type": "item_absent", "item": "16"},
+      {"type": "text_contains", "item": "1", "value": "General Electric"}
+    ]
+  },
+  "provenance": "GE FY1993 10-K, EDGAR accession 0000040545-94-000003, plain-text full submission (multi-<DOCUMENT>). Traps it enforces: pre-2003 taxonomy (no 1A/9A/16 — INV-S3), 'Item 405 of Regulation S-K' at line 124 and 'Item 601' at line 6275 as prose (known_items_only), exhibits after the 10-K document body."
+}

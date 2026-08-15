@@ -1,4 +1,27 @@
-# groundwork
+# sec-10k-extract
+
+Item-level structured extraction of SEC 10-K filings — split a raw filing
+(iXBRL, legacy HTML, or 1990s plain-text submission) into independently
+consumable Items 1–16 with explicit status and honest confidence.
+
+Built on [groundwork](https://github.com/HaoweiChan/groundwork), an eval-first
+scaffold: correctness here has no public ground truth, so it is encoded as
+executable invariants and golden/adversarial cases instead of prose specs.
+
+## Status
+
+Eval layer laid, pipeline not yet implemented — all cases deliberately red:
+2 golden cases on AAPL FY2025 (iXBRL) + 1 adversarial on GE FY1993 (plain-text,
+pre-2003 item taxonomy). Key contracts: `specs/001-sec10k-contract.md`
+(output shape, offset-verbatim rule), `specs/000-invariants.md` (INV-S1–S4),
+`.claude/skills/sec10k-domain/` (taxonomy eras + the 7 known traps).
+
+Sections to come as the pipeline lands: how to run, frontend URL,
+works-well / fails-honestly lists, performance & cost analysis.
+
+---
+
+## The template underneath
 
 **An eval-first project scaffold for the agent era.**
 
