@@ -6,6 +6,8 @@ normalization canon), ADR-006 (hidden iXBRL metadata, newline-by-era).
 Self-check: python3 -m src.sec10k.normalize
 """
 import re
+from datetime import date
+from html import unescape
 from html.parser import HTMLParser
 
 # EDGAR dissemination wraps every document in <DOCUMENT>/<TYPE>/<TEXT> SGML —
@@ -119,6 +121,52 @@ def normalize(body, era):
     return _tidy("".join(p.parts))
 
 
+# period of report, best signal first: EDGAR's own SGML header, the iXBRL
+# dei fact, then the cover page. All three are needed — the header exists only
+# on full submissions, dei only on 2019+ iXBRL, and JPM's two-column cover
+# interleaves "For the fiscal year ended" with "Commission file" so the cover
+# regex alone misses it.
+PERIOD_HDR_RE = re.compile(r"CONFORMED PERIOD OF REPORT:\s*(\d{4})(\d{2})(\d{2})")
+DEI_PERIOD_RE = re.compile(r'name="dei:DocumentPeriodEndDate"')
+# the comma can float ("December 31 , 2024") once JPM's nested ix element is
+# tag-stripped, so it is optional and may carry space on either side
+DATE_RE = re.compile(r"([A-Z][a-z]{2,8})\.?\s+(\d{1,2})\s*,?\s+(\d{4})")
+COVER_DATE_RE = re.compile(r"(?i)fiscal year ended[:\s]*"
+                           r"([A-Z][a-z]{2,8}\.?\s+\d{1,2},?\s+\d{4})")
+MONTHS = ["january", "february", "march", "april", "may", "june", "july",
+          "august", "september", "october", "november", "december"]
+
+
+def _parse_date(s):
+    m = DATE_RE.search(s)
+    if not m:
+        return None
+    month = m.group(1).lower()
+    idx = next((i for i, name in enumerate(MONTHS, 1) if name.startswith(month[:3])), None)
+    try:
+        return date(int(m.group(3)), idx, int(m.group(2))) if idx else None
+    except ValueError:
+        return None
+
+
+def period_end(raw, text):
+    """Fiscal-period end date, or None. Decides the era's expected item set."""
+    m = PERIOD_HDR_RE.search(raw)
+    if m:
+        try:
+            return date(*(int(g) for g in m.groups()))
+        except ValueError:
+            pass
+    m = DEI_PERIOD_RE.search(raw)
+    if m:  # the fact's own text, tags stripped — it may wrap a nested ix element
+        window = re.sub(r"<[^>]*>", " ", raw[m.end():m.end() + 400])
+        got = _parse_date(unescape(window))
+        if got:
+            return got
+    m = COVER_DATE_RE.search(text[:COVER_CHARS * 2])
+    return _parse_date(m.group(1)) if m else None
+
+
 def sniff_form(text):
     """Form type per the cover page, or None. Second opinion on <TYPE>."""
     m = FORM_SNIFF_RE.search(text[:COVER_CHARS])
@@ -159,6 +207,7 @@ def select_and_normalize(raw):
 
     meta = {
         "form_type": form_type,
+        "period_end": period_end(raw, text),
         "form_type_declared": declared,
         "form_type_sniffed": sniffed,
         "format_era": era,

@@ -14,9 +14,11 @@ empirically at T4/T5 against eval outcomes and recorded in an ADR.
 Planned layout: `src/sec10k/extract.py` (orchestration + assembly),
 `normalize.py` (selection + normalization), `segment.py` (candidates + filter +
 boundaries + status), `validate.py` (validation + confidence). Four files.
-Built so far (T3): `extract.py` + `normalize.py` — layers 1–3 and 11. Until
-segmentation lands, an identified 10-K reports `ambiguous` (zero coverage,
-rule 3 of the ladder below), never `success`.
+Built so far (T4): `extract.py` + `normalize.py` + `segment.py` — layers 1–7
+and 11. Layers 8–9 (validation battery, calibrated confidence) are T5, so a
+standing `validation_not_implemented` warning caps every filing at
+`success_with_warning`; nothing claims a clean `success` before it has been
+validated.
 
 ## Pipeline layers
 
@@ -59,24 +61,39 @@ deterministic, 40/40 eval anchors survive, 492 ms for the 12.8 MB JPM filing.
 
 **4. Candidate detection** — every plausible item heading, with features.
 Line-anchored, case-insensitive pattern on `Item <code>` where the code must be
-canonical **and era-valid**; features per candidate: offset, line length,
-trailing-title similarity to the canonical title (`difflib`), uppercase ratio,
-proximity to a PART marker. A lenient tier (mid-line matches) is consulted
-*only* for expected items that strict matching missed — the lenient tier can
-never add surprise items. Failure modes: unseen punctuation variants, inline
-headings missed. Trace: full candidate list with features. Eval: presence
-recall on golden cases.
+canonical **and era-valid**; features per candidate: offset, title text,
+similarity to the canonical title (`difflib` over era aliases), uppercase flag.
+A lenient tier (mid-line matches) is consulted *only* for expected items that
+strict matching missed — the lenient tier can never add surprise items.
+Failure modes: unseen punctuation variants, inline headings missed. Trace:
+candidate count plus every rejection. Eval: presence recall on golden cases.
+**Built (T4)**: strict line-anchored matching only — the lenient tier is
+deliberately NOT built (ADR-007). Strict matching finds every expected heading
+in all 13 fixtures, and the one heading it cannot find (corrupted markup in
+`malformed-html`) should surface as `missing`, not be rescued by a looser
+pattern. The expected item set comes from the period-of-report date, resolved
+from the SGML header, the iXBRL `dei` fact, or the cover page — all three are
+needed to cover 13 of 13.
 
 **5. TOC / false-candidate filter** — reject non-headings. (a) TOC cluster:
-many candidates tightly spaced near the document start form a cluster → drop it
-(cluster size / position / gap thresholds provisional, set in T4, recorded in
-trace and an ADR). The dropped cluster is not discarded: it is **parsed as the
+inside a dense run of ≥5 distinct codes, a candidate whose own code recurs
+later in the document is an index entry → drop it (ADR-007 — per-candidate
+recurrence, not density alone: real Part III one-liners sit as close as 43
+chars apart). The dropped cluster is not discarded: it is **parsed as the
 filing's self-declared item manifest** and handed to layer 8 — the trap doubles
 as a checklist. (b) Prose references: mid-sentence position, "of Regulation"
 suffix, "see / in / under" prefix → reject. Failure modes: TOC not near the
 start, two TOCs, a genuine heading caught inside the cluster. Trace: **every
 rejection with its reason** — the core observability requirement. Eval:
-`min_chars` + `text_not_contains` (the TOC trap is `aapl-2025-content`).
+`min_chars` + `text_not_contains` (the TOC trap is `aapl-2025-content`; its
+hard, titled-TOC form is `toc-titled`). **Built (T4)**: measured, the
+load-bearing rule is simpler than predicted — a real heading carries its title
+on the same line, which kills every real fixture's TOC *and* MSFT 2013's 42
+running `Item 8` page headers in one move. The cluster rule only matters when
+TOC entries are titled, which is why it needed a fixture of its own. (b) needs
+no separate rule so far: line-anchoring plus the canonical-code filter already
+rejects every prose reference in the set — GE 1994's "Item 405 of Regulation
+S-K" and IBM 1997's "ITEM 601 OF" parse as codes 40/60 and are not canonical.
 
 **6. Boundary resolution** — one span per item. Greedy ordered assignment over
 the era's expected sequence: walk expected order, accept the earliest surviving
@@ -85,7 +102,12 @@ the next accepted heading start (last item → end of the 10-K body). Disorder
 and duplicate survivors are handled by construction. Failure modes: wrong
 duplicate picked, last-item tail swallowing signatures/exhibit index. Trace:
 accepted/rejected per code with reason. Eval: `no_overlap_ordered` (INV-S1),
-boundary anchors.
+boundary anchors. **Built (T4)** as described, with trap 8 handled by stopping
+the last item at the signature block — verified on the txt-era and shell
+fixtures, whose tails begin exactly at `SIGNATURES` (GE 1994's inline 280K-char
+annual report is excluded, 75.8% of that document). Measured boundary hygiene:
+every extracted span in all 13 fixtures starts with its own heading, 0
+mismatches.
 
 **7. Status classification** — a status for every item in the era's expected
 set, per ADR-004/ADR-005: heading present → `extracted`, however trivial the
@@ -97,6 +119,14 @@ absence (optional Item 16, SRC 7A relief) → `omitted`; heading absent where
 the era expects it → `missing`. Failure modes: IBR paragraph longer than the
 stub threshold, keyword false hits, era-relief rules misjudged. Trace:
 classification + matched keyword. Eval: status-asserting checks (INV-S4).
+**Built (T4)** per ADR-004/005, with one ruling ADR-007 records: phrase
+matching runs on a whitespace-flattened copy of the body, because fixed-width
+txt filings wrap the very phrases the rules depend on ("definitive
+proxy\nstatement") — that alone mis-classified 5 items across GE 1994 and
+Textron 2001. The "stub threshold" above turned out not to exist: measured, IBR
+bodies (93–1,875 chars) and extracted bodies overlap completely in length, so
+shape decides — is the first sentence a pointer, and does it name a different
+document.
 
 **8. Structural validation** — the false-success net: a battery of
 **label-free** validators modeled on how a human sanity-checks an extraction.
