@@ -72,7 +72,7 @@ suggestion an agent can talk itself past.
 
 ### The execution layer in practice
 
-Three standing subagents, all evidence-only (they may not fix anything):
+Four standing subagents, all evidence-only (they may not fix anything):
 
 - `cold-reviewer` — cold-reads new code without the author's reasoning; its
   deliverable is the three most likely *silent* failure inputs.
@@ -80,17 +80,21 @@ Three standing subagents, all evidence-only (they may not fix anything):
   its findings become adversarial cases verbatim.
 - `spec-drift` — audits gaps between what the repo says (invariants, contracts,
   ADRs, docs) and what the code does; flags decorative invariants first.
+- `extraction-auditor` — audits extraction outputs and the eval methodology
+  itself; in output mode it is deliberately blind to the authors' reasoning
+  and confidence derivation rules.
 
 ## Repo map
 
 ```
 CLAUDE.md            facts layer — working rules, < 150 lines (AGENTS.md symlinks here)
 .claude/settings.json  hooks registration + plugin wiring (ponytail auto-installs)
-.claude/skills/      eval-protocol · failure-triage · cost-discipline · graphify (vendored)
-.claude/agents/      cold-reviewer · eval-adversary · spec-drift
+.claude/skills/      sec10k-domain · case-authoring · eval-protocol · failure-triage · cost-discipline · graphify (vendored)
+.claude/agents/      cold-reviewer · eval-adversary · spec-drift · extraction-auditor
 .claude/hooks/       post-edit invariant runner · session prompt logger
 .githooks/           pre-commit eval gate
 specs/               ONLY three kinds: invariants · output contracts · ADRs (why, not what)
+docs/                durable design docs — product · evals · architecture (descriptive; specs/ binds)
 evals/run.py         stdlib-only runner — defines the case + adapter contract
 evals/golden/        hand-verified cases (provenance recorded per case)
 evals/adversarial/   inputs that broke, or are designed to break, the pipeline

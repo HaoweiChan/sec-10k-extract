@@ -18,7 +18,8 @@ README.md; this file is the working contract.
 
 ```
 .claude/skills/    domain + process knowledge, loaded on demand
-.claude/agents/    cold-reviewer / eval-adversary / spec-drift subagents
+.claude/agents/    cold-reviewer / eval-adversary / spec-drift / extraction-auditor
+docs/              durable design docs (product, evals, architecture) — descriptive; specs/ binds
 .claude/hooks/     enforcement — the only layer that can actually block
 .githooks/         pre-commit eval gate (installed via core.hooksPath)
 specs/             ONLY: 000-invariants.md, per-task contracts, decisions/ADR-*.md
@@ -50,6 +51,12 @@ python3 -m evals.run --suite fast --update-baseline   # deliberate baseline move
    fabricate output to make a run look green.
 5. Commits go through the pre-commit eval gate. `--no-verify` is for emergencies
    and must be explained in the commit message.
+6. **Preserve material AI decisions.** If an AI interaction materially changes
+   architecture, evaluation methodology, failure handling, an output contract, or
+   another major implementation decision, preserve the key prompt and outcome in
+   `prompts/`. Do not curate routine coding, formatting, or trivial debugging
+   interactions. Raw transcripts may be auto-dumped; `prompts/` curated records
+   should capture decisions worth reviewing.
 
 ## Per-feature loop
 
