@@ -1,5 +1,6 @@
-"""T2 deploy spike: minimal FastAPI wrapper around the (unimplemented)
-extractor. Proves (1) the service shape runs and (2) EDGAR egress works.
+"""T2 deploy spike: minimal FastAPI wrapper around the extractor. Proves
+(1) the service shape runs and (2) EDGAR egress works. As of T3 /extract
+returns a real contract-v2 envelope (normalization only, no items yet).
 Full inspector UI is T7 — see docs/product/task2-problem-definition.md."""
 import subprocess
 import urllib.request
@@ -39,9 +40,11 @@ def status_page():
 <h1>sec10k-extract</h1>
 <p>git SHA: {_git_sha()}</p>
 <p>eval cases (golden + adversarial): {_case_count()}</p>
-<p>pipeline status: extraction is <strong>not yet implemented</strong>
-(extract_items raises NotImplementedError) &mdash; this is a T2 deploy spike,
-not the pipeline.</p>
+<p>pipeline status (T3): document selection + normalization are live;
+item segmentation lands at T4, so every identified 10-K comes back
+<code>ambiguous</code> with an empty <code>items</code> list &mdash; by design,
+never <code>success</code>. Non-10-K input is refused as
+<code>unsupported</code>.</p>
 <ul>
 <li><a href="/edgar-check">GET /edgar-check</a></li>
 <li>POST /extract {{"fixture": "aapl-2025"}}</li>

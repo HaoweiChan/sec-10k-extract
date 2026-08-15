@@ -1,0 +1,1791 @@
+{
+  "suite": "all",
+  "score": 0.15789473684210525,
+  "git_sha": "ca7f1ded4a8f6eb93a28818ef785410160eba9e9",
+  "results": [
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "1",
+            "value": "Company Background"
+          },
+          "why": "item 1 missing text 'Company Background'"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "1",
+            "value": "intended to be inactive textual references only"
+          },
+          "why": "item 1 missing text 'intended to be inactive textual references only'"
+        },
+        {
+          "check": {
+            "type": "min_chars",
+            "item": "1",
+            "value": 10000
+          },
+          "why": "item 1 has 0 chars < 10000"
+        },
+        {
+          "check": {
+            "type": "max_chars",
+            "item": "1",
+            "value": 25000
+          },
+          "why": "item not in output"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "1A",
+            "value": "The following summarizes factors that could have a material adverse effect"
+          },
+          "why": "item 1A missing text 'The following summarizes factors that could have a material adverse effect'"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "1A",
+            "value": "macroeconomic"
+          },
+          "why": "item 1A missing text 'macroeconomic'"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "1A",
+            "value": "material adverse impact on investor confidence and employee retention"
+          },
+          "why": "item 1A missing text 'material adverse impact on investor confidence and employee retention'"
+        },
+        {
+          "check": {
+            "type": "min_chars",
+            "item": "1A",
+            "value": 20000
+          },
+          "why": "item 1A has 0 chars < 20000"
+        },
+        {
+          "check": {
+            "type": "max_chars",
+            "item": "1A",
+            "value": 100000
+          },
+          "why": "item not in output"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "8",
+            "value": "CONSOLIDATED STATEMENTS OF OPERATIONS"
+          },
+          "why": "item 8 missing text 'CONSOLIDATED STATEMENTS OF OPERATIONS'"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "8",
+            "value": "San Jose, California"
+          },
+          "why": "item 8 missing text 'San Jose, California'"
+        },
+        {
+          "check": {
+            "type": "min_chars",
+            "item": "8",
+            "value": 50000
+          },
+          "why": "item 8 has 0 chars < 50000"
+        },
+        {
+          "check": {
+            "type": "max_chars",
+            "item": "8",
+            "value": 90000
+          },
+          "why": "item not in output"
+        }
+      ],
+      "n_items": 0,
+      "n_extracted": 0,
+      "doc_status": "ambiguous",
+      "items_summary": [],
+      "seconds": 0.06,
+      "id": "aapl-2025-content",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "item_present",
+            "item": "1"
+          },
+          "why": "item 1 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "1A"
+          },
+          "why": "item 1A not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "1C"
+          },
+          "why": "item 1C not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "6",
+            "status": "extracted"
+          },
+          "why": "item 6 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "7"
+          },
+          "why": "item 7 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "7A"
+          },
+          "why": "item 7A not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "8"
+          },
+          "why": "item 8 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "10",
+            "status": "incorporated_by_reference"
+          },
+          "why": "item 10 not incorporated_by_reference: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "11",
+            "status": "incorporated_by_reference"
+          },
+          "why": "item 11 not incorporated_by_reference: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "12",
+            "status": "incorporated_by_reference"
+          },
+          "why": "item 12 not incorporated_by_reference: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "13",
+            "status": "incorporated_by_reference"
+          },
+          "why": "item 13 not incorporated_by_reference: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "14",
+            "status": "incorporated_by_reference"
+          },
+          "why": "item 14 not incorporated_by_reference: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "15"
+          },
+          "why": "item 15 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "expected_set_complete",
+            "items": [
+              "1",
+              "1A",
+              "1B",
+              "1C",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "7A",
+              "8",
+              "9",
+              "9A",
+              "9B",
+              "9C",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16"
+            ]
+          },
+          "why": "expected items missing or unstatused: ['1', '1A', '1B', '1C', '2', '3', '4', '5', '6', '7', '7A', '8', '9', '9A', '9B', '9C', '10', '11', '12', '13', '14', '15', '16']"
+        }
+      ],
+      "n_items": 0,
+      "n_extracted": 0,
+      "doc_status": "ambiguous",
+      "items_summary": [],
+      "seconds": 0.11,
+      "id": "aapl-2025-structure",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "doc_status",
+            "in": [
+              "success",
+              "success_with_warning"
+            ]
+          },
+          "why": "doc_status 'ambiguous' not in ['success', 'success_with_warning']"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "1C",
+            "status": "extracted"
+          },
+          "why": "item 1C not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "6",
+            "status": "extracted"
+          },
+          "why": "item 6 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "9C",
+            "status": "extracted"
+          },
+          "why": "item 9C not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "16",
+            "status": "extracted"
+          },
+          "why": "item 16 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "expected_set_complete",
+            "items": [
+              "1",
+              "1A",
+              "1B",
+              "1C",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "7A",
+              "8",
+              "9",
+              "9A",
+              "9B",
+              "9C",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16"
+            ]
+          },
+          "why": "expected items missing or unstatused: ['1', '1A', '1B', '1C', '2', '3', '4', '5', '6', '7', '7A', '8', '9', '9A', '9B', '9C', '10', '11', '12', '13', '14', '15', '16']"
+        }
+      ],
+      "n_items": 0,
+      "n_extracted": 0,
+      "doc_status": "ambiguous",
+      "items_summary": [],
+      "seconds": 0.22,
+      "id": "cat-2023-shallow",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "doc_status",
+            "in": [
+              "success",
+              "success_with_warning"
+            ]
+          },
+          "why": "doc_status 'ambiguous' not in ['success', 'success_with_warning']"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "1",
+            "status": "extracted"
+          },
+          "why": "item 1 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "6",
+            "status": "incorporated_by_reference"
+          },
+          "why": "item 6 not incorporated_by_reference: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "9",
+            "status": "extracted"
+          },
+          "why": "item 9 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "expected_set_complete",
+            "items": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "7A",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14"
+            ]
+          },
+          "why": "expected items missing or unstatused: ['1', '2', '3', '4', '5', '6', '7', '7A', '8', '9', '10', '11', '12', '13', '14']"
+        }
+      ],
+      "n_items": 0,
+      "n_extracted": 0,
+      "doc_status": "ambiguous",
+      "items_summary": [],
+      "seconds": 0.01,
+      "id": "ibm-1997-shallow",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "1",
+            "value": "a leading financial services firm based in the United States of America"
+          },
+          "why": "item 1 missing text 'a leading financial services firm based in the United States of America'"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "1",
+            "value": "tuition assistance, and financial coaching"
+          },
+          "why": "item 1 missing text 'tuition assistance, and financial coaching'"
+        },
+        {
+          "check": {
+            "type": "min_chars",
+            "item": "1",
+            "value": 25000
+          },
+          "why": "item 1 has 0 chars < 25000"
+        },
+        {
+          "check": {
+            "type": "max_chars",
+            "item": "1",
+            "value": 60000
+          },
+          "why": "item not in output"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "1A",
+            "value": "The following discussion sets forth the material risk factors that could affect JPMorganChase\u2019s financial condition and operations"
+          },
+          "why": "item 1A missing text 'The following discussion sets forth the material risk factors that could affect JPMorganChase\u2019s financial condition and operations'"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "1A",
+            "value": "exceed the amount of reserves that JPMorganChase has established for those matters"
+          },
+          "why": "item 1A missing text 'exceed the amount of reserves that JPMorganChase has established for those matters'"
+        },
+        {
+          "check": {
+            "type": "min_chars",
+            "item": "1A",
+            "value": 100000
+          },
+          "why": "item 1A has 0 chars < 100000"
+        },
+        {
+          "check": {
+            "type": "max_chars",
+            "item": "1A",
+            "value": 180000
+          },
+          "why": "item not in output"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "7",
+            "value": "appears on pages 52\u2013167"
+          },
+          "why": "item 7 missing text 'appears on pages 52\u2013167'"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "7",
+            "value": "which appear on pages 172\u2013321"
+          },
+          "why": "item 7 missing text 'which appear on pages 172\u2013321'"
+        },
+        {
+          "check": {
+            "type": "min_chars",
+            "item": "7",
+            "value": 200
+          },
+          "why": "item 7 has 0 chars < 200"
+        },
+        {
+          "check": {
+            "type": "max_chars",
+            "item": "7",
+            "value": 1500
+          },
+          "why": "item not in output"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "8",
+            "value": "appear on pages 169\u2013321"
+          },
+          "why": "item 8 missing text 'appear on pages 169\u2013321'"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "8",
+            "value": "Glossary of Terms and Acronyms"
+          },
+          "why": "item 8 missing text 'Glossary of Terms and Acronyms'"
+        },
+        {
+          "check": {
+            "type": "min_chars",
+            "item": "8",
+            "value": 200
+          },
+          "why": "item 8 has 0 chars < 200"
+        },
+        {
+          "check": {
+            "type": "max_chars",
+            "item": "8",
+            "value": 1500
+          },
+          "why": "item not in output"
+        }
+      ],
+      "n_items": 0,
+      "n_extracted": 0,
+      "doc_status": "ambiguous",
+      "items_summary": [],
+      "seconds": 0.48,
+      "id": "jpm-2024-content",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "item_present",
+            "item": "1",
+            "status": "extracted"
+          },
+          "why": "item 1 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "1A",
+            "status": "extracted"
+          },
+          "why": "item 1A not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "1C",
+            "status": "extracted"
+          },
+          "why": "item 1C not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "6",
+            "status": "extracted"
+          },
+          "why": "item 6 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "7",
+            "status": "extracted"
+          },
+          "why": "item 7 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "7A",
+            "status": "extracted"
+          },
+          "why": "item 7A not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "8",
+            "status": "extracted"
+          },
+          "why": "item 8 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "9C",
+            "status": "extracted"
+          },
+          "why": "item 9C not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "10",
+            "status": "extracted"
+          },
+          "why": "item 10 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "11",
+            "status": "extracted"
+          },
+          "why": "item 11 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "13",
+            "status": "extracted"
+          },
+          "why": "item 13 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "16",
+            "status": "omitted"
+          },
+          "why": "item 16 not omitted: None"
+        },
+        {
+          "check": {
+            "type": "expected_set_complete",
+            "items": [
+              "1",
+              "1A",
+              "1B",
+              "1C",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "7A",
+              "8",
+              "9",
+              "9A",
+              "9B",
+              "9C",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16"
+            ]
+          },
+          "why": "expected items missing or unstatused: ['1', '1A', '1B', '1C', '2', '3', '4', '5', '6', '7', '7A', '8', '9', '9A', '9B', '9C', '10', '11', '12', '13', '14', '15', '16']"
+        }
+      ],
+      "n_items": 0,
+      "n_extracted": 0,
+      "doc_status": "ambiguous",
+      "items_summary": [],
+      "seconds": 0.48,
+      "id": "jpm-2024-structure",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "1",
+            "value": "Microsoft was founded in 1975"
+          },
+          "why": "item 1 missing text 'Microsoft was founded in 1975'"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "1",
+            "value": "The information found on our website is not part of this or any other report we file with"
+          },
+          "why": "item 1 missing text 'The information found on our website is not part of this or any other report we file with'"
+        },
+        {
+          "check": {
+            "type": "min_chars",
+            "item": "1",
+            "value": 30000
+          },
+          "why": "item 1 has 0 chars < 30000"
+        },
+        {
+          "check": {
+            "type": "max_chars",
+            "item": "1",
+            "value": 65000
+          },
+          "why": "item not in output"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "1A",
+            "value": "Our operations and financial results are subject to various risks and uncertainties"
+          },
+          "why": "item 1A missing text 'Our operations and financial results are subject to various risks and uncertainties'"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "1A",
+            "value": "Changes in weather where we operate may increase the costs of powering and cooling computer hardware"
+          },
+          "why": "item 1A missing text 'Changes in weather where we operate may increase the costs of powering and cooling computer hardware'"
+        },
+        {
+          "check": {
+            "type": "min_chars",
+            "item": "1A",
+            "value": 25000
+          },
+          "why": "item 1A has 0 chars < 25000"
+        },
+        {
+          "check": {
+            "type": "max_chars",
+            "item": "1A",
+            "value": 58000
+          },
+          "why": "item not in output"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "7",
+            "value": "The following Management\u2019s Discussion and Analysis"
+          },
+          "why": "item 7 missing text 'The following Management\u2019s Discussion and Analysis'"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "7",
+            "value": "Frank H. Brod"
+          },
+          "why": "item 7 missing text 'Frank H. Brod'"
+        },
+        {
+          "check": {
+            "type": "min_chars",
+            "item": "7",
+            "value": 60000
+          },
+          "why": "item 7 has 0 chars < 60000"
+        },
+        {
+          "check": {
+            "type": "max_chars",
+            "item": "7",
+            "value": 125000
+          },
+          "why": "item not in output"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "8",
+            "value": "INCOME STATEMENTS"
+          },
+          "why": "item 8 missing text 'INCOME STATEMENTS'"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "8",
+            "value": "Seattle, Washington"
+          },
+          "why": "item 8 missing text 'Seattle, Washington'"
+        },
+        {
+          "check": {
+            "type": "min_chars",
+            "item": "8",
+            "value": 80000
+          },
+          "why": "item 8 has 0 chars < 80000"
+        },
+        {
+          "check": {
+            "type": "max_chars",
+            "item": "8",
+            "value": 160000
+          },
+          "why": "item not in output"
+        }
+      ],
+      "n_items": 0,
+      "n_extracted": 0,
+      "doc_status": "ambiguous",
+      "items_summary": [],
+      "seconds": 0.19,
+      "id": "msft-2013-content",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "item_present",
+            "item": "1",
+            "status": "extracted"
+          },
+          "why": "item 1 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "1A",
+            "status": "extracted"
+          },
+          "why": "item 1A not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "6",
+            "status": "extracted"
+          },
+          "why": "item 6 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "7",
+            "status": "extracted"
+          },
+          "why": "item 7 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "7A",
+            "status": "extracted"
+          },
+          "why": "item 7A not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "8",
+            "status": "extracted"
+          },
+          "why": "item 8 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "9B",
+            "status": "extracted"
+          },
+          "why": "item 9B not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "10",
+            "status": "extracted"
+          },
+          "why": "item 10 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "11",
+            "status": "incorporated_by_reference"
+          },
+          "why": "item 11 not incorporated_by_reference: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "12",
+            "status": "incorporated_by_reference"
+          },
+          "why": "item 12 not incorporated_by_reference: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "13",
+            "status": "incorporated_by_reference"
+          },
+          "why": "item 13 not incorporated_by_reference: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "14",
+            "status": "incorporated_by_reference"
+          },
+          "why": "item 14 not incorporated_by_reference: None"
+        },
+        {
+          "check": {
+            "type": "expected_set_complete",
+            "items": [
+              "1",
+              "1A",
+              "1B",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "7A",
+              "8",
+              "9",
+              "9A",
+              "9B",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ]
+          },
+          "why": "expected items missing or unstatused: ['1', '1A', '1B', '2', '3', '4', '5', '6', '7', '7A', '8', '9', '9A', '9B', '10', '11', '12', '13', '14', '15']"
+        }
+      ],
+      "n_items": 0,
+      "n_extracted": 0,
+      "doc_status": "ambiguous",
+      "items_summary": [],
+      "seconds": 0.19,
+      "id": "msft-2013-structure",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "doc_status",
+            "in": [
+              "success",
+              "success_with_warning"
+            ]
+          },
+          "why": "doc_status 'ambiguous' not in ['success', 'success_with_warning']"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "1A",
+            "status": "extracted"
+          },
+          "why": "item 1A not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "6",
+            "status": "extracted"
+          },
+          "why": "item 6 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "9A",
+            "status": "extracted"
+          },
+          "why": "item 9A not extracted: None"
+        },
+        {
+          "check": {
+            "type": "expected_set_complete",
+            "items": [
+              "1",
+              "1A",
+              "1B",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "7A",
+              "8",
+              "9",
+              "9A",
+              "9B",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ]
+          },
+          "why": "expected items missing or unstatused: ['1', '1A', '1B', '2', '3', '4', '5', '6', '7', '7A', '8', '9', '9A', '9B', '10', '11', '12', '13', '14', '15']"
+        }
+      ],
+      "n_items": 0,
+      "n_extracted": 0,
+      "doc_status": "ambiguous",
+      "items_summary": [],
+      "seconds": 0.12,
+      "id": "nike-2006-shallow",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "doc_status",
+            "value": "success"
+          },
+          "why": "doc_status 'ambiguous' != 'success'"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "6",
+            "status": "extracted"
+          },
+          "why": "item 6 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "9C",
+            "status": "extracted"
+          },
+          "why": "item 9C not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "1C",
+            "status": "extracted"
+          },
+          "why": "item 1C not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "16",
+            "status": "extracted"
+          },
+          "why": "item 16 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "expected_set_complete",
+            "items": [
+              "1",
+              "1A",
+              "1B",
+              "1C",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "7A",
+              "8",
+              "9",
+              "9A",
+              "9B",
+              "9C",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16"
+            ]
+          },
+          "why": "expected items missing or unstatused: ['1', '1A', '1B', '1C', '2', '3', '4', '5', '6', '7', '7A', '8', '9', '9A', '9B', '9C', '10', '11', '12', '13', '14', '15', '16']"
+        }
+      ],
+      "n_items": 0,
+      "n_extracted": 0,
+      "doc_status": "ambiguous",
+      "items_summary": [],
+      "seconds": 0.08,
+      "id": "nvda-2024-shallow",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "doc_status",
+            "in": [
+              "success",
+              "success_with_warning"
+            ]
+          },
+          "why": "doc_status 'ambiguous' not in ['success', 'success_with_warning']"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "1",
+            "status": "extracted"
+          },
+          "why": "item 1 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "7A",
+            "status": "extracted"
+          },
+          "why": "item 7A not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "9A",
+            "status": "extracted"
+          },
+          "why": "item 9A not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "16",
+            "status": "omitted"
+          },
+          "why": "item 16 not omitted: None"
+        },
+        {
+          "check": {
+            "type": "expected_set_complete",
+            "items": [
+              "1",
+              "1A",
+              "1B",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "7A",
+              "8",
+              "9",
+              "9A",
+              "9B",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16"
+            ]
+          },
+          "why": "expected items missing or unstatused: ['1', '1A', '1B', '2', '3', '4', '5', '6', '7', '7A', '8', '9', '9A', '9B', '10', '11', '12', '13', '14', '15', '16']"
+        }
+      ],
+      "n_items": 0,
+      "n_extracted": 0,
+      "doc_status": "ambiguous",
+      "items_summary": [],
+      "seconds": 0.04,
+      "id": "premier-pacific-2016-shallow",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "doc_status",
+            "in": [
+              "success",
+              "success_with_warning"
+            ]
+          },
+          "why": "doc_status 'ambiguous' not in ['success', 'success_with_warning']"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "1",
+            "status": "extracted"
+          },
+          "why": "item 1 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "2",
+            "status": "extracted"
+          },
+          "why": "item 2 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "9A",
+            "status": "extracted"
+          },
+          "why": "item 9A not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "16",
+            "status": "omitted"
+          },
+          "why": "item 16 not omitted: None"
+        },
+        {
+          "check": {
+            "type": "expected_set_complete",
+            "items": [
+              "1",
+              "1A",
+              "1B",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "7A",
+              "8",
+              "9",
+              "9A",
+              "9B",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16"
+            ]
+          },
+          "why": "expected items missing or unstatused: ['1', '1A', '1B', '2', '3', '4', '5', '6', '7', '7A', '8', '9', '9A', '9B', '10', '11', '12', '13', '14', '15', '16']"
+        }
+      ],
+      "n_items": 0,
+      "n_extracted": 0,
+      "doc_status": "ambiguous",
+      "items_summary": [],
+      "seconds": 0.03,
+      "id": "sandston-2021-shallow",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "1",
+            "value": "reorganized our segments effective with the first quarter of 2002"
+          },
+          "why": "item 1 missing text 'reorganized our segments effective with the first quarter of 2002'"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "1",
+            "value": "At December 29, 2001, we had approximately 51,000 employees."
+          },
+          "why": "item 1 missing text 'At December 29, 2001, we had approximately 51,000 employees.'"
+        },
+        {
+          "check": {
+            "type": "min_chars",
+            "item": "1",
+            "value": 18000
+          },
+          "why": "item 1 has 0 chars < 18000"
+        },
+        {
+          "check": {
+            "type": "max_chars",
+            "item": "1",
+            "value": 38000
+          },
+          "why": "item not in output"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "2",
+            "value": "At December 29, 2001, we operated a total of 158 plants located throughout"
+          },
+          "why": "item 2 missing text 'At December 29, 2001, we operated a total of 158 plants located throughout'"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "2",
+            "value": "for the uses to which they are being put, and are substantially in regular use."
+          },
+          "why": "item 2 missing text 'for the uses to which they are being put, and are substantially in regular use.'"
+        },
+        {
+          "check": {
+            "type": "min_chars",
+            "item": "2",
+            "value": 450
+          },
+          "why": "item 2 has 0 chars < 450"
+        },
+        {
+          "check": {
+            "type": "max_chars",
+            "item": "2",
+            "value": 1500
+          },
+          "why": "item not in output"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "3",
+            "value": "On February 28, 2002, Cessna completed the settlement of the previously"
+          },
+          "why": "item 3 missing text 'On February 28, 2002, Cessna completed the settlement of the previously'"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "3",
+            "value": "not have a material effect on our financial position or results of operations."
+          },
+          "why": "item 3 missing text 'not have a material effect on our financial position or results of operations.'"
+        },
+        {
+          "check": {
+            "type": "min_chars",
+            "item": "3",
+            "value": 1500
+          },
+          "why": "item 3 has 0 chars < 1500"
+        },
+        {
+          "check": {
+            "type": "max_chars",
+            "item": "3",
+            "value": 4500
+          },
+          "why": "item not in output"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "5",
+            "value": "Our Common Stock is traded on the New York, Chicago and Pacific Stock"
+          },
+          "why": "item 5 missing text 'Our Common Stock is traded on the New York, Chicago and Pacific Stock'"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "5",
+            "value": "At December 29, 2001, there were approximately 21,000 holders of"
+          },
+          "why": "item 5 missing text 'At December 29, 2001, there were approximately 21,000 holders of'"
+        },
+        {
+          "check": {
+            "type": "min_chars",
+            "item": "5",
+            "value": 300
+          },
+          "why": "item 5 has 0 chars < 300"
+        },
+        {
+          "check": {
+            "type": "max_chars",
+            "item": "5",
+            "value": 1100
+          },
+          "why": "item not in output"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "14",
+            "value": "financial statement schedules listed in the accompanying Index to Financial"
+          },
+          "why": "item 14 missing text 'financial statement schedules listed in the accompanying Index to Financial'"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "14",
+            "value": "report that Textron will proceed with the sale of its Automotive Trim"
+          },
+          "why": "item 14 missing text 'report that Textron will proceed with the sale of its Automotive Trim'"
+        },
+        {
+          "check": {
+            "type": "min_chars",
+            "item": "14",
+            "value": 9000
+          },
+          "why": "item 14 has 0 chars < 9000"
+        },
+        {
+          "check": {
+            "type": "max_chars",
+            "item": "14",
+            "value": 19000
+          },
+          "why": "item not in output"
+        }
+      ],
+      "n_items": 0,
+      "n_extracted": 0,
+      "doc_status": "ambiguous",
+      "items_summary": [],
+      "seconds": 0.0,
+      "id": "textron-2001-content",
+      "kind": "golden"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "item_present",
+            "item": "1",
+            "status": "extracted"
+          },
+          "why": "item 1 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "2",
+            "status": "extracted"
+          },
+          "why": "item 2 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "3",
+            "status": "extracted"
+          },
+          "why": "item 3 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "4",
+            "status": "extracted"
+          },
+          "why": "item 4 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "5",
+            "status": "extracted"
+          },
+          "why": "item 5 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "6",
+            "status": "incorporated_by_reference"
+          },
+          "why": "item 6 not incorporated_by_reference: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "7",
+            "status": "incorporated_by_reference"
+          },
+          "why": "item 7 not incorporated_by_reference: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "7A",
+            "status": "incorporated_by_reference"
+          },
+          "why": "item 7A not incorporated_by_reference: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "8",
+            "status": "incorporated_by_reference"
+          },
+          "why": "item 8 not incorporated_by_reference: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "9",
+            "status": "extracted"
+          },
+          "why": "item 9 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "10",
+            "status": "incorporated_by_reference"
+          },
+          "why": "item 10 not incorporated_by_reference: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "11",
+            "status": "incorporated_by_reference"
+          },
+          "why": "item 11 not incorporated_by_reference: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "12",
+            "status": "incorporated_by_reference"
+          },
+          "why": "item 12 not incorporated_by_reference: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "13",
+            "status": "incorporated_by_reference"
+          },
+          "why": "item 13 not incorporated_by_reference: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "14",
+            "status": "extracted"
+          },
+          "why": "item 14 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "expected_set_complete",
+            "items": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "7A",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14"
+            ]
+          },
+          "why": "expected items missing or unstatused: ['1', '2', '3', '4', '5', '6', '7', '7A', '8', '9', '10', '11', '12', '13', '14']"
+        }
+      ],
+      "n_items": 0,
+      "n_extracted": 0,
+      "doc_status": "ambiguous",
+      "items_summary": [],
+      "seconds": 0.0,
+      "id": "textron-2001-structure",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 0,
+      "n_extracted": 0,
+      "doc_status": "unsupported",
+      "items_summary": [],
+      "seconds": 0.04,
+      "id": "10q-unsupported",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "item_present",
+            "item": "1"
+          },
+          "why": "item 1 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "7",
+            "status": "incorporated_by_reference"
+          },
+          "why": "item 7 not incorporated_by_reference: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "10",
+            "status": "extracted"
+          },
+          "why": "item 10 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "11",
+            "status": "incorporated_by_reference"
+          },
+          "why": "item 11 not incorporated_by_reference: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "12",
+            "status": "incorporated_by_reference"
+          },
+          "why": "item 12 not incorporated_by_reference: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "13",
+            "status": "incorporated_by_reference"
+          },
+          "why": "item 13 not incorporated_by_reference: None"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "14"
+          },
+          "why": "item 14 not extracted: None"
+        },
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "1",
+            "value": "one of the largest and most diversified industrial corporations in the world"
+          },
+          "why": "item 1 missing text 'one of the largest and most diversified industrial corporations in the world'"
+        },
+        {
+          "check": {
+            "type": "expected_set_complete",
+            "items": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14"
+            ]
+          },
+          "why": "expected items missing or unstatused: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14']"
+        }
+      ],
+      "n_items": 0,
+      "n_extracted": 0,
+      "doc_status": "ambiguous",
+      "items_summary": [],
+      "seconds": 0.01,
+      "id": "ge-1994-oldformat",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 0,
+      "n_extracted": 0,
+      "doc_status": "ambiguous",
+      "items_summary": [],
+      "seconds": 0.19,
+      "id": "html-source-wrap",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 0,
+      "n_extracted": 0,
+      "doc_status": "ambiguous",
+      "items_summary": [],
+      "seconds": 0.06,
+      "id": "ixbrl-hidden-metadata",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "expected_set_complete",
+            "items": [
+              "1",
+              "1A",
+              "1B",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "7A",
+              "8",
+              "9",
+              "9A",
+              "9B",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16"
+            ]
+          },
+          "why": "expected items missing or unstatused: ['1', '1A', '1B', '2', '3', '4', '5', '6', '7', '7A', '8', '9', '9A', '9B', '10', '11', '12', '13', '14', '15', '16']"
+        }
+      ],
+      "n_items": 0,
+      "n_extracted": 0,
+      "doc_status": "ambiguous",
+      "items_summary": [],
+      "seconds": 0.04,
+      "id": "malformed-html",
+      "kind": "adversarial"
+    }
+  ]
+}

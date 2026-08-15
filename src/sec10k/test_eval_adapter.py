@@ -156,9 +156,24 @@ def test_norm_checks():
                                 "value": "Microsoft was founded in 1975"}) is not None
 
 
+def test_warning_absent():
+    r = {"normalized_text": "", "items": [],
+         "warnings": [{"code": "form_type_disagreement", "message": "10-K405 vs 10-K"}]}
+    reason = eval_check(r, {"type": "warning_absent", "code": "form_type_disagreement"})
+    assert reason is not None and "10-K405" in reason, reason
+    assert eval_check(r, {"type": "warning_absent", "code": "lenient_match"}) is None
+
+    # absent/empty warnings must not blow up — a clean run is the common case
+    assert eval_check({"normalized_text": "", "items": [], "warnings": []},
+                      {"type": "warning_absent", "code": "x"}) is None
+    assert eval_check({"normalized_text": "", "items": []},
+                      {"type": "warning_absent", "code": "x"}) is None
+
+
 TESTS = [
     test_doc_status,
     test_norm_checks,
+    test_warning_absent,
     test_max_chars,
     test_text_checks_non_extracted,
     test_min_chars_null_offsets,

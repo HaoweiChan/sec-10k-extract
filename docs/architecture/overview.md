@@ -14,6 +14,9 @@ empirically at T4/T5 against eval outcomes and recorded in an ADR.
 Planned layout: `src/sec10k/extract.py` (orchestration + assembly),
 `normalize.py` (selection + normalization), `segment.py` (candidates + filter +
 boundaries + status), `validate.py` (validation + confidence). Four files.
+Built so far (T3): `extract.py` + `normalize.py` — layers 1–3 and 11. Until
+segmentation lands, an identified 10-K reports `ambiguous` (zero coverage,
+rule 3 of the ladder below), never `success`.
 
 ## Pipeline layers
 
@@ -30,7 +33,13 @@ eval cases.
 file as the document; cover-page "FORM 10-K" sniff; nothing matches →
 `doc_status: unsupported`. Failure modes: exhibit chosen, wrong form accepted.
 Trace: block count, chosen type + offsets. Eval: `ge-1994-oldformat`,
-10-Q→unsupported case.
+10-Q→unsupported case. **Built (T3)**: `<DOCUMENT>` blocks are present in 7 of
+13 fixtures — including four `.htm` primary documents, not just the txt-era
+submissions — so both paths are load-bearing. `<TYPE>` (EDGAR-validated) wins
+when present and the cover sniff becomes a second opinion that warns on
+disagreement rather than refusing; the sniff is confined to the first 3,000
+chars because a 10-Q always cites its own prior 10-K further down. 10-K/A and
+10-KSB are refused, not best-effort parsed.
 
 **3. Normalization** — deterministic plain text. Stdlib `HTMLParser` subclass:
 block-level tags emit `\n`, inline tags (including all `ix:*`) emit nothing,
@@ -38,9 +47,15 @@ block-level tags emit `\n`, inline tags (including all `ix:*`) emit nothing,
 Plain-text era: newline normalization passthrough. Page furniture deliberately
 **stays in the text** (removing it risks verbatim provenance and determinism) —
 it is filtered at candidate level instead. Failure modes: word-joining at block
-boundaries, entity mess. Trace: input/output lengths, tag stats. Eval:
+boundaries, entity mess. Trace: input/output lengths. Eval:
 `verbatim` (INV-S2); a determinism + word-joining spike runs before this layer
-is trusted (T3).
+is trusted (T3). **Built (T3)**, with two rulings the spike forced (ADR-006):
+`ix:header`/`ix:hidden` are skipped like `script`/`style` (INV-S5 — their
+character data was 15.4% of JPM 2024's text, ahead of the cover page), and a
+newline is era-dependent — collapsed inside HTML text chunks at parse time
+(where it is a filer's 80-column source wrap), preserved in txt-era filings
+(where it is the document's own layout). Measured: 13/13 fixtures
+deterministic, 40/40 eval anchors survive, 492 ms for the 12.8 MB JPM filing.
 
 **4. Candidate detection** — every plausible item heading, with features.
 Line-anchored, case-insensitive pattern on `Item <code>` where the code must be

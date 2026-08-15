@@ -78,6 +78,31 @@ normalize with them intact. Recorded as honest debt rather than pre-solved —
 if a held-out or adversarial txt case ever exhibits it, that case is the
 trigger to revisit, per the same discipline ADR-003 used.
 
+## Ruling 4 — the form cross-check compares families, not strings
+
+Layer 2 has two independent form signals: EDGAR's `<DOCUMENT>/<TYPE>` (present
+in 7 of 13 fixtures, including four `.htm` primary documents) and a cover-page
+sniff over the first 3,000 normalized chars. `<TYPE>` wins; the sniff is a
+second opinion that warns on disagreement and never refuses on its own.
+
+Compared as raw strings, that check fired on **every 10-K405 filing** — a
+10-K405's cover page always reads "FORM 10-K", because 405 is a Reg S-K
+Item 405 check-box distinction, not a form title. Two of thirteen fixtures,
+and 100% of that stratum.
+
+**Decision**: agreement means *same form family* — both values inside
+`ACCEPTED_FORMS`. A genuine mismatch (`<TYPE>` 10-K, cover says 10-Q) still
+warns.
+
+**Decision**: warnings get eval coverage of their own, via a new
+`warning_absent` check on `ibm-1997-shallow` and `textron-2001-structure`.
+Nothing in the eval set could see this defect: warnings reach the outside
+world only through `doc_status`, and both cases' `doc_status` checks allow
+`success_with_warning`, so a permanent false positive on the whole 10-K405
+stratum would have ridden invisibly into T5, where every warning moves the
+confidence score. Per taxonomy F7, a validator that cries wolf is a defect,
+not merely noise — and warnings now have a way to be asserted red.
+
 ## Consequences
 
 - Normalization is `src/sec10k/normalize.py`, ~2 KB, still zero parsing
