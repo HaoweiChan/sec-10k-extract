@@ -8,17 +8,16 @@ spec-drift flags it and this doc gets fixed.
 
 Design posture: deterministic code first, LLM last (`cost-discipline` skill);
 all-stdlib at B (ADR-003); simplest strategy that survives the known traps
-catalogued in `sec10k-domain` (ten and counting). Numeric thresholds below are **PROVISIONAL** — set
-empirically at T4/T5 against eval outcomes and recorded in an ADR.
+catalogued in `sec10k-domain` (ten and counting). Numeric thresholds below are
+**measured, not assumed** — set against eval-set distributions at T4/T5 and
+recorded in ADR-007 and ADR-008, which also list the priors that measurement
+REJECTED.
 
 Planned layout: `src/sec10k/extract.py` (orchestration + assembly),
 `normalize.py` (selection + normalization), `segment.py` (candidates + filter +
 boundaries + status), `validate.py` (validation + confidence). Four files.
-Built so far (T4): `extract.py` + `normalize.py` + `segment.py` — layers 1–7
-and 11. Layers 8–9 (validation battery, calibrated confidence) are T5, so a
-standing `validation_not_implemented` warning caps every filing at
-`success_with_warning`; nothing claims a clean `success` before it has been
-validated.
+Built so far (T5): all four files — layers 1–9 and 11. Layer 10 (fallback)
+stays deferred by design until residual-failure data justifies it.
 
 ## Pipeline layers
 
@@ -165,6 +164,18 @@ measured from eval-set distributions at T5, ADR-recorded):
   confidence, disagreement → `ambiguous`. The strongest form of
   multiple-ways-to-verify, nearly free once the TOC is parsed.
 
+**Built (T5)**, and measurement cut the battery in half: four of the eight
+proposed validators are false-positive generators and were rejected with their
+rates recorded in ADR-008 — "Item 8 is longest" is false in 6 of 13 fixtures,
+"1A ≫ 1B" inverts for smaller reporting companies, "spans end at punctuation"
+fires on 10 of 18 AAPL items (page furniture legitimately rides at span ends
+per ADR-003), and part-region consistency is defeated by JPM's 25 running
+`Part I` page headers. What ships: TOC manifest cross-check, unattributed
+content (>17%), last-item domination (>50%), boundary hygiene, relative
+numeric density, and gated keyword fingerprints. Dual-method boundary
+agreement is deferred — it needs TOC anchor offsets preserved through
+normalization, which discards tags by design.
+
 Signals are chosen for independence — shape, content, structure, agreement —
 not volume (word count + paragraph count + char count is one signal three
 times). Policy per taxonomy F7: every validator is itself a false-positive
@@ -203,8 +214,11 @@ no fake precision. Every input to the score is recorded in the item's
 keyword-evidenced IBR/omitted > missing with zero candidates at any tier >
 length-inferred classification > missing because all candidates were rejected.
 
-**All numeric values are PROVISIONAL placeholders** — set empirically in T5
-against eval outcomes, recorded in an ADR. At A-level: bucket dev + held-out
+**Set in T5 and recorded in ADR-008** (base 0.95 strict / 0.75 weak title;
+0.85 IBR, 0.80 omitted, 0.55 missing; −0.15 per warning naming the item;
+clamped to [0.20, 0.95]). Known limitation: the distribution is nearly binary
+— 224 of 283 items sit at 0.95 — and the scale is uncalibrated, so JPM's Item
+15 keeps 0.8 despite being the most wrong span in the set. At A-level: bucket dev + held-out
 items by score, measure empirical accuracy per bucket, publish the table in the
 analysis report, and remap scores through it (a lookup, not a model).
 

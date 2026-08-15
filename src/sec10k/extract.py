@@ -1,11 +1,10 @@
 """10-K item-level extraction. Contract: specs/001-sec10k-contract.md.
 
-T4 state: layers 1-7 and 11 are real (selection, normalization, candidates,
-TOC filter, boundaries, status, assembly). Layers 8-9 — the label-free
-validator battery and calibrated confidence — land at T5, so a standing
-`validation_not_implemented` warning caps every filing at
-`success_with_warning`: nothing here may claim a clean `success` before it has
-actually been validated, and a run that extracts nothing stays `ambiguous`.
+Layers 1-9 and 11 are real: selection, normalization, candidates, TOC filter,
+boundaries, status, label-free validation, confidence, assembly. Layer 10
+(LLM fallback) stays deferred until residual-failure data justifies one.
+`success` is deliberately hard to earn — it requires the validator battery to
+find nothing at all.
 """
 import hashlib
 import time
@@ -16,6 +15,7 @@ from src.sec10k.segment import (
     TITLES, assign_boundaries, classify, expected_items, filter_candidates,
     find_candidates,
 )
+from src.sec10k.validate import AMBIGUOUS_CODES, score, validate
 
 VERSION = "0.4.0-t4"
 
@@ -126,12 +126,23 @@ def extract_items(path):
         warnings.append({"code": "period_end_unknown", "item": None,
                          "message": "no period of report found; expected item set is a guess"})
 
-    # layers 8-9 (validation battery, calibrated confidence) are T5. Until they
-    # exist nothing may claim a clean `success` — the honest ceiling is
-    # success_with_warning, and a run with no extracted items stays ambiguous.
+    # layer 8: label-free validation, then layer 9 confidence from what it found
+    findings = validate(text, items, accepted, manifest)
+    warnings += findings
+    trace.append({"layer": "validate",
+                  "checks_fired": [w["code"] for w in findings]})
+    for i in items:
+        i["confidence"], i["evidence"] = score(i, warnings)
+
+    # doc_status ladder (contract v2, fixed order). Only the three validators
+    # named in AMBIGUOUS_CODES may reach `ambiguous`; the rest warn and move
+    # confidence, per the taxonomy's warn-don't-hard-fail policy.
     extracted = [i for i in items if i["status"] == "extracted"]
-    doc_status = "ambiguous" if not extracted else "success_with_warning"
-    warnings.append({"code": "validation_not_implemented", "item": None,
-                     "message": "T4: no structural validation yet (T5)"})
+    if not extracted or any(w["code"] in AMBIGUOUS_CODES for w in warnings):
+        doc_status = "ambiguous"
+    elif warnings:
+        doc_status = "success_with_warning"
+    else:
+        doc_status = "success"
     return _envelope(doc_status, text, items=items, meta=meta,
                      warnings=warnings, trace=trace, t0=t0)

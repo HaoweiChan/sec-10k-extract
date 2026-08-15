@@ -156,6 +156,17 @@ def test_norm_checks():
                                 "value": "Microsoft was founded in 1975"}) is not None
 
 
+def test_warning_present():
+    r = {"normalized_text": "", "items": [],
+         "warnings": [{"code": "toc_manifest_mismatch", "message": "lists ['8']"}]}
+    assert eval_check(r, {"type": "warning_present", "code": "toc_manifest_mismatch"}) is None
+    reason = eval_check(r, {"type": "warning_present", "code": "last_item_dominates"})
+    assert reason is not None and "toc_manifest_mismatch" in reason, reason
+    # a validator that never fires must not pass silently
+    assert eval_check({"normalized_text": "", "items": []},
+                      {"type": "warning_present", "code": "x"}) is not None
+
+
 def test_warning_absent():
     r = {"normalized_text": "", "items": [],
          "warnings": [{"code": "form_type_disagreement", "message": "10-K405 vs 10-K"}]}
@@ -174,6 +185,7 @@ TESTS = [
     test_doc_status,
     test_norm_checks,
     test_warning_absent,
+    test_warning_present,
     test_max_chars,
     test_text_checks_non_extracted,
     test_min_chars_null_offsets,

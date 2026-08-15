@@ -86,6 +86,12 @@ def eval_check(result, chk, path=None):
         n = result["normalized_text"].count(chk["value"])
         if n:
             return f"normalized_text contains {chk['value']!r} ({n}x)"
+    elif t == "warning_present":
+        # layer-8 validators are only worth having if a case can prove one
+        # FIRES when it should — the counterpart to warning_absent
+        if not [w for w in result.get("warnings", []) if w.get("code") == chk["code"]]:
+            got = sorted({w.get("code") for w in result.get("warnings", [])})
+            return f"expected warning {chk['code']!r}, got {got}"
     elif t == "warning_absent":
         # warnings are not free: they downgrade doc_status to
         # success_with_warning and move confidence, so a validator that cries

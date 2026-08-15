@@ -132,13 +132,21 @@ def find_candidates(text, expected):
 
 # ---------------------------------------------------------------- filtering
 
-def _toc_runs(cands):
-    """Indices of candidates that are table-of-contents entries.
+def _toc_runs(cands, universe=None):
+    """(indices to drop, codes the run declares) for table-of-contents runs.
 
-    A TOC is a manifest: inside a dense run of codes, an entry whose own code
-    is used AGAIN further down was indexing that later use. Density alone can
+    A TOC is a manifest: inside a dense run of codes, entries whose codes are
+    used AGAIN further down were indexing those later uses. Density alone can
     never decide — Part III's one-line IBR items sit as close together as any
     TOC and must survive. Recurrence is what makes a manifest a manifest.
+
+    The two return values deliberately differ. Only recurring entries are
+    DROPPED, because a TOC sits close enough to the body it indexes that the
+    run usually swallows the first real heading, whose code does not recur —
+    dropping the whole run would delete that heading. But the manifest reports
+    EVERY code in the run, including the non-recurring ones: an item the filing
+    lists in its own contents and then never heads is exactly the mismatch
+    layer 8 exists to catch, and filtering by recurrence would hide it.
     """
     runs, run = [], [0] if cands else []
     for i in range(1, len(cands)):
@@ -149,20 +157,21 @@ def _toc_runs(cands):
             run = [i]
     runs.append(run)
 
-    toc = set()
+    universe = cands if universe is None else universe
+    drop, manifest = set(), []
     for run in runs:
-        if len({cands[i]["item"] for i in run}) < TOC_CLUSTER_MIN:
+        codes = {cands[i]["item"] for i in run}
+        if len(codes) < TOC_CLUSTER_MIN:
             continue
-        # Recurrence is judged per candidate, not for the run as a whole: a TOC
-        # sits close enough to the body it indexes that the run usually swallows
-        # the first real heading too, and an all-codes-must-recur test then
-        # fails on that one candidate and rescues the entire TOC.
-        for i in run:
-            later = any(c["item"] == cands[i]["item"] and c["start"] > cands[i]["start"]
-                        for c in cands)
-            if later:  # this code is used again further down -> this one indexed it
-                toc.add(i)
-    return toc
+        recurs = {i for i in run
+                  if any(c["item"] == cands[i]["item"] and c["start"] > cands[i]["start"]
+                         for c in universe)}
+        # a run is an index if most of what it names turns up again below it
+        if len({cands[i]["item"] for i in recurs}) * 2 < len(codes):
+            continue
+        drop |= recurs
+        manifest += [cands[i]["item"] for i in run]
+    return drop, manifest
 
 
 def filter_candidates(cands):
@@ -179,10 +188,19 @@ def filter_candidates(cands):
         else:
             kept.append(c)
 
-    toc_idx = _toc_runs(kept)
-    manifest = [kept[i]["item"] for i in sorted(toc_idx)]
+    toc_idx, manifest = _toc_runs(kept)
     rejected += [{**kept[i], "why": "table-of-contents cluster"} for i in sorted(toc_idx)]
     kept = [c for i, c in enumerate(kept) if i not in toc_idx]
+
+    # The manifest is worth having even when the TOC died at the no-title rule,
+    # which is the usual case: it is the filing's own declared item list, the
+    # only free label-free statement of what SHOULD be here, and layer 8
+    # cross-checks it. Recover it from the bare candidates the same way.
+    if not manifest:
+        bare = [c for c in cands if not c["titled"]]
+        # recurrence is judged against ALL candidates, not just the bare ones:
+        # a bare TOC entry recurs as a TITLED body heading, never as another bare
+        manifest = _toc_runs(bare, cands)[1]
     return kept, manifest, rejected
 
 

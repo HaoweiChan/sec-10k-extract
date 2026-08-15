@@ -115,6 +115,8 @@ they resolve 13 of 13 fixtures). Two calls worth recording:
   `validation_not_implemented` warning, so the honest ceiling is
   `success_with_warning` until the layer-8 battery lands. That case is now the
   T5 tripwire — it flips green when validation is real, and only then.
+  *(T5 update: it flipped. The standing warning is gone and NVDA earns
+  `success` by surviving the battery in ADR-008.)*
 - Confidence values are placeholders (0.9 strict / 0.7 weak title / 0.8
   non-extracted), recomputable from each item's `evidence`. Calibration is T5,
   per the architecture doc's confidence section.

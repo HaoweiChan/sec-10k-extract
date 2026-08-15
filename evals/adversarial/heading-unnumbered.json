@@ -1,0 +1,27 @@
+{
+  "id": "heading-unnumbered",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/heading-unnumbered/filing.htm"},
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "deterministic"},
+      {"type": "doc_status", "value": "ambiguous"},
+      {"type": "warning_present", "code": "toc_manifest_mismatch"},
+      {"type": "warning_present", "code": "expected_item_missing"},
+      {"type": "item_present", "item": "8", "status": "missing"},
+      {"type": "item_present", "item": "7", "status": "extracted"},
+      {"type": "item_present", "item": "9", "status": "extracted"},
+      {"type": "expected_set_complete", "items": ["1","1A","1B","1C","2","3","4","5","6","7","7A","8","9","9A","9B","9C","10","11","12","13","14","15","16"]},
+      {"type": "only_items", "items": ["1","1A","1B","1C","2","3","4","5","6","7","7A","8","9","9A","9B","9C","10","11","12","13","14","15","16"]}
+    ]
+  },
+  "triage": {
+    "class": "invariant-gap",
+    "note": "Layer 8's whole purpose is catching extractions that are wrong without being obviously broken, and its strongest validator -- the TOC manifest cross-check, which the architecture calls 'a strong, free warning' -- fired on ZERO of 13 fixtures. Untested code guarding the false-success net, the same shape of gap that toc-titled exposed at T4. Building this case found that the cross-check could not fire AT ALL, by construction: the manifest was assembled by keeping only TOC entries whose code recurs later in the document, so the one item that is listed in the contents and then never headed -- precisely the mismatch being looked for -- was the one entry filtered out before comparison. Fixed in segment.py `_toc_runs`, which now drops only recurring entries (a TOC sits close enough to the body that the run swallows the first real heading, whose code does not recur) while reporting EVERY code in the run as the manifest. Knock-on effect, verified: malformed-html now also reports toc_manifest_mismatch for its corruption-destroyed Item 1A heading, which it previously missed."
+  },
+  "provenance": "SELF-CREATED adversarial fixture: a copy of evals/fixtures/nvda-2024/filing.htm (NVIDIA Corp FY2024 10-K, EDGAR accession 0001045810-24-000029 -- see that fixture's README row for original public-source provenance), mutated 2026-08-16 by a single 13-character deletion. THE MUTATION: the Item 8 BODY heading, which reads 'Item&#160;8. Financial Statements and Supplementary Data' at raw offset 686,815 (verified: exactly 1 occurrence of that string in the file), becomes 'Financial Statements and Supplementary Data' -- i.e. only the 'Item 8.' code prefix is removed, and the section keeps its title, its markup, its styling and all of its content. 2,085,566 -> 2,085,553 bytes. The filing's table of contents is untouched and still lists Item 8 (its TOC entry sits at raw offset 167,478). WHY THIS MUTATION IS REALISTIC AND NOT A STRAW MAN: filers genuinely head sections with the title alone and carry the item number in a separate table cell or omit it entirely, so a title-only heading is a real-world format variant rather than damage -- unlike malformed-html, nothing here is corrupt, and every byte that remains is well-formed HTML that renders identically to a human reader minus seven characters. This is the SILENT failure case: strict line-anchored matching cannot see the heading, so Item 8's content is not extracted under its own label, and nothing about the output looks broken -- the item count is right, every span is verbatim and ordered, and 22 of 23 items are correctly extracted. Only the document's own self-declaration reveals the problem. EXPECTED BEHAVIOR, all verified against the built fixture: item 8 -> `missing` (ADR-005 rule 3 -- the era expects it and no heading was found; NOT `omitted`, which would claim the absence is permitted); expected_item_missing warning; toc_manifest_mismatch warning naming exactly ['8']; and doc_status `ambiguous`, because toc_manifest_mismatch is one of the two codes in validate.py's AMBIGUOUS_CODES permitted to escalate -- when the filing's own contents page contradicts the extraction, refusing to call the run clean is the honest answer. Items 7 and 9 stay `extracted` and the full 23-item FY2024 expected set is still reported with statuses, so the case also pins that a missing heading does not cascade into neighbouring items. The two warning_present checks are what make the battery testable at all: before this case the eval set could only assert that warnings were ABSENT (warning_absent, added at T3), so a validator that silently never fired was indistinguishable from one that worked. NOT yet dual-passed by extraction-auditor: pending, per case-authoring step 8."
+}
