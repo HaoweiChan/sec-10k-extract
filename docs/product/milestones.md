@@ -44,7 +44,7 @@ Evidence-deepening, not feature-adding:
    remapped through the empirical table.
 3. **Silent-failure rate** measured and driven down via the auditor loop + the
    OSS second-extractor cross-check oracle.
-4. **Fallback stage** designed in ADR-004 only once residual-failure data
+4. **Fallback stage** designed in a dedicated ADR only once residual-failure data
    exists and justifies one (if it ships: cached, budget-capped, `full`-suite
    only, runtime prompt preserved in `prompts/`).
 5. **Perf/cost/scalability with real numbers**: large-filing and batch

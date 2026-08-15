@@ -10,11 +10,16 @@ executable invariants and golden/adversarial cases instead of prose specs.
 
 ## Status
 
-Eval layer laid, pipeline not yet implemented — all cases deliberately red:
-2 golden cases on AAPL FY2025 (iXBRL) + 1 adversarial on GE FY1993 (plain-text,
-pre-2003 item taxonomy). Key contracts: `specs/001-sec10k-contract.md`
-(output shape, offset-verbatim rule), `specs/000-invariants.md` (INV-S1–S4),
-`.claude/skills/sec10k-domain/` (taxonomy eras + the 7 known traps).
+Eval layer expanded (T2), pipeline not yet implemented — all cases
+deliberately red: 17 cases (15 golden + shallow-tier, 3 adversarial) across
+13 fixtures spanning 1993–2026: plain-text multi-document, 10-K405, mid-era
+HTML, modern iXBRL, a 12MB financial, a shell company, a 10-Q refusal probe,
+and a hand-degraded malformed-HTML corruption. Key contracts:
+`specs/001-sec10k-contract.md` (v2 envelope, offset-verbatim rule),
+`specs/000-invariants.md` (INV-0–S4, all invariant-suite-backed),
+`specs/decisions/ADR-004/005` (pointer & trivial-body status rulings),
+`.claude/skills/sec10k-domain/` (taxonomy eras + 10 known traps). A minimal
+FastAPI deploy spike (`src/sec10k/web/`) wraps the stub for Zeabur.
 
 Sections to come as the pipeline lands: how to run, frontend URL,
 works-well / fails-honestly lists, performance & cost analysis.
@@ -98,9 +103,12 @@ docs/                durable design docs — product · evals · architecture (d
 evals/run.py         stdlib-only runner — defines the case + adapter contract
 evals/golden/        hand-verified cases (provenance recorded per case)
 evals/adversarial/   inputs that broke, or are designed to break, the pipeline
+evals/fixtures/      committed public EDGAR filings + provenance README
 evals/report/        every run's scored output, committed — the progress narrative
 prompts/             AI-collaboration record: auto-dumped raw/ + curated correction chains
 src/<task>/          implementations — each exposes eval_adapter.py to the runner
+src/sec10k/web/      FastAPI service (deploy spike now, inspector UI at T7)
+pyproject.toml       web-service deps only (fastapi/uvicorn) + zbpack.json/requirements.txt for Zeabur
 ```
 
 ## Using this template
@@ -113,8 +121,10 @@ python3 -m evals.run --suite fast     # sanity: runner works (no cases yet)
 
 Opening the repo in Claude Code auto-prompts to install the **ponytail** plugin
 (lazy-first coding discipline); **graphify** (codebase knowledge graphs) is
-vendored as a project skill. The harness itself is Python-stdlib-only; tasks
-declare their own dependencies under `src/<task>/`.
+vendored as a project skill. The harness itself is Python-stdlib-only; the
+extraction pipeline is stdlib-only by ADR-003; the only third-party deps are
+the web service's fastapi/uvicorn, declared in the root `pyproject.toml`
+because the deploy platform reads them there.
 
 To add a task: `src/<task>/eval_adapter.py` exposing
 `run_case(case) -> {"passed": bool, ...}`, a domain skill, a contract spec,

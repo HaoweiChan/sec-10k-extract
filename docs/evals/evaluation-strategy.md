@@ -90,7 +90,8 @@ source reading; agreement on modern filings raises audit confidence cheaply.
 
 ## Metrics
 
-Computed by `evals/metrics.py` (stdlib, T2) over the latest committed
+Computed by `evals/metrics.py` (stdlib, lands at T8 with the first milestone
+run) over the latest committed
 `evals/report/*.json` + case JSONs. Prerequisites (all T2): the adapter echoes
 per-check results **and** per-item results (confidence, status, method) plus
 the run's `doc_status` — metrics 6 and 8 join per-item confidence to check

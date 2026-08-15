@@ -53,6 +53,17 @@ description: 10-K filing anatomy — item taxonomy by era, format variants, and 
 7. **Item 8 boundary** — financial statements + notes are the largest span
    and full of things that look like headings; F-pages sometimes live outside
    the item sequence entirely.
+8. **Trailing exhibit tail (txt era)** — GE 1994's 10-K `<DOCUMENT>` block
+   continues past SIGNATURES with the full ~280K-char Annual Report inline;
+   a greedy last-item span swallows it all. Stop the last item at SIGNATURES.
+9. **Wild non-canonical headings** — real filings invent item codes: CAT
+   FY2023 contains a literal "Item 1D" heading (no such Reg S-K item).
+   Canonical-code filtering must reject these (cat-2023-shallow encodes it as
+   an any_status absence trap).
+10. **Internal-pointer items** — JPM 2024 Items 7/8 are ~400-char pointers to
+    pages of the *same* document; the real MD&A/financials sit unlabeled
+    later. Labeled span = `extracted`, gap validators flag the unlabeled
+    region (ADR-004 has the status ruling; IBR is external-document only).
 
 ## Fixture provenance
 

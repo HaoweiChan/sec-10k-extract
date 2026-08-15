@@ -7,8 +7,8 @@ predict behavior and challenge it. Where this doc and reality diverge,
 spec-drift flags it and this doc gets fixed.
 
 Design posture: deterministic code first, LLM last (`cost-discipline` skill);
-all-stdlib at B (ADR-003); simplest strategy that survives the seven known
-traps in `sec10k-domain`. Numeric thresholds below are **PROVISIONAL** — set
+all-stdlib at B (ADR-003); simplest strategy that survives the known traps
+catalogued in `sec10k-domain` (ten and counting). Numeric thresholds below are **PROVISIONAL** — set
 empirically at T4/T5 against eval outcomes and recorded in an ADR.
 
 Planned layout: `src/sec10k/extract.py` (orchestration + assembly),
@@ -73,12 +73,15 @@ accepted/rejected per code with reason. Eval: `no_overlap_ordered` (INV-S1),
 boundary anchors.
 
 **7. Status classification** — a status for every item in the era's expected
-set. No accepted heading → `missing`; heading with a short body (stub
-threshold provisional) → keyword scan: "incorporated by reference" →
-`incorporated_by_reference`; "not applicable"/"none"/"[reserved]" → `omitted`;
-otherwise stays `extracted` at low confidence. Failure modes: IBR paragraph
-longer than the stub threshold, keyword false hits. Trace: classification +
-matched keyword. Eval: status-asserting checks (INV-S4).
+set, per ADR-004/ADR-005: heading present → `extracted`, however trivial the
+body ("[Reserved]", "None." — triviality is flagged by length and validators,
+not status); heading present with a short pointer-only body naming a
+*different document* (keyword scan, stub threshold provisional) →
+`incorporated_by_reference`; heading absent where era/filer rules permit the
+absence (optional Item 16, SRC 7A relief) → `omitted`; heading absent where
+the era expects it → `missing`. Failure modes: IBR paragraph longer than the
+stub threshold, keyword false hits, era-relief rules misjudged. Trace:
+classification + matched keyword. Eval: status-asserting checks (INV-S4).
 
 **8. Structural validation** — the false-success net: a battery of
 **label-free** validators modeled on how a human sanity-checks an extraction.
@@ -130,8 +133,8 @@ Eval: feeds `doc_status`/warning cases.
 **9. Confidence scoring** — see below.
 
 **10. Fallback (A-level, design deferred)** — no concrete design until T8
-residual-failure data exists; ADR-004 will choose then, sized to what actually
-fails. Candidate noted for the record only: an LLM returning **verbatim anchor
+residual-failure data exists; a dedicated ADR will choose then, sized to what
+actually fails. Candidate noted for the record only: an LLM returning **verbatim anchor
 quotes** that we re-locate to offsets (preserves INV-S2 by construction —
 invented quotes fail relocation and become explicit failures), cached by
 content-hash + prompt-version, budget-capped, `full` suite only.

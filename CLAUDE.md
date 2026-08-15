@@ -25,6 +25,7 @@ docs/              durable design docs (product, evals, architecture) — descri
 specs/             ONLY: 000-invariants.md, per-task contracts, decisions/ADR-*.md
 evals/golden/      hand-labeled cases (JSON, one per case)
 evals/adversarial/ cases known or designed to break the pipeline
+evals/fixtures/    committed EDGAR filings, provenance in its README
 evals/report/      every run's output, committed to git
 prompts/           AI-collaboration record (auto-dumped raw/ + curated files)
 src/<task>/        implementation + eval_adapter.py per task
@@ -36,6 +37,7 @@ src/<task>/        implementation + eval_adapter.py per task
 python3 -m evals.run --suite fast              # quick gate suite
 python3 -m evals.run --suite invariant         # must-always-hold assertions
 python3 -m evals.run --suite all               # everything, writes report
+python3 -m evals.run --suite fast --dir evals/heldout  # held-out run (T8+; always writes report)
 python3 -m evals.run --suite fast --update-baseline   # deliberate baseline move
 ```
 
