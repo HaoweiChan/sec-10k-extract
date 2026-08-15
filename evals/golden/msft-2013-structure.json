@@ -1,0 +1,32 @@
+{
+  "id": "msft-2013-structure",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {"path": "evals/fixtures/msft-2013/filing.htm"},
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "known_items_only"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "item_present", "item": "1", "status": "extracted"},
+      {"type": "item_present", "item": "1A", "status": "extracted"},
+      {"type": "item_present", "item": "6", "status": "extracted"},
+      {"type": "item_present", "item": "7", "status": "extracted"},
+      {"type": "item_present", "item": "7A", "status": "extracted"},
+      {"type": "item_present", "item": "8", "status": "extracted"},
+      {"type": "item_present", "item": "9B", "status": "extracted"},
+      {"type": "item_present", "item": "10", "status": "extracted"},
+      {"type": "item_present", "item": "11", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "12", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "13", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "14", "status": "incorporated_by_reference"},
+      {"type": "item_absent", "item": "1C", "any_status": true},
+      {"type": "item_absent", "item": "9C", "any_status": true},
+      {"type": "item_absent", "item": "16", "any_status": true},
+      {"type": "expected_set_complete", "items": ["1","1A","1B","2","3","4","5","6","7","7A","8","9","9A","9B","10","11","12","13","14","15"]},
+      {"type": "only_items", "items": ["1","1A","1B","2","3","4","5","6","7","7A","8","9","9A","9B","10","11","12","13","14","15"]}
+    ]
+  },
+  "provenance": "Microsoft Corporation FY2013 10-K (fiscal year ended June 30, 2013), EDGAR accession 0001193125-13-310206, filed 2013-07-30, primary document d527745d10k.htm (legacy pre-iXBRL HTML era, 2001-2019 format bucket; mid-era pick per the eval design doc's 'a mid-era HTML filing ~2005-2015' slot). Format-era trap found and worth flagging loudly: the raw HTML contains LITERAL embedded newlines inside running prose (e.g. 'Microsoft was\\nfounded in 1975.' is a single sentence broken mid-word-boundary by a hard newline byte in the source, not by any tag) -- a plain 'strip tags, keep whitespace as-is' normalizer would fragment sentences; a correct one must collapse ALL raw whitespace (including embedded literal newlines) to single spaces BEFORE re-inserting paragraph breaks at block-tag boundaries. All analysis below re-derives text with that whitespace-collapse-first approach; a first attempt without it produced completely wrong paragraph counts and false anchor misses. Heading-format trap: this filing's Table of Contents renders items in title case with a period ('Item 1A.\\nRisk Factors'), while the running page-header text repeats the bare code with NO period dozens of times per item (e.g. 'Item 8' appears 41 times as a page header across Item 8's ~41 printed pages -- this correlates almost exactly with page count, confirming it is page furniture, not real headings), and the ACTUAL section heading is a THIRD distinct form: ALL CAPS WITH A PERIOD ('ITEM 1. BUSINESS', 'ITEM 7A. QUANTITATIVE AND QUALITATIVE DISCLOSURES ABOUT MARKET RISK'). A regex tuned only to the TOC's title-case form (as used for AAPL) finds nothing in this filing's body; a regex tuned only to the page-header form would fire dozens of times per item and misidentify furniture as headings. Body headings were located via ALL-CAPS 'ITEM\\\\s*N\\\\.\\\\s*<CANONICAL TITLE WORDS>' patterns, each of which matched EXACTLY ONCE for every one of the 20 items below -- verified by full-document scan, positions recorded in scratch analysis, re-checked 2026-08-15. Full expected set for this era (2005+ risk-factors-mandatory, pre-2016 no Item 16, pre-2023 no Item 1C/9C, no Item 6 [Reserved] wording -- Selected Financial Data still required pre-2021): items 1,1A,1B,2,3,4,5,6,7,7A,8,9,9A,9B,10,11,12,13,14,15 (20 items) -- confirmed as the complete and only set of ALL-CAPS canonical headings found; asserted via expected_set_complete/only_items. Status verification (raw body text read at each item's span): Item 6 is a full 'FINANCIAL HIGHLIGHTS' data table (5-year selected financials) -- extracted. Item 9B reads only 'Not applicable.' -- extracted (trivial but genuinely present, same reasoning as AAPL's Item 6 [Reserved] and GE's Item 9 'Not applicable.'). Item 10 has substantial inline content (code-of-ethics policy description, a pointer to Item 1 for the executive-officer bios) plus an incorporation-by-reference sentence for director/audit-committee detail -- classified 'extracted' since it is not a single bare pointer paragraph (same reasoning applied to GE 1994's Item 10). Items 11, 12, 13, and 14 are each exactly one paragraph reading only 'The information in the Proxy Statement set forth under the caption(s) ... is incorporated herein by reference' with no other content -- classified 'incorporated_by_reference'. Not independently re-verified by extraction-auditor as of this authoring pass -- flagged for dual-pass."
+}

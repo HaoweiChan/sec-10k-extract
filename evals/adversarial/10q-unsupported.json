@@ -1,0 +1,12 @@
+{
+  "id": "10q-unsupported",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {"path": "evals/fixtures/aapl-2026-10q/filing.htm"},
+  "expect": {
+    "checks": [
+      {"type": "doc_status", "value": "unsupported"}
+    ]
+  },
+  "provenance": "Apple Inc. Form 10-Q (quarterly report, fiscal Q3), EDGAR accession 0000320193-26-000020, filed 2026-07-31, primary document aapl-20260627.htm (iXBRL, 996KB). Confirmed a genuine 10-Q via EDGAR's submissions JSON (form='10-Q') and via the fixture's own iXBRL header tag dei:DocumentFiscalPeriodFocus='Q3' (a 10-K would be 'FY'). This case encodes a deliberate design decision, not a bug to fix: per specs/001-sec10k-contract.md's envelope rules, 'unsupported'/'failed' mean the pipeline REFUSED -- it must never emit a best-effort items parse of a document it could not identify as a 10-K. Feeding it a same-filer, same-format (iXBRL), structurally similar but wrong-form-type document is the natural adversarial probe for that rule: a pipeline that only checks 'does this look like a 10-K item-heading structure' without checking the actual form type could easily emit a plausible-looking (and wrong) partial items parse here, since 10-Qs share the same Part I/Part II numbering convention and many similarly-named items (e.g. Item 1A Risk Factors also exists in 10-Qs). The single check asserts doc_status=='unsupported' and nothing else -- no items assertions at all, since the correct behavior is to refuse before producing any items. Refusal-is-correct: a wrong-form 10-Q silently parsed as if it were a 10-K would misrepresent quarterly data as annual, and any downstream consumer relying on doc_status to gate trust would be misled. Dual-passed by extraction-auditor 2026-08-15 (docs/evals/audits/) -- the fixture's dei:DocumentFiscalPeriodFocus='Q3' tag confirmed."
+}

@@ -1,0 +1,22 @@
+{
+  "id": "cat-2023-shallow",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {"path": "evals/fixtures/cat-2023/filing.htm"},
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "doc_status", "in": ["success", "success_with_warning"]},
+      {"type": "item_present", "item": "1C", "status": "extracted"},
+      {"type": "item_present", "item": "6", "status": "extracted"},
+      {"type": "item_present", "item": "9C", "status": "extracted"},
+      {"type": "item_present", "item": "16", "status": "extracted"},
+      {"type": "item_absent", "item": "1D", "any_status": true},
+      {"type": "expected_set_complete", "items": ["1","1A","1B","1C","2","3","4","5","6","7","7A","8","9","9A","9B","9C","10","11","12","13","14","15","16"]},
+      {"type": "only_items", "items": ["1","1A","1B","1C","2","3","4","5","6","7","7A","8","9","9A","9B","9C","10","11","12","13","14","15","16"]}
+    ]
+  },
+  "provenance": "Caterpillar Inc. FY2023 10-K, EDGAR accession 0000018230-24-000009, filed 2024-02-16, primary document cat-20231231.htm (iXBRL, 5.4MB). Shallow-tier 'one more industrial of a modern era' stratum, also chosen deliberately for a genuine known_items_only trap found while surveying candidate filers: this filing contains a non-canonical 'Item 1D' heading -- 'Item 1D. Information about our Executive Officers' in the TOC and 'Item 1D. Executive Officers of the Registrant. Name and age Present Ca...' in the body, formatted identically to every real item heading (found exactly twice, same as the 23 genuine items) -- verified 2026-08-15 via a flattened tag-strip scan. '1D' is NOT in the canonical item registry (src/sec10k/eval_adapter.py CANONICAL dict only defines 1, 1A, 1B, 1C, 2...; the sec10k-domain skill's taxonomy table has no 1D either) -- most filers present this same Item-401(b) executive-officer content as an unlabeled sub-section of Item 1 or under Item 10 (see JPM 2024, GE 1994) rather than inventing a new item letter. This case therefore asserts item_absent('1D', any_status=true) as a direct, concrete known_items_only stress test: a naive 'Item \\\\d+[A-Z]?' heading regex with no canonical-code filter will happily match 'Item 1D' and hallucinate it as a real item, which this check (and only_items, whose list deliberately excludes '1D') will catch. The other 23 canonical items (2023+-era full set, same as AAPL 2025 and NVDA 2024) were all confirmed present -- Item 1C (Cybersecurity) has substantial content -- extracted; Item 6 is literally '[Reserved]' -- extracted; Item 9C reads 'Not applicable' plus surrounding context -- extracted (not independently full-text-verified beyond the heading scan at this shallow-tier depth). ITEM 16 CHECK (ADR-005 sweep, audit follow-up 2026-08-15): unlike JPM/Sandston/Premier-Pacific, Caterpillar's Item 16 heading IS present ('Item 16. Form 10-K Summary. None. 127', confirmed in the original heading scan) -- 16 was already correctly included in expected_set_complete/only_items (23 items), no fix needed there. Per ADR-005 rule 1 (heading present -> extracted, however trivial) an explicit item_present(16, status=extracted) pin is added for consistency with NVDA 2024's identical 'None.'/'Not Applicable.' Item 16 treatment -- ADR-005 marks this optional at shallow tier, added anyway since it is a one-line, already-verified addition. No boundary anchors, no length bands, per the shallow-tier SOP. Dual-passed by extraction-auditor 2026-08-15 (docs/evals/audits/) for the expected set, the Item 1D known_items_only trap, and the other item statuses; the new Item 16 pin is not yet re-audited."
+}

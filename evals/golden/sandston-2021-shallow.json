@@ -1,0 +1,21 @@
+{
+  "id": "sandston-2021-shallow",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {"path": "evals/fixtures/sandston-2021/filing.htm"},
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "doc_status", "in": ["success", "success_with_warning"]},
+      {"type": "item_present", "item": "1", "status": "extracted"},
+      {"type": "item_present", "item": "2", "status": "extracted"},
+      {"type": "item_present", "item": "9A", "status": "extracted"},
+      {"type": "item_present", "item": "16", "status": "omitted"},
+      {"type": "expected_set_complete", "items": ["1","1A","1B","2","3","4","5","6","7","7A","8","9","9A","9B","10","11","12","13","14","15","16"]},
+      {"type": "only_items", "items": ["1","1A","1B","2","3","4","5","6","7","7A","8","9","9A","9B","10","11","12","13","14","15","16"]}
+    ]
+  },
+  "provenance": "Sandston Corporation (ticker SDON) FY2021 10-K, EDGAR accession 0001410578-22-000504, filed 2022-03-25, primary document sdon-20211231x10k.htm (iXBRL, 784KB). Shallow-tier shell-company/tiny-filer stratum: 'The Company does not own or lease any property' (Item 2), no operations of substance -- a genuine tiny shell registrant, not a synthetic example. Item headings verified 2026-08-15 via a flattened tag-strip regex scan: all 20 items of the 2010s-era set present exactly twice (TOC + body) except Item 1A at 3x (an extra cross-reference elsewhere in the text, not re-investigated at shallow-tier depth); no 1C/9C (consistent with a filing from just before those additions); no Item 16 heading anywhere in the document (re-confirmed this pass, zero regex hits). ITEM 16 STATUS FIX (ADR-005 enforcement, audit follow-up 2026-08-15): this filing (FY2021, filed 2022-03-25) postdates Item 16's June 2016 optional-summary adoption, so per specs/decisions/ADR-005-trivial-body-status.md rule 2 ('heading absent, era/filer rules permit the absence -> omitted'), Item 16 is era-valid-but-absent, not era-invalid -- it belongs in the expected set with status 'omitted', not excluded from it. Previously this case simply left 16 out of expected_set_complete/only_items with no assertion at all, which is the INV-S4 gap ADR-005 exists to close (silence is not an allowed way to report absence). Fixed: item_present(16, status=omitted) added, 16 added to both lists (21 items total). Quirk worth noting for the auditor: the raw heading text for Item 9A literally reads 'Item 9A(T). Controls and Procedures' (a leftover '(T)' suffix from the Dodd-Frank-era temporary internal-control-attestation exemption template, unusual for a 2021 filing but present in the raw fixture) -- the canonical item code asserted here is '9A' per the eval_adapter registry; heading_text is expected to preserve the literal '(T)' form. Item 6 ('Selected Financial Data') and Item 7A both read 'Not applicable because the Company is a smaller reporting company ...' rather than being silently omitted -- both asserted status 'extracted' elsewhere would be consistent but not included here (shallow tier keeps checks minimal by design); Item 1 (a short corporate-history paragraph) and Item 2 (Properties, one sentence) and Item 9A are spot-checked as 'extracted' as the two-or-three obvious presence assertions this tier calls for. No boundary anchors, no length bands -- per the shallow-tier SOP, the structural invariants (no_overlap_ordered, verbatim, no_empty_success, known-items enforcement via only_items) carry the correctness signal here. Dual-passed by extraction-auditor 2026-08-15 (docs/evals/audits/)."
+}

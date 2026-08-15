@@ -1,0 +1,22 @@
+{
+  "id": "nike-2006-shallow",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {"path": "evals/fixtures/nike-2006/filing.htm"},
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "doc_status", "in": ["success", "success_with_warning"]},
+      {"type": "item_present", "item": "1A", "status": "extracted"},
+      {"type": "item_present", "item": "6", "status": "extracted"},
+      {"type": "item_present", "item": "9A", "status": "extracted"},
+      {"type": "item_absent", "item": "1C", "any_status": true},
+      {"type": "item_absent", "item": "16", "any_status": true},
+      {"type": "expected_set_complete", "items": ["1","1A","1B","2","3","4","5","6","7","7A","8","9","9A","9B","10","11","12","13","14","15"]},
+      {"type": "only_items", "items": ["1","1A","1B","2","3","4","5","6","7","7A","8","9","9A","9B","10","11","12","13","14","15"]}
+    ]
+  },
+  "provenance": "NIKE, Inc. FY2006 10-K (fiscal year ended May 31, 2006), EDGAR accession 0001193125-06-156152, filed 2006-07-28, primary document d10k.htm (HTML, 1.1MB). Shallow-tier mid-2000s-HTML stratum, chosen distinct from the deep-tier MSFT 2013 pick to diversify the mid-era HTML sample by three fiscal years and a different filer/industry (apparel vs. software). Item headings verified 2026-08-15 via a flattened tag-strip scan: all 20 items of the 2005+-era set (1A mandatory, pre-2016 no Item 16, pre-2023 no 1C/9C) found, each exactly twice (TOC + body) except Item 6 and Item 9A which appear at only 2 raw positions each too (TOC then body, standard pattern) -- confirmed no 1C/9C/16. Item 1A (Risk Factors) and Item 9A (Controls and Procedures) both have substantial inline content -- extracted. Item 6 is a full 5-year Selected Financial Data table -- extracted. Item 10 is a mixed case worth flagging but not spot-checked here: 'The information required by Item 401 of Regulation S-K regarding directors ... is incorporated herein by reference [to the Proxy Statement]. The information required ... regarding executive officers is included under \"Executive Officers of the Registrant\" in Item 1 of this Report' -- an external-IBR sentence plus an internal cross-reference to Item 1, the same ambiguous shape flagged as a judgment call in the JPM 2024 and Textron 2001 deep-tier cases; left unpinned here deliberately rather than guessing at shallow-tier depth. The fixture also contains 'Item 405 of Regulation S-K' and 'Item 601 of Regulation SK' as prose (same known_items_only trap as every pre-2010ish fixture in this eval set), covered structurally by only_items. No boundary anchors, no length bands, per the shallow-tier SOP. Dual-passed by extraction-auditor 2026-08-15 (docs/evals/audits/)."
+}

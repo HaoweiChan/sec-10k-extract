@@ -9,13 +9,23 @@
       {"type": "known_items_only"},
       {"type": "no_overlap_ordered"},
       {"type": "verbatim"},
+      {"type": "deterministic"},
       {"type": "item_present", "item": "1"},
       {"type": "item_present", "item": "1A"},
       {"type": "item_present", "item": "1C"},
+      {"type": "item_present", "item": "6", "status": "extracted"},
       {"type": "item_present", "item": "7"},
+      {"type": "item_present", "item": "7A"},
       {"type": "item_present", "item": "8"},
-      {"type": "item_present", "item": "15"}
+      {"type": "item_present", "item": "10", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "11", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "12", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "13", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "14", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "15"},
+      {"type": "expected_set_complete", "items": ["1","1A","1B","1C","2","3","4","5","6","7","7A","8","9","9A","9B","9C","10","11","12","13","14","15","16"]},
+      {"type": "only_items", "items": ["1","1A","1B","1C","2","3","4","5","6","7","7A","8","9","9A","9B","9C","10","11","12","13","14","15","16"]}
     ]
   },
-  "provenance": "AAPL FY2025 10-K (iXBRL), EDGAR accession 0000320193-25-000079, filed 2025-10-31. Structural checks only; enforces INV-0/S1/S2."
+  "provenance": "AAPL FY2025 10-K (iXBRL), EDGAR accession 0000320193-25-000079, filed 2025-10-31. Structural checks only; enforces INV-0/S1/S2/S3/S4. Verified from the fixture 2026-08-15 (paragraph-preserving tag-strip; item body-heading positions used to locate each item, second/body occurrence distinguished from the TOC occurrence by index): Item 6 heading body text is literally 'Item 6. [Reserved]' with no further content (~19 chars) -- asserted status 'extracted' since the heading and its (trivial, mandated) content both genuinely appear in the document; there is no 'reserved' status in the v2 contract, and 'omitted' would misrepresent that the filer did include the heading. Items 10-14 (Part III) each read only 'The information required by this Item will be included in the Company's definitive proxy statement to be filed with the SEC within 120 days after September 27, 2025 ... and is incorporated herein by reference' (verified individually for 10/11/12/13/14, all textually near-identical apart from the item-specific topic clause) -- asserted status 'incorporated_by_reference' for all five; none of them carry any additional inline content (e.g. no separate Executive-Officers block folded into Item 10, unlike some filers). Item 7A is present with substantive market-risk content (not omitted) -- AAPL is a large accelerated filer, so no smaller-reporting-company 7A exemption applies. Item 16 ('Form 10-K Summary') IS present in this filing -- body text is 'Item 16. Form 10-K Summary\\nNone.' -- so the full expected set for this 2023+-era filing is all 23 canonical items (1,1A,1B,1C,2,3,4,5,6,7,7A,8,9,9A,9B,9C,10-15,16); expected_set_complete and only_items both assert this exact 23-item list, which also means the pipeline must NOT report Item 16 as absent/missing just because 16 is nominally optional post-2016. known_items_only + only_items together enforce INV-S3 (the 'Item 601 of Regulation S-K' and 'Item 601(b)(4)(iii)' prose references inside the exhibit index, and the 'Item 405 of Regulation S-K' pattern from the domain skill's known-traps list, must never surface as items '601' or '405'). The 'deterministic' check reflects that AAPL's iXBRL headings are extremely regular (every item heading matches a canonical 'Item N.' pattern exactly twice -- TOC then body -- with no ambiguous or missing headings), so a correct extractor should resolve every item via heading_strict/heading_lenient/status_keyword without falling back to the LLM path; if this ever fails it is a strong signal the deterministic splitter regressed on the easiest fixture in the set. Dual-passed by extraction-auditor 2026-08-15 (docs/evals/audits/)."
 }
