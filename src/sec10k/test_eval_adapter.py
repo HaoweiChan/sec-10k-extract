@@ -1,0 +1,159 @@
+"""Self-check for the eval check vocabulary itself — NOT an eval run.
+
+Feeds hand-built synthetic result dicts through eval_check() and asserts
+pass/fail outcomes. Never imports or calls extract_items, never fabricates
+an eval report (repo hard rule 4: no mocked results). `deterministic` is
+skipped on purpose — it's the one check allowed to call extract_items, so it
+needs a real pipeline and a real fixture, neither of which belongs here.
+
+Run: python3 -m src.sec10k.test_eval_adapter
+ or: python3 src/sec10k/test_eval_adapter.py   (from repo root)
+"""
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.sec10k.eval_adapter import eval_check  # noqa: E402
+
+
+def item(code, status="extracted", start=0, end=0, confidence=0.9):
+    if status == "extracted":
+        return {"item": code, "status": status, "start": start, "end": end,
+                "confidence": confidence}
+    return {"item": code, "status": status, "start": None, "end": None,
+            "confidence": confidence}
+
+
+def test_doc_status():
+    r = {"normalized_text": "", "doc_status": "unsupported", "items": []}
+    assert eval_check(r, {"type": "doc_status", "value": "unsupported"}) is None
+    assert eval_check(r, {"type": "doc_status", "value": "success"}) is not None
+    assert eval_check(r, {"type": "doc_status", "in": ["success", "success_with_warning"]}) is not None
+
+    r2 = {"normalized_text": "", "doc_status": "success", "items": []}
+    assert eval_check(r2, {"type": "doc_status", "in": ["success", "success_with_warning"]}) is None
+
+    r3 = {"normalized_text": "", "items": []}  # no doc_status key at all
+    reason = eval_check(r3, {"type": "doc_status", "value": "success"})
+    assert reason == "doc_status missing (contract v2)", reason
+
+
+def test_max_chars():
+    r = {"normalized_text": "x" * 100, "items": [item("1", "extracted", 0, 50)]}
+    assert eval_check(r, {"type": "max_chars", "item": "1", "value": 60}) is None
+    assert eval_check(r, {"type": "max_chars", "item": "1", "value": 10}) is not None
+    assert eval_check(r, {"type": "max_chars", "item": "2", "value": 10}) == "item not in output"
+
+    r2 = {"normalized_text": "", "items": [item("1", "missing")]}
+    assert eval_check(r2, {"type": "max_chars", "item": "1", "value": 10}) == "item not extracted"
+
+
+def test_text_checks_non_extracted():
+    # historical trap: normalized_text[None:None] == the whole document, which
+    # could false-pass text_contains (doc happens to contain the value anywhere)
+    # or false-fail text_not_contains (doc happens to contain the forbidden value
+    # somewhere outside the missing item). Neither must happen.
+    doc = "the forbidden phrase sits far away from item 1"
+    r = {"normalized_text": doc, "items": [item("1", "missing")]}
+
+    reason = eval_check(r, {"type": "text_contains", "item": "1", "value": "forbidden phrase"})
+    assert reason == "item not extracted", reason
+
+    # value present elsewhere in the whole doc, but item 1 was never extracted —
+    # must still fail, not false-pass via the whole-doc slice
+    reason = eval_check(r, {"type": "text_contains", "item": "1", "value": "far away"})
+    assert reason == "item not extracted", reason
+
+    # text_not_contains: nothing was extracted, so nothing can contain the
+    # forbidden text — vacuous pass, even though the phrase IS in the full doc
+    reason = eval_check(r, {"type": "text_not_contains", "item": "1", "value": "forbidden phrase"})
+    assert reason is None, reason
+
+
+def test_min_chars_null_offsets():
+    # this is the historical TypeError trap: null start/end must not blow up
+    r = {"normalized_text": "", "items": [item("1", "missing")]}
+    assert eval_check(r, {"type": "min_chars", "item": "1", "value": 10}) == "item not extracted"
+
+    r2 = {"normalized_text": "x" * 20, "items": [item("1", "extracted", 0, 20)]}
+    assert eval_check(r2, {"type": "min_chars", "item": "1", "value": 10}) is None
+    assert eval_check(r2, {"type": "min_chars", "item": "1", "value": 30}) is not None
+
+    # item absent entirely still defaults to 0 chars (pre-existing behavior, not TypeError)
+    r3 = {"normalized_text": "", "items": []}
+    assert eval_check(r3, {"type": "min_chars", "item": "1", "value": 10}) is not None
+
+
+def test_expected_set_complete():
+    r = {"normalized_text": "", "items": [item("1", "extracted", 0, 10), item("2", "missing")]}
+    assert eval_check(r, {"type": "expected_set_complete", "items": ["1", "2"]}) is None
+    reason = eval_check(r, {"type": "expected_set_complete", "items": ["1", "2", "3"]})
+    assert reason is not None and "3" in reason, reason
+
+
+def test_only_items():
+    r = {"normalized_text": "", "items": [item("1", "extracted", 0, 10)]}
+    assert eval_check(r, {"type": "only_items", "items": ["1", "2"]}) is None
+
+    r2 = {"normalized_text": "", "items": [item("1", "extracted", 0, 10),
+                                            item("99", "extracted", 10, 20)]}
+    reason = eval_check(r2, {"type": "only_items", "items": ["1"]})
+    assert reason is not None and "99" in reason, reason
+
+
+def test_item_absent_any_status():
+    r = {"normalized_text": "", "items": [item("1A", "missing")]}
+    # default (any_status unset): only fails when extracted, so "missing" passes
+    assert eval_check(r, {"type": "item_absent", "item": "1A"}) is None
+    # any_status: fails on presence with ANY status, including "missing"
+    assert eval_check(r, {"type": "item_absent", "item": "1A", "any_status": True}) is not None
+
+    r2 = {"normalized_text": "", "items": []}
+    assert eval_check(r2, {"type": "item_absent", "item": "1A", "any_status": True}) is None
+
+
+def test_no_empty_success():
+    for honest in ("failed", "unsupported", "ambiguous"):
+        r = {"normalized_text": "", "doc_status": honest, "items": []}
+        assert eval_check(r, {"type": "no_empty_success"}) is None, honest
+
+    r = {"normalized_text": "", "doc_status": "success", "items": []}
+    assert eval_check(r, {"type": "no_empty_success"}) is not None
+
+    # the old hole: one 100-char extracted item among a sea of empties used to pass
+    r = {"normalized_text": "x" * 100, "doc_status": "success",
+         "items": [item("1", "extracted", 0, 100), item("2", "missing"), item("3", "missing")]}
+    assert eval_check(r, {"type": "no_empty_success"}) is not None
+
+    r = {"normalized_text": "x" * 2000, "doc_status": "success",
+         "items": [item("1", "extracted", 0, 1200)]}
+    assert eval_check(r, {"type": "no_empty_success"}) is None
+
+    r = {"normalized_text": "", "items": []}  # doc_status missing entirely
+    assert eval_check(r, {"type": "no_empty_success"}) is not None
+
+
+TESTS = [
+    test_doc_status,
+    test_max_chars,
+    test_text_checks_non_extracted,
+    test_min_chars_null_offsets,
+    test_expected_set_complete,
+    test_only_items,
+    test_item_absent_any_status,
+    test_no_empty_success,
+]
+
+
+def main():
+    for t in TESTS:
+        t()
+        print(f"[PASS] {t.__name__}")
+    print(f"[eval_adapter self-check] {len(TESTS)}/{len(TESTS)} passed")
+
+
+if __name__ == "__main__":
+    main()

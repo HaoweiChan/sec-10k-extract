@@ -19,65 +19,133 @@ CANONICAL = {
     "15": "IV", "16": "IV",
 }
 STATUSES = {"extracted", "missing", "incorporated_by_reference", "omitted"}
+NO_EMPTY_SUCCESS_FLOOR = 1000  # provisional floor — narrows (not closes) the one-good-item hole
+# fields that determinism actually governs — timings/cost/trace/meta legitimately vary
+# run to run (wall-clock, run-local trace ids) on an honest, correct pipeline
+DETERMINISM_FIELDS = ("normalized_text", "items", "doc_status", "warnings")
 
 
 def item_text(result, entry):
     return result["normalized_text"][entry["start"]:entry["end"]]
 
 
+def eval_check(result, chk, path=None):
+    """Judge a single check against a result dict.
+
+    Returns None on pass, else a failure reason string. Pure and synthetic-
+    testable (no I/O) except `deterministic`, the only check allowed to call
+    extract_items — it needs `path` to re-run the pipeline.
+    """
+    t = chk["type"]
+    by_code = {i["item"]: i for i in result["items"]}
+    entry = by_code.get(chk.get("item"))
+    extracted = [i for i in result["items"] if i["status"] == "extracted"]
+
+    if t == "item_present":
+        if entry is None or entry["status"] != chk.get("status", "extracted"):
+            return (f"item {chk['item']} not {chk.get('status', 'extracted')}: "
+                     f"{entry and entry['status']}")
+    elif t == "item_absent":
+        if chk.get("any_status"):
+            if entry is not None:
+                return f"item {chk['item']} present ({entry['status']}) but must not exist here"
+        elif entry is not None and entry["status"] == "extracted":
+            return f"item {chk['item']} was extracted but must not exist here"
+    elif t == "text_contains":
+        if entry is None:
+            return f"item {chk['item']} missing text {chk['value']!r}"
+        if entry["status"] != "extracted":
+            return "item not extracted"
+        if chk["value"] not in item_text(result, entry):
+            return f"item {chk['item']} missing text {chk['value']!r}"
+    elif t == "text_not_contains":
+        # non-extracted (null offsets) has no text at all -> vacuously can't contain it
+        if entry is not None and entry["status"] == "extracted" \
+                and chk["value"] in item_text(result, entry):
+            return f"item {chk['item']} contains forbidden {chk['value']!r}"
+    elif t == "min_chars":
+        if entry is not None and entry["status"] != "extracted":
+            return "item not extracted"
+        n = (entry["end"] - entry["start"]) if entry else 0
+        if n < chk["value"]:
+            return f"item {chk['item']} has {n} chars < {chk['value']}"
+    elif t == "max_chars":
+        if entry is None:
+            return "item not in output"
+        if entry["status"] != "extracted":
+            return "item not extracted"
+        n = entry["end"] - entry["start"]
+        if n > chk["value"]:
+            return f"item {chk['item']} has {n} chars > {chk['value']}"
+    elif t == "known_items_only":
+        bad = [i["item"] for i in result["items"] if i["item"] not in CANONICAL]
+        bad += [i["item"] for i in result["items"] if i["status"] not in STATUSES]
+        if bad:
+            return f"non-canonical items or statuses: {bad}"
+    elif t == "only_items":
+        # era-validity: stronger than known_items_only, whitelist is case-declared
+        bad = [i["item"] for i in result["items"] if i["item"] not in chk["items"]]
+        if bad:
+            return f"items outside allowed set {chk['items']}: {bad}"
+    elif t == "expected_set_complete":
+        missing = [c for c in chk["items"]
+                   if c not in by_code or by_code[c]["status"] not in STATUSES]
+        if missing:
+            return f"expected items missing or unstatused: {missing}"
+    elif t == "no_overlap_ordered":
+        spans = [(i["start"], i["end"], i["item"]) for i in extracted]
+        for (s1, e1, a), (s2, e2, b) in zip(spans, spans[1:]):
+            if s2 < e1:
+                return f"items {a} and {b} overlap or are out of order"
+    elif t == "verbatim":
+        n = len(result["normalized_text"])
+        for i in extracted:
+            if not (0 <= i["start"] < i["end"] <= n):
+                return f"item {i['item']} offsets outside normalized_text"
+    elif t == "doc_status":
+        if "doc_status" not in result:
+            return "doc_status missing (contract v2)"
+        ds = result["doc_status"]
+        if "value" in chk and ds != chk["value"]:
+            return f"doc_status {ds!r} != {chk['value']!r}"
+        if "in" in chk and ds not in chk["in"]:
+            return f"doc_status {ds!r} not in {chk['in']}"
+    elif t == "no_empty_success":
+        if "doc_status" not in result:
+            return "doc_status missing (contract v2)"
+        if result["doc_status"] in ("success", "success_with_warning"):
+            total = sum(i["end"] - i["start"] for i in extracted)
+            if not extracted or total < NO_EMPTY_SUCCESS_FLOOR:
+                return "pipeline returned success with (near-)empty output"
+    elif t == "deterministic":
+        from src.sec10k.extract import extract_items
+        r2 = extract_items(path)
+        if {k: result.get(k) for k in DETERMINISM_FIELDS} \
+                != {k: r2.get(k) for k in DETERMINISM_FIELDS}:
+            return "non-deterministic output"
+    else:
+        return f"unknown check type {t!r}"
+    return None
+
+
 def run_case(case):
     from src.sec10k.extract import extract_items
-    result = extract_items(str(ROOT / case["input"]["path"]))
-
-    by_code = {i["item"]: i for i in result["items"]}
+    path = str(ROOT / case["input"]["path"])
+    result = extract_items(path)
     extracted = [i for i in result["items"] if i["status"] == "extracted"]
+
     failures = []
-
-    def fail(chk, why):
-        failures.append({"check": chk, "why": why})
-
     for chk in case["expect"]["checks"]:
-        t = chk["type"]
-        entry = by_code.get(chk.get("item"))
-        if t == "item_present":
-            if entry is None or entry["status"] != chk.get("status", "extracted"):
-                fail(chk, f"item {chk['item']} not {chk.get('status', 'extracted')}: "
-                          f"{entry and entry['status']}")
-        elif t == "item_absent":
-            if entry is not None and entry["status"] == "extracted":
-                fail(chk, f"item {chk['item']} was extracted but must not exist here")
-        elif t == "text_contains":
-            if entry is None or chk["value"] not in item_text(result, entry):
-                fail(chk, f"item {chk['item']} missing text {chk['value']!r}")
-        elif t == "text_not_contains":
-            if entry is not None and chk["value"] in item_text(result, entry):
-                fail(chk, f"item {chk['item']} contains forbidden {chk['value']!r}")
-        elif t == "min_chars":
-            n = entry and (entry["end"] - entry["start"]) or 0
-            if n < chk["value"]:
-                fail(chk, f"item {chk['item']} has {n} chars < {chk['value']}")
-        elif t == "known_items_only":
-            bad = [i["item"] for i in result["items"] if i["item"] not in CANONICAL]
-            bad += [i["item"] for i in result["items"] if i["status"] not in STATUSES]
-            if bad:
-                fail(chk, f"non-canonical items or statuses: {bad}")
-        elif t == "no_overlap_ordered":
-            spans = [(i["start"], i["end"], i["item"]) for i in extracted]
-            for (s1, e1, a), (s2, e2, b) in zip(spans, spans[1:]):
-                if s2 < e1:
-                    fail(chk, f"items {a} and {b} overlap or are out of order")
-                    break
-        elif t == "verbatim":
-            n = len(result["normalized_text"])
-            for i in extracted:
-                if not (0 <= i["start"] < i["end"] <= n):
-                    fail(chk, f"item {i['item']} offsets outside normalized_text")
-                    break
-        elif t == "no_empty_success":
-            if not extracted or all(i["end"] - i["start"] < 100 for i in extracted):
-                fail(chk, "pipeline returned success with (near-)empty output")
-        else:
-            fail(chk, f"unknown check type {t!r}")
+        reason = eval_check(result, chk, path=path)
+        if reason:
+            failures.append({"check": chk, "why": reason})
+
+    items_summary = [{
+        "item": i["item"], "status": i["status"],
+        "confidence": i.get("confidence"), "method": i.get("method"),
+        "chars": (i["end"] - i["start"]) if i["status"] == "extracted" else None,
+    } for i in result["items"]]
 
     return {"passed": not failures, "failures": failures,
-            "n_items": len(result["items"]), "n_extracted": len(extracted)}
+            "n_items": len(result["items"]), "n_extracted": len(extracted),
+            "doc_status": result.get("doc_status"), "items_summary": items_summary}

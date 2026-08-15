@@ -21,6 +21,7 @@ report history. Adapters own: how to run a case and judge it.
 import argparse
 import importlib
 import json
+import subprocess
 import sys
 import time
 import traceback
@@ -32,16 +33,34 @@ BASELINE = ROOT / ".eval-baseline.json"
 REPORT_DIR = ROOT / "evals" / "report"
 
 
-def load_cases(suite):
+def load_cases(suite, dir_arg=None):
+    if dir_arg:
+        p = Path(dir_arg)
+        dirs = [p if p.is_absolute() else ROOT / p]
+    else:
+        dirs = CASE_DIRS
     cases = []
-    for d in CASE_DIRS:
-        for f in sorted(d.rglob("*.json")):
+    for d in dirs:
+        for f in sorted(d.glob("*.json")):  # non-recursive: no stray nested JSON joins a suite
             case = json.loads(f.read_text())
-            case["_file"] = str(f.relative_to(ROOT))
-            case["_kind"] = d.name  # golden | adversarial
+            try:
+                case["_file"] = str(f.relative_to(ROOT))
+            except ValueError:
+                case["_file"] = str(f)
+            case["_kind"] = d.name  # golden | adversarial | <--dir basename>
             if suite == "all" or suite in case.get("suites", ["fast"]):
                 cases.append(case)
     return cases
+
+
+def git_sha():
+    try:
+        return subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True,
+            text=True, timeout=5, check=True,
+        ).stdout.strip()
+    except Exception:  # git absent, not a repo, etc. — never crash the runner over this
+        return None
 
 
 def run_case(case):
@@ -64,10 +83,13 @@ def main():
     ap.add_argument("--baseline", default=str(BASELINE))
     ap.add_argument("--update-baseline", action="store_true")
     ap.add_argument("--no-report", action="store_true")
+    ap.add_argument("--dir", default=None,
+                     help="discover cases from only this directory (e.g. evals/heldout), "
+                          "instead of CASE_DIRS")
     args = ap.parse_args()
 
     sys.path.insert(0, str(ROOT))
-    cases = load_cases(args.suite)
+    cases = load_cases(args.suite, args.dir)
     if not cases:
         print(f"[eval] suite '{args.suite}': no cases yet — nothing to gate on. "
               "Add cases under evals/golden/ or evals/adversarial/.")
@@ -83,11 +105,16 @@ def main():
             print(f"       {r['error'].strip().splitlines()[-1]}")
     print(f"[eval] suite '{args.suite}': {passed}/{len(results)} = {score:.3f}")
 
-    if not args.no_report:
+    report = {"suite": args.suite, "score": score, "git_sha": git_sha(), "results": results}
+    write_report = not args.no_report
+    if args.no_report and args.dir:
+        # held-out/--dir runs must never be traceless (docs/evals/evaluation-strategy.md)
+        print("[eval] --no-report ignored for --dir runs: writing report anyway")
+        write_report = True
+    if write_report:
         REPORT_DIR.mkdir(parents=True, exist_ok=True)
         stamp = time.strftime("%Y%m%d-%H%M%S")
-        (REPORT_DIR / f"{stamp}-{args.suite}.json").write_text(json.dumps(
-            {"suite": args.suite, "score": score, "results": results}, indent=2))
+        (REPORT_DIR / f"{stamp}-{args.suite}.json").write_text(json.dumps(report, indent=2))
 
     baseline_path = Path(args.baseline)
     baseline = json.loads(baseline_path.read_text()) if baseline_path.exists() else {}
