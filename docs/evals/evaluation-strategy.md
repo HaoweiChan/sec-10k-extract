@@ -71,8 +71,10 @@ normalization-independent evidence:
    raw lengths.
 4. **Cross-item exclusions** — `text_not_contains` guarding known bleed
    directions.
-5. **Structural invariants** — free correctness signal on every filing,
-   annotated or not.
+5. **Structural invariants + the label-free validator battery** (architecture
+   layer 8: TOC manifest cross-check, gap analysis, fingerprints, dual-method
+   agreement) — free correctness signal on every filing, annotated or not,
+   including held-out filings no label ever touched.
 6. **Dual-pass review** — the extraction-auditor independently re-verifies a
    sample of anchors against the source before a golden case is trusted;
    recorded in `provenance`.

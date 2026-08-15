@@ -82,3 +82,15 @@ no eval runs could contradict anything. Recorded in the same format.)
   100-char item.
 - Corrected: all became named T2 scope in milestones.md — the eval expansion
   now starts from audited gaps, not assumptions.
+
+- Assumed: layer-8 validation limited to coverage ratio, length priors, and
+  sequence checks was sufficient self-verification.
+- Review said (Willy, post-planning): verify the way a human does — multiple
+  independent naive signals (word counts, paragraph shape, beginning/ending
+  words), so results are cross-checked several ways, not one.
+- Corrected: layer 8 became a label-free validator battery (TOC manifest
+  cross-check, gap analysis, boundary hygiene, part-region consistency,
+  rank-order length sanity, numeric density, keyword fingerprints,
+  dual-method boundary agreement) chosen for signal independence, running on
+  every filing including held-out ones; priors measured at T5, seeded from
+  stats recorded during T2 case authoring.

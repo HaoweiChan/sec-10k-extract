@@ -55,11 +55,13 @@ recall on golden cases.
 **5. TOC / false-candidate filter** — reject non-headings. (a) TOC cluster:
 many candidates tightly spaced near the document start form a cluster → drop it
 (cluster size / position / gap thresholds provisional, set in T4, recorded in
-trace and an ADR). (b) Prose references: mid-sentence position, "of
-Regulation" suffix, "see / in / under" prefix → reject. Failure modes: TOC not
-near the start, two TOCs, a genuine heading caught inside the cluster. Trace:
-**every rejection with its reason** — the core observability requirement.
-Eval: `min_chars` + `text_not_contains` (the TOC trap is `aapl-2025-content`).
+trace and an ADR). The dropped cluster is not discarded: it is **parsed as the
+filing's self-declared item manifest** and handed to layer 8 — the trap doubles
+as a checklist. (b) Prose references: mid-sentence position, "of Regulation"
+suffix, "see / in / under" prefix → reject. Failure modes: TOC not near the
+start, two TOCs, a genuine heading caught inside the cluster. Trace: **every
+rejection with its reason** — the core observability requirement. Eval:
+`min_chars` + `text_not_contains` (the TOC trap is `aapl-2025-content`).
 
 **6. Boundary resolution** — one span per item. Greedy ordered assignment over
 the era's expected sequence: walk expected order, accept the earliest surviving
@@ -78,11 +80,52 @@ otherwise stays `extracted` at low confidence. Failure modes: IBR paragraph
 longer than the stub threshold, keyword false hits. Trace: classification +
 matched keyword. Eval: status-asserting checks (INV-S4).
 
-**8. Structural validation** — the false-success net. Expected-set
-completeness, order/overlap re-check, coverage ratio (extracted-span sum ÷ body
-length), per-item/era length priors, sequence completeness. Failure modes:
-priors wrong for shell companies and financials. Trace: each check with
-pass/fail and measured values. Eval: feeds `doc_status` cases.
+**8. Structural validation** — the false-success net: a battery of
+**label-free** validators modeled on how a human sanity-checks an extraction.
+Because they need no annotations, they run on *every* filing — including
+held-out ones the eval set has never seen; this is where robustness beyond the
+labeled fixtures comes from. Core checks: expected-set completeness,
+order/overlap re-check, coverage ratio (extracted-span sum ÷ body length),
+sequence completeness. The battery (all thresholds/priors provisional —
+measured from eval-set distributions at T5, ADR-recorded):
+
+- **TOC manifest cross-check** — the parsed TOC cluster from layer 5 is the
+  filing's self-declared item manifest; compare it against the extracted set.
+  A mismatch is a strong, free warning.
+- **Gap analysis** — text between consecutive spans should be near-empty
+  (page furniture, PART markers). A large unassigned gap means missed content
+  and *localizes* it — the complement of the coverage ratio.
+- **Boundary hygiene** — each span starts exactly with its matched heading,
+  ends at sentence/paragraph punctuation (not mid-sentence), and the next
+  accepted heading sits immediately after its end.
+- **Part-region consistency** — PART markers must fall between the right items
+  (e.g. "PART II" between Items 4 and 5); each item inside its declared Part's
+  region.
+- **Rank-order length sanity** — relative, not absolute: Item 8 typically
+  longest, 1A ≫ 1B, 9B tiny. Rank checks survive where absolute bands break
+  (shell company vs mega-cap).
+- **Numeric density** — digit/`$`/`%` ratio per item: Item 8 extreme, 1A
+  near-zero. A cheap mislabel detector.
+- **Keyword fingerprints** — small per-item vocabulary priors ("risk" /
+  "adversely affect" density for 1A, "litigation" for 3, "internal control
+  over financial reporting" for 9A, "compensation" for 11) scoring whether a
+  span *reads like* its label; includes negative fingerprints (risk-language
+  density inside Item 1 = bleed, generalizing the single-phrase
+  `text_not_contains`).
+- **Dual-method boundary agreement** — boundaries derived independently from
+  headings (layer 6) and from TOC anchors are compared; agreement raises
+  confidence, disagreement → `ambiguous`. The strongest form of
+  multiple-ways-to-verify, nearly free once the TOC is parsed.
+
+Signals are chosen for independence — shape, content, structure, agreement —
+not volume (word count + paragraph count + char count is one signal three
+times). Policy per taxonomy F7: every validator is itself a false-positive
+source (financials, shells, smaller reporting companies all violate "typical"
+priors), so validators emit warnings and move confidence; only TOC-manifest
+mismatch, gap analysis, and dual-method disagreement may push `doc_status` to
+`ambiguous`, and none hard-fails a run alone. Failure modes: priors wrong for
+atypical filers. Trace: each validator with pass/fail and measured values.
+Eval: feeds `doc_status`/warning cases.
 
 **9. Confidence scoring** — see below.
 

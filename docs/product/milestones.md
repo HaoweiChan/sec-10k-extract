@@ -73,7 +73,9 @@ Evidence-deepening, not feature-adding:
     every anchor's occurrence count; status assertions for AAPL items 6 and
     10–14 ([Reserved] / incorporated-by-reference) and 7A checks; a
     determinism check backing INV-S2 (the current `verbatim` check is a
-    bounds check only).
+    bounds check only). While authoring, record each item's measured
+    length/shape/density stats in `provenance` — they seed the layer-8
+    validator priors set at T5.
   **Plus the early end-to-end deploy spike**: hello-world FastAPI wrapping the
   stub, live on Zeabur, one EDGAR fetch from it — de-risks deployment and
   EDGAR egress now, not at T7.
@@ -82,9 +84,14 @@ Evidence-deepening, not feature-adding:
 - **T4** — candidates + TOC filter + boundaries + status classification →
   `aapl-2025-*` and `ge-1994` green (the TOC trap dying is the single most
   important green in this repo). **Txt stop-loss decision point at T4 exit.**
-- **T5** — validation + confidence + v2 envelope (numeric values set here,
-  ADR-recorded) → `doc_status` cases green; then cold-reviewer run → findings
-  become adversarial cases → fix loop.
+- **T5** — validation + confidence + v2 envelope: the layer-8 **label-free
+  validator battery** (TOC manifest cross-check, gap analysis, boundary
+  hygiene, part-region consistency, rank-order length sanity, numeric
+  density, keyword fingerprints, dual-method boundary agreement — architecture
+  overview has the definitions and warn-don't-hard-fail policy), with priors
+  and thresholds measured from eval-set distributions, ADR-recorded — no
+  pre-data numbers. → `doc_status` cases green; then cold-reviewer run →
+  findings become adversarial cases → fix loop.
 - **T6** — remaining goldens green (mid-era HTML, large financial iXBRL).
 - **T7** — full frontend UI on the already-proven Zeabur deploy.
 - **T8** — held-out authoring (frozen) + `evals/metrics.py` + milestone run +

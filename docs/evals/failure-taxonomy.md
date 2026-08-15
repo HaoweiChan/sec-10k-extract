@@ -60,7 +60,8 @@ Modes: Item 8 / F-pages boundary (largest span, full of heading-like lines);
 across items; duplicate content; unexpected item ordering; overlapping spans.
 
 - Detection: sequence consistency vs the era's taxonomy order; overlap check;
-  per-item length priors.
+  per-item length priors; boundary hygiene and dual-method boundary agreement
+  (architecture layer 8).
 - Mitigation: boundary resolution + structural validation.
 - Eval: `no_overlap_ordered`, `min_chars`, `max_chars` (new, T2),
   end-of-item `text_contains` anchors, cross-item `text_not_contains`
@@ -100,8 +101,11 @@ headings; wrong file submitted (a 10-Q, a lone exhibit, a 20-F).
 Any failure above escaping detection while the output reports success. This is
 the #1 graded failure mode and the reason INV-0 exists.
 
-- Detection: structural-validation battery (coverage ratio, length priors,
-  sequence completeness) + the eval set + auditor sampling.
+- Detection: the structural-validation battery (coverage ratio, gap analysis,
+  TOC manifest cross-check, rank-order length sanity, numeric density, keyword
+  fingerprints, boundary hygiene, dual-method boundary agreement — all
+  label-free, so they run on held-out filings the eval set has never seen;
+  detail in architecture layer 8) + the eval set + auditor sampling.
 - Policy: validation failures always downgrade `doc_status` and emit warnings —
   the pipeline never silently recovers.
 
