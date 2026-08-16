@@ -51,9 +51,14 @@ curl -H "User-Agent: Haowei Chan hwchan42@gmail.com" <url> -o <dest>
 ## Disjointness from the dev set
 
 No filer appears in both sets. Sector coverage added here that `evals/fixtures/`
-does not have at all: beverage, brokerage, pharmaceutical, petroleum, retail
-warehouse. Fiscal-year ends added: November, January (52/53-week), August —
-every dev fixture ends in December, June, May or September.
+does not have at all: beverage, brokerage, computer-communications equipment,
+petroleum, retail warehouse. Fiscal-year ends added: November, July
+(52/53-week), August — every dev fixture ends in December, June, May or
+September.
+
+(Pharmaceutical and the January 52/53-week year end left this set with
+`jnj-2016` when H1 burned it; both now live in `evals/fixtures/`, so the
+coverage is not lost, it moved to the dev side.)
 
 ## Run history
 
