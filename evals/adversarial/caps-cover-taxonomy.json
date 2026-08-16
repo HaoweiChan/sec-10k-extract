@@ -1,0 +1,32 @@
+{
+  "id": "caps-cover-taxonomy",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/caps-cover-2016/filing.htm"},
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "deterministic"},
+      {"type": "doc_status", "in": ["success", "success_with_warning"]},
+      {"type": "item_present", "item": "1A", "status": "extracted"},
+      {"type": "item_present", "item": "7A", "status": "extracted"},
+      {"type": "item_present", "item": "9A", "status": "extracted"},
+      {"type": "item_present", "item": "9B", "status": "extracted"},
+      {"type": "item_present", "item": "15", "status": "extracted"},
+      {"type": "text_not_contains", "item": "1", "value": "ITEM 1A. RISK FACTORS."},
+      {"type": "max_chars", "item": "1", "value": 7600},
+      {"type": "text_not_contains", "item": "9", "value": "ITEM 9A(I). CONTROLS AND PROCEDURES"},
+      {"type": "max_chars", "item": "9", "value": 500},
+      {"type": "text_not_contains", "item": "14", "value": "ITEM 15. EXHIBITS, FINANCIAL STATEMENT SCHEDULES."},
+      {"type": "expected_set_complete", "items": ["1","1A","1B","2","3","4","5","6","7","7A","8","9","9A","9B","10","11","12","13","14","15","16"]},
+      {"type": "only_items", "items": ["1","1A","1B","2","3","4","5","6","7","7A","8","9","9A","9B","10","11","12","13","14","15","16"]}
+    ]
+  },
+  "triage": {
+    "class": "input-variant",
+    "note": "Found by the T3-T5 cold review (G1 ledger row), not by a failing run -- no committed fixture has an ALL-CAPS cover page, so the whole stratum was 0/14. The defect is a single missing inline flag: normalize.py COVER_DATE_RE carries (?i) and matches 'FOR THE FISCAL YEAR ENDED DECEMBER 31, 2016'; the DATE_RE it hands the captured string to does NOT, and its month pattern '[A-Z][a-z]{2,8}' requires exactly one leading capital, so 'DECEMBER' fails at every start position. _parse_date returns None, period_end returns None, and segment.expected_items' guard 'period_end and period_end >= ADDED[c]' is falsy for EVERY dated code, so the modern taxonomy silently collapses to the 14-code 1993 set. This also defeats the iXBRL path, not just legacy HTML: _parse_date reads the dei fact's own RENDERED text, which on an all-caps cover is equally uppercase, so only an EDGAR SGML header saves a filing -- and a primary .htm document never has one. Class is input-variant rather than parser-bug because the code is correct for every casing it was tested against; the eval set simply never contained the other casing."
+  },
+  "provenance": "SELF-CREATED adversarial fixture: a copy of evals/fixtures/premier-pacific-2016/filing.htm (Premier Pacific Construction, Inc. FY2016 10-K, EDGAR accession 0001127855-17-000104 -- see that fixture's README row for original public-source provenance), mutated 2026-08-16 by one documented, reproducible transformation. THE MUTATION: within the single <div> that contains the cover-page string 'For the fiscal year ended' (verified to occur exactly 1x in the raw file; the two other 'fiscal year ended' occurrences at raw offsets ~1098 and ~7069 are body prose and are NOT touched), two literal substrings were uppercased -- 'For the fiscal year ended' -> 'FOR THE FISCAL YEAR ENDED' and 'December 31, 2016' -> 'DECEMBER 31, 2016'. 27 bytes differ; file length is unchanged; no markup, no other text, and nothing outside that one div is altered. This is exactly what a filer's typesetting choice produces -- an all-caps cover block is common on EDGAR and carries no semantic difference whatsoever. MEASURED EFFECT (run 2026-08-16 against the T5 pipeline, before any fix): meta.period_end None (source: 2016-12-31), meta.taxonomy_era 'legacy' (source: 'modern'), 14 items instead of 21, and doc_status 'success_with_warning' with the single warning 'period_end_unknown'. The spans are wrong by exact arithmetic, which is what makes the max_chars bands here sharp rather than guessed: item 1 measures 7,767 chars = 7,496 (its true span) + 129 (all of Item 1A) + 142 (all of Item 1B); item 9 measures 7,454 = 102 + 7,166 (all of Item 9A) + 186 (all of Item 9B); item 14 measures 2,624 = 1,253 + 1,371 (all of Item 15). Items 1A, 1B, 7A, 9A, 9B, 15 and 16 are absent from the envelope entirely. On a filing with a real Risk Factors section rather than this shell company's 129-char stub, the same code path puts the entire 1A section inside Item 1 at confidence 0.95. WHY THESE CHECKS: the item_present rows for 1A/7A/9A/9B/15 fail directly under the collapse (the codes are not in the output at all, so item_present reports them absent). The text_not_contains rows are the boundary tripwires and each anchor was counted against the mutated fixture's normalized text: 'ITEM 1A. RISK FACTORS.' 1x, 'ITEM 9A(I). CONTROLS AND PROCEDURES' 1x, 'ITEM 15. EXHIBITS, FINANCIAL STATEMENT SCHEDULES.' 1x -- each occurs only as the real body heading it names, so containment inside a NEIGHBOURING item's span is unambiguous bleed and can have no other cause. max_chars(1, 7600) and max_chars(9, 500) pin the same two bleeds numerically as well as textually, sitting above the true lengths (7,496 and 102) and below the bled ones (7,767 and 7,454); note text_not_contains is vacuous whenever the item is not extracted (eval_adapter documents this), so the max_chars rows are what keep those two assertions load-bearing under a different failure mode. expected_set_complete and only_items assert the same 21-item FY2016 set as premier-pacific-2016-shallow -- uppercasing a cover date cannot change a filing's item inventory, and that is the whole point of the case. Tagged 'invariant' because a silent era misclassification produces confident, plausible, wrong spans across the entire document rather than a localised error, which is the failure class the invariant suite exists to make non-negotiable. NOT yet dual-passed by extraction-auditor: pending, per case-authoring step 8."
+}

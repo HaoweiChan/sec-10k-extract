@@ -21,7 +21,10 @@
       {"type": "item_present", "item": "11", "status": "extracted"},
       {"type": "item_present", "item": "13", "status": "extracted"},
       {"type": "item_present", "item": "16", "status": "omitted"},
-      {"type": "doc_status", "in": ["success_with_warning", "ambiguous"]},
+      {"type": "doc_status", "value": "ambiguous"},
+      {"type": "warning_present", "code": "last_item_dominates"},
+      {"type": "confidence", "item": "15", "value": 0.8},
+      {"type": "confidence", "item": "1A", "value": 0.95},
       {"type": "expected_set_complete", "items": ["1","1A","1B","1C","2","3","4","5","6","7","7A","8","9","9A","9B","9C","10","11","12","13","14","15","16"]},
       {"type": "only_items", "items": ["1","1A","1B","1C","2","3","4","5","6","7","7A","8","9","9A","9B","9C","10","11","12","13","14","15","16"]}
     ]

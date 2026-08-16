@@ -99,6 +99,22 @@ def eval_check(result, chk, path=None):
         hits = [w for w in result.get("warnings", []) if w.get("code") == chk["code"]]
         if hits:
             return f"unexpected warning {chk['code']!r}: {hits[0].get('message')}"
+    elif t == "confidence":
+        # the contract promises confidence is honest and that the eval set
+        # punishes overconfident wrongness. Until this check type existed no
+        # case read the field at all, so every constant in ADR-008's
+        # confidence table was free to change with the suite still green.
+        if entry is None:
+            return f"item {chk['item']} not in output"
+        c = entry.get("confidence")
+        if c is None:
+            return f"item {chk['item']} has no confidence"
+        if "value" in chk and c != chk["value"]:
+            return f"item {chk['item']} confidence {c} != {chk['value']}"
+        if "max" in chk and c > chk["max"]:
+            return f"item {chk['item']} confidence {c} > {chk['max']}"
+        if "min" in chk and c < chk["min"]:
+            return f"item {chk['item']} confidence {c} < {chk['min']}"
     elif t == "known_items_only":
         bad = [i["item"] for i in result["items"] if i["item"] not in CANONICAL]
         bad += [i["item"] for i in result["items"] if i["status"] not in STATUSES]

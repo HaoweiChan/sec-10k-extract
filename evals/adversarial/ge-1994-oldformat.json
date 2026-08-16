@@ -10,6 +10,8 @@
       {"type": "no_overlap_ordered"},
       {"type": "item_present", "item": "1"},
       {"type": "item_present", "item": "7", "status": "incorporated_by_reference"},
+      {"type": "confidence", "item": "7", "value": 0.85},
+      {"type": "confidence", "item": "10", "value": 0.95},
       {"type": "item_present", "item": "10", "status": "extracted"},
       {"type": "item_present", "item": "11", "status": "incorporated_by_reference"},
       {"type": "item_present", "item": "12", "status": "incorporated_by_reference"},
