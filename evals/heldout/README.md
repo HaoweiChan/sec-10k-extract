@@ -38,7 +38,7 @@ first run, so it cannot be retrofitted afterwards.
 |---|---|---|---|---|---|---|
 | `ko-1997/filing.txt` | sec.gov/Archives/edgar/data/21344/0000021344-98-000004.txt | 0000021344-98-000004 | 1998-03-09 | 1997-12-31 | pre-2001 txt, beverage; first cohort required to carry Item 7A; ALL-CAPS cover date from a real filer | 377,407 |
 | `gs-2002/filing.htm` | sec.gov/Archives/edgar/data/886982/000095012303002099/y83718e10vk.htm | 0000950123-03-002099 | 2003-02-27 | 2002-11-29 | 2001–2004 transitional HTML, financial, **November** FY end; uses post-SOX numbering (14 = Controls, 15 = Exhibits) ahead of the 2003-08-14 effective date | 395,754 |
-| `jnj-2016/filing.htm` | sec.gov/Archives/edgar/data/200406/000020040617000006/form10-k20170101.htm | 0000200406-17-000006 | 2017-02-27 | 2017-01-01 | mid-2010s HTML, pharmaceutical; 52/53-week FY whose period end falls in the *next* calendar year | 3,500,076 |
+| `csco-2016/filing.htm` | sec.gov/Archives/edgar/data/858877/000085887716000117/csco-2016730x10k.htm | 0000858877-16-000117 | 2016-09-08 | 2016-07-30 | mid-2010s HTML, computer-communications equipment; 52/53-week FY ending in **July**. Replaces `jnj-2016`, burned by H1 | 4,476,127 |
 | `xom-2021/filing.htm` | sec.gov/Archives/edgar/data/34088/000003408822000011/xom-20211231.htm | 0000034088-22-000011 | 2022-02-23 | 2021-12-31 | large iXBRL, energy; the calendar-FY2021 cohort ADR-010 moved the 9C boundary to reach; drops Item 6 entirely | 6,159,522 |
 | `cost-2022/filing.htm` | sec.gov/Archives/edgar/data/909832/000090983222000021/cost-20220828.htm | 0000909832-22-000021 | 2022-10-05 | 2022-08-28 | iXBRL, retail, **August** FY end; separates every item code from its title with an **em dash**, a heading shape no dev fixture contains | 1,861,894 |
 
@@ -54,3 +54,14 @@ No filer appears in both sets. Sector coverage added here that `evals/fixtures/`
 does not have at all: beverage, brokerage, pharmaceutical, petroleum, retail
 warehouse. Fiscal-year ends added: November, January (52/53-week), August —
 every dev fixture ends in December, June, May or September.
+
+## Run history
+
+| Run | Date | Score | Outcome |
+|---|---|---|---|
+| **H1** | 2026-08-16 | **1/5** | `evals/report/20260816-225101-fast.json`, triaged in `docs/evals/audits/2026-08-16-h1-heldout-triage.md`. Two real extractor findings, four labels the author got wrong. `jnj-2016` burned and promoted to `evals/adversarial/`; `gs-2002`, `ko-1997` and `xom-2021` label-corrected from their source documents. |
+
+After H1 the set is no longer pristine: `cost-2022` is the only case never
+observed failing, and three carry corrected labels. H1 is the only clean
+generalization estimate those three will ever provide, and later runs on them
+measure regression, not generalization. `csco-2016` is fresh.
