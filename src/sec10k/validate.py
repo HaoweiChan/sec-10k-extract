@@ -31,7 +31,22 @@ SUBSTANTIVE_MIN = 5000
 # deliberately NOT among them: for IBR-heavy filings (IBM 1997 leaves 43% of
 # the document outside every item, Textron 28%) that shape is normal and the
 # honest report is a warning, not "we could not resolve this".
-AMBIGUOUS_CODES = {"toc_manifest_mismatch", "last_item_dominates"}
+AMBIGUOUS_CODES = {"toc_manifest_mismatch", "last_item_dominates",
+                   "expected_items_mostly_missing"}
+
+# H1: JNJ 2016 lost 18 of 21 items and still reported success_with_warning,
+# because `expected_item_missing` is per-item and is not an escalating code —
+# so no VOLUME of it could ever move doc_status. Measured over all 17
+# non-refused dev fixtures: fifteen lose ZERO items, and the only two that lose
+# any (heading-unnumbered 0.043, malformed-html 0.048) already escalate by
+# another route. Held-out JNJ sat at 0.857. Empty band 0.048–0.857.
+#
+# The floor is 0.25, not the band midpoint this repo usually takes: the cost
+# asymmetry differs from a content-shape validator. A false `ambiguous` is a
+# conservative report a consumer can inspect; a false `success_with_warning` on
+# a collapsed document is the silent failure the whole battery exists to
+# prevent. 0.25 still sits 5x above the worst real filing in the set.
+MISSING_MAX = 0.25
 
 # per-item vocabulary priors: does this span READ like its label?
 FINGERPRINTS = {
@@ -76,6 +91,22 @@ def validate(text, items, accepted, manifest):
         if missing:
             warn("toc_manifest_mismatch",
                  f"filing's own table of contents lists {missing} but no heading was resolved")
+
+    # 1b. Missing PROPORTION, not missing count. The per-item
+    # `expected_item_missing` warnings are emitted upstream and are informative
+    # but non-escalating; on their own they let a document that lost most of
+    # its items present as a qualified success. The contract calls doc_status
+    # "the frontend's headline banner" and invites consumers to threshold on
+    # it, so losing a quarter of the expected items is a refusal to resolve,
+    # not a footnote.
+    if items:
+        missing = [i for i in items if i["status"] == "missing"]
+        frac = len(missing) / len(items)
+        if frac > MISSING_MAX:
+            warn("expected_items_mostly_missing",
+                 f"{len(missing)} of {len(items)} expected items ({frac:.0%}) have no "
+                 f"heading: {[i['item'] for i in missing][:8]}"
+                 f"{'…' if len(missing) > 8 else ''}")
 
     # 2. Unattributed content — everything outside every item. Localises the
     # complement of coverage: preamble is the cover page, tail is signatures,

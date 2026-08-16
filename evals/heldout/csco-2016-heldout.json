@@ -1,0 +1,25 @@
+{
+  "id": "csco-2016-heldout",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {"path": "evals/heldout/fixtures/csco-2016/filing.htm"},
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "known_items_only"},
+      {"type": "deterministic"},
+      {"type": "doc_status", "in": ["success", "success_with_warning", "ambiguous"]},
+      {"type": "item_present", "item": "1", "status": "extracted"},
+      {"type": "item_present", "item": "1A", "status": "extracted"},
+      {"type": "item_present", "item": "6", "status": "extracted"},
+      {"type": "item_present", "item": "9B", "status": "extracted"},
+      {"type": "item_absent", "item": "1C", "any_status": true},
+      {"type": "item_absent", "item": "9C", "any_status": true},
+      {"type": "expected_set_complete", "items": ["1", "1A", "1B", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "9A", "9B", "10", "11", "12", "13", "14", "15", "16"]},
+      {"type": "only_items", "items": ["1", "1A", "1B", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "9A", "9B", "10", "11", "12", "13", "14", "15", "16"]}
+    ]
+  },
+  "provenance": "HELD-OUT, FROZEN AT AUTHORING 2026-08-16 \u2014 NOT RUN. Replaces jnj-2016, which H1 burned. Cisco Systems, Inc. FY2016 10-K, EDGAR accession 0000858877-16-000117, filed 2016-09-08, primary document csco-2016730x10k.htm (4,476,127 bytes). Stratum: mid-2010s HTML, computer-communications equipment \u2014 a sector neither set covers \u2014 and a 52/53-WEEK FISCAL YEAR ending 2016-07-30, which keeps the non-calendar-year-end coverage jnj-2016 provided while changing both the sector and the month. Verified 2026-08-16 by an INDEPENDENT tag-strip regex scan importing nothing from src/; the extractor has never been invoked on this file. Scan results: cover reads 'fiscal year ended July 30, 2016'; body/contents hits for 1, 1A, 1B, 2, 3, 4, 5, 6, 7, 7A, 8, 9, 9A, 9B, 10, 11, 12, 13, 14, 15; no 1C and no 9C, both of which postdate this filing. ITEM 16 IS DELIBERATELY NOT ASSERTED, and that is a direct consequence of the H1 triage. My scan returns no hit for Item 16, and the period end (2016-07-30) is after the 2016-06-01 adoption, so 'omitted' would be the natural assertion. But H1 caught me asserting exactly that shape of negative on xom-2021 and being wrong: the scan strips tags to spaces where the normalizer joins within a block, so a code split across markup dies in the scan and survives the pipeline. An absence established by an instrument weaker than the thing under test is not ground truth. Item 16 therefore rides in expected_set_complete, which accepts any of the four statuses, and the missing-vs-omitted question is left for a run to settle. The positively verified items are asserted; the negative ones (1C, 9C) are asserted only where the era rules them out on a date basis rather than on my scan. BURN RULE: the moment this case's outcome influences implementation it moves to evals/adversarial/ and is replaced."
+}

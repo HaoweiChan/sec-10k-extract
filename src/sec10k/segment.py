@@ -119,6 +119,19 @@ def title_similarity(code, title):
                for a in TITLES[code][1])
 
 
+def _next_lines(text, pos, n=2, window=600):
+    """The next `n` non-empty lines after pos. A filer may put the item code and
+    its title in separate markup blocks, which normalization renders as
+    'Item 1.\\n\\nBUSINESS'."""
+    out = []
+    for line in text[pos:pos + window].split("\n"):
+        if line.strip():
+            out.append(line.strip())
+            if len(out) == n:
+                break
+    return out + [""] * (n - len(out))
+
+
 def find_candidates(text, expected):
     """Every plausible heading for an expected code, with its features."""
     out = []
@@ -128,11 +141,30 @@ def find_candidates(text, expected):
             continue  # INV-S3: era-invalid and non-canonical codes never surface
         title = m.group(3).strip()
         line = m.group(0).strip()
+        # A bare code line is USUALLY page furniture or a TOC cell, which is why
+        # "no title on the heading line" is a free filter. But JNJ 2016 puts the
+        # code and the title in separate blocks for 18 of 21 items, so there the
+        # rule rejects every real heading — the discriminator inverts (H1
+        # triage). Take the next line as the title when it reads like one, and
+        # let the TOC-cluster rule decide what is furniture: measured, real body
+        # headings sit a median 2,824 chars apart while TOC runs sit 50-59
+        # apart, so the existing cluster thresholds already separate them and no
+        # new number is introduced here.
+        via_next = False
+        if not title:
+            nxt, after = _next_lines(text, m.end())
+            # ...but if ANOTHER item code follows immediately, the pair is an
+            # index row, not a heading and its body. The TOC-cluster rule would
+            # catch a full contents page; this catches a run shorter than
+            # TOC_CLUSTER_MIN, which no real 10-K produces but which nothing
+            # else would stop.
+            if title_similarity(code, nxt) >= SIM_FLOOR and not HEADING_RE.match(after):
+                title, via_next = nxt, True
         out.append({
             "item": code, "start": m.start(), "heading_end": m.end(),
             "heading_text": line, "title": title,
             "similarity": round(title_similarity(code, title), 3),
-            "titled": bool(title),
+            "titled": bool(title), "title_on_next_line": via_next,
             "upper": bool(line) and line == line.upper(),
         })
     return out
