@@ -37,7 +37,7 @@ first run, so it cannot be retrofitted afterwards.
 | Fixture | Source | Accession | Filed | Period end | Stratum | Bytes |
 |---|---|---|---|---|---|---|
 | `ko-1997/filing.txt` | sec.gov/Archives/edgar/data/21344/0000021344-98-000004.txt | 0000021344-98-000004 | 1998-03-09 | 1997-12-31 | pre-2001 txt, beverage; first cohort required to carry Item 7A; ALL-CAPS cover date from a real filer | 377,407 |
-| `gs-2002/filing.htm` | sec.gov/Archives/edgar/data/886982/000095012303002099/y83718e10vk.htm | 0000950123-03-002099 | 2003-02-27 | 2002-11-29 | 2001–2004 transitional HTML, financial, **November** FY end; uses post-SOX numbering (14 = Controls, 15 = Exhibits) ahead of the 2003-08-14 effective date | 395,754 |
+| `pgr-2023/filing.htm` | sec.gov/Archives/edgar/data/80661/000008066124000007/pgr-20231231.htm | 0000080661-24-000007 | 2024-02-26 | 2023-12-31 | iXBRL, **fire/marine/casualty insurance** — restores the financial-sector coverage. Sits 16 days past the Item 1C era boundary, and its cover carries a **floating comma** (`December 31 , 2023`). Replaces `gs-2002`, burned 2026-08-17 | 1,474,219 |
 | `csco-2016/filing.htm` | sec.gov/Archives/edgar/data/858877/000085887716000117/csco-2016730x10k.htm | 0000858877-16-000117 | 2016-09-08 | 2016-07-30 | mid-2010s HTML, computer-communications equipment; 52/53-week FY ending in **July**. Replaces `jnj-2016`, burned by H1 | 4,476,127 |
 | `xom-2021/filing.htm` | sec.gov/Archives/edgar/data/34088/000003408822000011/xom-20211231.htm | 0000034088-22-000011 | 2022-02-23 | 2021-12-31 | large iXBRL, energy; the calendar-FY2021 cohort ADR-010 moved the 9C boundary to reach; drops Item 6 entirely | 6,159,522 |
 | `cost-2022/filing.htm` | sec.gov/Archives/edgar/data/909832/000090983222000021/cost-20220828.htm | 0000909832-22-000021 | 2022-10-05 | 2022-08-28 | iXBRL, retail, **August** FY end; separates every item code from its title with an **em dash**, a heading shape no dev fixture contains | 1,861,894 |
@@ -78,4 +78,15 @@ evidence. `ko-1997` and `xom-2021` pass because their labels were corrected,
 which measures the correction, not the extractor. The single failure,
 `gs-2002`, is the era-model limitation ADR-013 deliberately declined to fix and
 is enumerated debt, not a surprise. The honest one-line summary is: **one fresh
-unseen filing, 4.5 MB and never observed, passed on the first attempt.**
+unseen filing, 4.5 MB and never observed, passed on the first attempt** — and
+even that is a presence-and-status result, not a boundary one: `csco-2016` and
+`cost-2022` carry no anchors and no length bands, so a TOC-collapsed extraction
+would clear them (pre-B audit finding 4).
+
+**Burn, 2026-08-17** — `gs-2002` moved to `evals/adversarial/` as enumerated
+debt. It had been run twice, its failure mode is published in four documents,
+and ADR-013's decision *not* to fix the era model was taken with its outcome in
+hand; the burn rule names "a threshold choice" as burning, and a documented
+decision to decline a fix is at least as much influence. Counting it in a
+held-out denominator would have overstated that denominator. Replaced by
+`pgr-2023`, which carries two predictions recorded before its first run.

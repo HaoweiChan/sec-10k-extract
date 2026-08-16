@@ -1,0 +1,26 @@
+{
+  "id": "pgr-2023-heldout",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {"path": "evals/heldout/fixtures/pgr-2023/filing.htm"},
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "known_items_only"},
+      {"type": "deterministic"},
+      {"type": "doc_status", "in": ["success", "success_with_warning", "ambiguous"]},
+      {"type": "item_present", "item": "1", "status": "extracted"},
+      {"type": "item_present", "item": "1C", "status": "extracted"},
+      {"type": "item_present", "item": "6", "status": "extracted"},
+      {"type": "item_present", "item": "8", "status": "extracted"},
+      {"type": "item_present", "item": "9C", "status": "extracted"},
+      {"type": "item_present", "item": "15", "status": "extracted"},
+      {"type": "item_present", "item": "16", "status": "extracted"},
+      {"type": "expected_set_complete", "items": ["1", "1A", "1B", "1C", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "9A", "9B", "9C", "10", "11", "12", "13", "14", "15", "16"]},
+      {"type": "only_items", "items": ["1", "1A", "1B", "1C", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "9A", "9B", "9C", "10", "11", "12", "13", "14", "15", "16"]}
+    ]
+  },
+  "provenance": "HELD-OUT, FROZEN AT AUTHORING 2026-08-17 \u2014 NOT RUN. Replaces gs-2002, burned when ADR-013 declined to fix the era model with its outcome in hand. The Progressive Corporation FY2023 10-K, EDGAR accession 0000080661-24-000007, filed 2024-02-26, primary document pgr-20231231.htm (1,474,219 bytes). Stratum: iXBRL, FIRE/MARINE/CASUALTY INSURANCE \u2014 restores the financial-sector coverage gs-2002 provided, which docs/evals/evaluation-strategy.md names as the stratum that stresses the Item 8 / F-pages boundary hardest, and does it WITHOUT re-probing the transitional numbering that is now enumerated debt (a replacement in that same stratum would only re-measure a known failure). Verified 2026-08-17 by an INDEPENDENT tag-strip regex scan importing nothing from src/; the extractor has never been invoked on this file. Scan results: all 23 codes present; 'ITEM 1C. CYBERSECURITY' confirmed as a real body heading (the second of its two hits is the cross-reference 'Item 1C, Cybersecurity below for more information', and distinguishing them mattered); 'ITEM 6. SELECTED FINANCIAL DATA [Reserved]' carries the legacy TITLE with a [Reserved] BODY, a hybrid no dev fixture has; Items 8, 9C, 15 and 16 confirmed as headings. TWO PREDICTIONS RECORDED BEFORE THE FIRST RUN so they cannot be retrofitted afterwards. (1) ERA BOUNDARY: period end 2023-12-31 sits just past segment.ADDED's 1C date of 2023-12-15, so Item 1C is expected by a 16-day margin. The era table has already been wrong twice \u2014 Item 9C keyed to period end instead of filing date (ADR-010), and Item 15 on the 2002-2003 transitional window (still unfixed) \u2014 so the newest boundary is the one most worth probing, and this is the narrowest margin available. (2) FLOATING COMMA: the cover reads 'For the fiscal year ended December 31 , 2023' with a space BEFORE the comma. ADR-010 records exactly this as accepted, unfixed debt: COVER_DATE_RE's capture group is '\\\\d{1,2},?\\\\s+\\\\d{4}', which cannot match a floating comma, while the DATE_RE it feeds is lenient \u2014 so the gate is the strict one. If period_end resolution falls through to the SGML header or the dei fact this filing is unaffected; if it depends on the cover regex, period_end returns None and the whole modern taxonomy collapses to the 1993 set, which is the caps-cover-taxonomy failure mode arriving by a second route. I do not know which happens and have deliberately not checked. Per the H1 lesson, nothing here asserts an ABSENCE from the scan: every assertion is a positive heading I read in the document, and no item is asserted absent. BURN RULE: the moment this case's outcome influences implementation it moves to evals/adversarial/ and is replaced."
+}
