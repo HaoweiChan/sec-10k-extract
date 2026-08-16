@@ -1,0 +1,14 @@
+{
+  "id": "ibr-pointer-window",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {
+    "path": "evals/fixtures/wmt-2010/filing.htm"
+  },
+  "expect": {
+    "checks": [
+      {"type": "item_present", "item": "14", "status": "incorporated_by_reference"}
+    ]
+  },
+  "provenance": "T9 tranche-1 finding 2, isolated from wmt-2010-shallow (red 2026-08-17, report 20260817 fast 29/30). WMT Item 14's entire body is one pointer sentence - 'The information required by this item is incorporated herein by reference to all information under the caption ... Proposal No. 2: Ratification ... included in our Proxy Statement.' - the same shape as Item 11 on the same filing, which classifies IBR correctly. 14 came back extracted at 365 chars / conf 0.95. HYPOTHESIS AT AUTHORING, WRONG: a fixed pointer-detection window measured from span start, overflowed by 14's 16-char-longer title. ACTUAL MECHANISM, found in code: _sentences() split at the ordinal abbreviation 'No.' in 'Proposal No. 2', truncating sents[0] before 'Proxy Statement', so the pointer sentence carried IBR_RE but not EXTERNAL_DOC_RE - the same failure family as pre-B finding 2's 'Item 1.' caption split, one abbreviation over. Item 11 has no ordinal in its captions, which is the whole observed difference. Kept per house rule: the wrong hypothesis stays in the record next to what was actually true. Fixed in ADR-014 by rejoining 'No.' + digit in _sentences()."
+}

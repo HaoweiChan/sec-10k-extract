@@ -1,0 +1,26 @@
+{
+  "id": "cvx-2015-shallow",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {
+    "path": "evals/fixtures/cvx-2015/filing.htm"
+  },
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "doc_status", "in": ["success", "success_with_warning"]},
+      {"type": "expected_set_complete", "items": ["1", "1A", "1B", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "9A", "9B", "10", "11", "12", "13", "14", "15"]},
+      {"type": "item_present", "item": "1A", "status": "extracted"},
+      {"type": "item_present", "item": "2", "status": "extracted"},
+      {"type": "item_present", "item": "4"},
+      {"type": "item_present", "item": "7", "status": "extracted"},
+      {"type": "item_present", "item": "11", "status": "incorporated_by_reference"},
+      {"type": "item_absent", "item": "1C", "any_status": true},
+      {"type": "item_absent", "item": "9C", "any_status": true},
+      {"type": "item_absent", "item": "16", "any_status": true}
+    ]
+  },
+  "provenance": "T9 tranche 1 (energy industry stratum + >5MB HTML size stratum). sec.gov/Archives/edgar/data/93410/000009341016000049/cvx-123115x10kdoc.htm, accession 0000093410-16-000049, filed 2016-02-25, FY2015 (Dec-end), 5,606,365 bytes, legacy HTML - the first >5MB filing in the 2001-2019 era band. 2011+ taxonomy verified in-document: Item 4 = 'Mine Safety Disclosures'; Item 16 not yet available (FAST Act summary item post-dates this filing) hence item_absent. Statuses verified by independent tag-strip scan 2026-08-17: 1A/2/7 real bodies; Item 11 'The information required by Item 402 of Regulation S-K and contained under the headings ... in the 2016 Proxy Statement is incorporated by reference' -> external IBR. Item 4 pinned presence-only: its body routes to Exhibit 95, a classifier-ambiguous shape deliberately left unpinned at shallow tier. Item 10 unpinned: mixed body (in-document Executive Officers roster + IBR remainder)."
+}

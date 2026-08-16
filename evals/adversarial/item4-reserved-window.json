@@ -1,0 +1,14 @@
+{
+  "id": "item4-reserved-window",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {
+    "path": "evals/fixtures/wmt-2010/filing.htm"
+  },
+  "expect": {
+    "checks": [
+      {"type": "item_present", "item": "4", "status": "extracted"}
+    ]
+  },
+  "provenance": "T9 tranche-1 finding 1, isolated from wmt-2010-shallow (red 2026-08-17, report 20260817 fast 29/30). WMT FY2010 (filed 2010-03-30) carries the heading 'ITEM 4. RESERVED' - the 2010-2011 window after the SEC removed 'Submission of Matters to a Vote of Security Holders' (Feb 2010 proxy rules) and before Mine Safety Disclosures arrived (Dodd-Frank s.1503, filings after 2011-12-30). The era model knows only the two neighbor titles, so title similarity rejects the real heading and Item 4 is classified missing (conf 0.4, method status_keyword) while its heading sits in plain sight. Label 'extracted' follows the nvda-2024 Item 6 '[Reserved]' precedent: a present Reserved heading is a labeled span, not an absence. Fix must extend the Item 4 title set for the window, not loosen similarity globally."
+}

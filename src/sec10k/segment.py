@@ -22,7 +22,12 @@ TITLES = {
     "2":  ("I", ["Properties"]),
     "3":  ("I", ["Legal Proceedings"]),
     "4":  ("I", ["Mine Safety Disclosures",
-                 "Submission of Matters to a Vote of Security Holders"]),
+                 "Submission of Matters to a Vote of Security Holders",
+                 # 2010-02-28 (Release 33-9089A) removed the vote item;
+                 # Mine Safety arrived 2011-12-15. In the window filers wrote
+                 # "RESERVED" / "(Removed and Reserved)" — wmt-2010 is the
+                 # eval case; the longer variants clear SIM_FLOOR by ratio.
+                 "Reserved"]),
     "5":  ("II", ["Market for Registrant's Common Equity, Related Stockholder "
                   "Matters and Issuer Purchases of Equity Securities",
                   "Market for the Registrant's Common Stock and Related "
@@ -99,6 +104,11 @@ def item_label(code, period_end):
     inspector renders this over the item's text, so an era-wrong label is a
     statement to the reader that the extraction is something it is not."""
     part, titles = TITLES[code]
+    # Item 4's Reserved window sits between its two ALIAS_FROM phases. Keyed
+    # on period end like everything here: Jan-2010+ period ends file after the
+    # 2010-02-28 effective date; Dec-2009 enders mostly filed before it.
+    if code == "4" and period_end and date(2010, 1, 1) <= period_end < ALIAS_FROM["4"]:
+        return part, "Reserved"
     legacy = code in ALIAS_FROM and not (period_end and period_end >= ALIAS_FROM[code])
     if legacy:
         return LEGACY_PART.get(code, part), titles[min(1, len(titles) - 1)]
@@ -340,6 +350,11 @@ def _sentences(flat):
     for p in parts:
         if out and re.search(r"(?i)\bitem\s*\d{1,2}[A-D]?\.$", out[-1]):
             out[-1] += " " + p          # rejoin: that period ended a reference
+        elif out and re.search(r"(?i)\bno\.$", out[-1]) and re.match(r"\d", p):
+            # "Proposal No. 2" — an ordinal, not a stop. Splitting here cut
+            # wmt-2010 item 14's pointer sentence before "Proxy Statement",
+            # hiding the external-document evidence (ibr-pointer-window).
+            out[-1] += " " + p
         else:
             out.append(p)
     return out
