@@ -1,7 +1,7 @@
 {
   "suite": "all",
   "score": 1.0,
-  "git_sha": "bad2605a1e7f2530743109dfa31e1014fb960e27",
+  "git_sha": "2ca4c4e978e90b5cfe806bd5d6429d81d31329b7",
   "results": [
     {
       "passed": true,
@@ -981,7 +981,7 @@
           "chars": null
         }
       ],
-      "seconds": 0.53,
+      "seconds": 0.52,
       "id": "jpm-2024-structure",
       "kind": "golden"
     },
@@ -1285,7 +1285,7 @@
           "chars": 5475
         }
       ],
-      "seconds": 0.23,
+      "seconds": 0.22,
       "id": "msft-2013-structure",
       "kind": "golden"
     },
@@ -3390,7 +3390,7 @@
       "passed": true,
       "failures": [],
       "n_items": 21,
-      "n_extracted": 21,
+      "n_extracted": 18,
       "doc_status": "success",
       "items_summary": [
         {
@@ -3500,10 +3500,10 @@
         },
         {
           "item": "11",
-          "status": "extracted",
-          "confidence": 0.95,
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
           "method": "heading_strict",
-          "chars": 805
+          "chars": null
         },
         {
           "item": "12",
@@ -3514,17 +3514,17 @@
         },
         {
           "item": "13",
-          "status": "extracted",
-          "confidence": 0.95,
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
           "method": "heading_strict",
-          "chars": 310
+          "chars": null
         },
         {
           "item": "14",
-          "status": "extracted",
-          "confidence": 0.95,
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
           "method": "heading_strict",
-          "chars": 285
+          "chars": null
         },
         {
           "item": "15",
