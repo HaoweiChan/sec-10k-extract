@@ -28,6 +28,8 @@ jobs:
       - run: python3 -m src.sec10k.normalize
       - run: python3 -m src.sec10k.segment
       - run: python3 -m src.sec10k.validate
+      # the view layer imports no fastapi, precisely so it can run here
+      - run: python3 -m src.sec10k.web.view
 
   invariant-eval:
     runs-on: ubuntu-latest
