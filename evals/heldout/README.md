@@ -146,3 +146,29 @@ labels were corrected after H1. Of the two predictions frozen into `pgr-2023`
 before its first run, the Item 1C era boundary held and the floating-comma
 prediction was wrong — its premise was an artifact of the verification scan
 itself, which is why the authoring rule above is now stated more tightly.
+
+**H3, 2026-08-17, 4/6** — the T9 tranche-4 run, triaged in
+`docs/evals/audits/2026-08-17-h3-heldout.md`. **Both failures were mine**, and
+in the same way: a length floor derived from the gap to the next heading is
+meaningless for the LAST item, because that gap runs to the end of the file and
+sweeps in the exhibit index and signature block the extractor is right to cut.
+`spg-2019` item 16 is the single word "None." (the ~55,700 chars I floored
+against were the exhibit index annexed to it) and `axp-2008` item 15 is 745
+chars of pointers. Fifth time the instrument rather than the pipeline has been
+at fault. Both floors corrected from the documents and replaced with cross-item
+exclusions, which assert the boundary directly instead of proxying for it; on
+the H1 precedent those assertions now measure the correction. Re-run 6/6.
+
+The honest headline is neither number: **three fresh, never-observed filings —
+a 1996 pharmaceutical text submission with no contents page, a crisis-era bank
+that omits four item headings outright, and a 9.8 MB REIT — came out with every
+item, status, label and boundary correct on the first attempt**, and `mrk-1995`
+is the first held-out pass in this project's history that says anything about
+BOUNDARIES rather than only presence and status. Of three frozen predictions,
+the two about the extractor held (`axp-2008`'s missing fraction of 0.20 landing
+just under `MISSING_MAX`, `spg-2019`'s transposed Item 7A title resolving
+normally) and the one about a document was wrong. No support for ADR-017 was
+gained: AXP's pointers use the single-sentence phrasing the old rule already
+matched, and that claim was checked and withdrawn rather than made.
+
+Next refresh should retire `csco-2016` and `cost-2022`, now run three times each.
