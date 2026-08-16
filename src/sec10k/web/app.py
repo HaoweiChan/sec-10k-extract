@@ -16,6 +16,7 @@ of tempfile does. The UI posts the File object straight as the body.
 Run: uvicorn src.sec10k.web.app:app --reload
 """
 import hashlib
+import os
 import subprocess
 import tempfile
 import urllib.error
@@ -39,6 +40,13 @@ app = FastAPI(title="sec10k-extract inspector")
 
 
 def _git_sha() -> str:
+    """Build identity for the status line. A deployed instance usually has no
+    .git directory, so GIT_SHA can be set as an env var instead — a reviewer
+    needs to know which build they are looking at, and "unknown" is a bad
+    answer on the one instance strangers will actually use."""
+    env = os.environ.get("GIT_SHA")
+    if env:
+        return env.strip()[:12]
     try:
         return subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"], cwd=ROOT,
