@@ -1,0 +1,794 @@
+{
+  "suite": "fast",
+  "score": 0.2,
+  "git_sha": "70d10f1749be5e584212e84626cd907b02c76c1d",
+  "results": [
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 22,
+      "n_extracted": 19,
+      "doc_status": "success",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 20526
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 40390
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 42
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 858
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 150
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 81
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2474
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 40
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 28693
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 4471
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 87103
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 100
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 3635
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 34
+        },
+        {
+          "item": "9C",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 104
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 638
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 318
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 5444
+        },
+        {
+          "item": "16",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 57
+        }
+      ],
+      "seconds": 0.09,
+      "id": "cost-2022-heldout",
+      "kind": "heldout"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "item_present",
+            "item": "7A",
+            "status": "extracted"
+          },
+          "why": "item 7A not extracted: incorporated_by_reference"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "15",
+            "status": "extracted"
+          },
+          "why": "item 15 not extracted: None"
+        }
+      ],
+      "n_items": 15,
+      "n_extracted": 8,
+      "doc_status": "success",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 70724
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2714
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 29221
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 9700
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2502
+        },
+        {
+          "item": "6",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "7",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "7A",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "8",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 236
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 586
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 23737
+        }
+      ],
+      "seconds": 0.05,
+      "id": "gs-2002-heldout",
+      "kind": "heldout"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "item_present",
+            "item": "1",
+            "status": "extracted"
+          },
+          "why": "item 1 not extracted: missing"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "6",
+            "status": "extracted"
+          },
+          "why": "item 6 not extracted: missing"
+        }
+      ],
+      "n_items": 21,
+      "n_extracted": 3,
+      "doc_status": "success_with_warning",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "1A",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "1B",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 100676
+        },
+        {
+          "item": "3",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "4",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "5",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "6",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "7",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "7A",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 211268
+        },
+        {
+          "item": "9",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "9A",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "9B",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "10",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "11",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "13",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "15",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "16",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 201
+        }
+      ],
+      "seconds": 0.24,
+      "id": "jnj-2016-heldout",
+      "kind": "heldout"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "item_present",
+            "item": "7A",
+            "status": "extracted"
+          },
+          "why": "item 7A not extracted: incorporated_by_reference"
+        }
+      ],
+      "n_items": 15,
+      "n_extracted": 9,
+      "doc_status": "success_with_warning",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 41318
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 3194
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2373
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 7781
+        },
+        {
+          "item": "5",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "6",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "7",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "7A",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 930
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 212
+        },
+        {
+          "item": "10",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "11",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 539
+        },
+        {
+          "item": "12",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "13",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 738
+        },
+        {
+          "item": "14",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 11569
+        }
+      ],
+      "seconds": 0.01,
+      "id": "ko-1997-heldout",
+      "kind": "heldout"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "doc_status",
+            "in": [
+              "success",
+              "success_with_warning"
+            ]
+          },
+          "why": "doc_status 'ambiguous' not in ['success', 'success_with_warning']"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "9C",
+            "status": "omitted"
+          },
+          "why": "item 9C not omitted: extracted"
+        }
+      ],
+      "n_items": 22,
+      "n_extracted": 19,
+      "doc_status": "ambiguous",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 7884
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 26805
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 46
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 55072
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 293
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 7215
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1332
+        },
+        {
+          "item": "6",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 267
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 413
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 737
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 101
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2218
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 35
+        },
+        {
+          "item": "9C",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 109
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 815
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1883
+        },
+        {
+          "item": "13",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 392
+        },
+        {
+          "item": "14",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 209
+        },
+        {
+          "item": "16",
+          "status": "extracted",
+          "confidence": 0.8,
+          "method": "heading_strict",
+          "chars": 274655
+        }
+      ],
+      "seconds": 0.24,
+      "id": "xom-2021-heldout",
+      "kind": "heldout"
+    }
+  ]
+}
