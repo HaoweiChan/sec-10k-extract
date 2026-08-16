@@ -192,17 +192,22 @@ def select_and_normalize(raw):
     warnings = []
     blocks = split_documents(raw)
     chosen = next((b for b in blocks if b["type"] in ACCEPTED_FORMS), None)
-    if blocks and chosen is None:
-        # exhibits-only or a non-10-K submission: EDGAR's own metadata says so
-        types = sorted({b["type"] for b in blocks})
-        return "", {"form_type": None, "format_era": None, "n_blocks": len(blocks),
-                    "document_selected": None, "block_types": types}, warnings
 
+    # Exhibits-only or a non-10-K submission: EDGAR's own metadata says so, and
+    # selection has nothing to select. This branch used to return "" — which
+    # tripped the caller's collapse test, since the caller checks collapse
+    # BEFORE form identity (contract order, ADR-010 ruling 4). So a perfectly
+    # readable 10-KSB came back `failed`, "117768 raw chars normalized to 0",
+    # which sends a user to re-download a file that downloaded fine. The
+    # ordering is not the bug: an unselectable submission is not an unreadable
+    # one, so normalize the whole file and let the caller refuse on the form it
+    # can now name. A file that is BOTH unselectable and truncated still
+    # collapses first, which is the ordering doing its job.
     body = chosen["body"] if chosen else raw
     era = format_era(body)
     text = normalize(body, era)
 
-    declared = chosen["type"] if chosen else None
+    declared = chosen["type"] if chosen else (blocks[0]["type"] if blocks else None)
     sniffed = sniff_form(text)
     form_type = declared or sniffed
     # filer-supplied <TYPE> vs the document's own cover page. Warn, trust
@@ -210,7 +215,9 @@ def select_and_normalize(raw):
     # form family is agreement: a 10-K405's cover page always reads "FORM
     # 10-K" (405 is a check-box distinction, not a form title), so comparing
     # the strings would fire on every 10-K405 ever filed.
-    if declared and sniffed and declared != sniffed \
+    # ...and EDGAR's <TYPE> drops the hyphen the cover page keeps ("10KSB" vs
+    # "FORM 10-KSB"), which is spelling, not disagreement.
+    if declared and sniffed and declared.replace("-", "") != sniffed.replace("-", "") \
             and not {declared, sniffed} <= ACCEPTED_FORMS:
         warnings.append({"code": "form_type_disagreement", "item": None,
                          "message": f"<TYPE> says {declared}, cover page says {sniffed}"})
@@ -222,9 +229,11 @@ def select_and_normalize(raw):
         "form_type_sniffed": sniffed,
         "format_era": era,
         "n_blocks": len(blocks),
+        "block_types": sorted({b["type"] for b in blocks}) if blocks else [],
         "document_selected": (
             f"{chosen['type']} seq={chosen['sequence']} {chosen['filename']}".strip()
-            if chosen else "whole file (no <DOCUMENT> blocks)"),
+            if chosen else "whole file (no 10-K block to select)" if blocks
+            else "whole file (no <DOCUMENT> blocks)"),
         "raw_chars": len(raw),
         "norm_chars": len(text),
     }
@@ -267,9 +276,17 @@ def _demo():
     loud = ("<DOCUMENT>\n<TYPE>10-K\n<TEXT>\n" + "FORM 10-Q\nbody\n" + "</TEXT>\n</DOCUMENT>")
     assert [w["code"] for w in select_and_normalize(loud)[2]] == ["form_type_disagreement"]
 
-    # exhibits-only submission: EDGAR's own metadata refuses it for us
+    # exhibits-only submission: EDGAR's own metadata refuses it for us — by
+    # NAMING the form, not by returning nothing. Returning "" here made the
+    # caller's collapse test fire and report `failed` on a readable file
+    # (ksb-unsupported).
     ex = "<DOCUMENT>\n<TYPE>EX-21\n<TEXT>\nsubsidiaries\n</TEXT>\n</DOCUMENT>"
-    assert select_and_normalize(ex)[1]["form_type"] is None
+    t, m, _ = select_and_normalize(ex)
+    assert m["form_type"] == "EX-21" and m["form_type"] not in ACCEPTED_FORMS, m
+    assert "subsidiaries" in t, t   # readable, therefore not a collapse
+    # EDGAR's <TYPE> drops the hyphen the cover page keeps; same form, no news
+    ksb = "<DOCUMENT>\n<TYPE>10KSB\n<TEXT>\nFORM 10-KSB\nbody\n</TEXT>\n</DOCUMENT>"
+    assert select_and_normalize(ksb)[2] == [], select_and_normalize(ksb)[2]
 
     print("[normalize self-check] ok")
 

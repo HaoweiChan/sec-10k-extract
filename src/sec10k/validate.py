@@ -204,6 +204,23 @@ def _demo():
     w = validate(text, items, {"1": {}, "15": {}}, [])
     assert not [x for x in w if x["code"] == "boundary_hygiene"], w
 
+    # ...and the positive case, which ONLY exists here. No fixture can fire
+    # boundary_hygiene: spans are built from heading matches, so a span always
+    # opens with its heading by construction, and the check re-applies a copy
+    # of the regex that produced the offset. It is a consistency assertion
+    # between two layers, not a statement about any document — so it is proved
+    # against the layer boundary, on offsets a caller could only produce by
+    # being wrong. ADR-016 records why that is the honest place for it.
+    off = [{**items[0], "start": items[0]["start"] + 40}, items[1]]
+    codes = [x["code"] for x in validate(text, off, {"1": {}, "15": {}}, [])]
+    assert "boundary_hygiene" in codes, codes
+    # an IBR span is checked the same way (ADR-011): before that extension an
+    # IBR item's offsets were invisible to every validator here
+    ibr = [{**items[0], "status": "incorporated_by_reference",
+            "start": items[0]["start"] + 40}]
+    codes = [x["code"] for x in validate(text, ibr, {"1": {}}, [])]
+    assert "boundary_hygiene" in codes, codes
+
     # a manifest naming an item we never resolved is a strong, free signal
     w = validate(text, items, {"1": {}}, ["1", "7", "8"])
     assert [x["code"] for x in w if x["code"] == "toc_manifest_mismatch"], w

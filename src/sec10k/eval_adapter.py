@@ -154,10 +154,24 @@ def eval_check(result, chk, path=None):
             if s2 < e1:
                 return f"items {a} and {b} overlap or are out of order"
     elif t == "verbatim":
+        # INV-S2. Bounds first — offsets outside the text are the loud failure.
         n = len(result["normalized_text"])
         for i in spanned:
             if not (0 <= i["start"] < i["end"] <= n):
                 return f"item {i['item']} offsets outside normalized_text"
+        # ...then the quiet one. The G1 audit's complaint about this check was
+        # that it "asserts bounds and never compares text", so an offset pair
+        # that was in range but pointed at the wrong region satisfied INV-S2's
+        # enforcement. There IS something to compare: the envelope publishes
+        # `heading_text`, and a span must open with the heading the item claims.
+        # Verified across all 31 dev fixtures before landing — zero mismatches,
+        # so this pins current behaviour rather than describing an aspiration.
+        for i in spanned:
+            head = i.get("heading_text")
+            if head and not result["normalized_text"][i["start"]:i["end"]] \
+                    .lstrip().startswith(head):
+                return (f"item {i['item']} span does not open with its own "
+                        f"heading_text {head[:40]!r}")
     elif t == "doc_status":
         if "doc_status" not in result:
             return "doc_status missing (contract v2)"

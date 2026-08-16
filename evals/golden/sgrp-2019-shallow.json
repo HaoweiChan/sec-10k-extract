@@ -1,0 +1,35 @@
+{
+  "id": "sgrp-2019-shallow",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {
+    "path": "evals/fixtures/sgrp-2019/filing.htm"
+  },
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "known_items_only"},
+      {"type": "doc_status", "in": ["success", "success_with_warning"]},
+      {"type": "expected_set_complete", "items": ["1", "1A", "1B", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "9A", "9B", "10", "11", "12", "13", "14", "15", "16"]},
+      {"type": "only_items", "items": ["1", "1A", "1B", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "9A", "9B", "10", "11", "12", "13", "14", "15", "16"]},
+      {"type": "item_present", "item": "1", "status": "extracted"},
+      {"type": "item_present", "item": "1A", "status": "extracted"},
+      {"type": "item_present", "item": "4", "status": "extracted"},
+      {"type": "item_field", "item": "4", "field": "title", "value": "Mine Safety Disclosures"},
+      {"type": "item_present", "item": "7A", "status": "extracted"},
+      {"type": "item_present", "item": "8", "status": "extracted"},
+      {"type": "item_present", "item": "11", "status": "extracted"},
+      {"type": "item_present", "item": "16", "status": "omitted"},
+      {"type": "confidence", "item": "16", "value": 0.8},
+      {"type": "text_contains", "item": "7A", "value": "Not Applicable to Smaller Reporting Companies"},
+      {"type": "text_not_contains", "item": "1", "value": "Item 1A"},
+      {"type": "min_chars", "item": "1A", "value": 10000},
+      {"type": "max_chars", "item": "4", "value": 400},
+      {"type": "item_absent", "item": "9C", "any_status": true},
+      {"type": "item_absent", "item": "1C", "any_status": true}
+    ]
+  },
+  "provenance": "T9 tranche 3 (SHELL / micro-cap stratum, June fiscal year). SigmaRenoPro, Inc., sec.gov/Archives/edgar/data/1714367/000155889119000066/sgrp-20190630_10k.htm, accession 0001558891-19-000066, filed 2019-08-30, FY ending 2019-06-30, 490,291 bytes, HTML. AUTHORED FROM THE DOCUMENT and verified 2026-08-17 by an independent tag-strip scan importing nothing from src/: cover reads 'fiscal year ended June 30, 2019'; there is no 'Item 16' anywhere in the filing. WHY THIS FILING: the existing shell/SRC pair (premier-pacific-2016, sandston-2021) both write out every scaled-disclosure heading with a 'not required' body, so the stratum was one shape sampled twice. This one differs in three ways that the assertions pin: (a) it is a genuine micro-cap operating shell that nevertheless files 22,925 chars of REAL risk factors under Item 1A, so 'shell company' does not imply 'empty Item 1A' and min_chars holds that; (b) its Item 4 heading reads 'Item 4. Safety Disclosures' — the filer dropped the word 'Mine' — which is the first title-elision in the set, and item_field pins that the ERA label is still rendered correctly over it; (c) it is the first fixture with a June fiscal year end in the post-2016 taxonomy, so Item 16 is era-valid, genuinely absent, and must report `omitted` at 0.80 rather than `missing` — the INV-S4 distinction, on a filing that exercises it by accident rather than by construction. Item 7A carries the scaled-disclosure phrase verbatim ('Not Applicable to Smaller Reporting Companies'), which is the anchor. This case is expected GREEN with no new code; that is the T9 validation's first branch, and it is worth as much as a red one only because the assertions are strong enough to have failed."
+}

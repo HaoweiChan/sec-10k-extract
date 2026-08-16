@@ -222,6 +222,60 @@ def test_ibr_spans_are_checked():
                            "value": "proxy statement"}) is not None
 
 
+def test_checks_that_had_never_gone_red():
+    """The G1 audit (ADR-010 consequences) named four checks that were
+    structurally incapable of failing: `no_overlap_ordered`, `verbatim`,
+    `known_items_only` and the layer-8 `boundary_hygiene`. A check no case can
+    turn red is decoration — it makes a suite look stronger than it is, which
+    is the specific complaint. The first three are pure functions of a result
+    dict, so they are provable HERE, on hand-built results, without waiting for
+    a fixture whose segmentation happens to break. (`boundary_hygiene` is a
+    validator, not a check; its positive case lives in validate._demo, and
+    ADR-016 records why a real filing cannot fire it.)"""
+    text = "Item 1. Business\n" + "x" * 200
+
+    # known_items_only: a non-canonical code...
+    r = {"normalized_text": text, "items": [item("1"), item("405")]}
+    assert eval_check(r, {"type": "known_items_only"}) is not None
+    # ...and a status outside the contract's four
+    r2 = {"normalized_text": text, "items": [
+        {"item": "1", "status": "partially_extracted", "start": 0, "end": 10}]}
+    assert eval_check(r2, {"type": "known_items_only"}) is not None
+    r3 = {"normalized_text": text, "items": [item("1"), item("9A"),
+                                             item("16", status="omitted")]}
+    assert eval_check(r3, {"type": "known_items_only"}) is None
+
+    # no_overlap_ordered: overlap, and plain disorder
+    over = {"normalized_text": text, "items": [
+        item("1", start=0, end=100), item("2", start=50, end=150)]}
+    assert eval_check(over, {"type": "no_overlap_ordered"}) is not None
+    disorder = {"normalized_text": text, "items": [
+        item("1", start=100, end=150), item("2", start=0, end=50)]}
+    assert eval_check(disorder, {"type": "no_overlap_ordered"}) is not None
+
+    # verbatim: out-of-range offsets...
+    oob = {"normalized_text": text, "items": [item("1", start=0, end=99999)]}
+    assert eval_check(oob, {"type": "verbatim"}) is not None
+    assert eval_check({"normalized_text": text,
+                       "items": [item("1", start=10, end=5)]},
+                      {"type": "verbatim"}) is not None
+    # ...and the half that did not exist before ADR-016: offsets in range but
+    # pointing somewhere the item's own heading_text is not
+    wrong = {"normalized_text": text, "items": [
+        {"item": "1", "status": "extracted", "start": 30, "end": 120,
+         "heading_text": "Item 1. Business", "confidence": 0.95}]}
+    reason = eval_check(wrong, {"type": "verbatim"})
+    assert reason is not None and "heading_text" in reason, reason
+    right = {"normalized_text": text, "items": [
+        {"item": "1", "status": "extracted", "start": 0, "end": 120,
+         "heading_text": "Item 1. Business", "confidence": 0.95}]}
+    assert eval_check(right, {"type": "verbatim"}) is None
+    # an item without heading_text is exempt, not silently passed by accident
+    assert eval_check({"normalized_text": text,
+                       "items": [item("1", start=30, end=120)]},
+                      {"type": "verbatim"}) is None
+
+
 def test_item_field():
     """title/part ship on every item and the inspector renders them, but no
     check read either until the pre-B audit found every pre-2003 filing
@@ -266,6 +320,7 @@ def test_confidence():
 TESTS = [
     test_item_field,
     test_ibr_spans_are_checked,
+    test_checks_that_had_never_gone_red,
     test_confidence,
     test_doc_status,
     test_norm_checks,
