@@ -1,0 +1,45 @@
+{
+  "id": "wfc-2008-shallow",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {
+    "path": "evals/fixtures/wfc-2008/filing.htm"
+  },
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "known_items_only"},
+      {"type": "expected_set_complete", "items": ["1", "1A", "1B", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "9A", "9B", "10", "11", "12", "13", "14", "15"]},
+      {"type": "only_items", "items": ["1", "1A", "1B", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "9A", "9B", "10", "11", "12", "13", "14", "15"]},
+      {"type": "item_present", "item": "1", "status": "extracted"},
+      {"type": "item_present", "item": "1A", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "1B", "status": "extracted"},
+      {"type": "item_present", "item": "2", "status": "extracted"},
+      {"type": "item_present", "item": "3", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "4", "status": "extracted"},
+      {"type": "item_present", "item": "5", "status": "extracted"},
+      {"type": "item_present", "item": "6", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "7", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "7A", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "8", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "9", "status": "extracted"},
+      {"type": "item_present", "item": "9A", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "9B", "status": "extracted"},
+      {"type": "item_present", "item": "10", "status": "extracted"},
+      {"type": "item_present", "item": "11", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "12", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "13", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "14", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "15", "status": "extracted"},
+      {"type": "confidence", "item": "7", "max": 0.85},
+      {"type": "min_chars", "item": "1", "value": 30000},
+      {"type": "min_chars", "item": "10", "value": 4000},
+      {"type": "max_chars", "item": "7", "value": 600},
+      {"type": "item_absent", "item": "16", "any_status": true},
+      {"type": "item_absent", "item": "9C", "any_status": true}
+    ]
+  },
+  "provenance": "T9 tranche 4 (CRISIS-ERA FINANCIAL stratum, 2007-2009, which the fixture set had no filing from at all). Wells Fargo & Company, sec.gov/Archives/edgar/data/72971/000095013409003967/f51597e10vk.htm, accession 0000950134-09-003967, filed 2009-02-27, FY2008 (Dec-end), 232,547 bytes, legacy HTML. THIS FILING WAS FETCHED FOR THE HELD-OUT REFRESH AND MOVED TO THE DEV SET BEFORE ITS FIRST RUN. The reason is recorded because the line it draws is worth keeping: reading the tag-strip scan, I formed a specific belief about how the pipeline would resolve its headings, and that belief implied a code change. A prediction you would ACT on is influence; a prediction you merely record is not — the held-out README's own practice is to freeze predictions in provenance, and that stays fine. So this filing lost its held-out standing the moment the analysis pointed at a fix, and it was moved rather than argued about. It is replaced in evals/heldout/ by a different crisis-era filer. FOR THE RECORD, THE PREDICTION WAS WRONG: the scan showed items 5 through 14 with bare `ITEM N.` body headings and their titles in a following block, which would have made the body a dense run and re-armed the trap ADR-015 had just closed. The normalizer joins within a block where the scan inserts a newline, so the titles are in fact on the same line and nothing of the sort happens. FOURTH time the instrument rather than the pipeline has been at fault (H1 xom-2021, H2 pgr-2023, a declined csco-2016 assertion, now this) — the held-out README already says character-level claims must come from raw bytes, and this is a paragraph-level claim that failed the same way. WHAT THE FILING ACTUALLY EXPOSED, RED AT AUTHORING (watched before any fix, hard rule 2): ten items — 1A, 3, 6, 7, 7A, 8, 9A, 11, 12, 13, 14 — are whole-item external pointers whose bodies read 'Information in response to this Item N can be found in the 2008 Annual Report to Stockholders under ... That information is incorporated into this report by reference.' Every one of them reported `extracted` at confidence 0.95 over a 250-360 char pointer paragraph. A consumer asking for Item 7 got a sentence instead of the MD&A, labelled a successful extraction with top confidence. Two independent causes, both in classify(): IBR_RE's alternatives are 'incorporated (herein )?by reference' and 'is incorporated by reference', and this filer writes 'incorporated INTO THIS REPORT by reference'; and even matched, the incorporation statement is the SECOND sentence while the external document is named in the first, so ADR-010 ruling 3's requirement that both signals sit in sents[0] fails. ANCHORS ARE DELIBERATELY ABSENT: none of the candidate phrases is contiguous in the raw bytes — this filer breaks running text across tags — so under the case-authoring rule (verify by grep against the raw fixture) they cannot be claimed, and length bands carry the boundary assertions instead. STATUSES VERIFIED IN-DOCUMENT: items 1 (41,811 chars of business), 2 (owned-property list), 5 (NYSE listing and market information inline, plus a pointer — mixed, `extracted` per ADR-010 ruling 3), 10 (the executive-officer chart) and 15 (the exhibit list) carry real content; items 1B, 4 and 9 are 'Not applicable.' trivial bodies per ADR-005 rule 1. The confidence ceiling on item 7 is the check that would catch a fix which relabels the status without moving the score off the 0.95 strict band."
+}

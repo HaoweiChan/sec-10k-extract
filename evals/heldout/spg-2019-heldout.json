@@ -1,0 +1,38 @@
+{
+  "id": "spg-2019-heldout",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {
+    "path": "evals/heldout/fixtures/spg-2019/filing.htm"
+  },
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "known_items_only"},
+      {"type": "expected_set_complete", "items": ["1", "1A", "1B", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "9A", "9B", "10", "11", "12", "13", "14", "15", "16"]},
+      {"type": "only_items", "items": ["1", "1A", "1B", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "9A", "9B", "10", "11", "12", "13", "14", "15", "16"]},
+      {"type": "item_present", "item": "1", "status": "extracted"},
+      {"type": "item_present", "item": "1A", "status": "extracted"},
+      {"type": "item_present", "item": "2", "status": "extracted"},
+      {"type": "item_present", "item": "6", "status": "extracted"},
+      {"type": "item_present", "item": "7", "status": "extracted"},
+      {"type": "item_present", "item": "8", "status": "extracted"},
+      {"type": "item_present", "item": "9A", "status": "extracted"},
+      {"type": "item_present", "item": "16", "status": "extracted"},
+      {"type": "text_not_contains", "item": "1", "value": "Unresolved Staff Comments"},
+      {"type": "text_not_contains", "item": "3", "value": "Mine Safety Disclosures"},
+      {"type": "text_not_contains", "item": "5", "value": "Selected Financial Data"},
+      {"type": "min_chars", "item": "1", "value": 10000},
+      {"type": "min_chars", "item": "1A", "value": 30000},
+      {"type": "min_chars", "item": "2", "value": 40000},
+      {"type": "min_chars", "item": "7", "value": 30000},
+      {"type": "min_chars", "item": "8", "value": 80000},
+      {"type": "min_chars", "item": "16", "value": 20000},
+      {"type": "item_absent", "item": "1C", "any_status": true},
+      {"type": "item_absent", "item": "9C", "any_status": true}
+    ]
+  },
+  "provenance": "T9 tranche 4, authored 2026-08-17, NEVER RUN. Simon Property Group, Inc., sec.gov/Archives/edgar/data/1063761/000155837020001135/spg-20191231x10k.htm, accession 0001558370-20-001135, filed 2020-02-21, FY2019 (Dec-end), 9,812,403 bytes, iXBRL. Verified by the independent tag-strip scan (imports nothing from src/): cover reads 'fiscal year ended December 31, 2019'; twenty-one item headings including Item 16; raw anchor counts 'Form 10-K Summary' 2x, 'Unresolved Staff Comments' 2x, 'Mine Safety Disclosures' 2x, 'Selected Financial Data' 2x, 'Qualitative and Quantitative Disclosures About Market Risk' 1x — the 2x pattern is the acceptable TOC-plus-body shape the case-authoring skill names, and it makes each `text_not_contains` a TOC-trap tripwire as well as a boundary one. STRATUM, three things at once: (a) REAL-ESTATE INVESTMENT TRUST — a sector neither set has, and its Item 2 Properties runs ~101,000 chars of mall-by-mall tables, an order of magnitude past any other fixture's Item 2, which is a boundary problem no other filing poses; (b) the FY2017-FY2020 window, which nothing in either set covers; (c) the SECOND-LARGEST filing anywhere here at 9.8 MB, behind only JPM's 12.8 MB. TWO PREDICTIONS, FROZEN BEFORE THE FIRST RUN. First: Item 16 'Form 10-K Summary' is PRESENT and substantive (~55,700 chars in the scan) — every other filing in either set omits it, so `omitted` has been the only Item 16 outcome ever observed and this is the first chance to see the other branch; it is asserted `extracted`, and if that is wrong the case is red for a real reason. Second, NOT asserted: the Item 7A heading reads 'Qualitative and Quantitative Disclosures About Market Risk' — the filer has transposed the first two words of the canonical title. Title similarity is a character-level ratio and the two orderings should still score far above SIM_FLOOR, so the item should resolve normally; the prediction is recorded rather than asserted because it is a claim about a threshold, and a red produced by my guess about a threshold would measure me rather than the extractor."
+}

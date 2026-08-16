@@ -1,0 +1,104 @@
+{
+  "id": "ko-1997-shallow",
+  "task": "sec10k",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "path": "evals/fixtures/ko-1997/filing.txt"
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "no_empty_success"
+      },
+      {
+        "type": "no_overlap_ordered"
+      },
+      {
+        "type": "verbatim"
+      },
+      {
+        "type": "known_items_only"
+      },
+      {
+        "type": "doc_status",
+        "in": [
+          "success",
+          "success_with_warning"
+        ]
+      },
+      {
+        "type": "item_present",
+        "item": "1",
+        "status": "extracted"
+      },
+      {
+        "type": "item_present",
+        "item": "7A",
+        "status": "incorporated_by_reference"
+      },
+      {
+        "type": "item_absent",
+        "item": "1A",
+        "any_status": true
+      },
+      {
+        "type": "item_absent",
+        "item": "9A",
+        "any_status": true
+      },
+      {
+        "type": "item_absent",
+        "item": "15",
+        "any_status": true
+      },
+      {
+        "type": "item_absent",
+        "item": "16",
+        "any_status": true
+      },
+      {
+        "type": "expected_set_complete",
+        "items": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "7A",
+          "8",
+          "9",
+          "10",
+          "11",
+          "12",
+          "13",
+          "14"
+        ]
+      },
+      {
+        "type": "only_items",
+        "items": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "7A",
+          "8",
+          "9",
+          "10",
+          "11",
+          "12",
+          "13",
+          "14"
+        ]
+      }
+    ]
+  },
+  "provenance": "RETIRED FROM HELD-OUT 2026-08-17 (T9 tranche 4), moved to the dev set unchanged except for this note, its id, and its fixture path. TWO reasons, and the weaker one is listed second so it is not mistaken for the main one. (1) EXHAUSTED: run twice (H1 20260816-225101, H1b 20260816-231253) and again at H2, and four of its assertions were AUTHORING ERRORS that H1 caught and corrected from the source document — so from H1b onward it measured the correction, not the extractor, which the held-out README already said in as many words. (2) CONTAMINATED: the T9 tranche-2 blast-radius scan for the semicolon ruling (ADR-015 §3) ran the pipeline over every fixture on disk, this one included, and so observed that two of its item STATUSES moved (items 11 and 13, extracted -> incorporated_by_reference). No case file was opened and no labelled outcome was consulted, so this is weaker than a burn — and the remedy is to retire the fixture rather than argue the distinction. Its coverage is not lost: pre-2001 txt, beverage sector, the first Item 7A cohort and a real ALL-CAPS cover date all move to the dev side, where they are now scored on every run instead of once a milestone. || ORIGINAL HELD-OUT PROVENANCE, VERBATIM: HELD-OUT, FROZEN AT AUTHORING 2026-08-16 — NOT RUN. The Coca-Cola Company FY1997 10-K, EDGAR accession 0000021344-98-000004, filed 1998-03-09, plain-text full submission (377,407 bytes). Stratum: pre-2001 txt era, consumer/beverage — disjoint from every dev fixture (the dev txt filings are GE 1994 industrial, IBM 1997 tech, Textron 2001 industrial, and no dev fixture is this filer). Verified 2026-08-16 by an INDEPENDENT tag-strip regex scan that imports nothing from src/ — the extractor was never invoked on this file, which is the whole point of the held-out split. Scan results: SGML CONFORMED PERIOD OF REPORT 19971231; cover reads 'DECEMBER 31, 1997' in ALL CAPS (an incidental second sample of the casing stratum that caps-cover-taxonomy covers synthetically — this one is a real filer doing it); item codes found = 1,2,3,4,5,6,7,7A,8,9,10,11,12,13,14, exactly the era-valid set. WHY 7A IS ASSERTED PRESENT: Item 7A took effect for fiscal periods ending on or after 1997-06-15, so a 1997-12-31 filing is in the FIRST cohort that must carry it — this case pins the near edge of that boundary, which no dev fixture does (IBM 1997 has 7A too but its case asserts it only via the expected set). The item_absent rows pin the far edges: 1A/1B arrive 2005, 9A/9B/15 arrive 2003, 16 arrives 2016. No anchors, no length bands — shallow tier, per the case-authoring SOP; the structural invariants carry the correctness signal. BURN RULE: the moment this case's outcome influences implementation it moves to evals/adversarial/ and is replaced with a fresh filing. LABEL CORRECTED AFTER H1 (2026-08-16, docs/evals/audits/2026-08-16-h1-heldout-triage.md). Item 7A was asserted 'extracted'. It is a genuine whole-item pointer and the filing says so in as many words -- the body is a single sentence directing the reader to the Annual Report and ending 'is incorporated herein by reference'. 'incorporated_by_reference' is correct and the extractor was right. The error was mine: I asserted 7A's PRESENCE to pin an era boundary and attached a status to it without reading the body. Correction verified against the source document, not against extractor output. This case is label-corrected rather than burned -- it drives no implementation change -- but it has now been observed, so H1 is the only clean generalization estimate it will ever provide."
+}

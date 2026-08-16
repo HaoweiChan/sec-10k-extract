@@ -30,9 +30,11 @@ imports nothing from `src/`** — used only to establish *what a document contai
 at paragraph granularity*, and nothing finer. **Anything character-level must be
 read from the raw bytes or not claimed.** The scan replaces tags with spaces
 where the normalizer joins within a block, so the two disagree about exactly
-that; it has produced a wrong claim three times (H1's `xom-2021` Item 9C, H2's
-`pgr-2023` floating comma, and a `csco-2016` Item 16 assertion declined for this
-reason). The extractor has never been invoked on any of
+that; it has produced a wrong claim **four** times (H1's `xom-2021` Item 9C,
+H2's `pgr-2023` floating comma, a `csco-2016` Item 16 assertion declined for
+this reason, and T9's `wfc-2008` heading shape — the last one at *paragraph*
+granularity, which is the level this scan is supposed to be trusted at, so the
+rule is now that a structural reading is a hypothesis until a run tests it). The extractor has never been invoked on any of
 these files. Where a case records a prediction about how the pipeline will
 behave — GS 2002's transitional numbering, Costco's em-dash separators, Exxon's
 missing Item 6 — that prediction is written into the provenance *before* the
@@ -42,11 +44,12 @@ first run, so it cannot be retrofitted afterwards.
 
 | Fixture | Source | Accession | Filed | Period end | Stratum | Bytes |
 |---|---|---|---|---|---|---|
-| `ko-1997/filing.txt` | sec.gov/Archives/edgar/data/21344/0000021344-98-000004.txt | 0000021344-98-000004 | 1998-03-09 | 1997-12-31 | pre-2001 txt, beverage; first cohort required to carry Item 7A; ALL-CAPS cover date from a real filer | 377,407 |
 | `pgr-2023/filing.htm` | sec.gov/Archives/edgar/data/80661/000008066124000007/pgr-20231231.htm | 0000080661-24-000007 | 2024-02-26 | 2023-12-31 | iXBRL, **fire/marine/casualty insurance** — restores the financial-sector coverage. Sits 16 days past the Item 1C era boundary, and its cover carries a **floating comma** (`December 31 , 2023`). Replaces `gs-2002`, burned 2026-08-17 | 1,474,219 |
 | `csco-2016/filing.htm` | sec.gov/Archives/edgar/data/858877/000085887716000117/csco-2016730x10k.htm | 0000858877-16-000117 | 2016-09-08 | 2016-07-30 | mid-2010s HTML, computer-communications equipment; 52/53-week FY ending in **July**. Replaces `jnj-2016`, burned by H1 | 4,476,127 |
-| `xom-2021/filing.htm` | sec.gov/Archives/edgar/data/34088/000003408822000011/xom-20211231.htm | 0000034088-22-000011 | 2022-02-23 | 2021-12-31 | large iXBRL, energy; the calendar-FY2021 cohort ADR-010 moved the 9C boundary to reach; drops Item 6 entirely | 6,159,522 |
 | `cost-2022/filing.htm` | sec.gov/Archives/edgar/data/909832/000090983222000021/cost-20220828.htm | 0000909832-22-000021 | 2022-10-05 | 2022-08-28 | iXBRL, retail, **August** FY end; separates every item code from its title with an **em dash**, a heading shape no dev fixture contains | 1,861,894 |
+| `mrk-1995/filing.txt` | sec.gov/Archives/edgar/data/64978/0000950130-96-000896.txt | 0000950130-96-000896 | 1996-03-20 | 1995-12-31 | pre-2001 txt, **pharmaceutical** (the sector jnj-2016 took with it when H1 burned it); form 10-K405; earliest filing in either set that predates Item 7A, so the 14-code taxonomy is exercised by a real document; **no table of contents at all** | 322,618 |
+| `axp-2008/filing.htm` | sec.gov/Archives/edgar/data/4962/000119312509041008/d10k.htm | 0001193125-09-041008 | 2009-02-27 | 2008-12-31 | legacy HTML, **crisis-era financial** — a window neither set had. No table of contents, and the strings 'Item 10' through 'Item 13' occur **zero** times: Part III is addressed without its item headings. Replaces `wfc-2008`, moved to the dev set before its first run | 1,296,375 |
+| `spg-2019/filing.htm` | sec.gov/Archives/edgar/data/1063761/000155837020001135/spg-20191231x10k.htm | 0001558370-20-001135 | 2020-02-21 | 2019-12-31 | iXBRL, **REIT** — Item 2 Properties runs ~101K chars of mall-by-mall tables, an order of magnitude past any other Item 2; the FY2017–FY2020 window; the first filing in either set with a **present and substantive Item 16**; 9.8 MB, second-largest anywhere here | 9,812,403 |
 
 Re-fetch pattern, same as `evals/fixtures/README.md`:
 
@@ -54,17 +57,54 @@ Re-fetch pattern, same as `evals/fixtures/README.md`:
 curl -H "User-Agent: Haowei Chan hwchan42@gmail.com" <url> -o <dest>
 ```
 
+## T9 refresh, 2026-08-17
+
+Two cases **retired** to `evals/golden/` rather than burned, for two reasons
+each and in this order. *Exhausted*: `ko-1997` and `xom-2021` were run at H1,
+H1b and H2, and both carry labels corrected after H1's triage, so from H1b
+onward they measured the correction rather than the extractor — this file said
+as much already. *Contaminated*: the T9 tranche-2 blast-radius scan for the
+semicolon ruling (ADR-015 §3) ran the pipeline over every fixture on disk,
+these included, and observed that three of their item statuses moved. No case
+file was opened and no labelled outcome was consulted, which is weaker than a
+burn — and the remedy is to retire the fixtures rather than argue the
+distinction. Their coverage is not lost; it moved to the scored side.
+
+One case **never entered the set**. `wfc-2008` was fetched for this refresh and
+moved straight to `evals/fixtures/` because reading its scan produced a belief
+about how the pipeline would resolve its headings, and that belief implied a
+code change. The line this draws is worth keeping: **a prediction you would act
+on is influence; a prediction you merely record is not** — freezing predictions
+into provenance, as every case here does, stays fine. (For the record the
+prediction was wrong, in the instrument's now-familiar way, and the filing
+turned out to carry a real defect worth two ADR rulings.)
+
+Three cases **added**, and all three carry something no held-out case has ever
+carried: **length floors and cross-item exclusions**. Every earlier case here
+asserted presence and status only — the pre-B audit flagged it as finding 4 and
+the H2 triage repeated it: *"a TOC-collapsed extraction would clear them."* T9
+tranche 2 proved that was not hypothetical. Intel 2002 resolved every item to an
+18-to-490-char stub, reported `success_with_warning`, and satisfied every
+structural check in the vocabulary; a floor of 2,000 chars on Item 1 would have
+caught it instantly. Floors are set from the scan at paragraph granularity with
+wide margins, so they cannot encode the scan's known disagreement with the
+normalizer.
+
 ## Disjointness from the dev set
 
-No filer appears in both sets. Sector coverage added here that `evals/fixtures/`
-does not have at all: beverage, brokerage, computer-communications equipment,
-petroleum, retail warehouse. Fiscal-year ends added: November, July
-(52/53-week), August — every dev fixture ends in December, June, May or
-September.
+No filer appears in both sets. Sector coverage held here that `evals/fixtures/`
+does not have at all: fire/marine/casualty insurance, computer-communications
+equipment, retail warehouse, pharmaceutical, real-estate investment trust.
+Fiscal-year ends held here: July (52/53-week) and August — every dev fixture
+ends in December, June, May, January or September.
 
-(Pharmaceutical and the January 52/53-week year end left this set with
-`jnj-2016` when H1 burned it; both now live in `evals/fixtures/`, so the
-coverage is not lost, it moved to the dev side.)
+Coverage that has MOVED to the dev side rather than being lost, as cases
+retired or were burned: pharmaceutical and the January 52/53-week year end
+(`jnj-2016`, burned at H1 — pharma is restored here by `mrk-1995`), the
+Sarbanes-Oxley interim numbering (`gs-2002`, burned 2026-08-17), beverage and
+the first Item 7A cohort (`ko-1997`), petroleum and the FY2021 9C cohort
+(`xom-2021`), and the crisis-era two-sentence pointer (`wfc-2008`, moved before
+its first run — the stratum itself stays here on `axp-2008`).
 
 ## Run history
 

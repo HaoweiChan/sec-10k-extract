@@ -6,6 +6,7 @@ ADR-005 (trivial bodies / absent headings), ADR-007 (T4 thresholds, measured).
 Self-check: python3 -m src.sec10k.segment
 """
 import difflib
+import itertools
 import re
 from datetime import date
 
@@ -388,8 +389,13 @@ def assign_boundaries(survivors, expected, text):
 EXTERNAL_DOC_RE = re.compile(
     r"(?i)(proxy statement|information statement|annual report to (share|stock)"
     r"[ ]?(holders|owners)|annual report to its (share|stock)[ ]?(holders|owners))")
-IBR_RE = re.compile(r"(?i)incorporated (herein )?by reference|"
-                    r"is incorporated by reference|reported on pages|refer to (page|the section)")
+# "incorporated ... by reference" tolerates an interposed phrase: Wells Fargo
+# 2008 writes "incorporated INTO THIS REPORT by reference" on ten of its items,
+# and both of the old fixed alternatives missed it, so every one of them
+# reported `extracted` at 0.95 over a 300-char pointer. `[^.]` keeps the window
+# inside one sentence.
+IBR_RE = re.compile(r"(?i)incorporated\b[^.]{0,40}?\bby reference|"
+                    r"reported on pages|refer to (page|the section)")
 # Non-pointer prose a body may carry and still count as "the content is
 # elsewhere". Measured over all 34 pointer-bearing bodies in the fixture set:
 # genuine whole-item pointers leave 0-166 chars of non-pointer remainder (the
@@ -466,11 +472,31 @@ def classify(code, body, present):
     #    before, so moving two paragraphs flipped a 4,805-char item to IBR —
     #    silently, since IBR spans are excluded from every layer-8 validator.
     sents = _sentences(flat)
-    if not (IBR_RE.search(sents[0]) and EXTERNAL_DOC_RE.search(sents[0])):
+
+    def _pointer(s):
+        return bool(IBR_RE.search(s) or EXTERNAL_DOC_RE.search(s)
+                    or INTERNAL_REF_RE.search(s))
+
+    # ADR-010 ruling 3 required both signals in sents[0]. The requirement that
+    # the pointer OPENS the body is load-bearing and stays: textron-2001 item 5
+    # ends with "The price range is incorporated by reference to the Annual
+    # Report to Shareholders" after two sentences of real market data, and it is
+    # `extracted` — an item that mentions a pointer last is not an item whose
+    # content is elsewhere.
+    #
+    # What does NOT survive is "exactly one sentence". The commonest
+    # institutional phrasing splits the pointer across two adjacent sentences:
+    # "Information in response to this Item 7 can be found in the 2008 Annual
+    # Report to Stockholders under ... . That information is incorporated into
+    # this report by reference." — Wells Fargo 2008 writes it that way on ten
+    # items, each of which reported `extracted` at 0.95 over a 300-char pointer.
+    # So the window is the LEADING RUN of pointer sentences, and both signals
+    # must appear inside it.
+    lead = list(itertools.takewhile(_pointer, sents))
+    joined = " ".join(lead)
+    if not (IBR_RE.search(joined) and EXTERNAL_DOC_RE.search(joined)):
         return "extracted"
-    rest = sum(len(s) for s in sents[1:]
-               if not (IBR_RE.search(s) or EXTERNAL_DOC_RE.search(s)
-                       or INTERNAL_REF_RE.search(s)))
+    rest = sum(len(s) for s in sents[len(lead):] if not _pointer(s))
     return "incorporated_by_reference" if rest <= IBR_REMAINDER_MAX else "extracted"
 
 
@@ -563,6 +589,16 @@ def _demo():
                     "regarding shares authorized for issuance under equity compensation "
                     "plans approved by stockholders and not approved by stockholders.",
                     True) == "incorporated_by_reference"
+    # the pointer may run across two adjacent sentences (wfc-2008, ten items),
+    # and "incorporated INTO THIS REPORT by reference" is still a pointer...
+    assert classify("7", "Information in response to this Item 7 can be found in the "
+                    "2008 Annual Report to Stockholders under \"Financial Review\" on "
+                    "pages 34-83. That information is incorporated into this report "
+                    "by reference.", True) == "incorporated_by_reference"
+    # ...but the pointer must OPEN the body. The textron-2001 item 5 assertion
+    # above is the guard: an item that mentions a pointer LAST is not an item
+    # whose content is elsewhere, and generalising the window without keeping
+    # that requirement flipped nine committed items across the fixture set.
     assert classify("6", "[Reserved]", True) == "extracted"           # ADR-005 rule 1
     assert classify("16", "", False) == "omitted"                     # rule 2
     assert classify("1A", "", False) == "missing"                     # rule 3
