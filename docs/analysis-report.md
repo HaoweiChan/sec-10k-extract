@@ -113,12 +113,21 @@ the implementation was never built against.
 |---|---|---|---|
 | **H1** | 2026-08-16 | **1/5** | first execution, at git `70d10f1` |
 | **H1b** | 2026-08-16 | **4/5** | after the ADR-013 fixes, at git `453cbc4` |
+| **H2** | 2026-08-17 | **5/5** | T8 milestone run, at git `61619e6`, after `gs-2002` was burned to enumerated debt and replaced by `pgr-2023` |
 
-**1/5 → 4/5 must not be quoted as a generalization improvement.** Of H1b's four
-passes, only two are generalization evidence: `cost-2022` (clean in H1) and
-`csco-2016` (fresh, never observed). The other two pass because their *labels*
-were corrected, which measures the correction. The remaining failure,
-`gs-2002`, is a real limitation left unfixed on purpose.
+**Neither 1/5 → 4/5 nor H2's 5/5 may be quoted as a generalization number.**
+Across all three runs the set has only ever contained a handful of genuinely
+unobserved filings at a time. H2's five passes decompose as: two filings with
+generalization content (`csco-2016`, `pgr-2023`), two that pass because their
+*labels* were corrected after H1, and one clean twice. **The generalization
+evidence at B-freeze is two filings, and both of those carry no anchors and no
+length bands** — so they establish that the right items were found with the
+right statuses, not that their boundaries are right. A TOC-collapsed extraction
+would clear either.
+
+`gs-2002`, the one real failure H1 and H1b both found, was burned to enumerated
+debt rather than fixed: the era-model rework it demands conflicts with INV-S3
+and is A-level scope. It still runs every suite and still reports `STILL RED`.
 
 What H1 actually bought, in order of value:
 

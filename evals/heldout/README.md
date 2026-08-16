@@ -26,7 +26,13 @@ expansion. Budget 2 spare filings per milestone for that cycle.
 ## Authoring discipline
 
 Every case here was verified by an **independent tag-strip regex scan that
-imports nothing from `src/`**. The extractor has never been invoked on any of
+imports nothing from `src/`** — used only to establish *what a document contains
+at paragraph granularity*, and nothing finer. **Anything character-level must be
+read from the raw bytes or not claimed.** The scan replaces tags with spaces
+where the normalizer joins within a block, so the two disagree about exactly
+that; it has produced a wrong claim three times (H1's `xom-2021` Item 9C, H2's
+`pgr-2023` floating comma, and a `csco-2016` Item 16 assertion declined for this
+reason). The extractor has never been invoked on any of
 these files. Where a case records a prediction about how the pipeline will
 behave — GS 2002's transitional numbering, Costco's em-dash separators, Exxon's
 missing Item 6 — that prediction is written into the provenance *before* the
@@ -90,3 +96,13 @@ hand; the burn rule names "a threshold choice" as burning, and a documented
 decision to decline a fix is at least as much influence. Counting it in a
 held-out denominator would have overstated that denominator. Replaced by
 `pgr-2023`, which carries two predictions recorded before its first run.
+
+**H2, 2026-08-17, 5/5** — the T8 milestone run, triaged in
+`docs/evals/audits/2026-08-17-h2-heldout.md`. Worth less than H1's 1/5: only
+`csco-2016` and `pgr-2023` carry generalization content, and neither has anchors
+or length bands, so passing means the right items with the right statuses and
+says nothing about their boundaries. `ko-1997` and `xom-2021` pass because their
+labels were corrected after H1. Of the two predictions frozen into `pgr-2023`
+before its first run, the Item 1C era boundary held and the floating-comma
+prediction was wrong — its premise was an artifact of the verification scan
+itself, which is why the authoring rule above is now stated more tightly.
