@@ -1,8 +1,9 @@
 # Milestones — B-level exit criteria, A-level hardening
 
-Durable exit criteria, ranked hardening priorities, and the milestone
-decomposition (what must go red/green, in what dependency order). Fine-grained
-scheduling and task status live in the session; judgment calls become ADRs.
+Durable exit criteria and ranked hardening priorities — what "done" means, not
+where we are. Milestone status and per-milestone exit gates live in
+`tasks/TODO.md` (ADR-009); fine-grained scheduling lives in the session;
+judgment calls become ADRs.
 
 ## B-level exit checklist
 
@@ -18,8 +19,10 @@ A legitimate B is a complete, honest system — not a happy-path prototype.
 - [ ] Every invariant in `specs/000-invariants.md` backed by a case tagged
   `"suites": ["invariant"]` — includes retagging `ge-1994-oldformat` to close
   the known INV-S3/S4 gap.
-- [ ] Held-out set (3–5 filings) authored frozen, run once at the milestone,
-  results committed **before** any fix.
+- [ ] Held-out set (3–5 filings) authored frozen **before** the frontend, run
+  twice (T7 exit, T8), results committed **before** any fix — one measurement
+  taken on the last day cannot be reacted to, and the burn/refresh cycle needs
+  a turn of the crank to be more than a described policy.
 - [ ] Contract v2 envelope implemented; ADR-001..003 recorded.
 - [ ] Zeabur-deployed inspector: fixture select + upload + EDGAR URL;
   item/status/confidence/method badges; warnings + `doc_status` banner; trace
@@ -51,54 +54,13 @@ Evidence-deepening, not feature-adding:
    benchmarks, projection to N filings, fallback cost model.
 6. **Taxonomy completeness** + 10-K/A stretch scope.
 
-## Milestone decomposition (eval-first: every implementation task names cases that go red first)
+## Milestone decomposition — moved
 
-- **T1** — planning artifacts: docs/, contract v2, ADR-001..003,
-  extraction-auditor agent, case-authoring skill, curated prompt record.
-- **T2** — eval expansion round 1 (case-commit, all red): retag `ge-1994`;
-  new deep-tier goldens + shallow-tier filings + 10-Q→unsupported +
-  malformed-HTML adversarial cases. Hardening scope fixed by the 2026-08-15
-  methodology audit (`docs/evals/audits/2026-08-15-methodology.md`):
-  - adapter: `doc_status` + `max_chars` + expected-set-completeness check
-    (INV-S4 currently has no enforcing check); era-validity strengthening
-    (`item_absent`/`known_items_only` pass era-invalid non-extracted codes);
-    `no_empty_success` reconciled with `doc_status` and its one-good-item
-    gaming hole closed; `min_chars` on null offsets → judgment, not TypeError;
-    result echo is per-item (confidence, status, method) + `doc_status`, not
-    per-check only.
-  - runner: `--dir` flag for held-out; reports embed the git SHA; case
-    discovery hardened against stray nested JSONs.
-  - cases: end-of-item anchors + `max_chars` on existing goldens; replace
-    non-discriminating anchors (GE "General Electric": 101 hits) and record
-    every anchor's occurrence count; status assertions for AAPL items 6 and
-    10–14 ([Reserved] / incorporated-by-reference) and 7A checks; a
-    determinism check backing INV-S2 (the current `verbatim` check is a
-    bounds check only). While authoring, record each item's measured
-    length/shape/density stats in `provenance` — they seed the layer-8
-    validator priors set at T5.
-  **Plus the early end-to-end deploy spike**: hello-world FastAPI wrapping the
-  stub, live on Zeabur, one EDGAR fetch from it — de-risks deployment and
-  EDGAR egress now, not at T7.
-- **T3** — document selection + normalization (spike first: determinism +
-  word-joining on both fixtures). Partial green: `verbatim`.
-- **T4** — candidates + TOC filter + boundaries + status classification →
-  `aapl-2025-*` and `ge-1994` green (the TOC trap dying is the single most
-  important green in this repo). **Txt stop-loss decision point at T4 exit.**
-- **T5** — validation + confidence + v2 envelope: the layer-8 **label-free
-  validator battery** (TOC manifest cross-check, gap analysis, boundary
-  hygiene, part-region consistency, rank-order length sanity, numeric
-  density, keyword fingerprints, dual-method boundary agreement — architecture
-  overview has the definitions and warn-don't-hard-fail policy), with priors
-  and thresholds measured from eval-set distributions, ADR-recorded — no
-  pre-data numbers. → `doc_status` cases green; then cold-reviewer run →
-  findings become adversarial cases → fix loop.
-- **T6** — remaining goldens green (mid-era HTML, large financial iXBRL).
-- **T7** — full frontend UI on the already-proven Zeabur deploy.
-- **T8** — held-out authoring (frozen) + `evals/metrics.py` + milestone run +
-  analysis report v1 + README lists + pre-B audit + baseline = **B**.
-- **T9+** — A-hardening in the ranked order above; each item starts with its
-  eval cases (calibration starts by measuring; any fallback starts with the
-  failures it must rescue, tagged `full`).
+The per-milestone decomposition, its status, and each milestone's exit gate now
+live in **`tasks/TODO.md`** (ADR-009). It moved rather than being copied: two
+files listing the same milestones drift, and the T5 exit gate went unnoticed
+precisely because it was a clause inside prose here. This file keeps the
+durable half — exit criteria, hardening rank, commit strategy, self-review.
 
 ## Commit strategy
 

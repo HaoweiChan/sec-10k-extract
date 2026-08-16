@@ -22,7 +22,7 @@ the coverage map that `spec-drift` and methodology audits check against.
 | # | Requirement | Kind | Satisfied by |
 |---|---|---|---|
 | T1 | Extract individual Items from raw 10-K filings so they are independently consumable | mandatory | `specs/001-sec10k-contract.md` (offset-based items) |
-| T2 | Self-built eval set verifying reliability | mandatory | `evals/` golden + adversarial (+ heldout at T2); [evaluation-strategy.md](../evals/evaluation-strategy.md) |
+| T2 | Self-built eval set verifying reliability | mandatory | `evals/` golden + adversarial (+ `heldout/`, authored frozen at ledger row G3); [evaluation-strategy.md](../evals/evaluation-strategy.md) |
 | T3 | Frontend: submit **or** select filings, inspect extracted items, understand confidence / failure cases | mandatory | fixture-select + upload + URL modes; item/confidence/warning/trace views |
 | T4 | List filings/companies that work well, with examples | mandatory | README + frontend page (T8) |
 | T5 | List filings/companies that are difficult/unreliable/unsupported, with concrete failure cases | mandatory | same — fed by adversarial debt + audit findings |

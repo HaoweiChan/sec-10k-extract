@@ -20,6 +20,7 @@ README.md; this file is the working contract.
 .claude/skills/    domain + process knowledge, loaded on demand
 .claude/agents/    cold-reviewer / eval-adversary / spec-drift / extraction-auditor
 docs/              durable design docs (product, evals, architecture) — descriptive; specs/ binds
+tasks/TODO.md      milestone ledger — status + per-milestone Validation gates (ADR-009)
 .claude/hooks/     enforcement — the only layer that can actually block
 .githooks/         pre-commit eval gate (installed via core.hooksPath)
 specs/             ONLY: 000-invariants.md, per-task contracts, decisions/ADR-*.md
@@ -37,7 +38,7 @@ src/<task>/        implementation + eval_adapter.py per task
 python3 -m evals.run --suite fast              # quick gate suite
 python3 -m evals.run --suite invariant         # must-always-hold assertions
 python3 -m evals.run --suite all               # everything, writes report
-python3 -m evals.run --suite fast --dir evals/heldout  # held-out run (T8+; always writes report)
+python3 -m evals.run --suite fast --dir evals/heldout  # held-out run (milestones only; always writes report)
 python3 -m evals.run --suite fast --update-baseline   # deliberate baseline move
 ```
 
@@ -48,7 +49,10 @@ python3 -m evals.run --suite fast --update-baseline   # deliberate baseline move
 2. **Every new failure becomes a case** in `evals/adversarial/` before it is fixed.
    Watch the new case fail first; an eval you've never seen red proves nothing.
 3. **specs/ holds only three kinds of files**: invariants, output contracts, ADRs.
-   No tasks.md, no plans — task lists live in the session, not in files.
+   No plans there, ever. Task state lives in exactly one file — `tasks/TODO.md`,
+   milestone-level only (ADR-009). Micro-tasks stay in the session. Every ledger
+   row names its Validation gate, and a gate that has not run is written
+   **`UNRUN`** in Status rather than omitted.
 4. **No mocked results.** If a live dependency is unreachable, fail loudly; never
    fabricate output to make a run look green.
 5. Commits go through the pre-commit eval gate. `--no-verify` is for emergencies
