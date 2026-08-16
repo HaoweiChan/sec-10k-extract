@@ -3,8 +3,12 @@
   "configurations": [
     {
       "name": "inspector",
-      "runtimeExecutable": ".venv/bin/uvicorn",
-      "runtimeArgs": ["src.sec10k.web.app:app", "--port", "8000", "--reload"],
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "exec .venv/bin/uvicorn src.sec10k.web.app:app --host 0.0.0.0 --port ${PORT:-8000} --reload"
+      ],
+      "autoPort": true,
       "port": 8000
     }
   ]
