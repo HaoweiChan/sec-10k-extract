@@ -1,0 +1,22 @@
+{
+  "id": "gs-2002-heldout",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {"path": "evals/heldout/fixtures/gs-2002/filing.htm"},
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "known_items_only"},
+      {"type": "doc_status", "in": ["success", "success_with_warning", "ambiguous"]},
+      {"type": "item_present", "item": "1", "status": "extracted"},
+      {"type": "item_present", "item": "7A", "status": "extracted"},
+      {"type": "item_present", "item": "15", "status": "extracted"},
+      {"type": "item_absent", "item": "1A", "any_status": true},
+      {"type": "expected_set_complete", "items": ["1", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "10", "11", "12", "13", "14"]},
+      {"type": "only_items", "items": ["1", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "10", "11", "12", "13", "14", "15"]}
+    ]
+  },
+  "provenance": "HELD-OUT, FROZEN AT AUTHORING 2026-08-16 \u2014 NOT RUN. The Goldman Sachs Group, Inc. FY2002 10-K, EDGAR accession 0000950123-03-002099, filed 2003-02-27, primary document y83718e10vk.htm (early HTML, 395,754 bytes). Stratum: 2001-2004 transitional HTML + financial sector + NOVEMBER fiscal-year end \u2014 three axes no dev fixture combines (JPM is the only other financial and it is 2024 iXBRL with a December year end). evaluation-strategy.md names 'a 2001-2004 transitional filing' as a known gap; this fills it in the held-out set rather than the dev set. Verified 2026-08-16 by an INDEPENDENT tag-strip regex scan; the extractor was never invoked. THE REASON THIS FILING WAS CHOSEN, stated plainly because it is also the reason the case may fail: it uses the post-Sarbanes-Oxley TRANSITIONAL NUMBERING. The scan finds 'Item 14. Controls and Procedures' and 'Item 15. Exhibits, Financial Statement Schedules, and Reports on Form 8-K' as real body headings (each with a matching contents-page row), i.e. Goldman adopted the Controls/Exhibits renumbering for a FY2002 filing, ahead of the 2003-08-14 effective date that src/sec10k/segment.py's ADDED table encodes for Items 9A/9B/15. Under that table a 2002-11-29 period end does not expect Item 15 at all, so item_present('15') is asserted here on the authority of the DOCUMENT, not of the table. If the extractor cannot produce it, this case is red at the milestone and the finding is that the era model does not cover the transitional window \u2014 which is exactly what a held-out filing is for. It is recorded here BEFORE the run so that the prediction cannot be retrofitted afterwards. doc_status permits 'ambiguous' because an era/heading mismatch of this kind is a legitimate reason for the pipeline to decline to resolve. only_items therefore allows the era-valid 15 codes PLUS 15; expected_set_complete demands only the era-valid set, so the two checks fail for distinguishable reasons. Shallow tier: no anchors, no length bands. BURN RULE: if this outcome influences implementation, it moves to evals/adversarial/ and is replaced."
+}

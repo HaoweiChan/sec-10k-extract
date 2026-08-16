@@ -1,0 +1,23 @@
+{
+  "id": "cost-2022-heldout",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {"path": "evals/heldout/fixtures/cost-2022/filing.htm"},
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "known_items_only"},
+      {"type": "doc_status", "in": ["success", "success_with_warning"]},
+      {"type": "item_present", "item": "1", "status": "extracted"},
+      {"type": "item_present", "item": "4", "status": "extracted"},
+      {"type": "item_present", "item": "6", "status": "extracted"},
+      {"type": "item_present", "item": "9C", "status": "extracted"},
+      {"type": "item_absent", "item": "1C", "any_status": true},
+      {"type": "expected_set_complete", "items": ["1", "1A", "1B", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "9A", "9B", "9C", "10", "11", "12", "13", "14", "15", "16"]},
+      {"type": "only_items", "items": ["1", "1A", "1B", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "9A", "9B", "9C", "10", "11", "12", "13", "14", "15", "16"]}
+    ]
+  },
+  "provenance": "HELD-OUT, FROZEN AT AUTHORING 2026-08-16 \u2014 NOT RUN. Costco Wholesale Corporation FY2022 10-K, EDGAR accession 0000909832-22-000021, filed 2022-10-05, primary document cost-20220828.htm (1,861,894 bytes). Stratum: iXBRL, retail-variety-stores, and an AUGUST fiscal-year end (period 2022-08-28) \u2014 the only non-December, non-January year end in either set. Verified 2026-08-16 by an INDEPENDENT tag-strip regex scan; the extractor was never invoked. THE FORMAT VARIANT THAT MAKES THIS FILING WORTH HOLDING OUT, recorded before the run: Costco separates every item code from its title with an EM DASH rather than a period \u2014 the scan finds 'Item 4\u2014Mine Safety Disclosures Not applicable.', 'Item 6\u2014Reserved', 'Item 9C\u2014Disclosure Regarding Foreign Jurisdictions that Prevent Inspections Not Applicable.' \u2014 while its contents page uses the conventional 'Item 4. Mine Safety Disclosures' form. Every one of the 14 dev fixtures uses a period or a colon, so the em-dash separator is a heading shape src/sec10k/segment.py's HEADING_RE has never been exercised against. If it does not match, the body headings all fail while the TOC rows still match, which is the precise condition that produces TOC-collapsed spans \u2014 so this case would fail loudly rather than silently, via min-span and ordering checks. Item 9C is asserted 'extracted' (heading present, body 'Not Applicable.' \u2014 ADR-005 rule 1: a present heading with a trivial body is extracted, not omitted), which together with xom-2021-heldout's 'omitted' pins BOTH sides of the 9C ruling on real filings the fix was never tuned against. Item 6 likewise asserted 'extracted' \u2014 'Item 6\u2014Reserved' is a present heading with a trivial body, the same [Reserved] shape the AAPL 2025 dev case pins. Item 4 is asserted because it is the em-dash heading with the shortest body, so it fails first if the separator is unsupported. BURN RULE: if this outcome influences implementation, it moves to evals/adversarial/ and is replaced."
+}
