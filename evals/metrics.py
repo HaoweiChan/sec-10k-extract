@@ -81,12 +81,18 @@ def compute(report, cases):
     # success, that nonetheless fail a check. Denominator counts ONLY items some
     # check targets; untargeted confident items are reported separately rather
     # than silently counted as fine (evaluation-strategy is explicit about this).
-    conf_targeted = conf_silent = unaudited = 0
+    conf_targeted = conf_silent = unaudited = excluded_nonsuccess = 0
     for r in results:
-        if r.get("doc_status") not in ("success", "success_with_warning"):
-            continue
+        success = r.get("doc_status") in ("success", "success_with_warning")
         for it in r.get("items_summary", []):
             if (it.get("confidence") or 0) < CONFIDENT:
+                continue
+            if not success:
+                # The metric's definition scopes it to docs the pipeline called
+                # a success, which is defensible — but the pre-B audit caught
+                # the PROSE quoting coverage as if this exclusion did not exist.
+                # It is counted and published, not silently dropped.
+                excluded_nonsuccess += 1
                 continue
             key = (r["id"], it["item"])
             if key in targeted_items:
@@ -95,6 +101,7 @@ def compute(report, cases):
                     conf_silent += 1
             else:
                 unaudited += 1
+    conf_total = conf_targeted + unaudited + excluded_nonsuccess
 
     # --- 8: calibration. Same join, bucketed.
     calib = []
@@ -154,8 +161,11 @@ def compute(report, cases):
             {"n": 6, "name": "silent-failure rate",
              "value": _rate(conf_silent, conf_targeted), "sample": conf_targeted,
              "note": f"confident (>={CONFIDENT}) items in success docs that fail a check. "
-                     f"{unaudited} confident items are targeted by NO check and are excluded "
-                     f"from the denominator — they are unaudited, not verified"},
+                     f"COVERAGE {_rate(conf_targeted, conf_total)} of the {conf_total} confident "
+                     f"items in the run: {unaudited} are targeted by NO check (unaudited, not "
+                     f"verified) and {excluded_nonsuccess} more sit in non-success docs and are "
+                     f"outside the metric's definition — including items this report names as "
+                     f"wrongly bounded"},
             {"n": 7, "name": "doc-level success rate (golden)",
              "value": _rate(ok(golden), len(golden)), "sample": len(golden),
              "note": f"golden filings only. Pooled over the whole suite it reads "

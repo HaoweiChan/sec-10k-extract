@@ -90,7 +90,7 @@ Verified by committed cases; run `python3 -m evals.run --suite all` to reproduce
 | Stratum | Examples | Result |
 |---|---|---|
 | Modern iXBRL (2019+) | AAPL FY2025, NVDA FY2024, CAT FY2023 | `success`, full item sets (23 items) |
-| Mid-era HTML (2001–2019) | MSFT FY2013, NIKE FY2006, JNJ FY2016 | `success` |
+| Mid-era HTML (2001–2019) | MSFT FY2013, NIKE FY2006, JNJ FY2016 | `success`. JNJ is the filer whose bare-block headings once cost 18 of 21 items (ADR-013) |
 | Plain-text submissions (1993–2001) | GE FY1993, IBM FY1997 | `success_with_warning`; the txt era was kept in scope, its stop-loss never invoked (ADR-007) |
 | 10-K405 checkbox variant | Textron FY2001, IBM FY1997 | handled; the form cross-check compares families, not strings (ADR-006) |
 | Shell / tiny filers | Sandston FY2021, Premier Pacific FY2016 | `success`, including correct `omitted` for absent optional items |
@@ -125,15 +125,20 @@ speculative.
 
 **Thin evidence — claimed, but not strongly demonstrated**
 
-- **4 of 6 validators have no case proving they fire.** `unattributed_content`
-  and `last_item_dominates` are pinned; numeric-density, keyword-fingerprint,
-  boundary-hygiene and the manifest cross-check are not all provable.
+- **3 of the 7 validators have never fired on any input in this repository** —
+  `boundary_hygiene`, `numeric_density_inversion` and `keyword_fingerprint`.
+  Not "no case proves it": measured across all 21 fixtures, they have never
+  produced a warning at all. (The manifest cross-check *is* pinned, by
+  `heading-unnumbered`; an earlier version of this list named it as unproven
+  and was wrong in that direction.)
 - **Four eval checks are structurally incapable of failing** —
   `no_overlap_ordered`, `verbatim`, `known_items_only`, `boundary_hygiene`.
   `verbatim` asserts bounds and never compares text. Recorded in ADR-010, not
   papered over: **27/27 green means less than it appears**.
-- **284 confident items are targeted by no check at all.** The 0.0
-  silent-failure rate covers the 105 that are audited.
+- **The silent-failure rate covers 22% of the confident items.** 0.0 is
+  measured over 109 audited items out of 490 confident ones: 280 are targeted
+  by no check, and 101 more sit in non-success documents and fall outside the
+  metric's definition — including the JPM span this README names as wrong.
 
 **Explicitly unsupported** — refused, never best-effort: non-10-K forms
 (10-Q, 8-K, 20-F), scanned/image/PDF filings, inputs with no detectable 10-K

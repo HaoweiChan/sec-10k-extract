@@ -4,7 +4,7 @@ Written from committed artifacts, not from memory. Every number below is
 reproducible from `evals/report/*.json` and `evals/metrics.py`; where a number
 could not be measured honestly it says so rather than being estimated.
 
-Run of record: `evals/report/20260816-232946-all.json`, git `45ce49f`,
+Run of record: `evals/report/20260816-234718-all.json`, git `31b07c3`,
 27 cases, score 1.000.
 
 ---
@@ -33,23 +33,23 @@ that re-verifies anchors and outputs.
 ### Metrics (verbatim from `python3 -m evals.metrics`)
 
 ```
-suite=all  score=1.0  cases=27  git=45ce49f
+suite=all  score=1.0  cases=27  git=31b07c3
 
- 1. item presence recall             1.0   (n=105)
- 2. status accuracy                  1.0   (n=105)
+ 1. item presence recall             1.0   (n=108)
+ 2. status accuracy                  1.0   (n=108)
  3. anchor-containment accuracy      1.0   (n=45)
  4. boundary tightness (proxy)       1.0   (n=47)
  5. false-positive extraction rate   0.0   (n=63)
- 6. silent-failure rate              0.0   (n=105)
- 7. doc-level success rate (golden)  0.8571 (n=14)
+ 6. silent-failure rate              0.0   (n=109)
+ 7. doc-level success rate (golden)  0.8571   (n=14)
  8. confidence calibration
          [0.0,0.60)  n=2    pass=1.0
          [0.6,0.80)  n=5    pass=1.0
-         [0.8,0.90)  n=34   pass=1.0
-         [0.9,1.01)  n=91   pass=1.0
- 9. latency p50 / p95 (s)            [0.08, 0.53]   (n=27)
+         [0.8,0.90)  n=37   pass=1.0
+         [0.9,1.01)  n=92   pass=1.0
+ 9. latency p50 / p95 (s)            [0.08, 0.54]   (n=27)
 10. cost per filing (USD)            0.0   (n=27)
-11. deterministic coverage           1.0   (n=413)
+11. deterministic coverage           1.0   (n=410)
 ```
 
 ### What these numbers do **not** mean
@@ -58,10 +58,12 @@ This section matters more than the table, and it is deliberately placed
 immediately after it.
 
 - **Metric 6 is the headline honesty number and its denominator is small.**
-  0.0 silent failures is measured over **105 audited items**, while **284
-  confident items are targeted by no check at all**. The rate covers 27% of the
-  confident population. Those 284 are reported as *unaudited*, never folded in
-  as if verified.
+  0.0 silent failures is measured over **109 audited items out of 490 confident
+  ones — 22% coverage**. 280 are targeted by no check at all, and a further
+  **101 sit in non-success documents and fall outside the metric's definition**,
+  among them the JPM item 15 that §6 of this report names as wrongly bounded.
+  An earlier version of this section quoted 27% by counting only the first
+  exclusion; the pre-B audit caught it, and `metrics.py` now publishes both.
 - **Metric 8 is not calibration, it is a placeholder shaped like calibration.**
   Every bucket reads 1.0 because every targeted check passes. A calibration
   curve needs failures to have any shape at all. ADR-008 already states the
@@ -77,6 +79,18 @@ immediately after it.
   `verbatim`, `known_items_only`, `boundary_hygiene` (ADR-010). `verbatim`
   asserts bounds and never compares text. **27/27 green means less than it
   appears**, and the metrics above inherit that weakness.
+- **Metrics 1, 2, 3, 4 and 6 are pass-rates over the same declared checks**, and
+  the commit gate requires 27/27 with the baseline armed at 1.000. On the dev
+  set they therefore *cannot* report anything but 1.0/0.0: they confirm the gate
+  is green, they do not independently measure capability. Metric 2 is
+  byte-identical to metric 1 for the same reason. Metric 11 is likewise true by
+  construction — no code path emits `llm_fallback`, so "100% deterministic
+  coverage kills the fallback stage" is circular until a fallback exists.
+- **Metric 5's denominator is padded.** Of its 63 checks, the 5
+  `known_items_only` cannot fail, and `text_not_contains` is vacuous whenever
+  the item has no span. It reads as 63 independent opportunities to fail; it is
+  fewer. (`item_absent` is the strong form throughout — all 15 use
+  `any_status` — that part is sound.)
 
 ### Provisional targets, reset
 
@@ -135,7 +149,7 @@ no caching (verified: a 5.7 MB filing takes 0.260 s cold and 0.249 s on repeat
 
 | | |
 |---|---|
-| Latency p50 | **0.041 s** |
+| Latency p50 | **0.041 s** (metric 9 quotes `[0.08, 0.53]` over a different population — 27 cases including re-runs, single run each, versus 21 fixtures at median-of-3 here; both are reproducible and neither is wrong) |
 | Latency p95 | **0.249 s** |
 | Slowest filing | JPM FY2024, 12.8 MB → **0.526 s** |
 | Aggregate throughput | **18.9 MB/s** (37.8 MB in 2.00 s) |
