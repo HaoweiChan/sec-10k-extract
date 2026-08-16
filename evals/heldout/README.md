@@ -70,3 +70,12 @@ After H1 the set is no longer pristine: `cost-2022` is the only case never
 observed failing, and three carry corrected labels. H1 is the only clean
 generalization estimate those three will ever provide, and later runs on them
 measure regression, not generalization. `csco-2016` is fresh.
+
+**H1b, 2026-08-16, 4/5** — re-run after the ADR-013 fixes. Read it carefully,
+because the number flatters the result: of the four passes only `cost-2022`
+(clean in H1) and `csco-2016` (fresh, never observed) are generalization
+evidence. `ko-1997` and `xom-2021` pass because their labels were corrected,
+which measures the correction, not the extractor. The single failure,
+`gs-2002`, is the era-model limitation ADR-013 deliberately declined to fix and
+is enumerated debt, not a surprise. The honest one-line summary is: **one fresh
+unseen filing, 4.5 MB and never observed, passed on the first attempt.**
