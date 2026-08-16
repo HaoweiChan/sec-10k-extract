@@ -30,6 +30,7 @@ jobs:
       - run: python3 -m src.sec10k.validate
       # the view layer imports no fastapi, precisely so it can run here
       - run: python3 -m src.sec10k.web.view
+      - run: python3 -m evals.metrics --self-check
 
   invariant-eval:
     runs-on: ubuntu-latest
