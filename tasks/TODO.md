@@ -20,13 +20,32 @@ it looks.
 | T4 | Layers 4–7 — candidates, TOC filter, boundaries, status | ordered-candidate resolution, TOC-cluster suppression, boundary assignment, status classification; thresholds measured then ADR-007 | T1 T5 | the TOC trap case dies; txt stop-loss decided at exit, either way, in writing | **done** — 8bfc232 (19/20); ADR-007 §2 declines the stop-loss, txt era stays in scope · **cold-reviewer UNRUN** |
 | T5 | Layers 8–9 — label-free validator battery + confidence + v2 envelope | 8 validators (TOC manifest cross-check, gap analysis, boundary hygiene, part-region consistency, rank-order length, numeric density, keyword fingerprints, dual-method agreement); priors from eval-set distributions, ADR-008 | robustness T5 | thresholds derived from measured distributions, never chosen ahead of data; `doc_status` cases green | **done** — 67ec058 (21/21) · **cold-reviewer UNRUN · spec-drift UNRUN** |
 | T6 | Remaining goldens | mid-era HTML + large financial iXBRL goldens | T2 | green with no new code — if code is needed, it is a T4/T5 defect, not a T6 task | **done** — no commit; carried green by T4/T5, `report/20260816-010527-all.json` 1.0 @ a6ab0a5 |
-| G1 | **Gate catch-up** (blocks T7) | cold-reviewer cold-reads T3–T5 implementation; spec-drift audits specs↔code | C1 honesty | every finding becomes an adversarial case **watched red**, then fixed green (hard rule 2); zero findings is itself a reportable result | **todo** |
+| G1 | **Gate catch-up** | cold-reviewer cold-reads T3–T5 implementation; spec-drift audits specs↔code | C1 honesty | every finding becomes an adversarial case **watched red**, then fixed green (hard rule 2); zero findings is itself a reportable result | **done** — 4 red cases → ADR-010 → 25/25 fast, 8/8 invariant. Both audits ran; the spec↔code audit was dispatched to the cold-reviewer agent by mistake and ran under the spec-drift brief — remit covered, agent charter not exercised. **Open: 4 of 6 validators still unprovable, 4 adapter checks structurally cannot go red** (ADR-010 consequences) — deferred to T9 by scope decision, not closed. **Open: IBR offset recommendation awaiting sign-off** (below).** |
 | G2 | **CI + armed baseline + branch protection** | one workflow (unit / invariant / fast); `--update-baseline` with its ADR; protect `main`: require PR + the 3 checks, block force-push and deletion | C2 | CI proven red on a deliberately broken commit before it is trusted; baseline non-empty so `run.py:130` can actually fire | **todo** |
 | G3 | **Held-out authoring** (frozen) | 3–5 shallow-tier filings + cases in `evals/heldout/`, era-stratified, disjoint from dev fixtures | T6 | authored and committed **without being run** — authoring must not leak an outcome | **todo** |
 | T7 | Frontend inspector | fixture select + upload + EDGAR URL; item / status / confidence / method badges; warnings + `doc_status` banner; trace panel — on the already-proven Zeabur deploy | C3 T3 | a stranger can submit a filing, read the confidence, and understand a failure without reading the code | **todo** |
 | H1 | **Held-out run #1** (T7 exit) | `--suite fast --dir evals/heldout` against the deployed system | T6 | report committed **before** any fix; burned cases triaged, promoted to adversarial, replaced | **todo** |
 | T8 | B-freeze | held-out run #2, `evals/metrics.py`, `docs/analysis-report.md` v1 (measured latency/cost/scalability), README works-well + difficult/unsupported lists, pre-B extraction-auditor audit, baseline move | C5 C6 T4 T5 T6 | the B-exit checklist in `docs/product/milestones.md` is green line by line → **stop** | **todo** |
 | T9+ | A-hardening | ranked backlog in `milestones.md` — eval expansion, confidence calibration, silent-failure rate, fallback (only if residual data justifies it), perf/cost numbers, taxonomy completeness | E-level markers | each item lands with its own eval evidence or it does not land | backlog |
+
+## Open decision — IBR offsets (G1, awaiting sign-off)
+
+The contract says non-`extracted` items carry null offsets; the code emits real
+offsets for `incorporated_by_reference`, and eval anchors were **deleted** from
+`textron-2001-content` to match the spec — coverage lost to a stale spec line.
+
+Investigated, recommendation: **amend the contract, not the code.** `validate()`
+builds its span map from `status == "extracted"` only, and the adapter's
+`no_overlap_ordered` / `verbatim` do the same, so an IBR span is invisible to
+all six validators and both structural checks — which is exactly what let
+`ibr-pointer-first` disown 4,805 chars in silence. Nulling the offsets would
+also cost the T7 inspector the pointer sentence itself, the evidence a human
+uses to confirm an IBR claim; `heading_text` alone cannot show it.
+
+So: keep pointer-text offsets for `incorporated_by_reference`, keep null for
+`missing`/`omitted`, **and extend INV-S1 and boundary hygiene to cover IBR
+spans** so a misclassification is loud rather than silent. Restore the deleted
+Textron anchors. Not implemented — it changes a binding invariant.
 
 Exit criteria + A-ranking: `docs/product/milestones.md` ·
 Methodology: `docs/evals/evaluation-strategy.md` ·

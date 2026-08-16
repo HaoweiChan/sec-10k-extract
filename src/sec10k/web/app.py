@@ -1,6 +1,6 @@
 """T2 deploy spike: minimal FastAPI wrapper around the extractor. Proves
-(1) the service shape runs and (2) EDGAR egress works. As of T3 /extract
-returns a real contract-v2 envelope (normalization only, no items yet).
+(1) the service shape runs and (2) EDGAR egress works. /extract returns a
+real contract-v2 envelope from the full T3-T5 pipeline.
 Full inspector UI is T7 — see docs/product/task2-problem-definition.md."""
 import subprocess
 import urllib.request
@@ -40,11 +40,14 @@ def status_page():
 <h1>sec10k-extract</h1>
 <p>git SHA: {_git_sha()}</p>
 <p>eval cases (golden + adversarial): {_case_count()}</p>
-<p>pipeline status (T3): document selection + normalization are live;
-item segmentation lands at T4, so every identified 10-K comes back
-<code>ambiguous</code> with an empty <code>items</code> list &mdash; by design,
-never <code>success</code>. Non-10-K input is refused as
-<code>unsupported</code>.</p>
+<p>pipeline status: the full deterministic pipeline is live &mdash; document
+selection, normalization, heading candidates, TOC filtering, boundaries,
+status classification, the label-free validator battery and confidence
+scoring. Extraction returns a contract-v2 envelope with per-item offsets,
+status, confidence and method.</p>
+<p>Refusals are explicit and are not best-effort parses: unreadable input is
+<code>failed</code>, input that is not a 10-K is <code>unsupported</code>.
+The inspector UI lands at T7 &mdash; see docs/product/task2-problem-definition.md.</p>
 <ul>
 <li><a href="/edgar-check">GET /edgar-check</a></li>
 <li>POST /extract {{"fixture": "aapl-2025"}}</li>

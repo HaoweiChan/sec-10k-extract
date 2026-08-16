@@ -181,7 +181,30 @@ def test_warning_absent():
                       {"type": "warning_absent", "code": "x"}) is None
 
 
+def test_confidence():
+    r = {"normalized_text": "x" * 100, "items": [
+        item("1", start=0, end=100, confidence=0.95),
+        item("7", status="incorporated_by_reference", confidence=0.85),
+    ]}
+    assert eval_check(r, {"type": "confidence", "item": "1", "value": 0.95}) is None
+    assert eval_check(r, {"type": "confidence", "item": "1", "value": 0.75}) is not None
+    # bands, so a case can pin "must not be confident" without pinning a constant
+    assert eval_check(r, {"type": "confidence", "item": "1", "min": 0.9}) is None
+    assert eval_check(r, {"type": "confidence", "item": "1", "max": 0.9}) is not None
+    # non-extracted statuses carry confidence too (contract: how sure are we
+    # it is really absent) — the check must not silently skip them
+    assert eval_check(r, {"type": "confidence", "item": "7", "value": 0.85}) is None
+
+    # missing item, and present-but-unscored item, are failures not crashes
+    assert eval_check(r, {"type": "confidence", "item": "9", "value": 0.5}) is not None
+    r2 = {"normalized_text": "", "items": [{"item": "1", "status": "missing",
+                                            "start": None, "end": None}]}
+    reason = eval_check(r2, {"type": "confidence", "item": "1", "value": 0.55})
+    assert reason is not None and "no confidence" in reason, reason
+
+
 TESTS = [
+    test_confidence,
     test_doc_status,
     test_norm_checks,
     test_warning_absent,

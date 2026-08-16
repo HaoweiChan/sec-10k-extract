@@ -17,7 +17,7 @@ from src.sec10k.segment import (
 )
 from src.sec10k.validate import AMBIGUOUS_CODES, score, validate
 
-VERSION = "0.4.0-t4"
+VERSION = "0.5.1-g1"  # meta.extractor_version — audits compare across runs
 
 # Layer 9 in its provisional form: tiered by heading-match quality, coarse, and
 # clamped away from 0 and 1. Calibration against measured per-bucket accuracy is
@@ -80,19 +80,24 @@ def extract_items(path):
     meta["input_sha256"] = sha
     trace.append({"layer": "select+normalize", **meta})
 
+    # ORDER IS THE CONTRACT'S, NOT A PREFERENCE (001-sec10k-contract, envelope
+    # rules): collapse is tested BEFORE form identity. A truncated download
+    # normalizes to nothing AND sniffs no form, and the two statuses are
+    # different diagnoses to a user — "we could not read this" sends them to
+    # re-download, "this is not a 10-K" sends them to check the wrong thing.
+    if len(text) < COLLAPSE_FLOOR:
+        warnings.append({
+            "code": "normalization_collapse", "item": None,
+            "message": f"{len(raw)} raw chars normalized to {len(text)}"})
+        return _envelope("failed", text, meta=meta, warnings=warnings,
+                         trace=trace, t0=t0)
+
     if meta["form_type"] not in ACCEPTED_FORMS:
         # refusal, not a best-effort parse (contract v2 envelope rules)
         found = meta["form_type"] or "none"
         warnings.append({"code": "unsupported_form", "item": None,
                          "message": f"not an accepted 10-K form (detected: {found})"})
         return _envelope("unsupported", text, meta=meta, warnings=warnings,
-                         trace=trace, t0=t0)
-
-    if len(text) < COLLAPSE_FLOOR:
-        warnings.append({
-            "code": "normalization_collapse", "item": None,
-            "message": f"{len(raw)} raw chars normalized to {len(text)}"})
-        return _envelope("failed", text, meta=meta, warnings=warnings,
                          trace=trace, t0=t0)
 
     expected = expected_items(meta.get("period_end"))

@@ -130,7 +130,12 @@ PERIOD_HDR_RE = re.compile(r"CONFORMED PERIOD OF REPORT:\s*(\d{4})(\d{2})(\d{2})
 DEI_PERIOD_RE = re.compile(r'name="dei:DocumentPeriodEndDate"')
 # the comma can float ("December 31 , 2024") once JPM's nested ix element is
 # tag-stripped, so it is optional and may carry space on either side
-DATE_RE = re.compile(r"([A-Z][a-z]{2,8})\.?\s+(\d{1,2})\s*,?\s+(\d{4})")
+# (?i) is load-bearing: an ALL-CAPS cover block ("DECEMBER 31, 2016") is a
+# common filer typesetting choice, and COVER_DATE_RE below already matches one.
+# Without it the two regexes disagree about case, the captured string fails to
+# parse, period_end comes back None, and expected_items silently drops the
+# whole modern taxonomy — caps-cover-taxonomy.
+DATE_RE = re.compile(r"(?i)([A-Za-z]{3,9})\.?\s+(\d{1,2})\s*,?\s+(\d{4})")
 COVER_DATE_RE = re.compile(r"(?i)fiscal year ended[:\s]*"
                            r"([A-Z][a-z]{2,8}\.?\s+\d{1,2},?\s+\d{4})")
 MONTHS = ["january", "february", "march", "april", "may", "june", "july",
@@ -138,15 +143,20 @@ MONTHS = ["january", "february", "march", "april", "may", "june", "july",
 
 
 def _parse_date(s):
-    m = DATE_RE.search(s)
-    if not m:
-        return None
-    month = m.group(1).lower()
-    idx = next((i for i, name in enumerate(MONTHS, 1) if name.startswith(month[:3])), None)
-    try:
-        return date(int(m.group(3)), idx, int(m.group(2))) if idx else None
-    except ValueError:
-        return None
+    # every match, not just the first: (?i) widens DATE_RE enough that a
+    # non-month word ("Ended 31, 2016") can match ahead of the real date, and
+    # returning None then would reintroduce the bug this loop exists to kill
+    for m in DATE_RE.finditer(s):
+        month = m.group(1).lower()
+        idx = next((i for i, name in enumerate(MONTHS, 1)
+                    if name.startswith(month[:3])), None)
+        if not idx:
+            continue
+        try:
+            return date(int(m.group(3)), idx, int(m.group(2)))
+        except ValueError:
+            continue
+    return None
 
 
 def period_end(raw, text):

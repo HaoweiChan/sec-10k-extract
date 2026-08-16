@@ -61,7 +61,15 @@ ADDED = {
     "1C": date(2023, 12, 15),
     "7A": date(1997, 6, 15),
     "9A": date(2003, 8, 14), "9B": date(2003, 8, 14),
-    "9C": date(2022, 1, 1),
+    # 9C's rule keys on FILING date (annual reports filed on/after 2022-01-01),
+    # and this table keys on period end — a different date. Filing date is not
+    # recoverable from a modern primary .htm (2 of 15 fixtures carry an SGML
+    # header), so the boundary is the earliest period end whose report can land
+    # after the cutoff. Calendar-FY2021 filers, the largest cohort of that
+    # season, file in Feb-Mar 2022 and MUST address 9C; keyed at 2022-01-01
+    # they lost it entirely and its text was annexed to Item 9B. Filers who
+    # legitimately have no 9C heading fall through to `omitted` (see classify).
+    "9C": date(2021, 10, 1),
     "15": date(2003, 8, 14),   # Exhibits moved 14 -> 15 when 14 became Fees
     "16": date(2016, 6, 1),
 }
@@ -242,6 +250,14 @@ EXTERNAL_DOC_RE = re.compile(
     r"[ ]?(holders|owners)|annual report to its (share|stock)[ ]?(holders|owners))")
 IBR_RE = re.compile(r"(?i)incorporated (herein )?by reference|"
                     r"is incorporated by reference|reported on pages|refer to (page|the section)")
+# Non-pointer prose a body may carry and still count as "the content is
+# elsewhere". Measured over all 34 pointer-bearing bodies in the fixture set:
+# genuine whole-item pointers leave 0-166 chars of non-pointer remainder (the
+# 166 is NIKE's Item 10, whose remainder is itself a pointer phrased without
+# the trigger words), while bodies with real inline content start at 414
+# (IBM 1997 Item 5: stockholders of record, exchange listings) and run to
+# 3,186 (the ibr-pointer-first officer table). Floor sits in that empty band.
+IBR_REMAINDER_MAX = 300
 
 
 def classify(code, body, present):
@@ -259,12 +275,21 @@ def classify(code, body, present):
     flat = re.sub(r"\s+", " ", body).strip()
     if not IBR_RE.search(flat):
         return "extracted"
-    # pointer-shaped body: IBR only if the FIRST sentence is the pointer and it
-    # names a different document (ADR-004 shapes 1 vs 3)
-    first = re.split(r"(?<=[.;])\s", flat, maxsplit=1)[0]
-    if IBR_RE.search(first) and EXTERNAL_DOC_RE.search(flat):
-        return "incorporated_by_reference"
-    return "extracted"
+    # IBR means the content lives ELSEWHERE. Two corrections over the T4 rule,
+    # both from ibr-pointer-first:
+    #  - the external-document evidence must be in the POINTER SENTENCE, not
+    #    anywhere in the body. Searching `flat` let "proxy statement" 40,000
+    #    chars away justify a first-sentence pointer.
+    #  - a body that also carries substantive inline prose is `extracted`
+    #    however many pointers it opens with. Sentence order decided this
+    #    before, so moving two paragraphs flipped a 4,805-char item to IBR —
+    #    silently, since IBR spans are excluded from every layer-8 validator.
+    sents = re.split(r"(?<=[.;])\s", flat)
+    if not (IBR_RE.search(sents[0]) and EXTERNAL_DOC_RE.search(sents[0])):
+        return "extracted"
+    rest = sum(len(s) for s in sents[1:]
+               if not (IBR_RE.search(s) or EXTERNAL_DOC_RE.search(s)))
+    return "incorporated_by_reference" if rest <= IBR_REMAINDER_MAX else "extracted"
 
 
 def _demo():
@@ -273,7 +298,12 @@ def _demo():
     assert len(expected_items(date(1993, 12, 31))) == 14
     assert "7A" not in expected_items(date(1993, 12, 31))
     assert len(expected_items(date(1997, 12, 31))) == 15
-    assert len(expected_items(date(2021, 12, 31))) == 21   # no 9C/1C yet
+    # a calendar-FY2021 filer files in early 2022 and MUST address 9C; 1C is
+    # the one still to come. This assertion read 21 with the comment "no 9C/1C
+    # yet" — the same wrong belief the ADDED table and sandston-2021-shallow
+    # carried, which is how the FY2021 cohort lost the item three ways at once.
+    assert len(expected_items(date(2021, 12, 31))) == 22   # 9C yes, 1C not yet
+    assert "9C" not in expected_items(date(2021, 6, 30))   # filed before cutoff
     assert len(expected_items(date(2016, 12, 31))) == 21
 
     text = ("Item 1.\nBusiness\nItem 1A.\nRisk Factors\n"          # bare TOC
