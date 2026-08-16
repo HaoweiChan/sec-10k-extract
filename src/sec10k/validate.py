@@ -54,6 +54,15 @@ def validate(text, items, accepted, manifest):
     spans = {i["item"]: (i["start"], i["end"]) for i in items
              if i["status"] == "extracted"}
     body = {c: text[s:e] for c, (s, e) in spans.items()}
+    # ADR-011: IBR items carry pointer-text offsets. They stay OUT of the
+    # content-shape validators below — coverage, domination and density were
+    # all measured over extracted spans, and a pointer paragraph has no
+    # vocabulary or numeric profile to judge — but their boundaries are checked
+    # like any other span. Before this, an IBR span was invisible to all six.
+    hygiene_spans = dict(spans)
+    hygiene_spans.update({i["item"]: (i["start"], i["end"]) for i in items
+                          if i["status"] == "incorporated_by_reference"
+                          and i["start"] is not None})
 
     def warn(code, msg, item=None):
         warns.append({"code": code, "item": item, "message": msg})
@@ -94,7 +103,7 @@ def validate(text, items, accepted, manifest):
 
     # 4. Boundary hygiene — every span must open with its own heading. Cheap,
     # and it is the one thing that must never be wrong.
-    for code, (s, e) in spans.items():
+    for code, (s, e) in hygiene_spans.items():
         head = text[s:s + 60].split("\n")[0]
         if not re.match(r"(?i)^\s*(part\s+[ivx]+\s*[-–—.:]?\s*)?item\s*" +
                         re.escape(code) + r"\b", head):

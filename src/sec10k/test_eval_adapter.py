@@ -48,7 +48,7 @@ def test_max_chars():
     assert eval_check(r, {"type": "max_chars", "item": "2", "value": 10}) == "item not in output"
 
     r2 = {"normalized_text": "", "items": [item("1", "missing")]}
-    assert eval_check(r2, {"type": "max_chars", "item": "1", "value": 10}) == "item not extracted"
+    assert eval_check(r2, {"type": "max_chars", "item": "1", "value": 10}) == "item has no span"
 
 
 def test_text_checks_non_extracted():
@@ -60,12 +60,12 @@ def test_text_checks_non_extracted():
     r = {"normalized_text": doc, "items": [item("1", "missing")]}
 
     reason = eval_check(r, {"type": "text_contains", "item": "1", "value": "forbidden phrase"})
-    assert reason == "item not extracted", reason
+    assert reason == "item has no span", reason
 
     # value present elsewhere in the whole doc, but item 1 was never extracted —
     # must still fail, not false-pass via the whole-doc slice
     reason = eval_check(r, {"type": "text_contains", "item": "1", "value": "far away"})
-    assert reason == "item not extracted", reason
+    assert reason == "item has no span", reason
 
     # text_not_contains: nothing was extracted, so nothing can contain the
     # forbidden text — vacuous pass, even though the phrase IS in the full doc
@@ -76,7 +76,7 @@ def test_text_checks_non_extracted():
 def test_min_chars_null_offsets():
     # this is the historical TypeError trap: null start/end must not blow up
     r = {"normalized_text": "", "items": [item("1", "missing")]}
-    assert eval_check(r, {"type": "min_chars", "item": "1", "value": 10}) == "item not extracted"
+    assert eval_check(r, {"type": "min_chars", "item": "1", "value": 10}) == "item has no span"
 
     r2 = {"normalized_text": "x" * 20, "items": [item("1", "extracted", 0, 20)]}
     assert eval_check(r2, {"type": "min_chars", "item": "1", "value": 10}) is None
@@ -181,6 +181,47 @@ def test_warning_absent():
                       {"type": "warning_absent", "code": "x"}) is None
 
 
+def test_ibr_spans_are_checked():
+    """ADR-011: incorporated_by_reference carries pointer-text offsets, so the
+    structural checks must cover it. Before ADR-011 both checks iterated the
+    extracted list only, which is what let a misclassified IBR item disown
+    4,805 chars of GE 1994 with nothing anywhere registering it."""
+    text = "x" * 100
+    # an IBR span overlapping the extracted item that follows it
+    r = {"normalized_text": text, "items": [
+        {"item": "6", "status": "incorporated_by_reference", "start": 0,
+         "end": 60, "confidence": 0.85},
+        {"item": "7", "status": "extracted", "start": 40, "end": 90,
+         "confidence": 0.95},
+    ]}
+    reason = eval_check(r, {"type": "no_overlap_ordered"})
+    assert reason is not None and "6" in reason and "7" in reason, reason
+
+    # and offsets outside the text must be caught on an IBR item too
+    r2 = {"normalized_text": text, "items": [
+        {"item": "6", "status": "incorporated_by_reference", "start": 0,
+         "end": 400, "confidence": 0.85}]}
+    assert eval_check(r2, {"type": "verbatim"}) is not None
+
+    # null-offset statuses stay exempt — they have no span to check
+    r3 = {"normalized_text": text, "items": [
+        item("6", status="omitted"), item("7", status="missing")]}
+    assert eval_check(r3, {"type": "no_overlap_ordered"}) is None
+    assert eval_check(r3, {"type": "verbatim"}) is None
+
+    # content checks reach IBR text: the pointer sentence is real, inspectable
+    # evidence, and refusing to anchor it is what deleted coverage from
+    # textron-2001-content in the first place
+    r4 = {"normalized_text": "Item 6. See the proxy statement, page 61.",
+          "items": [{"item": "6", "status": "incorporated_by_reference",
+                     "start": 0, "end": 40, "confidence": 0.85}]}
+    assert eval_check(r4, {"type": "text_contains", "item": "6",
+                           "value": "proxy statement"}) is None
+    assert eval_check(r4, {"type": "min_chars", "item": "6", "value": 10}) is None
+    assert eval_check(r4, {"type": "text_not_contains", "item": "6",
+                           "value": "proxy statement"}) is not None
+
+
 def test_confidence():
     r = {"normalized_text": "x" * 100, "items": [
         item("1", start=0, end=100, confidence=0.95),
@@ -204,6 +245,7 @@ def test_confidence():
 
 
 TESTS = [
+    test_ibr_spans_are_checked,
     test_confidence,
     test_doc_status,
     test_norm_checks,

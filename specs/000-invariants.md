@@ -22,10 +22,16 @@ Format per invariant:
 
 ## sec10k
 
-## INV-S1: Extracted item ranges are non-overlapping and in document order
+## INV-S1: Span-carrying item ranges are non-overlapping and in document order
+- Scope: every status that carries offsets — `extracted` **and**
+  `incorporated_by_reference` (ADR-011). `missing`/`omitted` have no span.
 - Rationale: overlap means double-attribution of text; disorder means the
   splitter matched a TOC entry or a stray reference instead of a real heading.
-- Enforced by: evals/golden/aapl-2025-structure.json
+  Restricting this to `extracted` left IBR spans unchecked by anything, which
+  is how `ibr-pointer-first` disowned 4,805 chars in silence.
+- Enforced by: evals/golden/aapl-2025-structure.json,
+  evals/adversarial/ibr-pointer-first.json,
+  src/sec10k/test_eval_adapter.py::test_ibr_spans_are_checked
 
 ## INV-S2: Every extracted item's text is a verbatim slice of normalized_text
 - Rationale: no paraphrase, no LLM rewriting, no dropped characters — offsets

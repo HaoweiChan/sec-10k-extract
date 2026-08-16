@@ -41,8 +41,10 @@ unchanged; field rationale lives in `docs/product/task2-problem-definition.md`.
 
 ## Rules
 
-- `item` codes come from the canonical registry in
-  `src/sec10k/eval_adapter.py` (modern + legacy taxonomies). Nothing else.
+- `item` codes come from the emitting registry, `TITLES`/`ORDER` in
+  `src/sec10k/segment.py` (modern + legacy taxonomies). Nothing else.
+  `eval_adapter.CANONICAL` is a hand-kept mirror used for judging, which is
+  why `known_items_only` can only ever pass — see ADR-010's open list.
 - `status` ∈ `extracted` | `missing` | `incorporated_by_reference` | `omitted`.
   Every item in the filing-era's expected set MUST appear in `items` with some
   status — silence is not an allowed way to report absence (INV-S4).
@@ -50,10 +52,18 @@ unchanged; field rationale lives in `docs/product/task2-problem-definition.md`.
   text verbatim (INV-S2); `[start, end)` ranges must not overlap and must
   appear in document order (INV-S1). Item text is read via the offsets — there
   is deliberately no separate `text` field to drift from them.
-- For any other status: `start`/`end` are null; `confidence` still required
-  (how sure are we it's actually absent/incorporated, not missed).
+- For `status: incorporated_by_reference`: `start`/`end` point at the item's
+  own pointer text — the sentence naming the other document. That text is real
+  and is the evidence a human uses to confirm the claim, so it is addressable
+  like any other span, and INV-S1 + boundary hygiene cover it (ADR-011).
+- For `status: missing` / `omitted`: `start`/`end` are null — there is no span.
+- All statuses require `confidence` (how sure are we it's actually
+  absent/incorporated, not missed).
 - `confidence` ∈ [0,1] and must be honest: downstream consumers will threshold
-  on it, and the eval set contains cases that punish overconfident wrongness.
+  on it. Cases pin the scale's constants via the `confidence` check type
+  (ADR-010). They do **not** yet punish overconfident wrongness — the scale is
+  uncalibrated (ADR-008) and measuring it is A-level work. This line previously
+  claimed the stronger thing while no case read the field at all.
 - Offsets are into `normalized_text`, NOT the raw file. Normalization is owned
   by the extractor but must be deterministic for a given input.
 

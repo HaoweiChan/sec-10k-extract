@@ -19,6 +19,10 @@ CANONICAL = {
     "15": "IV", "16": "IV",
 }
 STATUSES = {"extracted", "missing", "incorporated_by_reference", "omitted"}
+# statuses that carry offsets, per ADR-011. `incorporated_by_reference` points
+# at the pointer paragraph — real, inspectable text — so every span-level check
+# must reach it. `missing`/`omitted` have no span by definition.
+SPAN_STATUSES = {"extracted", "incorporated_by_reference"}
 NO_EMPTY_SUCCESS_FLOOR = 1000  # provisional floor — narrows (not closes) the one-good-item hole
 # fields that determinism actually governs — timings/cost/trace/meta legitimately vary
 # run to run (wall-clock, run-local trace ids) on an honest, correct pipeline
@@ -40,6 +44,8 @@ def eval_check(result, chk, path=None):
     by_code = {i["item"]: i for i in result["items"]}
     entry = by_code.get(chk.get("item"))
     extracted = [i for i in result["items"] if i["status"] == "extracted"]
+    spanned = [i for i in result["items"] if i["status"] in SPAN_STATUSES]
+    has_span = entry is not None and entry["status"] in SPAN_STATUSES
 
     if t == "item_present":
         if entry is None or entry["status"] != chk.get("status", "extracted"):
@@ -54,26 +60,25 @@ def eval_check(result, chk, path=None):
     elif t == "text_contains":
         if entry is None:
             return f"item {chk['item']} missing text {chk['value']!r}"
-        if entry["status"] != "extracted":
-            return "item not extracted"
+        if not has_span:
+            return "item has no span"
         if chk["value"] not in item_text(result, entry):
             return f"item {chk['item']} missing text {chk['value']!r}"
     elif t == "text_not_contains":
-        # non-extracted (null offsets) has no text at all -> vacuously can't contain it
-        if entry is not None and entry["status"] == "extracted" \
-                and chk["value"] in item_text(result, entry):
+        # a null-offset status has no text at all -> vacuously can't contain it
+        if has_span and chk["value"] in item_text(result, entry):
             return f"item {chk['item']} contains forbidden {chk['value']!r}"
     elif t == "min_chars":
-        if entry is not None and entry["status"] != "extracted":
-            return "item not extracted"
+        if entry is not None and not has_span:
+            return "item has no span"
         n = (entry["end"] - entry["start"]) if entry else 0
         if n < chk["value"]:
             return f"item {chk['item']} has {n} chars < {chk['value']}"
     elif t == "max_chars":
         if entry is None:
             return "item not in output"
-        if entry["status"] != "extracted":
-            return "item not extracted"
+        if not has_span:
+            return "item has no span"
         n = entry["end"] - entry["start"]
         if n > chk["value"]:
             return f"item {chk['item']} has {n} chars > {chk['value']}"
@@ -131,13 +136,16 @@ def eval_check(result, chk, path=None):
         if missing:
             return f"expected items missing or unstatused: {missing}"
     elif t == "no_overlap_ordered":
-        spans = [(i["start"], i["end"], i["item"]) for i in extracted]
+        # INV-S1 covers every span-carrying status (ADR-011), not just
+        # `extracted`: an IBR span excluded from this check is how a
+        # misclassified item disowned 4,805 chars with nothing registering it
+        spans = [(i["start"], i["end"], i["item"]) for i in spanned]
         for (s1, e1, a), (s2, e2, b) in zip(spans, spans[1:]):
             if s2 < e1:
                 return f"items {a} and {b} overlap or are out of order"
     elif t == "verbatim":
         n = len(result["normalized_text"])
-        for i in extracted:
+        for i in spanned:
             if not (0 <= i["start"] < i["end"] <= n):
                 return f"item {i['item']} offsets outside normalized_text"
     elif t == "doc_status":
