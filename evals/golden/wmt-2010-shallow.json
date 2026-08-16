@@ -1,0 +1,30 @@
+{
+  "id": "wmt-2010-shallow",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {
+    "path": "evals/fixtures/wmt-2010/filing.htm"
+  },
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "doc_status", "in": ["success", "success_with_warning"]},
+      {"type": "expected_set_complete", "items": ["1", "1A", "1B", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "9A", "9B", "10", "11", "12", "13", "14", "15"]},
+      {"type": "item_present", "item": "1A", "status": "extracted"},
+      {"type": "item_present", "item": "2", "status": "extracted"},
+      {"type": "item_present", "item": "4", "status": "extracted"},
+      {"type": "item_present", "item": "6", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "7", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "8", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "11", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "14", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "15", "status": "extracted"},
+      {"type": "item_absent", "item": "1C", "any_status": true},
+      {"type": "item_absent", "item": "9C", "any_status": true},
+      {"type": "item_absent", "item": "16", "any_status": true}
+    ]
+  },
+  "provenance": "T9 tranche 1 (IBR-heavy retail stratum + ALL-CAPS body headings + Item 4 'RESERVED' window). sec.gov/Archives/edgar/data/104169/000119312510071652/d10k.htm, accession 0001193125-10-071652, filed 2010-03-30, FY ending 2010-01-31, 343,590 bytes, legacy HTML. Two firsts for the eval set, verified by independent tag-strip scan 2026-08-17: (a) every body heading is uppercase 'ITEM N.' - no existing fixture exercises heading case-insensitivity; (b) Item 4 reads 'ITEM 4. RESERVED' - the 2010-2011 reserved window after the SEC removed 'Submission of Matters', pinned extracted per the nvda-2024 Item 6 '[Reserved]' precedent, span carries the Executive Officers chart that follows the heading. Part II is structurally IBR: Items 6/7/8 each read 'The information required by this item is incorporated by reference to' portions of the Annual Report filed as an exhibit - a separate document from this primary doc, hence external IBR; 45 IBR phrases in 108K text chars. Items 11/14 IBR to proxy. 1A/2/15 have real bodies (risk text, store counts, exhibit list)."
+}

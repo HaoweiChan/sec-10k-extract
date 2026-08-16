@@ -1,0 +1,26 @@
+{
+  "id": "bac-2006-shallow",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {
+    "path": "evals/fixtures/bac-2006/filing.htm"
+  },
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "doc_status", "in": ["success", "success_with_warning"]},
+      {"type": "expected_set_complete", "items": ["1", "1A", "1B", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "9A", "9B", "10", "11", "12", "13", "14", "15"]},
+      {"type": "item_present", "item": "1", "status": "extracted"},
+      {"type": "item_present", "item": "6", "status": "extracted"},
+      {"type": "item_present", "item": "8", "status": "extracted"},
+      {"type": "item_present", "item": "11", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "14", "status": "incorporated_by_reference"},
+      {"type": "item_absent", "item": "1C", "any_status": true},
+      {"type": "item_absent", "item": "9C", "any_status": true},
+      {"type": "item_absent", "item": "16", "any_status": true}
+    ]
+  },
+  "provenance": "T9 tranche 1 (financial x mid-2000s HTML stratum). sec.gov/Archives/edgar/data/70858/000119312507042036/d10k.htm, accession 0001193125-07-042036, filed 2007-02-28, FY2006 (Dec-end), 4,517,513 bytes, legacy HTML. Pre-2011 taxonomy verified in-document: Item 4 = 'SUBMISSION OF MATTERS TO A VOTE OF SECURITY HOLDERS'. Statuses verified by independent tag-strip scan 2026-08-17 (imports nothing from src/): Item 1 real body ('General Bank of America Corporation...'); Item 6 is an INTERNAL pointer ('See Table 5 in the MD&A on page 21') -> extracted per ADR-004, the JPM trap-10 analog on a new filing; Item 8 real body ('Report of Management on Internal Control...'); Items 11/14 'Information included under the following captions in the 2007 Proxy Statement is incorporated herein by reference' -> external-document IBR. Unpinned statuses are deliberate shallow-tier scope, not unknowns."
+}
