@@ -10,7 +10,7 @@ the coverage map that `spec-drift` and methodology audits check against.
 | # | Requirement | Kind | Satisfied by |
 |---|---|---|---|
 | C1 | AI-assisted workflow; how AI was used to reason, implement, evaluate, iterate | mandatory | `prompts/` (raw + curated), README "where AI helped" section |
-| C2 | Public git repo; commit history reflects the real development process | mandatory | commit strategy in [milestones.md](milestones.md) — eval-first red→green pairs, no squashed story |
+| C2 | Public git repo; commit history reflects the real development process | mandatory | **PARTIAL — the repo is PRIVATE as of 2026-08-16.** History half is satisfied: commit strategy in [milestones.md](milestones.md), eval-first red→green pairs, no squashed story. Public half is **not** — deliberately deferred, and it must be flipped before submission (tracked in `tasks/TODO.md`). This row previously claimed satisfaction by naming the commit strategy only, which verified the adjacent thing rather than the requirement |
 | C3 | Publicly accessible web frontend per task; not API-only; operable from a browser | mandatory | FastAPI + vanilla JS inspector on Zeabur (T7); views specified in [task2-problem-definition.md](task2-problem-definition.md) |
 | C4 | Root `prompts/` folder with key prompts — they will read them | mandatory | `prompts/` with curation rules in `prompts/README.md`; CLAUDE.md hard rule 6 |
 | C5 | README: how to run, key design decisions, where AI helped | mandatory | README rewrite at T8 |
