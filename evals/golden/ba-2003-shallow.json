@@ -1,0 +1,39 @@
+{
+  "id": "ba-2003-shallow",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {
+    "path": "evals/fixtures/ba-2003/filing.htm"
+  },
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "known_items_only"},
+      {"type": "doc_status", "in": ["success", "success_with_warning"]},
+      {"type": "expected_set_complete", "items": ["1", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "9A", "10", "11", "12", "13", "14", "15"]},
+      {"type": "only_items", "items": ["1", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "9A", "10", "11", "12", "13", "14", "15"]},
+      {"type": "item_present", "item": "1", "status": "extracted"},
+      {"type": "item_present", "item": "4", "status": "extracted"},
+      {"type": "item_present", "item": "5", "status": "extracted"},
+      {"type": "item_present", "item": "6", "status": "extracted"},
+      {"type": "item_present", "item": "7A", "status": "extracted"},
+      {"type": "item_present", "item": "8", "status": "extracted"},
+      {"type": "item_present", "item": "9A", "status": "extracted"},
+      {"type": "item_field", "item": "9A", "field": "title", "value": "Controls and Procedures"},
+      {"type": "item_present", "item": "10", "status": "extracted"},
+      {"type": "item_present", "item": "12", "status": "extracted"},
+      {"type": "item_present", "item": "14", "status": "incorporated_by_reference"},
+      {"type": "item_field", "item": "14", "field": "title", "value": "Principal Accountant Fees and Services"},
+      {"type": "item_field", "item": "14", "field": "part", "value": "III"},
+      {"type": "item_present", "item": "15", "status": "extracted"},
+      {"type": "item_absent", "item": "1A", "any_status": true},
+      {"type": "item_absent", "item": "1B", "any_status": true},
+      {"type": "item_absent", "item": "9B", "any_status": true},
+      {"type": "item_absent", "item": "9C", "any_status": true},
+      {"type": "item_absent", "item": "16", "any_status": true}
+    ]
+  },
+  "provenance": "T9 tranche 2 (POST-TRANSITION numbering stratum — the control for intc-2002/tgt-2002, and the FY2003-FY2005 gap between textron-2001 and bac-2006). sec.gov/Archives/edgar/data/12927/000119312504034751/d10k.htm, accession 0001193125-04-034751, filed 2004-03-05, FY ending 2003-12-31, 1,752,352 bytes, legacy HTML. AUTHORED FROM THE DOCUMENT, NOT FROM PIPELINE OUTPUT, and verified 2026-08-17 by an independent tag-strip scan importing nothing from src/: cover reads 'For the fiscal year ended December 31, 2003'; 'Item 9A. Controls and Procedures' and 'Item 14. Principal Accountant Fees and Services*' are both present (2x each: contents row + body), so this filing uses the FINAL post-Release-33-8238 numbering, unlike the two interim-regime filings authored alongside it; 'Item 9B' occurs ZERO times. THE ASSERTION THAT IS EXPECTED RED (watched before any fix, hard rule 2): item_absent('9B'). Item 9B 'Other Information' was created by Release 33-8400 (adopted 2004-03-16, effective 2004-08-23), months AFTER this filing; segment.ADDED dates it 2003-08-14, a full year early, so the pipeline expects an item that did not exist, finds no heading, and reports status `missing` with an `expected_item_missing` warning. That is precisely the INV-S4 distinction — 'not in filing' vs 'extractor missed it' — resolved the wrong way, and it is the SECOND independent era-table date error this tranche found, in the opposite direction from the interim-regime one. OTHER STATUSES VERIFIED IN-DOCUMENT: item 5 carries real inline content (NYSE listing, 135,640 holders of record) alongside an internal pointer, `extracted` per ADR-004; item 6 is the Five-Year Summary table; item 8's body heading reads 'Item 8. CONSOLIDATED STATEMENTS OF OPERATIONS' rather than the canonical title — a real filer style that scores 0.500 similarity, above SIM_FLOOR but below the 0.8 strong-match band, so it is `extracted` at reduced confidence; item 10 carries 14,911 chars of Codes-of-Conduct prose; item 12 carries the Equity Compensation Plan Information table; item 14's whole body is the footnote 'Certain information required by Items 5, 10, 11, 13 and 14 is incorporated herein by reference to the registrant's definitive proxy statement', a genuine whole-item external pointer. ITEMS 11 AND 13 ARE DELIBERATELY UNASSERTED HERE: their bodies are empty because Boeing marks them incorporated-by-reference with a bare asterisk resolved by that item-14 footnote, a cross-item convention the pipeline does not model. Asserting them would make this case permanently red for a reason that is not the era finding, so the gap is carried as its own enumerated-debt case, ba-2003-asterisk-ibr, which the runner prints every run and does not score."
+}

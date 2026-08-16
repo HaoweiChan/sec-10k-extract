@@ -52,7 +52,12 @@ TITLES = {
                    "Director Independence"]),
     "14": ("III", ["Principal Accountant Fees and Services",
                    "Exhibits, Financial Statement Schedules, and Reports on "
-                   "Form 8-K"]),
+                   "Form 8-K",
+                   # 2002-08-29 (Release 33-8124) inserted Controls and
+                   # Procedures HERE and pushed Exhibits to Item 15;
+                   # 2003-08-14 (Release 33-8238) moved it to Item 9A. Item 4
+                   # has the same shape of history — see SOX_INTERIM.
+                   "Controls and Procedures"]),
     "15": ("IV", ["Exhibits, Financial Statement Schedules",
                   "Exhibits and Financial Statement Schedules"]),
     "16": ("IV", ["Form 10-K Summary"]),
@@ -65,7 +70,15 @@ ADDED = {
     "1A": date(2005, 12, 1), "1B": date(2005, 12, 1),
     "1C": date(2023, 12, 15),
     "7A": date(1997, 6, 15),
-    "9A": date(2003, 8, 14), "9B": date(2003, 8, 14),
+    "9A": date(2003, 8, 14),
+    # 9B "Other Information" is NOT 9A's twin: it arrived with the Form 8-K
+    # overhaul, Release 33-8400 (adopted 2004-03-16, effective 2004-08-23), a
+    # full year later. Dated 2003-08-14 the pipeline expected an item that did
+    # not exist yet and reported it `missing` — ba-2003 (FY2003, zero
+    # occurrences of "Item 9B" in the document) is the case. Boundary is the
+    # earliest period end whose report necessarily lands after the effective
+    # date, the ADR-010 ruling-2 convention.
+    "9B": date(2004, 5, 23),
     # 9C's rule keys on FILING date (annual reports filed on/after 2022-01-01),
     # and this table keys on period end — a different date. Filing date is not
     # recoverable from a modern primary .htm (2 of 15 fixtures carry an SGML
@@ -75,7 +88,14 @@ ADDED = {
     # they lost it entirely and its text was annexed to Item 9B. Filers who
     # legitimately have no 9C heading fall through to `omitted` (see classify).
     "9C": date(2021, 10, 1),
-    "15": date(2003, 8, 14),   # Exhibits moved 14 -> 15 when 14 became Fees
+    # Exhibits moved 14 -> 15 at 2002-08-29, when Controls and Procedures took
+    # Item 14 — a year BEFORE 14 became Fees. Dated 2003-08-14 this table kept
+    # Item 15 out of `expected` for every filing in the interim window, so
+    # find_candidates never made its heading a candidate, it could not reach the
+    # TOC manifest to raise a mismatch, and its exhibit section was annexed to
+    # item 14 in silence: gs-2002 (burned held-out), intc-2002 and tgt-2002 are
+    # three independent confirmations. See SOX_INTERIM for the boundary.
+    "15": date(2002, 6, 1),
     "16": date(2016, 6, 1),
 }
 ORDER = ["1", "1A", "1B", "1C", "2", "3", "4", "5", "6", "7", "7A", "8", "9",
@@ -98,6 +118,17 @@ ALIAS_FROM = {
 # ...and one code changes PART, not just title, at the same boundary.
 LEGACY_PART = {"14": "IV"}
 
+# The Sarbanes-Oxley interim window: Item 14 is neither Exhibits (before) nor
+# Principal Accountant Fees (after) but "Controls and Procedures", in Part III,
+# with Exhibits at Item 15. Release 33-8124 took effect 2002-08-29 and keys on
+# FILING date; this table keys on period end, so the boundary is the earliest
+# period end whose report necessarily lands after that date under the then-90-day
+# deadline — the same one-sided compromise ADR-010 ruling 2 made for Item 9C, and
+# it sits inside the empty band the fixtures measure (textron-2001 ends 2001-12-29
+# on the old numbering; gs-2002, the earliest interim filing in the set, ends
+# 2002-11-29).
+SOX_INTERIM = (date(2002, 6, 1), date(2003, 8, 14))
+
 
 def item_label(code, period_end):
     """(part, title) for a code as of the filing's era. Not cosmetic: the
@@ -109,6 +140,13 @@ def item_label(code, period_end):
     # 2010-02-28 effective date; Dec-2009 enders mostly filed before it.
     if code == "4" and period_end and date(2010, 1, 1) <= period_end < ALIAS_FROM["4"]:
         return part, "Reserved"
+    # ...and Item 14 has its own, for the same reason: a third phase between the
+    # two ALIAS_FROM neighbours. Without it a filing in the window renders
+    # "Exhibits, Financial Statement Schedules, and Reports on Form 8-K" (Part
+    # IV) over Controls-and-Procedures text — a correct span under a label that
+    # tells the reader it is something else.
+    if code == "14" and period_end and SOX_INTERIM[0] <= period_end < SOX_INTERIM[1]:
+        return "III", "Controls and Procedures"
     legacy = code in ALIAS_FROM and not (period_end and period_end >= ALIAS_FROM[code])
     if legacy:
         return LEGACY_PART.get(code, part), titles[min(1, len(titles) - 1)]
@@ -235,6 +273,24 @@ def _toc_runs(cands, universe=None):
     EVERY code in the run, including the non-recurring ones: an item the filing
     lists in its own contents and then never heads is exactly the mismatch
     layer 8 exists to catch, and filtering by recurrence would hide it.
+
+    Recurrence ignores occurrences buried INSIDE another dense run — but not the
+    LAST member of one, which is exactly the position the escaped first real
+    heading occupies (paragraph above). A filing may echo its item list a second
+    time at the end: Intel 2002 and Target 2002 both close with a compact
+    cross-reference index, and counting that echo made every real body heading
+    "recur", so the run's trailing member — the heading this rule exists to
+    protect — was dropped with the rest, and greedy assignment then resolved
+    every code to the 18-to-490-char stubs at the end of the file. Intel
+    reported `success_with_warning` on 0.47% of its own text; Target reported
+    plain `success` while item 4 swallowed 81% of the document.
+
+    The last-member exemption is not a special case bolted on: NIKE 2006 and
+    premier-pacific-2016 both run their contents page straight into the body, so
+    the real Item 1 heading is the final entry of a dense run. Without the
+    exemption their item 1 span starts at the contents page instead. No new
+    threshold either way — "dense" is exactly the TOC_CLUSTER_MIN/TOC_GAP_MAX
+    test used everywhere here.
     """
     runs, run = [], [0] if cands else []
     for i in range(1, len(cands)):
@@ -246,6 +302,9 @@ def _toc_runs(cands, universe=None):
     runs.append(run)
 
     universe = cands if universe is None else universe
+    echoed = {cands[i]["start"] for r in runs
+              if len({cands[i]["item"] for i in r}) >= TOC_CLUSTER_MIN
+              for i in r[:-1]}
     drop, manifest = set(), []
     for run in runs:
         codes = {cands[i]["item"] for i in run}
@@ -253,6 +312,7 @@ def _toc_runs(cands, universe=None):
             continue
         recurs = {i for i in run
                   if any(c["item"] == cands[i]["item"] and c["start"] > cands[i]["start"]
+                         and c["start"] not in echoed
                          for c in universe)}
         # a run is an index if most of what it names turns up again below it
         if len({cands[i]["item"] for i in recurs}) * 2 < len(codes):
@@ -338,14 +398,35 @@ IBR_RE = re.compile(r"(?i)incorporated (herein )?by reference|"
 # (IBM 1997 Item 5: stockholders of record, exchange listings) and run to
 # 3,186 (the ibr-pointer-first officer table). Floor sits in that empty band.
 IBR_REMAINDER_MAX = 300
+# ...and a sentence that sends the reader to another ITEM OF THIS SAME REPORT is
+# navigation, not content, so it does not count toward that remainder either.
+# ADR-004 already rules that an internal pointer cannot by itself make an item
+# IBR — this is the other side of the same coin: it cannot make one `extracted`
+# either. Intel 2002 item 12 is three sentences, all of them pointers (one to
+# the proxy, two to Items 7 and 8 of this Form 10-K) and none of them the
+# beneficial-ownership content the item is named for; counting the two internal
+# ones as 530 chars of "inline prose" reported the item `extracted`, telling a
+# consumer the content was in the span when the span says it is not.
+INTERNAL_REF_RE = re.compile(
+    r"(?i)\bitem\s*\d{1,2}[A-D]?\b[^.]{0,200}?\bthis (form\s*10-?K|annual report|report)\b")
 
 
 def _sentences(flat):
     """Split on sentence punctuation, but NOT on the period of an item
     cross-reference: 10-K proxy captions read “Item 1. Election of Directors”,
     and splitting there truncates a pointer sentence before the words that name
-    the other document (pre-B audit finding 2)."""
-    parts = re.split(r"(?<=[.;])\s", flat)
+    the other document (pre-B audit finding 2).
+
+    A semicolon is not sentence punctuation and no longer splits. Enumerated
+    pointers are a house style — Target 2002 item 2 reads “Leases, Page 32;
+    Owned and Leased Store Locations, Page 32, and the list of store locations
+    ... are incorporated herein by reference.” — and cutting at the first
+    semicolon left sents[0] as “Leases, Page 32;”, hiding the words that name
+    the other document. Third instance of the same family (ADR-014 §2 was the
+    ordinal “Proposal No. 2”, the pre-B finding was the item caption); this one
+    removes a splitter rather than adding a rejoin.
+    """
+    parts = re.split(r"(?<=[.])\s", flat)
     out = []
     for p in parts:
         if out and re.search(r"(?i)\bitem\s*\d{1,2}[A-D]?\.$", out[-1]):
@@ -388,7 +469,8 @@ def classify(code, body, present):
     if not (IBR_RE.search(sents[0]) and EXTERNAL_DOC_RE.search(sents[0])):
         return "extracted"
     rest = sum(len(s) for s in sents[1:]
-               if not (IBR_RE.search(s) or EXTERNAL_DOC_RE.search(s)))
+               if not (IBR_RE.search(s) or EXTERNAL_DOC_RE.search(s)
+                       or INTERNAL_REF_RE.search(s)))
     return "incorporated_by_reference" if rest <= IBR_REMAINDER_MAX else "extracted"
 
 
@@ -405,6 +487,37 @@ def _demo():
     assert len(expected_items(date(2021, 12, 31))) == 22   # 9C yes, 1C not yet
     assert "9C" not in expected_items(date(2021, 6, 30))   # filed before cutoff
     assert len(expected_items(date(2016, 12, 31))) == 21
+    # the Sarbanes-Oxley interim window: Exhibits already at 15, Controls not
+    # yet at 9A. Three real filings live here (gs-2002, intc-2002, tgt-2002)
+    # and the era table had none of them.
+    assert "15" in expected_items(date(2002, 12, 28))
+    assert "9A" not in expected_items(date(2002, 12, 28))
+    assert "15" not in expected_items(date(2001, 12, 29))       # textron, before
+    assert item_label("14", date(2002, 12, 28)) == ("III", "Controls and Procedures")
+    assert item_label("14", date(2001, 12, 29))[0] == "IV"      # Exhibits, Part IV
+    assert item_label("14", date(2004, 12, 31)) == ("III", "Principal Accountant "
+                                                    "Fees and Services")
+    # 9B arrived with Release 33-8400, a year after 9A — ba-2003 has 9A and no 9B
+    assert "9A" in expected_items(date(2003, 12, 31))
+    assert "9B" not in expected_items(date(2003, 12, 31))
+    assert "9B" in expected_items(date(2004, 12, 31))
+
+    # a trailing cross-reference index must not make the real body headings
+    # look like a table of contents (intc-2002 / tgt-2002: every code resolved
+    # to the echo and the filing reported success on 0.47% of its own text)
+    body = "".join(f"Item {c}. {t}\n" + "z" * 3000 + "\n" for c, t in
+                   [("1", "Business"), ("2", "Properties"), ("3", "Legal Proceedings"),
+                    ("5", "Market for the Registrant's Common Stock and Related "
+                          "Stockholder Matters"), ("6", "Selected Financial Data")])
+    echo = "".join(f"Item {c}. {t}\n" for c, t in
+                   [("1", "Business"), ("2", "Properties"), ("3", "Legal Proceedings"),
+                    ("5", "Market for the Registrant's Common Stock and Related "
+                          "Stockholder Matters"), ("6", "Selected Financial Data")])
+    exp3 = ["1", "2", "3", "5", "6"]
+    got3 = assign_boundaries(filter_candidates(find_candidates(echo + body + echo, exp3))[0],
+                             exp3, echo + body + echo)
+    assert all(got3[c]["end"] - got3[c]["start"] > 2000 for c in exp3), \
+        {c: got3[c]["end"] - got3[c]["start"] for c in exp3}
 
     text = ("Item 1.\nBusiness\nItem 1A.\nRisk Factors\n"          # bare TOC
             "Item 1. Business\nWe make things. " + "x" * 3000 + "\n"
@@ -436,6 +549,19 @@ def _demo():
     # the same pointer wrapped across lines, as fixed-width txt filings do
     assert classify("12", "Incorporated by reference to \"Information relating to "
                     "Directors\" in the registrant's definitive proxy\nstatement.",
+                    True) == "incorporated_by_reference"
+    # a semicolon is not a sentence end: cutting there hid the words naming the
+    # other document (tgt-2002 item 2)
+    assert classify("2", "Leases, Page 32; Owned and Leased Store Locations, Page 32, "
+                    "of Registrant's 2002 Annual Report to Shareholders are "
+                    "incorporated herein by reference.", True) == "incorporated_by_reference"
+    # ...and a sentence pointing at another item of THIS report is navigation,
+    # not the inline content that would make the item `extracted` (intc-2002 item 12)
+    assert classify("12", "The information under \"Security Ownership\" in our 2003 "
+                    "Proxy Statement is incorporated by reference. See the information "
+                    "under \"Employee Stock Options\" within Item 7 of this Form 10-K "
+                    "regarding shares authorized for issuance under equity compensation "
+                    "plans approved by stockholders and not approved by stockholders.",
                     True) == "incorporated_by_reference"
     assert classify("6", "[Reserved]", True) == "extracted"           # ADR-005 rule 1
     assert classify("16", "", False) == "omitted"                     # rule 2

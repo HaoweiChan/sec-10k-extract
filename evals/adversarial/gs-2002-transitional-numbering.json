@@ -1,22 +1,97 @@
 {
   "id": "gs-2002-transitional-numbering",
   "task": "sec10k",
-  "suites": ["debt"],
-  "input": {"path": "evals/fixtures/gs-2002/filing.htm"},
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "path": "evals/fixtures/gs-2002/filing.htm"
+  },
   "expect": {
     "checks": [
-      {"type": "no_empty_success"},
-      {"type": "no_overlap_ordered"},
-      {"type": "verbatim"},
-      {"type": "doc_status", "in": ["success", "success_with_warning", "ambiguous"]},
-      {"type": "item_present", "item": "1", "status": "extracted"},
-      {"type": "item_present", "item": "7A", "status": "incorporated_by_reference"},
-      {"type": "item_absent", "item": "1A", "any_status": true},
-      {"type": "expected_set_complete", "items": ["1", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "10", "11", "12", "13", "14"]},
-      {"type": "item_present", "item": "15", "status": "extracted"},
-      {"type": "only_items", "items": ["1", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "10", "11", "12", "13", "14", "15"]}
+      {
+        "type": "no_empty_success"
+      },
+      {
+        "type": "no_overlap_ordered"
+      },
+      {
+        "type": "verbatim"
+      },
+      {
+        "type": "doc_status",
+        "in": [
+          "success",
+          "success_with_warning",
+          "ambiguous"
+        ]
+      },
+      {
+        "type": "item_present",
+        "item": "1",
+        "status": "extracted"
+      },
+      {
+        "type": "item_present",
+        "item": "7A",
+        "status": "incorporated_by_reference"
+      },
+      {
+        "type": "item_absent",
+        "item": "1A",
+        "any_status": true
+      },
+      {
+        "type": "expected_set_complete",
+        "items": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "7A",
+          "8",
+          "9",
+          "10",
+          "11",
+          "12",
+          "13",
+          "14"
+        ]
+      },
+      {
+        "type": "item_present",
+        "item": "15",
+        "status": "extracted"
+      },
+      {
+        "type": "only_items",
+        "items": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "7A",
+          "8",
+          "9",
+          "10",
+          "11",
+          "12",
+          "13",
+          "14",
+          "15"
+        ]
+      }
     ]
   },
-  "triage": {"class": "era-model-limitation", "note": "BURNED HELD-OUT CASE, PROMOTED AND ENUMERATED AS DEBT. Goldman Sachs FY2002 (period end 2002-11-29, filed 2003-02-27) adopted the post-Sarbanes-Oxley numbering EARLY: its body carries 'Item 14. Controls and Procedures' and 'Item 15. Exhibits, Financial Statement Schedules, and Reports on Form 8-K' as real headings, each with a matching contents-page row. segment.ADDED encodes Item 15 as arriving 2003-08-14, so expected_items never expects it, find_candidates never makes it a candidate, and it cannot even reach the TOC manifest to raise a mismatch \u2014 the item is absent from the envelope with nothing anywhere registering the loss. The item_present('15') assertion below is therefore RED and is expected to stay red until the era model is reworked. THE FIX IS DELIBERATELY NOT TAKEN AT B: letting a physically present heading for a known code surface regardless of era expectation conflicts with INV-S3 as written ('era-invalid and non-canonical codes never surface'), so it is a spec change plus an invariant amendment, not a bug fix \u2014 A-level scope per ADR-013. This is the THIRD independent confirmation of the debt ADR-010 recorded: the era table is a single point of silent failure, and any item mis-dated by one season repeats this exactly (Item 9C was the first, in the opposite direction)."},
-  "provenance": "BURNED 2026-08-17, promoted from evals/heldout/. Goldman Sachs Group, Inc. FY2002 10-K, EDGAR accession 0000950123-03-002099, filed 2003-02-27, primary document y83718e10vk.htm (395,754 bytes); the fixture moved from evals/heldout/fixtures/ to evals/fixtures/ unchanged (git mv, byte-identical). WHY IT IS BURNED: it was run twice (H1 20260816-225101, H1b 20260816-231253), its failure mode is published in four documents, and ADR-013's decision NOT to fix the era model was taken with its outcome in hand. The repo's burn rule names 'a threshold choice' as burning, and a documented decision to decline a fix is at least as much influence as a threshold \u2014 so it can no longer serve as a generalization estimate and counting it in a held-out denominator would overstate that denominator. Its original held-out provenance, including the prediction recorded BEFORE the first run, is in git history at 5a17149. WHAT THE CASE ASSERTS: the passing checks pin the behaviour that IS correct on this filing \u2014 item 1 extracted, item 7A incorporated_by_reference (a genuine whole-item pointer whose body ends 'is incorporated herein by reference'; asserting it 'extracted' was one of the four authoring errors H1 caught), no Item 1A in the 2002 taxonomy, and the era-valid 15-code expected set complete. The failing check is item_present('15'), asserted on the authority of the DOCUMENT rather than of the era table. only_items allows the era-valid 15 codes plus 15, so the two checks fail for distinguishable reasons. Tagged 'debt': the runner executes it every run and prints its state, but excludes it from the score \u2014 scoring it would force a choice between breaking the gate and rewriting the case to assert the bug as correct, which is precisely the mistake sandston-2021-shallow made with Item 9C and which H1 caught. If it ever goes green the runner says 'NOW GREEN \u2014 promote it'."
+  "triage": {
+    "class": "era-model-limitation — RESOLVED 2026-08-17 (ADR-015), promoted from debt to the scored suite",
+    "note": "HISTORY, KEPT SO THE CASE STILL EXPLAINS ITSELF. Burned held-out case (H1/H1b), promoted to adversarial 2026-08-17 and then carried as UNSCORED DEBT because item 15 was absent from the envelope with nothing registering the loss: Goldman Sachs FY2002 (period end 2002-11-29, filed 2003-02-27) uses the Sarbanes-Oxley INTERIM numbering — 'Item 14. Controls and Procedures', 'Item 15. Exhibits, Financial Statement Schedules, and Reports on Form 8-K' — and segment.ADDED dated Item 15 to 2003-08-14, so expected_items never expected it, find_candidates never made it a candidate, and it could not even reach the TOC manifest to raise a mismatch. ADR-013 declined the fix at B on the grounds that it needed a spec change; that reading turned out to be wrong, and cheaply so. T9 tranche 2 fetched two more real filings from the same window (intc-2002, tgt-2002), which showed the window is a THIRD era phase created by Release 33-8124 (effective 2002-08-29) rather than one filer's early adoption. Adding that phase to the era table — SOX_INTERIM, ADDED['15'], TITLES['14'] — is a table correction of the kind this repo has made three times before, not the INV-S3 amendment ADR-013 feared. The general fix it declined (letting any physically present heading for a canonical code surface regardless of era) is still NOT taken and is still open debt: see ADR-015 section 5."
+  },
+  "provenance": "BURNED 2026-08-17, promoted from evals/heldout/. Goldman Sachs Group, Inc. FY2002 10-K, EDGAR accession 0000950123-03-002099, filed 2003-02-27, primary document y83718e10vk.htm (395,754 bytes); the fixture moved from evals/heldout/fixtures/ to evals/fixtures/ unchanged (git mv, byte-identical). WHY IT IS BURNED: it was run twice (H1 20260816-225101, H1b 20260816-231253), its failure mode is published in four documents, and ADR-013's decision NOT to fix the era model was taken with its outcome in hand. The repo's burn rule names 'a threshold choice' as burning, and a documented decision to decline a fix is at least as much influence as a threshold — so it can no longer serve as a generalization estimate and counting it in a held-out denominator would overstate that denominator. Its original held-out provenance, including the prediction recorded BEFORE the first run, is in git history at 5a17149. WHAT THE CASE ASSERTS: the passing checks pin the behaviour that IS correct on this filing — item 1 extracted, item 7A incorporated_by_reference (a genuine whole-item pointer whose body ends 'is incorporated herein by reference'; asserting it 'extracted' was one of the four authoring errors H1 caught), no Item 1A in the 2002 taxonomy, and the era-valid 15-code expected set complete. The failing check is item_present('15'), asserted on the authority of the DOCUMENT rather than of the era table. only_items allows the era-valid 15 codes plus 15, so the two checks fail for distinguishable reasons. WAS tagged 'debt' from 2026-08-17 until the same day's T9 tranche 2, when the era model gained the interim phase and this case went green with no edit to a single assertion — the whole point of writing the failing check against the DOCUMENT rather than against the era table. Tagged 'fast' from then on. While it was debt the runner executed it every run and printed its state, but excluded it from the score — scoring it would force a choice between breaking the gate and rewriting the case to assert the bug as correct, which is precisely the mistake sandston-2021-shallow made with Item 9C and which H1 caught. If it ever goes green the runner says 'NOW GREEN — promote it'."
 }

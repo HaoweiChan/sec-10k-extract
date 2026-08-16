@@ -1,0 +1,43 @@
+{
+  "id": "intc-2002-shallow",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {
+    "path": "evals/fixtures/intc-2002/filing.htm"
+  },
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "known_items_only"},
+      {"type": "doc_status", "in": ["success", "success_with_warning"]},
+      {"type": "expected_set_complete", "items": ["1", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "10", "11", "12", "13", "14", "15"]},
+      {"type": "only_items", "items": ["1", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "10", "11", "12", "13", "14", "15"]},
+      {"type": "item_present", "item": "1", "status": "extracted"},
+      {"type": "item_present", "item": "2", "status": "extracted"},
+      {"type": "item_present", "item": "4", "status": "extracted"},
+      {"type": "item_present", "item": "5", "status": "extracted"},
+      {"type": "item_present", "item": "7A", "status": "extracted"},
+      {"type": "item_present", "item": "8", "status": "extracted"},
+      {"type": "item_present", "item": "9", "status": "extracted"},
+      {"type": "item_present", "item": "10", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "11", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "12", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "13", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "14", "status": "extracted"},
+      {"type": "item_field", "item": "14", "field": "title", "value": "Controls and Procedures"},
+      {"type": "item_field", "item": "14", "field": "part", "value": "III"},
+      {"type": "item_present", "item": "15", "status": "extracted"},
+      {"type": "item_field", "item": "15", "field": "part", "value": "IV"},
+      {"type": "text_contains", "item": "14", "value": "Quarterly Evaluation of the Company's Disclosure Controls"},
+      {"type": "item_absent", "item": "1A", "any_status": true},
+      {"type": "item_absent", "item": "9A", "any_status": true},
+      {"type": "item_absent", "item": "9B", "any_status": true},
+      {"type": "item_absent", "item": "9C", "any_status": true},
+      {"type": "item_absent", "item": "1C", "any_status": true},
+      {"type": "item_absent", "item": "16", "any_status": true}
+    ]
+  },
+  "provenance": "T9 tranche 2 (INTERIM SARBANES-OXLEY NUMBERING stratum — the transitional era the eval set jumped over between textron-2001 and bac-2006). sec.gov/Archives/edgar/data/50863/000104746903008257/a2104280z10-k.htm, accession 0001047469-03-008257, filed 2003-03-11, FY ending 2002-12-28, 863,995 bytes, legacy HTML. AUTHORED FROM THE DOCUMENT, NOT FROM PIPELINE OUTPUT, and verified 2026-08-17 by an independent tag-strip scan importing nothing from src/: cover reads 'For the fiscal year ended December 28, 2002'; body headings are 'ITEM 14. CONTROLS AND PROCEDURES' (2x: contents row + body) and 'ITEM 15. EXHIBITS, FINANCIAL STATEMENT SCHEDULES AND REPORTS ON FORM 8-K' (2x); zero occurrences of 'Item 9A' or 'Item 9B'. THE STRATUM: SEC Release 33-8124 (effective 2002-08-29) inserted 'Controls and Procedures' as Item 14 and pushed Exhibits to Item 15; Release 33-8238 (effective 2003-08-14) then moved Controls to Item 9A and made Item 14 'Principal Accountant Fees and Services'. Filings whose period ends between those dates carry a THIRD numbering regime that segment.ADDED/ALIAS_FROM did not model — this is the same regime gs-2002 exposed as burned held-out debt, now confirmed on a second real, unmutated filing from a different sector and filing agent. EXPECTED RED AT AUTHORING TIME (watched before any fix, hard rule 2): item 15 is absent from the envelope entirely (ADDED['15'] = 2003-08-14 keeps it out of `expected`, so find_candidates never makes it a candidate and its 13,787-char exhibit section is annexed to item 14), and item 14 carries the era-wrong label 'Exhibits, Financial Statement Schedules, and Reports on Form 8-K' / Part IV over Controls-and-Procedures text. Item 12 is asserted `incorporated_by_reference` on the authority of the document: all three of its sentences are pointers (one to the 2003 Proxy Statement, two to Items 7 and 8 of this same Form 10-K) and none carries inline substantive content. STATUSES VERIFIED IN-DOCUMENT: items 10/11/12/13 open 'The information appearing ... of the 2003 Proxy Statement is incorporated by reference'; item 5 is an INTERNAL pointer ('may be found in \"Financial Information by Quarter (Unaudited)\" in Item 8 on page 78 of this Form 10-K') and stays `extracted` per ADR-004; items 4 ('None.') and 9 ('Not applicable.') are trivial bodies, `extracted` per ADR-005 rule 1. The item-14 anchor 'Quarterly Evaluation of the Company's Disclosure Controls' occurs once in the raw fixture."
+}
