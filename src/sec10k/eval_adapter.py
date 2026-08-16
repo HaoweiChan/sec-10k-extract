@@ -104,6 +104,16 @@ def eval_check(result, chk, path=None):
         hits = [w for w in result.get("warnings", []) if w.get("code") == chk["code"]]
         if hits:
             return f"unexpected warning {chk['code']!r}: {hits[0].get('message')}"
+    elif t == "item_field":
+        # `title` and `part` ship on every item and the inspector renders them,
+        # but until the pre-B audit nothing in the eval vocabulary could read
+        # either — so an era-wrong label over correct text was structurally
+        # invisible. Asserts any scalar item field by name.
+        if entry is None:
+            return f"item {chk['item']} not in output"
+        got = entry.get(chk["field"])
+        if got != chk["value"]:
+            return f"item {chk['item']} {chk['field']} {got!r} != {chk['value']!r}"
     elif t == "confidence":
         # the contract promises confidence is honest and that the eval set
         # punishes overconfident wrongness. Until this check type existed no

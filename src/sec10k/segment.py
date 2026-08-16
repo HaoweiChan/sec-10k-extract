@@ -76,6 +76,34 @@ ADDED = {
 ORDER = ["1", "1A", "1B", "1C", "2", "3", "4", "5", "6", "7", "7A", "8", "9",
          "9A", "9B", "9C", "10", "11", "12", "13", "14", "15", "16"]
 
+# The alias lists above already carry the era variants, but nothing selected
+# between them: every pre-2003 filing shipped item 14 as "Principal Accountant
+# Fees and Services", part III, over a span whose text is the exhibit index —
+# the label contradicted the content and the part contradicted the filing
+# (pre-B audit finding 3). TITLES[code][1][0] applies from this date; the
+# second alias applies before it.
+ALIAS_FROM = {
+    "4": date(2011, 12, 15),   # Mine Safety replaced Submission of Matters
+    "5": date(2005, 12, 1),    # retitled to add Issuer Purchases
+    "6": date(2021, 2, 10),    # S-K amendment: Selected Financial Data -> [Reserved]
+    "10": date(2003, 8, 14),
+    "14": date(2003, 8, 14),   # 14 became Fees when Exhibits moved to 15
+    "15": date(2003, 8, 14),
+}
+# ...and one code changes PART, not just title, at the same boundary.
+LEGACY_PART = {"14": "IV"}
+
+
+def item_label(code, period_end):
+    """(part, title) for a code as of the filing's era. Not cosmetic: the
+    inspector renders this over the item's text, so an era-wrong label is a
+    statement to the reader that the extraction is something it is not."""
+    part, titles = TITLES[code]
+    legacy = code in ALIAS_FROM and not (period_end and period_end >= ALIAS_FROM[code])
+    if legacy:
+        return LEGACY_PART.get(code, part), titles[min(1, len(titles) - 1)]
+    return part, titles[0]
+
 
 def expected_items(period_end):
     """Codes the filing's era requires, in document order."""
@@ -141,6 +169,7 @@ def find_candidates(text, expected):
             continue  # INV-S3: era-invalid and non-canonical codes never surface
         title = m.group(3).strip()
         line = m.group(0).strip()
+        heading_end = m.end()
         # A bare code line is USUALLY page furniture or a TOC cell, which is why
         # "no title on the heading line" is a free filter. But JNJ 2016 puts the
         # code and the title in separate blocks for 18 of 21 items, so there the
@@ -160,8 +189,17 @@ def find_candidates(text, expected):
             # else would stop.
             if title_similarity(code, nxt) >= SIM_FLOOR and not HEADING_RE.match(after):
                 title, via_next = nxt, True
+                # heading_end MUST advance past the promoted title. Leaving it
+                # at the end of the bare code line leaks the title into the
+                # body, which shifts the sentence boundaries classify() reads —
+                # that is how JNJ's Part III proxy pointers came back
+                # `extracted` at 0.95 instead of incorporated_by_reference
+                # (pre-B audit finding 2).
+                j = text.find(nxt, m.end())
+                if j != -1:
+                    heading_end = j + len(nxt)
         out.append({
-            "item": code, "start": m.start(), "heading_end": m.end(),
+            "item": code, "start": m.start(), "heading_end": heading_end,
             "heading_text": line, "title": title,
             "similarity": round(title_similarity(code, title), 3),
             "titled": bool(title), "title_on_next_line": via_next,
@@ -292,6 +330,21 @@ IBR_RE = re.compile(r"(?i)incorporated (herein )?by reference|"
 IBR_REMAINDER_MAX = 300
 
 
+def _sentences(flat):
+    """Split on sentence punctuation, but NOT on the period of an item
+    cross-reference: 10-K proxy captions read “Item 1. Election of Directors”,
+    and splitting there truncates a pointer sentence before the words that name
+    the other document (pre-B audit finding 2)."""
+    parts = re.split(r"(?<=[.;])\s", flat)
+    out = []
+    for p in parts:
+        if out and re.search(r"(?i)\bitem\s*\d{1,2}[A-D]?\.$", out[-1]):
+            out[-1] += " " + p          # rejoin: that period ended a reference
+        else:
+            out.append(p)
+    return out
+
+
 def classify(code, body, present):
     """Status per ADR-004/005. `body` is the span minus its heading line."""
     if not present:
@@ -316,7 +369,7 @@ def classify(code, body, present):
     #    however many pointers it opens with. Sentence order decided this
     #    before, so moving two paragraphs flipped a 4,805-char item to IBR —
     #    silently, since IBR spans are excluded from every layer-8 validator.
-    sents = re.split(r"(?<=[.;])\s", flat)
+    sents = _sentences(flat)
     if not (IBR_RE.search(sents[0]) and EXTERNAL_DOC_RE.search(sents[0])):
         return "extracted"
     rest = sum(len(s) for s in sents[1:]

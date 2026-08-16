@@ -12,7 +12,7 @@ from pathlib import Path
 
 from src.sec10k.normalize import ACCEPTED_FORMS, COLLAPSE_FLOOR, select_and_normalize
 from src.sec10k.segment import (
-    TITLES, assign_boundaries, classify, expected_items, filter_candidates,
+    assign_boundaries, classify, expected_items, filter_candidates, item_label,
     find_candidates,
 )
 from src.sec10k.validate import AMBIGUOUS_CODES, score, validate
@@ -25,16 +25,16 @@ VERSION = "0.5.1-g1"  # meta.extractor_version — audits compare across runs
 CONF_STRICT, CONF_WEAK_TITLE, CONF_NON_EXTRACTED = 0.9, 0.7, 0.8
 
 
-def _item(code, cand, status):
-    part, titles = TITLES[code]
+def _item(code, cand, status, period_end=None):
+    part, title = item_label(code, period_end)
     if cand is None:
-        return {"item": code, "part": part, "title": titles[0],
+        return {"item": code, "part": part, "title": title,
                 "heading_text": None, "start": None, "end": None,
                 "status": status, "confidence": CONF_NON_EXTRACTED,
                 "method": "status_keyword", "evidence": {}}
     strong = cand["similarity"] >= 0.8
     return {
-        "item": code, "part": part, "title": titles[0],
+        "item": code, "part": part, "title": title,
         "heading_text": cand["heading_text"], "start": cand["start"],
         "end": cand["end"], "status": status,
         "confidence": CONF_STRICT if strong else CONF_WEAK_TITLE,
@@ -118,7 +118,7 @@ def extract_items(path):
         c = accepted.get(code)
         body = text[c["heading_end"]:c["end"]] if c else ""
         status = classify(code, body, c is not None)
-        items.append(_item(code, c, status))
+        items.append(_item(code, c, status, meta.get("period_end")))
     trace.append({"layer": "status",
                   "counts": {s: sum(1 for i in items if i["status"] == s)
                              for s in {i["status"] for i in items}}})

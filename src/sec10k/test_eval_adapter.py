@@ -222,6 +222,25 @@ def test_ibr_spans_are_checked():
                            "value": "proxy statement"}) is not None
 
 
+def test_item_field():
+    """title/part ship on every item and the inspector renders them, but no
+    check read either until the pre-B audit found every pre-2003 filing
+    labelled with a post-2003 title and part."""
+    r = {"normalized_text": "x" * 50, "items": [
+        {"item": "14", "part": "IV", "title": "Exhibits", "status": "extracted",
+         "start": 0, "end": 50, "confidence": 0.95}]}
+    assert eval_check(r, {"type": "item_field", "item": "14",
+                          "field": "part", "value": "IV"}) is None
+    reason = eval_check(r, {"type": "item_field", "item": "14",
+                            "field": "part", "value": "III"})
+    assert reason is not None and "IV" in reason, reason
+    # a field the item does not carry is a failure, not a crash
+    assert eval_check(r, {"type": "item_field", "item": "14",
+                          "field": "nope", "value": "x"}) is not None
+    assert eval_check(r, {"type": "item_field", "item": "9",
+                          "field": "part", "value": "II"}) is not None
+
+
 def test_confidence():
     r = {"normalized_text": "x" * 100, "items": [
         item("1", start=0, end=100, confidence=0.95),
@@ -245,6 +264,7 @@ def test_confidence():
 
 
 TESTS = [
+    test_item_field,
     test_ibr_spans_are_checked,
     test_confidence,
     test_doc_status,
