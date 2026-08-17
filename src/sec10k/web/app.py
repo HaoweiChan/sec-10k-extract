@@ -68,16 +68,21 @@ def _fixture_file(name: str) -> Path:
     return files[0]
 
 
+def _err(status: int, code: str, message: str, doc_status: str = "failed", **extra):
+    """Every refusal returns the same envelope the UI already renders, so a
+    rejected request and a failed extraction look identical to the frontend."""
+    return JSONResponse(status_code=status, content={
+        "doc_status": doc_status, "items": [], "counts": {}, "trace": [], "meta": {},
+        "warnings": [{"code": code, "item": None, "message": message}], **extra})
+
+
 def _run(path: str, source: dict):
     """Extract and shape for the UI. Never leaks a traceback to the browser."""
     try:
         result = extract_items(path)
     except Exception as e:                       # refuse loudly, hard rule 4
-        return JSONResponse(status_code=500, content={
-            "doc_status": "failed", "items": [], "warnings": [
-                {"code": "extractor_exception", "item": None,
-                 "message": f"{type(e).__name__}: {e}"}],
-            "source": source, "meta": {}, "trace": [], "counts": {}})
+        return _err(500, "extractor_exception", f"{type(e).__name__}: {e}",
+                    source=source)
     view = build_view(result)
     view["source"] = source
     return JSONResponse(view)
@@ -101,10 +106,7 @@ def extract_fixture(body: dict):
     try:
         f = _fixture_file(name)
     except FileNotFoundError as e:
-        return JSONResponse(status_code=404, content={
-            "doc_status": "failed", "items": [], "counts": {}, "trace": [],
-            "meta": {}, "warnings": [{"code": "bad_input", "item": None,
-                                      "message": str(e)}]})
+        return _err(404, "bad_input", str(e))
     return _run(str(f), {"mode": "fixture", "name": name, "file": f.name})
 
 
@@ -115,21 +117,14 @@ async def extract_upload(request: Request):
     name = request.query_params.get("filename", "upload.htm")
     suffix = Path(name).suffix.lower()
     if suffix not in ALLOWED_SUFFIX:
-        return JSONResponse(status_code=415, content={
-            "doc_status": "unsupported", "items": [], "counts": {}, "trace": [],
-            "meta": {}, "warnings": [{"code": "bad_input", "item": None,
-                "message": f"suffix {suffix!r} not one of {ALLOWED_SUFFIX}"}]})
+        return _err(415, "bad_input", f"suffix {suffix!r} not one of {ALLOWED_SUFFIX}",
+                    doc_status="unsupported")
     raw = await request.body()
     if not raw:
-        return JSONResponse(status_code=400, content={
-            "doc_status": "failed", "items": [], "counts": {}, "trace": [],
-            "meta": {}, "warnings": [{"code": "bad_input", "item": None,
-                                      "message": "empty upload"}]})
+        return _err(400, "bad_input", "empty upload")
     if len(raw) > MAX_BYTES:
-        return JSONResponse(status_code=413, content={
-            "doc_status": "failed", "items": [], "counts": {}, "trace": [],
-            "meta": {}, "warnings": [{"code": "too_large", "item": None,
-                "message": f"{len(raw):,} bytes exceeds the {MAX_BYTES:,} cap"}]})
+        return _err(413, "too_large",
+                    f"{len(raw):,} bytes exceeds the {MAX_BYTES:,} cap")
     with tempfile.TemporaryDirectory() as td:
         p = Path(td) / f"upload{suffix}"
         p.write_bytes(raw)
@@ -141,10 +136,8 @@ async def extract_upload(request: Request):
 def extract_url(body: dict):
     url = ((body or {}).get("url") or "").strip()
     if not url.startswith("https://www.sec.gov/Archives/"):
-        return JSONResponse(status_code=400, content={
-            "doc_status": "failed", "items": [], "counts": {}, "trace": [],
-            "meta": {}, "warnings": [{"code": "bad_input", "item": None,
-                "message": "URL must start with https://www.sec.gov/Archives/"}]})
+        return _err(400, "bad_input",
+                    "URL must start with https://www.sec.gov/Archives/")
     suffix = Path(url.split("?")[0]).suffix.lower() or ".htm"
     if suffix not in ALLOWED_SUFFIX:
         suffix = ".htm"
@@ -153,21 +146,15 @@ def extract_url(body: dict):
         with urllib.request.urlopen(req, timeout=30) as resp:
             raw = resp.read(MAX_BYTES + 1)
     except urllib.error.HTTPError as e:
-        return JSONResponse(status_code=502, content={
-            "doc_status": "failed", "items": [], "counts": {}, "trace": [],
-            "meta": {}, "warnings": [{"code": "edgar_fetch_failed", "item": None,
-                "message": f"EDGAR returned HTTP {e.code}. EDGAR sometimes blocks "
-                           "datacenter IPs — the upload path does not depend on it."}]})
+        return _err(502, "edgar_fetch_failed",
+                    f"EDGAR returned HTTP {e.code}. EDGAR sometimes blocks "
+                    "datacenter IPs — the upload path does not depend on it.")
     except Exception as e:
-        return JSONResponse(status_code=502, content={
-            "doc_status": "failed", "items": [], "counts": {}, "trace": [],
-            "meta": {}, "warnings": [{"code": "edgar_fetch_failed", "item": None,
-                "message": f"{type(e).__name__}: {e}. Use the upload path instead."}]})
+        return _err(502, "edgar_fetch_failed",
+                    f"{type(e).__name__}: {e}. Use the upload path instead.")
     if len(raw) > MAX_BYTES:
-        return JSONResponse(status_code=413, content={
-            "doc_status": "failed", "items": [], "counts": {}, "trace": [],
-            "meta": {}, "warnings": [{"code": "too_large", "item": None,
-                "message": f"document exceeds the {MAX_BYTES:,} byte cap"}]})
+        return _err(413, "too_large",
+                    f"document exceeds the {MAX_BYTES:,} byte cap")
     with tempfile.TemporaryDirectory() as td:
         p = Path(td) / f"edgar{suffix}"
         p.write_bytes(raw)

@@ -14,6 +14,7 @@ Self-check: python3 -m evals.metrics --self-check
 """
 import json
 import sys
+from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -52,7 +53,7 @@ def _rate(hit, total):
 
 def compute(report, cases):
     results = report["results"]
-    checks_total, checks_failed = {}, {}
+    checks_total, checks_failed = Counter(), Counter()
     failed_items = set()          # (case_id, item) with at least one failing check
     targeted_items = set()
 
@@ -62,13 +63,13 @@ def compute(report, cases):
         failed_keys = [json.dumps(f["check"], sort_keys=True) for f in r.get("failures", [])]
         for chk in declared:
             t = chk["type"]
-            checks_total[t] = checks_total.get(t, 0) + 1
+            checks_total[t] += 1
             key = json.dumps(chk, sort_keys=True)
             item = chk.get("item")
             if item:
                 targeted_items.add((r["id"], item))
             if key in failed_keys:
-                checks_failed[t] = checks_failed.get(t, 0) + 1
+                checks_failed[t] += 1
                 if item:
                     failed_items.add((r["id"], item))
 
