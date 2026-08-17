@@ -3,4 +3,10 @@ __pycache__/
 .venv/
 .env
 .DS_Store
-graphify-out/   # derived knowledge graph; rebuild with /graphify
+# graphify: the graph and its report are committed (see graphify-out/).
+# These four are not — regenerable, machine-local, or both.
+graphify-out/cache/
+graphify-out/graph.html
+graphify-out/.graphify_python
+graphify-out/.graphify_root
+graphify-out/.graphify_labels.json
