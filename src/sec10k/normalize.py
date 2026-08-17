@@ -207,7 +207,22 @@ def select_and_normalize(raw):
     era = format_era(body)
     text = normalize(body, era)
 
-    declared = chosen["type"] if chosen else (blocks[0]["type"] if blocks else None)
+    declared = chosen["type"] if chosen else (blocks[0]["type"] or None if blocks else None)
+    if blocks and chosen is None:
+        # ...and SAY SO. `document_selected` records it in meta, but meta is not
+        # where a consumer looks for problems. The span universe on this path is
+        # every <DOCUMENT> block concatenated, exhibits included, so an EX-13
+        # carrying its own "Item 1." headings is inside the text being segmented.
+        # Worse, `blocks[0]["type"]` is empty when the SGML header omits <TYPE>:
+        # form_type then falls through to the cover page, the submission is
+        # accepted as a 10-K, and the last item's span swallows the exhibit —
+        # `success`, no warnings. Non-escalating (not in AMBIGUOUS_CODES): the
+        # parse is real and usually right, it is the SCOPE that needs declaring.
+        warnings.append({
+            "code": "whole_submission_fallback", "item": None,
+            "message": f"no <DOCUMENT> block declares an accepted 10-K form "
+                       f"({sorted({b['type'] or '<none>' for b in blocks})}); the whole "
+                       f"submission was normalized, so exhibits are inside the span universe"})
     sniffed = sniff_form(text)
     form_type = declared or sniffed
     # filer-supplied <TYPE> vs the document's own cover page. Warn, trust
@@ -281,12 +296,24 @@ def _demo():
     # caller's collapse test fire and report `failed` on a readable file
     # (ksb-unsupported).
     ex = "<DOCUMENT>\n<TYPE>EX-21\n<TEXT>\nsubsidiaries\n</TEXT>\n</DOCUMENT>"
-    t, m, _ = select_and_normalize(ex)
+    t, m, w = select_and_normalize(ex)
     assert m["form_type"] == "EX-21" and m["form_type"] not in ACCEPTED_FORMS, m
     assert "subsidiaries" in t, t   # readable, therefore not a collapse
+    assert [x["code"] for x in w] == ["whole_submission_fallback"], w
+    # the shape that made the fallback dangerous: no <TYPE> at all, so form_type
+    # falls through to the cover page and a 10-K is ACCEPTED with its exhibits
+    # inside the span universe. It may proceed — but not in silence.
+    untyped = ("<DOCUMENT>\n<TEXT>\nFORM 10-K\nItem 1. Business\nprose\n</TEXT>\n</DOCUMENT>\n"
+               "<DOCUMENT>\n<TYPE>EX-13\n<TEXT>\nItem 1. Business\nexhibit\n</TEXT>\n</DOCUMENT>")
+    t2, m2, w2 = select_and_normalize(untyped)
+    assert m2["form_type"] == "10-K" and m2["form_type_declared"] is None, m2
+    assert "exhibit" in t2, t2
+    assert "whole_submission_fallback" in [x["code"] for x in w2], w2
     # EDGAR's <TYPE> drops the hyphen the cover page keeps; same form, no news
     ksb = "<DOCUMENT>\n<TYPE>10KSB\n<TEXT>\nFORM 10-KSB\nbody\n</TEXT>\n</DOCUMENT>"
-    assert select_and_normalize(ksb)[2] == [], select_and_normalize(ksb)[2]
+    codes = [x["code"] for x in select_and_normalize(ksb)[2]]
+    assert "form_type_disagreement" not in codes, codes   # spelling, not news
+    assert codes == ["whole_submission_fallback"], codes   # ...but the scope IS news
 
     print("[normalize self-check] ok")
 

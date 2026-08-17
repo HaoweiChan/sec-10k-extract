@@ -35,6 +35,7 @@ Disposition is one of three, and every code gets one:
 | `normalization_collapse` | fixture | `truncated-download` |
 | `unsupported_form` | fixture | `10q-unsupported`, `ksb-unsupported` |
 | `form_type_disagreement` | unit | `normalize._demo` (the `loud` case) |
+| `whole_submission_fallback` | **fixture** | `ksb-unsupported`, added by code review — see §6 |
 | `period_end_unknown` | **ruled** | see §4 |
 
 ## 1. `expected_items_mostly_missing` was firing but unasserted
@@ -153,10 +154,76 @@ This is the one place in this ADR where a check gained teeth rather than a
 proof, and it is the one that most deserved it: `verbatim` appears in
 twenty-odd cases and is cited as the enforcement of INV-S2.
 
+### The overlap with `boundary_hygiene`, named because it is real
+
+**`verbatim`'s new half and `boundary_hygiene` now assert the same relation** —
+that a span opens with its own heading — and both are provable only on
+hand-built inputs. Raised in code review, and it is a fair reading of §2 and §5
+together, which discharge each of them separately as if they were independent.
+They are not.
+
+The duplication is kept, deliberately, because the two sit on opposite sides of
+the trust boundary and fail differently:
+
+- `boundary_hygiene` runs **inside the pipeline** and reaches the consumer as a
+  warning with an item attached, which moves that item's confidence through
+  `WARN_PENALTY`. It is the half a deployed reader sees.
+- `verbatim` runs **in the harness**, is asserted by twenty-odd committed cases,
+  and turns the gate red. It is the half that stops a regression from being
+  committed at all — and it uses the published envelope only, so it would still
+  fire if `validate()` itself were the thing that broke.
+
+A single check could not do both jobs: a validator cannot fail a build, and an
+eval check cannot inform a consumer. What would be wrong is claiming two
+independent proofs of one property, so this section says plainly that §2 and §5
+prove **one** relation at two layers, and that the count of "checks that can now
+go red" is three, not four.
+
+## 6. `whole_submission_fallback` — the silence this ADR's own fix introduced
+
+Making a readable non-10-K submission report `unsupported` instead of `failed`
+meant `select_and_normalize` stopped returning empty text and started
+normalizing the **whole submission** when no `<DOCUMENT>` block declares an
+accepted form. Code review found that this traded one silent report for another,
+and produced the shape where it bites:
+
+A submission with `<DOCUMENT>` blocks, **no `<TYPE>` at all**, a 10-K cover page,
+and an `EX-13` carrying its own `Item 1.` / `Item 7.` headings.
+`blocks[0]["type"]` is `""`, `form_type = declared or sniffed` falls through to
+the cover page, the submission is **accepted as a 10-K**, and the exhibit sits
+inside the text being segmented — `doc_status: success`, **zero warnings**, the
+last item's span swallowing the whole exhibit. `main` refuses this input
+outright; this branch accepted it in silence. Reproduced before fixing.
+
+`document_selected: "whole file (no 10-K block to select)"` did record it, in
+`meta` — which is not where a consumer looks for problems, and is not somewhere
+any eval check reads.
+
+**Ruling**: emit `whole_submission_fallback`, naming the block types found and
+saying that exhibits are inside the span universe. Deliberately **not** in
+`AMBIGUOUS_CODES`: the parse is real and usually right: it is the *scope* that
+needs declaring, and a filing whose only flaw is that its exhibits are in range
+is a qualified success, not a refusal. `blocks[0]["type"] or None` also stops an
+empty string being published as `form_type_declared`.
+
+Asserted by `ksb-unsupported`, the only fixture in the set that reaches the
+path, plus a `normalize._demo` assertion for the untyped-submission variant,
+which a synthetic two-block submission can build exactly.
+
+The lesson is the one this ADR is about, turned on itself: **a fix that changes
+which branch a document takes has to say so out loud.** This one was found by
+review rather than by the eval set, because no fixture has a `<DOCUMENT>` block
+without a `<TYPE>`.
+
 ## Consequences
 
-- Fast 41/41. Every warning code the pipeline can emit is now either fired by a
-  committed case, proved at its own layer, or ruled here with a reason.
+- Fast 44/44. Every warning code the pipeline can emit is now either fired by a
+  committed case, proved at its own layer, or ruled here with a reason —
+  including `whole_submission_fallback`, which §6 added because this ADR's own
+  fix created it.
+- **Three checks can now go red, not four.** §2 and §5 prove one relation —
+  "a span opens with its own heading" — at two layers, and the count is stated
+  that way rather than double-counted.
 - Two new adversarial cases (`spans-transposed`, `ksb-unsupported`), one new
   fixture derived by transposition, one new unit test, two new self-check
   assertions in `validate._demo`, one added assertion in

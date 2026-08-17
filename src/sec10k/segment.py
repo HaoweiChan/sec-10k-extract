@@ -275,23 +275,30 @@ def _toc_runs(cands, universe=None):
     lists in its own contents and then never heads is exactly the mismatch
     layer 8 exists to catch, and filtering by recurrence would hide it.
 
-    Recurrence ignores occurrences buried INSIDE another dense run — but not the
-    LAST member of one, which is exactly the position the escaped first real
-    heading occupies (paragraph above). A filing may echo its item list a second
-    time at the end: Intel 2002 and Target 2002 both close with a compact
-    cross-reference index, and counting that echo made every real body heading
-    "recur", so the run's trailing member — the heading this rule exists to
-    protect — was dropped with the rest, and greedy assignment then resolved
-    every code to the 18-to-490-char stubs at the end of the file. Intel
-    reported `success_with_warning` on 0.47% of its own text; Target reported
-    plain `success` while item 4 swallowed 81% of the document.
+    Recurrence ignores occurrences inside an ECHO run. A filing may repeat its
+    item list a second time at the end: Intel 2002 and Target 2002 both close
+    with a compact cross-reference index, and counting that repeat made every
+    real body heading "recur", so the front run's trailing member — the first
+    real heading, the one this rule exists to protect — was dropped with the
+    rest, and greedy assignment resolved every code to the 18-to-490-char stubs
+    at the end of the file. Intel reported `success_with_warning` on 0.47% of its
+    own text; Target reported plain `success` while item 4 swallowed 81% of the
+    document.
 
-    The last-member exemption is not a special case bolted on: NIKE 2006 and
-    premier-pacific-2016 both run their contents page straight into the body, so
-    the real Item 1 heading is the final entry of a dense run. Without the
-    exemption their item 1 span starts at the contents page instead. No new
-    threshold either way — "dense" is exactly the TOC_CLUSTER_MIN/TOC_GAP_MAX
-    test used everywhere here.
+    An echo is defined by what it REPEATS, not by where it sits: a dense run
+    whose codes mostly appeared already, as headings outside any dense run. That
+    definition is the whole of it, and two cheaper ones were tried and discarded
+    against real documents (ADR-015 §0a). "All but the run's last member" breaks
+    a dormant shell, whose one-line item bodies put the contents page and the
+    body in a single run. "All but members of this same run" breaks the same
+    shell with cover furniture between its contents page and Part I, which is the
+    ordinary layout — there the body is its own dense run, so nothing in it
+    counted, and every code resolved to a contents row. Both are ADR-015 §0's own
+    failure rebuilt on a different document.
+
+    No new threshold: `len(pre) * 2 >= len(codes)` is the same shape of majority
+    test as the forward one below, and "dense" is exactly the
+    TOC_CLUSTER_MIN/TOC_GAP_MAX test used everywhere here.
     """
     runs, run = [], [0] if cands else []
     for i in range(1, len(cands)):
@@ -303,9 +310,20 @@ def _toc_runs(cands, universe=None):
     runs.append(run)
 
     universe = cands if universe is None else universe
-    echoed = {cands[i]["start"] for r in runs
-              if len({cands[i]["item"] for i in r}) >= TOC_CLUSTER_MIN
-              for i in r[:-1]}
+    dense = [r for r in runs if len({cands[i]["item"] for i in r}) >= TOC_CLUSTER_MIN]
+    clustered = {cands[i]["start"] for r in dense for i in r}
+    # A dense run is an ECHO if most of the codes it names ALREADY appeared as a
+    # heading somewhere outside any dense run — i.e. it is repeating the body
+    # rather than announcing it. Same shape of test as the forward one below, and
+    # the same two thresholds; nothing new is introduced.
+    echoed = set()
+    for r in dense:
+        codes = {cands[i]["item"] for i in r}
+        pre = {cands[i]["item"] for i in r
+               if any(c["item"] == cands[i]["item"] and c["start"] < cands[i]["start"]
+                      and c["start"] not in clustered for c in universe)}
+        if len(pre) * 2 >= len(codes):
+            echoed |= {cands[i]["start"] for i in r}
     drop, manifest = set(), []
     for run in runs:
         codes = {cands[i]["item"] for i in run}
@@ -397,12 +415,28 @@ EXTERNAL_DOC_RE = re.compile(
 IBR_RE = re.compile(r"(?i)incorporated\b[^.]{0,40}?\bby reference|"
                     r"reported on pages|refer to (page|the section)")
 # Non-pointer prose a body may carry and still count as "the content is
-# elsewhere". Measured over all 34 pointer-bearing bodies in the fixture set:
-# genuine whole-item pointers leave 0-166 chars of non-pointer remainder (the
-# 166 is NIKE's Item 10, whose remainder is itself a pointer phrased without
-# the trigger words), while bodies with real inline content start at 414
-# (IBM 1997 Item 5: stockholders of record, exchange listings) and run to
-# 3,186 (the ibr-pointer-first officer table). Floor sits in that empty band.
+# elsewhere".
+#
+# RE-MEASURED 2026-08-17 over all 126 pointer-bearing bodies that reach this
+# test across the 31-fixture set (the ADR-010 numbers below described 34 bodies
+# and are kept because they are what chose the constant). Genuine whole-item
+# pointers now leave 0-186 chars of non-pointer remainder — the 186 is ko-1997
+# item 5, and the old top of 166 was NIKE item 10, whose remainder is itself a
+# pointer phrased without the trigger words. Bodies with real inline content now
+# start at 338 (ko-1997 item 8), not 414 (IBM 1997 item 5: stockholders of
+# record, exchange listings), and still run to 3,186 (the ibr-pointer-first
+# officer table).
+#
+# So the empty band is 186..338, width 152, and the floor sits inside it with
+# 114 chars of margin below and only 38 above — NOT the comfortable gap the
+# original wording implied. The floor is deliberately NOT moved to the new
+# midpoint (262): no body in the set lies between 262 and 300, so the change
+# would be untestable, and moving a threshold no case can distinguish is a
+# behaviour change with no evidence behind it. The named trigger instead: the
+# first body that lands in 300..338 moves the floor to the band midpoint, with
+# its own ADR. ADR-015 §3's `_sentences` and INTERNAL_REF_RE rules widened this
+# band rather than narrowing it (152 chars against 71 for the same bodies under
+# the old rules), which is the check that they did not merely loosen the test.
 IBR_REMAINDER_MAX = 300
 # ...and a sentence that sends the reader to another ITEM OF THIS SAME REPORT is
 # navigation, not content, so it does not count toward that remainder either.
@@ -543,7 +577,31 @@ def _demo():
     got3 = assign_boundaries(filter_candidates(find_candidates(echo + body + echo, exp3))[0],
                              exp3, echo + body + echo)
     assert all(got3[c]["end"] - got3[c]["start"] > 2000 for c in exp3), \
-        {c: got3[c]["end"] - got3[c]["start"] for c in exp3}
+        {c: got3[c]["end"] - got3[c]["start"] > 2000 for c in exp3}
+
+    # ...and the MIRROR shape, in BOTH its layouts. A dormant shell answers
+    # "None." to most items, so its bodies sit closer than TOC_GAP_MAX and the
+    # body is a dense run of its own. Two cheaper definitions of "echo" both
+    # collapsed this filing to its contents page — one when the contents page
+    # runs straight into the body, the other when cover furniture separates them,
+    # which is the ordinary layout. Both layouts are asserted because each one
+    # caught a different wrong rule (ADR-015 §0a). Found by review, not by a
+    # fixture: no filing in either set reaches it, and §0a records the search.
+    shell_codes = [("1", "Business"), ("1A", "Risk Factors"), ("2", "Properties"),
+                   ("3", "Legal Proceedings"),
+                   ("5", "Market for the Registrant's Common Stock and Related "
+                         "Stockholder Matters")]
+    shell_toc = "".join(f"Item {c}. {t} .... {i + 3}\n"
+                        for i, (c, t) in enumerate(shell_codes))
+    shell_body = "".join(f"Item {c}. {t}\nNone. The Company is a shell corporation. \n"
+                         for c, t in shell_codes)
+    exp4 = [c for c, _ in shell_codes]
+    for gap in ("", "\n" + "cover and signature furniture. " * 30 + "\n"):
+        shell = "FORM 10-K\n" + shell_toc + gap + shell_body
+        got4 = assign_boundaries(filter_candidates(find_candidates(shell, exp4))[0],
+                                 exp4, shell)
+        assert all("None." in shell[got4[c]["start"]:got4[c]["end"]] for c in exp4), \
+            (len(gap), {c: shell[got4[c]["start"]:got4[c]["end"]][:60] for c in exp4})
 
     text = ("Item 1.\nBusiness\nItem 1A.\nRisk Factors\n"          # bare TOC
             "Item 1. Business\nWe make things. " + "x" * 3000 + "\n"

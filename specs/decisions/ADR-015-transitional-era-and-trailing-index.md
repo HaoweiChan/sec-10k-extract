@@ -67,6 +67,89 @@ filings that is still correct for its own reasons. Target scored 9% and drew no
 warning at all. This is the "mis-assigned rather than missing" blind spot
 ADR-013 named and did not close. It is **still not closed** — see §5.
 
+## 0a. What counts as an echo — two wrong answers before the right one
+
+§0's ruling was implemented as **"an occurrence inside another dense run does not
+count, unless it is that run's last member"**. Code review found that this is not
+what §0 says it is, and produced a document where the difference is fatal. The
+review's proposed correction was also incomplete. The rule below is the third
+attempt and the first that survives every document tried against it.
+
+**The document.** A dormant shell answers "None." to most of its items, so its
+bodies sit closer than `TOC_GAP_MAX` and the item list forms a dense run of its
+own.
+
+| | before ADR-015 | as first implemented | with the review's fix | this ruling |
+|---|---|---|---|---|
+| contents page runs into the body | `success` | **every code → a TOC row** | fixed | fixed |
+| cover furniture between them | `success` | **every code → a TOC row** | **still broken** | fixed |
+
+In the first layout the contents page and body are one run, so every body heading
+but the run's last landed in `echoed`. The review's `or c["start"] in here`
+exempts same-run occurrences and fixes that. But the **second layout is the
+ordinary one** — a real 10-K has a cover page between its contents page and Part
+I — and there the body is a *separate* dense run, so `here` never applies, nothing
+in the body counts as recurring, the contents page is not dropped at all, and
+greedy assignment resolves every code to a contents row. Reproduced against
+`main` for the first layout and against the review's own patch for the second.
+
+**Ruling.** An echo is defined by what it **repeats**, not by where it sits:
+
+> A dense run is an echo when most of the codes it names already appeared as a
+> heading **outside any dense run**.
+
+```python
+pre = {codes in this run that also occur EARLIER, at a non-clustered position}
+if len(pre) * 2 >= len(codes): echoed |= this run
+```
+
+Intel's trailing block repeats codes whose real headings sit isolated in the body,
+so it is an echo. A shell's body run repeats nothing — its codes appear earlier
+*only* in the contents page, which is itself dense and therefore excluded — so it
+is not. No new threshold: the majority test is the same shape as the forward one
+three lines below, and "dense" is the existing
+`TOC_CLUSTER_MIN`/`TOC_GAP_MAX` pair.
+
+**This also repairs a regression the review measured and the review's own patch
+did not.** Survivor counts after the TOC filter had risen on six dev fixtures —
+the drop was getting weaker, which is the same weakening that produced the bug.
+They are now **identical to `main`**, verified fixture by fixture:
+
+| | `main` | as first implemented | this ruling |
+|---|---|---|---|
+| `aapl-2025` | 23 | 29 | **23** |
+| `jpm-2024` | 22 | 27 | **22** |
+| `msft-2013` | 28 | 31 | **28** |
+| `sandston-2021` | 20 | 24 | **20** |
+| `fy2021-item9c` | 21 | 25 | **21** |
+
+`sgrp-2019` (24 → 20) and `wfc-2008` (27 → 20) go with them, which closes the
+specific fragility the review flagged: four of `sgrp-2019`'s five body headings
+were invisible to recurrence, and its contents rows survived as candidates that
+happened to sit before the cursor.
+
+**No fixture binds it, and that is a real gap rather than a shrug.** The path
+needs five distinct codes within 400-char gaps in the body *and* a dense contents
+page. Nothing in either set reaches it: all 42 fixtures were re-scanned, and three
+further real dormant shells were fetched and checked specifically for this shape
+(`eight-2015`, `newcent-2015`, `forest-2017` — the first two have an isolated body
+Item 1, the third has no contents page at all). Manufacturing one means deleting
+most of a real filing's content, which makes the fixture a test of the code path
+rather than a model of a filer, and `items-stripped` already occupies that shape
+for another purpose. So it is bound by two `segment._demo` assertions — one per
+layout, because each layout caught a different wrong rule — written as siblings of
+§0's trailing-index assertion and using the same synthetic-document instrument
+the review used to find the bug. If a real filing of this shape turns up it
+becomes a fixture that day.
+
+**Verified**: `segment` self-check green including all three synthetic assertions;
+fast 44/44; invariant 12/12; the original cases still bind the original fix
+(removing only the `echoed` exclusion turns `intc-2002-shallow` red on 5 checks
+and `tgt-2002-shallow` on 6); and **zero** change to `doc_status`, warnings,
+statuses, offsets, confidences, titles or parts across all 42 fixtures, dev and
+held-out, other than the new `whole_submission_fallback` warning on `ksb-2007`
+that ADR-016 §6 adds deliberately.
+
 ## 1. Item 14 and Item 15 have a third era, 2002-08-29 → 2003-08-14
 
 Release 33-8124 (effective 2002-08-29) inserted "Controls and Procedures" as
