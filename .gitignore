@@ -3,3 +3,4 @@ __pycache__/
 .venv/
 .env
 .DS_Store
+graphify-out/   # derived knowledge graph; rebuild with /graphify

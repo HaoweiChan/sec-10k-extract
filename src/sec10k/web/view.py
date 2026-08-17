@@ -10,6 +10,7 @@ full text — the invariant survives and the payload stays sane.
 
 Self-check: python3 -m src.sec10k.web.view
 """
+from collections import Counter
 
 # JPM 2024's Item 15 span is 1,010,422 chars. Sending that to a browser per
 # item is not inspection, it is a download. Truncate for display and say so —
@@ -51,11 +52,7 @@ def build_view(result, display_max=DISPLAY_MAX):
 
 
 def _counts(items):
-    out = {}
-    for i in items:
-        st = i.get("status")
-        out[st] = out.get(st, 0) + 1
-    return out
+    return dict(Counter(i.get("status") for i in items))
 
 
 def _scrub(trace):
