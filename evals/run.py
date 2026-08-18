@@ -124,7 +124,7 @@ def main():
 
     report = {"suite": args.suite, "score": score, "git_sha": git_sha(),
               "results": results,
-              "debt": [{"id": r["id"], "passed": r["passed"]} for r in debt_results]}
+              "debt": debt_results}
     write_report = not args.no_report
     if args.no_report and args.dir:
         # held-out/--dir runs must never be traceless (docs/evals/evaluation-strategy.md)

@@ -24,7 +24,6 @@ CASE_DIRS = ("golden", "adversarial", "heldout")
 # confidence scale is uncalibrated, so this is a reporting convention, not a
 # validated decision boundary.
 CONFIDENT = 0.8
-BUCKETS = [(0.0, 0.6), (0.6, 0.8), (0.8, 0.9), (0.9, 1.01)]
 
 # checks that assert something about a named item, grouped by what they reveal
 PRESENCE = {"item_present"}
@@ -104,23 +103,51 @@ def compute(report, cases):
                 unaudited += 1
     conf_total = conf_targeted + unaudited + excluded_nonsuccess
 
-    # --- 8: calibration. Same join, bucketed.
-    calib = []
-    for lo, hi in BUCKETS:
-        tot = bad = 0
-        for r in results:
-            for it in r.get("items_summary", []):
-                c = it.get("confidence")
-                if c is None or not (lo <= c < hi):
-                    continue
-                key = (r["id"], it["item"])
-                if key not in targeted_items:
-                    continue
-                tot += 1
-                if key in failed_items:
-                    bad += 1
-        calib.append({"bucket": f"[{lo:.1f},{hi:.2f})", "n_targeted": tot,
-                      "empirical_pass_rate": _rate(tot - bad, tot)})
+    # --- 8: calibration, per distinct confidence value. Scored rows use the
+    # targeted_items/failed_items join above (untouched). Debt rows get their
+    # own small join, same case-lookup logic, added ONLY here — metrics 1-7
+    # and 9-11 never see debt. Old-style debt rows (pre this change, no
+    # items_summary) are skipped rather than crashing.
+    debt_targeted_items, debt_failed_items = set(), set()
+    for r in report.get("debt", []):
+        if "items_summary" not in r:
+            continue
+        case = cases.get(r["id"], {})
+        declared = case.get("expect", {}).get("checks", [])
+        failed_keys = [json.dumps(f["check"], sort_keys=True) for f in r.get("failures", [])]
+        for chk in declared:
+            item = chk.get("item")
+            if not item:
+                continue
+            key = (r["id"], item)
+            debt_targeted_items.add(key)
+            if json.dumps(chk, sort_keys=True) in failed_keys:
+                debt_failed_items.add(key)
+
+    conf_rows = {}
+
+    def _bump(r_id, it, targeted, failed, scored):
+        c = it.get("confidence")
+        key = (r_id, it.get("item"))
+        if c is None or key not in targeted:
+            return
+        row = conf_rows.setdefault(c, {"confidence": c, "n_targeted": 0, "failed": 0,
+                                        "n_debt_targeted": 0, "debt_failed": 0})
+        if scored:
+            row["n_targeted"] += 1
+            row["failed"] += key in failed
+        else:
+            row["n_debt_targeted"] += 1
+            row["debt_failed"] += key in failed
+
+    for r in results:
+        for it in r.get("items_summary", []):
+            _bump(r["id"], it, targeted_items, failed_items, scored=True)
+    for r in report.get("debt", []):
+        for it in r.get("items_summary", []):
+            _bump(r["id"], it, debt_targeted_items, debt_failed_items, scored=False)
+
+    calib = sorted(conf_rows.values(), key=lambda row: -row["confidence"])
 
     # --- 9/10/11
     secs = sorted(r.get("seconds", 0) for r in results)
@@ -175,7 +202,12 @@ def compute(report, cases):
                      f"deliberately refuse or flag (10-Q, truncated download, stripped "
                      f"items), and refusing correctly is the desired behaviour there"},
             {"n": 8, "name": "confidence calibration", "value": calib,
-             "note": "bucket edges provisional; ADR-008 states the scale is uncalibrated"},
+             "note": "the scored suite is gated green, so scored pass rates here are UPPER "
+                     "BOUNDS, not accuracy — nothing scored is currently failing by "
+                     "construction. debt rows (evals/run.py's unscored 'debt' suite) are the "
+                     "only current-code failure channel and are enumerated in full here, not "
+                     "sampled. unaudited confident items — not targeted by any check, scored "
+                     "or debt — are counted in metric 6's note, not here"},
             {"n": 9, "name": "latency p50 / p95 (s)",
              "value": [pct(0.5), pct(0.95)], "sample": len(secs)},
             {"n": 10, "name": "cost per filing (USD)", "value": 0.0, "sample": len(results),
@@ -196,8 +228,9 @@ def render(m):
         if isinstance(v, list) and x["n"] == 8:
             out.append(f"{x['n']:>2}. {x['name']}")
             for b in v:
-                out.append(f"       {b['bucket']:>12}  n={b['n_targeted']:<4} "
-                           f"pass={b['empirical_pass_rate']}")
+                out.append(f"       conf={b['confidence']:<5} n_targeted={b['n_targeted']:<4} "
+                           f"failed={b['failed']:<4} n_debt_targeted={b['n_debt_targeted']:<4} "
+                           f"debt_failed={b['debt_failed']}")
         else:
             out.append(f"{x['n']:>2}. {x['name']:<32} {v}   (n={x.get('sample')})")
         if x.get("note"):
@@ -206,10 +239,14 @@ def render(m):
 
 
 def _self_check():
-    cases = {"c1": {"id": "c1", "expect": {"checks": [
-        {"type": "item_present", "item": "1", "status": "extracted"},
-        {"type": "item_present", "item": "7", "status": "extracted"},
-        {"type": "text_contains", "item": "1", "value": "x"}]}}}
+    cases = {
+        "c1": {"id": "c1", "expect": {"checks": [
+            {"type": "item_present", "item": "1", "status": "extracted"},
+            {"type": "item_present", "item": "7", "status": "extracted"},
+            {"type": "text_contains", "item": "1", "value": "x"}]}},
+        "d1": {"id": "d1", "expect": {"checks": [
+            {"type": "item_present", "item": "1", "status": "extracted"}]}},
+    }
     report = {"suite": "fast", "score": 0.0, "git_sha": "abc1234", "results": [{
         "id": "c1", "kind": "golden", "passed": False, "doc_status": "success", "seconds": 0.5,
         "failures": [{"check": {"type": "item_present", "item": "7", "status": "extracted"},
@@ -218,7 +255,20 @@ def _self_check():
             {"item": "1", "status": "extracted", "confidence": 0.95, "method": "heading_strict"},
             {"item": "7", "status": "missing", "confidence": 0.95, "method": "status_keyword"},
             {"item": "9", "status": "extracted", "confidence": 0.95, "method": "heading_strict"},
-        ]}]}
+        ]}],
+        # a failing debt case (evals/run.py's unscored suite) targeting item 1
+        # at the same confidence, plus an old-style debt row (pre this change,
+        # no items_summary) that must not crash the join.
+        "debt": [
+            {"id": "d1", "kind": "adversarial", "passed": False, "doc_status": "success",
+             "seconds": 0.1,
+             "failures": [{"check": {"type": "item_present", "item": "1", "status": "extracted"},
+                           "why": "y"}],
+             "items_summary": [
+                 {"item": "1", "status": "missing", "confidence": 0.95, "method": "status_keyword"},
+             ]},
+            {"id": "d2", "passed": True},
+        ]}
     m = compute(report, cases)
     by = {x["n"]: x for x in m["metrics"]}
     assert by[1]["value"] == 0.5, by[1]          # 1 of 2 item_present passed
@@ -229,6 +279,11 @@ def _self_check():
     assert m["unaudited_confident_items"] == 1, m
     assert by[11]["value"] == 1.0, by[11]        # no llm_fallback anywhere
     assert by[10]["value"] == 0.0
+    # metric 8: one row for confidence 0.95 — scored columns unchanged by the
+    # debt join, debt columns pick up d1's failing item and ignore d2.
+    calib95 = next(row for row in by[8]["value"] if row["confidence"] == 0.95)
+    assert calib95["n_targeted"] == 2 and calib95["failed"] == 1, calib95
+    assert calib95["n_debt_targeted"] == 1 and calib95["debt_failed"] == 1, calib95
     # empty report must not divide by zero
     m2 = compute({"suite": "x", "score": 0, "results": []}, {})
     assert {x["n"]: x for x in m2["metrics"]}[1]["value"] is None
