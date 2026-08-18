@@ -166,6 +166,16 @@ def test_warning_present():
     assert eval_check({"normalized_text": "", "items": []},
                       {"type": "warning_present", "code": "x"}) is not None
 
+    # "item" narrows the match: same code, wrong item, must still fail — this
+    # is what let a fingerprint warning on item 8 satisfy a check meant for 1A
+    r2 = {"normalized_text": "", "items": [],
+          "warnings": [{"code": "keyword_fingerprint", "item": "8", "message": "m"}]}
+    reason = eval_check(r2, {"type": "warning_present", "code": "keyword_fingerprint", "item": "1A"})
+    assert reason is not None, reason
+    assert eval_check(r2, {"type": "warning_present", "code": "keyword_fingerprint", "item": "8"}) is None
+    # no "item" key on the check: today's behaviour, any item matches
+    assert eval_check(r2, {"type": "warning_present", "code": "keyword_fingerprint"}) is None
+
 
 def test_warning_absent():
     r = {"normalized_text": "", "items": [],
@@ -179,6 +189,14 @@ def test_warning_absent():
                       {"type": "warning_absent", "code": "x"}) is None
     assert eval_check({"normalized_text": "", "items": []},
                       {"type": "warning_absent", "code": "x"}) is None
+
+    # "item" narrows the match, mirroring warning_present
+    r2 = {"normalized_text": "", "items": [],
+          "warnings": [{"code": "keyword_fingerprint", "item": "8", "message": "m"}]}
+    assert eval_check(r2, {"type": "warning_absent", "code": "keyword_fingerprint",
+                           "item": "1A"}) is None
+    reason = eval_check(r2, {"type": "warning_absent", "code": "keyword_fingerprint", "item": "8"})
+    assert reason is not None, reason
 
 
 def test_ibr_spans_are_checked():

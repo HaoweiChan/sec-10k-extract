@@ -48,17 +48,30 @@ def load_cases(suite, dir_arg=None):
             except ValueError:
                 case["_file"] = str(f)
             case["_kind"] = d.name  # golden | adversarial | <--dir basename>
-            if suite == "all" or suite in case.get("suites", ["fast"]):
+            # a "debt" case loads under every suite, not just --suite all: it
+            # documents a known-red limitation and main()'s debt split already
+            # excludes it from scoring, so loading it everywhere costs nothing
+            # and is what "debt runs every run" is supposed to mean
+            case_suites = case.get("suites", ["fast"])
+            if suite == "all" or suite in case_suites or "debt" in case_suites:
                 cases.append(case)
     return cases
 
 
 def git_sha():
     try:
-        return subprocess.run(
+        sha = subprocess.run(
             ["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True,
             text=True, timeout=5, check=True,
         ).stdout.strip()
+        # a report's sha must not claim code the run wasn't actually on. -uno:
+        # every run writes an untracked report into evals/report/, so without
+        # it the second run in a session always stamps -dirty on identical code
+        dirty = subprocess.run(
+            ["git", "status", "--porcelain", "-uno"], cwd=ROOT, capture_output=True,
+            text=True, timeout=5, check=True,
+        ).stdout.strip()
+        return sha + "-dirty" if dirty else sha
     except Exception:  # git absent, not a repo, etc. — never crash the runner over this
         return None
 
@@ -124,7 +137,7 @@ def main():
 
     report = {"suite": args.suite, "score": score, "git_sha": git_sha(),
               "results": results,
-              "debt": [{"id": r["id"], "passed": r["passed"]} for r in debt_results]}
+              "debt": debt_results}
     write_report = not args.no_report
     if args.no_report and args.dir:
         # held-out/--dir runs must never be traceless (docs/evals/evaluation-strategy.md)

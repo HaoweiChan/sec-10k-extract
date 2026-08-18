@@ -13,6 +13,7 @@
       {"type": "warning_present", "code": "toc_manifest_mismatch"},
       {"type": "warning_present", "code": "expected_item_missing"},
       {"type": "item_present", "item": "8", "status": "missing"},
+      {"type": "confidence", "item": "8", "value": 0.4},
       {"type": "item_present", "item": "7", "status": "extracted"},
       {"type": "item_present", "item": "9", "status": "extracted"},
       {"type": "expected_set_complete", "items": ["1","1A","1B","1C","2","3","4","5","6","7","7A","8","9","9A","9B","9C","10","11","12","13","14","15","16"]},

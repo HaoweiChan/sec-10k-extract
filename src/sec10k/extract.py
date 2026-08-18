@@ -17,12 +17,7 @@ from src.sec10k.segment import (
 )
 from src.sec10k.validate import AMBIGUOUS_CODES, score, validate
 
-VERSION = "0.5.1-g1"  # meta.extractor_version — audits compare across runs
-
-# Layer 9 in its provisional form: tiered by heading-match quality, coarse, and
-# clamped away from 0 and 1. Calibration against measured per-bucket accuracy is
-# T5 — these are placeholders that an auditor can recompute from `evidence`.
-CONF_STRICT, CONF_WEAK_TITLE, CONF_NON_EXTRACTED = 0.9, 0.7, 0.8
+VERSION = "0.6.0-t10"  # meta.extractor_version — audits compare across runs
 
 
 def _item(code, cand, status, period_end=None):
@@ -30,14 +25,12 @@ def _item(code, cand, status, period_end=None):
     if cand is None:
         return {"item": code, "part": part, "title": title,
                 "heading_text": None, "start": None, "end": None,
-                "status": status, "confidence": CONF_NON_EXTRACTED,
+                "status": status,
                 "method": "status_keyword", "evidence": {}}
-    strong = cand["similarity"] >= 0.8
     return {
         "item": code, "part": part, "title": title,
         "heading_text": cand["heading_text"], "start": cand["start"],
         "end": cand["end"], "status": status,
-        "confidence": CONF_STRICT if strong else CONF_WEAK_TITLE,
         "method": "heading_strict",
         "evidence": {"title_similarity": cand["similarity"],
                      "chars": cand["end"] - cand["start"]},
