@@ -18,7 +18,7 @@ committed report in `evals/report/`.
 ## Run it
 
 ```bash
-python3 -m evals.run --suite all        # 27 cases, no dependencies
+python3 -m evals.run --suite all        # 44 cases, no dependencies
 ```
 
 The extraction pipeline and the eval harness are **stdlib-only** (ADR-003).
@@ -62,7 +62,7 @@ not identify.
 
 ## Key design decisions
 
-Full rationale in `specs/decisions/` (13 ADRs). The ones that shaped the system:
+Full rationale in `specs/decisions/` (18 ADRs). The ones that shaped the system:
 
 - **Deterministic first, LLM deferred** (ADR-000/003). No model is in the
   extraction path. Cost is therefore structurally $0 — not "cheap", zero — and
@@ -104,15 +104,23 @@ Verified by committed cases; run `python3 -m evals.run --suite all` to reproduce
 Concrete, with the case or run that demonstrates each. Nothing here is
 speculative.
 
+**Closed since B-freeze**
+
+- **2002–2003 transitional numbering** — listed here as unfixed until T9.
+  Goldman Sachs FY2002 used the post-Sarbanes-Oxley scheme (Item 14 =
+  Controls, Item 15 = Exhibits) *ahead* of the 2003-08-14 effective date the
+  era table encoded, so Item 15 was absent from the output entirely. ADR-013
+  read it as one filer's early adoption needing an INV-S3 amendment and
+  declined the repair. Two more filings from the same window (`intc-2002`,
+  `tgt-2002`) showed it is a **regulatory era** — Release 33-8124, effective
+  2002-08-29 — and a table correction, not a conflict: `gs-2002` moved from
+  the `debt` suite into `fast` with **not one of its assertions edited**
+  (ADR-015 §1). The lesson survives the fix, and is
+  the reason it is still written down here: **the era table remains the
+  pipeline's most brittle component**, and this was its third confirmation.
+
 **Fails today — known and unfixed**
 
-- **2002–2003 transitional numbering.** Goldman Sachs FY2002 uses the
-  post-Sarbanes-Oxley scheme (Item 14 = Controls, Item 15 = Exhibits) *ahead*
-  of the 2003-08-14 effective date the era table encodes, so **Item 15 is
-  absent from the output entirely**. Found by held-out run H1, predicted in the
-  case's provenance before the run, deliberately not fixed: the general repair
-  conflicts with INV-S3 and is A-level scope (ADR-013). This is the third
-  confirmation that **the era table is the pipeline's most brittle component**.
 - **Permitted omissions read as `missing`.** Exxon FY2021 drops Item 6 entirely
   — allowed since the Feb 2021 S-K amendment — and the extractor reports
   `missing` rather than `omitted`, because only codes 16 and 9C auto-omit.
@@ -125,29 +133,41 @@ speculative.
 
 **Thin evidence — claimed, but not strongly demonstrated**
 
-- **3 of the 7 validators have never fired on any input in this repository** —
-  `boundary_hygiene`, `numeric_density_inversion` and `keyword_fingerprint`.
-  Not "no case proves it": measured across all 21 fixtures, they have never
-  produced a warning at all. (The manifest cross-check *is* pinned, by
-  `heading-unnumbered`; an earlier version of this list named it as unproven
-  and was wrong in that direction.)
-- **Four eval checks are structurally incapable of failing** —
-  `no_overlap_ordered`, `verbatim`, `known_items_only`, `boundary_hygiene`.
-  `verbatim` asserts bounds and never compares text. Recorded in ADR-010, not
-  papered over: **27/27 green means less than it appears**.
+- **1 of the 8 layer-8 codes cannot be fired by any document** —
+  `boundary_hygiene`. This list named three until T9; ADR-016 §3 closed the
+  other two with `spans-transposed`, a pure byte-transposition of `sgrp-2019`
+  (the derivation asserts `sorted(out) == sorted(raw)`) that mislabels two
+  spans without adding or deleting a character, and both
+  `numeric_density_inversion` and `keyword_fingerprint` fire on it.
+  `boundary_hygiene` is not merely unproven but unprovable from a filing:
+  spans are built from heading matches, so a span opens with its heading by
+  construction. It is proved against the layer boundary in `validate._demo`
+  instead, and ADR-016 §2 records why that is the honest place for it.
+- **Three eval checks can go red — where the honest count was zero of four.**
+  ADR-010 recorded that `no_overlap_ordered`, `verbatim`, `known_items_only`
+  and `boundary_hygiene` were structurally incapable of failing, and that
+  `verbatim` asserted bounds and never compared text. ADR-016 §5 proves the
+  first three on hand-built results and gives `verbatim` a real comparison: a
+  span must open with its own `heading_text`. The count is three and not four
+  because §2 and §5 prove **one** relation at two layers, stated that way
+  rather than double-counted. Firing a check once still proves the code path,
+  not the threshold — per-bucket calibration is T10's job.
 - **The silent-failure rate covers 22% of the confident items.** 0.0 is
   measured over 109 audited items out of 490 confident ones: 280 are targeted
   by no check, and 101 more sit in non-success documents and fall outside the
   metric's definition — including the JPM span this README names as wrong.
 
-**Explicitly unsupported** — refused, never best-effort: non-10-K forms
+**Explicitly unsupported** — refused, never item-extracted: non-10-K forms
 (10-Q, 8-K, 20-F), scanned/image/PDF filings, inputs with no detectable 10-K
-document. 10-K/A amendments and 10-KSB are out of scope.
+document. 10-K/A amendments and 10-KSB are out of scope. The refusal names the
+form and returns the normalized text; it does not return items, and it does not
+claim the file was unreadable (ADR-016 §6).
 
 ## Performance, cost, scalability
 
 Measured, not estimated — see `docs/analysis-report.md` for method and full
-tables.
+tables. These are the **B-freeze** numbers, over the 21 fixtures committed at
+that point; the set is now 36 and analysis-report v2 re-measures at T10.
 
 | | |
 |---|---|
@@ -180,7 +200,7 @@ project learned.
 ## Repo map
 
 ```
-specs/            invariants, the output contract, 13 ADRs — binding
+specs/            invariants, the output contract, 18 ADRs — binding
 docs/             product, evals, architecture, audits — descriptive
 tasks/TODO.md     milestone ledger with per-milestone exit gates
 evals/golden/     hand-labelled cases (anchors verified, counts recorded)

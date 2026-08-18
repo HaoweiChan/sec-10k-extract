@@ -30,8 +30,8 @@ errors. Trace: source, sha256, byte count. Tested at the service level, not by
 eval cases.
 
 **2. Document selection** — find the 10-K body, classify the form. If
-`<DOCUMENT>` blocks exist: pick `<TYPE>10-K` or `10-K405`; else treat the whole
-file as the document; cover-page "FORM 10-K" sniff; nothing matches →
+`<DOCUMENT>` blocks exist: pick `<TYPE>10-K` or `10-K405`; else treat the
+whole file as the document; cover-page "FORM 10-K" sniff; nothing matches →
 `doc_status: unsupported`. Failure modes: exhibit chosen, wrong form accepted.
 Trace: block count, chosen type + offsets. Eval: `ge-1994-oldformat`,
 10-Q→unsupported case. **Built (T3)**: `<DOCUMENT>` blocks are present in 7 of
@@ -40,7 +40,16 @@ submissions — so both paths are load-bearing. `<TYPE>` (EDGAR-validated) wins
 when present and the cover sniff becomes a second opinion that warns on
 disagreement rather than refusing; the sniff is confined to the first 3,000
 chars because a 10-Q always cites its own prior 10-K further down. 10-K/A and
-10-KSB are refused, not best-effort parsed.
+10-KSB are refused, not best-effort parsed. **Amended (T9, ADR-016 §6)**:
+refusing a form is not the same as reading nothing. When `<DOCUMENT>` blocks
+exist but none declares an accepted form, the whole submission is normalized
+and the first block's `<TYPE>` names it, so a readable 10-KSB is refused on
+its form instead of being reported `failed` for a collapse that never
+happened. The span universe on that path is every block concatenated, exhibits
+included, and a submission whose SGML header omits `<TYPE>` altogether falls
+through to the cover sniff and can be *accepted* — so the path declares itself
+with a non-escalating `whole_submission_fallback` warning rather than
+proceeding in silence.
 
 **3. Normalization** — deterministic plain text. Stdlib `HTMLParser` subclass:
 block-level tags emit `\n`, inline tags (including all `ix:*`) emit nothing,
@@ -79,13 +88,13 @@ inside a dense run of ≥5 distinct codes, a candidate whose own code recurs
 later in the document is an index entry → drop it (ADR-007 — per-candidate
 recurrence, not density alone: real Part III one-liners sit as close as 43
 chars apart). The dropped cluster is not discarded: it is **parsed as the
-filing's self-declared item manifest** and handed to layer 8 — the trap doubles
-as a checklist. (b) Prose references: mid-sentence position, "of Regulation"
-suffix, "see / in / under" prefix → reject. Failure modes: TOC not near the
-start, two TOCs, a genuine heading caught inside the cluster. Trace: **every
-rejection with its reason** — the core observability requirement. Eval:
-`min_chars` + `text_not_contains` (the TOC trap is `aapl-2025-content`; its
-hard, titled-TOC form is `toc-titled`). **Built (T4)**: measured, the
+filing's self-declared item manifest** and handed to layer 8 — the trap
+doubles as a checklist. (b) Prose references: mid-sentence position, "of
+Regulation" suffix, "see / in / under" prefix → reject. Failure modes: TOC not
+near the start, two TOCs, a genuine heading caught inside the cluster. Trace:
+**every rejection with its reason** — the core observability requirement.
+Eval: `min_chars` + `text_not_contains` (the TOC trap is `aapl-2025-content`;
+its hard, titled-TOC form is `toc-titled`). **Built (T4)**: measured, the
 load-bearing rule is simpler than predicted — a real heading carries its title
 on the same line, which kills every real fixture's TOC *and* MSFT 2013's 42
 running `Item 8` page headers in one move. The cluster rule only matters when
@@ -93,6 +102,15 @@ TOC entries are titled, which is why it needed a fixture of its own. (b) needs
 no separate rule so far: line-anchoring plus the canonical-code filter already
 rejects every prose reference in the set — GE 1994's "Item 405 of Regulation
 S-K" and IBM 1997's "ITEM 601 OF" parse as codes 40/60 and are not canonical.
+**Amended (T9, ADR-015 §0/§0a)**: recurrence now ignores occurrences inside an
+*echo* run — a dense run whose codes mostly appeared already, as headings
+outside any dense run. Without the exclusion, a filing that repeats its item
+list at the end makes every real body heading look like a contents entry:
+Intel FY2002 reported `success_with_warning` over 0.47% of its own text and
+Target FY2002 reported plain `success`, both invisible to all eight
+validators. The definition is load-bearing in the other direction too — under
+cruder ones a dormant shell, whose one-line bodies form a dense run of their
+own, collapses to its contents page instead.
 
 **6. Boundary resolution** — one span per item. Greedy ordered assignment over
 the era's expected sequence: walk expected order, accept the earliest surviving
