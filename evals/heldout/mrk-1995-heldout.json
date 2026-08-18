@@ -1,0 +1,36 @@
+{
+  "id": "mrk-1995-heldout",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {
+    "path": "evals/heldout/fixtures/mrk-1995/filing.txt"
+  },
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "known_items_only"},
+      {"type": "expected_set_complete", "items": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14"]},
+      {"type": "only_items", "items": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14"]},
+      {"type": "item_present", "item": "1", "status": "extracted"},
+      {"type": "item_present", "item": "2", "status": "extracted"},
+      {"type": "item_present", "item": "3", "status": "extracted"},
+      {"type": "item_present", "item": "4", "status": "extracted"},
+      {"type": "item_present", "item": "14", "status": "extracted"},
+      {"type": "item_field", "item": "14", "field": "part", "value": "IV"},
+      {"type": "text_contains", "item": "1", "value": "Vasotec"},
+      {"type": "text_not_contains", "item": "1", "value": "ITEM 2. PROPERTIES."},
+      {"type": "text_not_contains", "item": "2", "value": "ITEM 3. LEGAL PROCEEDINGS."},
+      {"type": "min_chars", "item": "1", "value": 20000},
+      {"type": "min_chars", "item": "3", "value": 2000},
+      {"type": "min_chars", "item": "14", "value": 3000},
+      {"type": "item_absent", "item": "1A", "any_status": true},
+      {"type": "item_absent", "item": "7A", "any_status": true},
+      {"type": "item_absent", "item": "9A", "any_status": true},
+      {"type": "item_absent", "item": "15", "any_status": true},
+      {"type": "item_absent", "item": "16", "any_status": true}
+    ]
+  },
+  "provenance": "T9 tranche 4, authored 2026-08-17, NEVER RUN. Merck & Co., Inc., sec.gov/Archives/edgar/data/64978/0000950130-96-000896.txt, accession 0000950130-96-000896, filed 1996-03-20, FY1995 (Dec-end), form type 10-K405, 322,618 bytes, plain-text full submission. Verified by the independent tag-strip scan (imports nothing from src/; for a .txt filing the scan and the raw bytes are the same thing, so the instrument's usual failure mode does not apply here): SGML header reads CONFORMED SUBMISSION TYPE 10-K405 and CONFORMED PERIOD OF REPORT 19951231; the cover reads 'Fiscal Year Ended December 31, 1995'; there are exactly FOURTEEN item headings and NO table of contents at all. Anchor counts in the raw file: 'ITEM 1. BUSINESS.' 1x, 'ITEM 2. PROPERTIES.' 1x, 'ITEM 3. LEGAL PROCEEDINGS.' 1x, 'Vasotec' 8x. STRATUM: mid-1990s pharmaceutical — pharma left the held-out set when jnj-2016 burned at H1, and the only other pre-1997 fixture anywhere is ge-1994. It is also the earliest filing in either set that predates Item 7A entirely (added for periods ending on or after 1997-06-15), so the 14-code taxonomy is exercised by a real filing rather than by an era-table assertion. WHAT IS NEW IN THIS CASE'S SHAPE, AND IT APPLIES TO ALL THREE FILINGS ADDED IN THIS REFRESH: it carries LENGTH FLOORS and CROSS-ITEM EXCLUSIONS. Every held-out case authored before today asserted presence and status only, which the pre-B audit flagged as finding 4 and the H2 triage repeated — 'a TOC-collapsed extraction would clear them'. T9 tranche 2 then proved that was not hypothetical: Intel 2002 resolved every item to an 18-to-490-char stub and reported success_with_warning, and a floor of even 2,000 chars on Item 1 would have caught it instantly. min_chars values are set from the scan at paragraph granularity with wide margins (item 1 measures ~41,800 chars in the scan and is floored at 20,000), because the scan and the normalizer legitimately disagree on whitespace and the floor must not encode that disagreement. PREDICTION, FROZEN BEFORE THE FIRST RUN so it cannot be retrofitted: item 14's span will carry the whole financial-statement and exhibit tail — roughly 220,000 of the scan's 283,000 chars — so `last_item_dominates` should fire and doc_status should be `ambiguous`, UNLESS the TAIL_RE signature cut lands first and truncates the span. It is deliberately NOT asserted: this case exists to measure the extractor, and a red produced by my own guess about a threshold would measure me."
+}

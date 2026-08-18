@@ -1,0 +1,19 @@
+{
+  "id": "ba-2003-asterisk-ibr",
+  "task": "sec10k",
+  "suites": ["debt"],
+  "input": {
+    "path": "evals/fixtures/ba-2003/filing.htm"
+  },
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "item_present", "item": "11", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "13", "status": "incorporated_by_reference"}
+    ]
+  },
+  "triage": {"class": "cross-item-footnote-convention", "note": "ENUMERATED DEBT, NOT A BUG BEING FIXED. Boeing FY2003 marks Items 5, 10, 11, 13 and 14 as incorporated by reference with a bare typographic asterisk on the heading line, and states the reference ONCE, in a footnote sitting inside item 14's body: '* Certain information required by Items 5, 10, 11, 13 and 14 is incorporated herein by reference to the registrant's definitive proxy statement, which will be filed with the Commission within 120 days after the close of the fiscal year.' Items 11 and 13 therefore have EMPTY bodies — 34 and 59 chars, heading and page furniture only. classify() reads one item's body at a time, finds no pointer phrase in an empty body, and returns `extracted` under ADR-005 rule 1 (trivial body). The result is the silent-failure shape this repo exists to hunt: 'Executive Compensation: extracted, confidence 0.95' over nothing at all, with no warning fired, because a 34-char span is neither missing nor obviously wrong to any label-free validator. WHY IT IS NOT FIXED: resolving a footnote that names OTHER items requires cross-item reference resolution, a capability the pipeline does not have and that the T8 freeze forbids adding (`docs/product/milestones.md`; tasks/TODO.md freeze guard). It is a new capability, not a defect in an existing layer. WHAT WOULD CLOSE IT: either a post-freeze ADR admitting cross-item pointer resolution, or a label-free validator that flags a near-empty span for an item whose canonical content cannot be trivial — the second is the cheaper and more general half, and belongs with the layer-8 battery rather than with classify(). Tagged 'debt' on the gs-2002 precedent: the runner executes it every run and prints its state, but excludes it from the score, so the gap stays visible without either breaking the gate or being rewritten to assert the bug as correct. If it ever goes green the runner says 'NOW GREEN — promote it'.\n"},
+  "provenance": "T9 tranche 2, authored 2026-08-17 alongside ba-2003-shallow, from the same fixture (evals/fixtures/ba-2003/filing.htm, Boeing FY2003, accession 0001193125-04-034751). Split out of the shallow golden deliberately: items 11 and 13 fail for a reason unrelated to the era-model finding that golden exists to pin, and mixing the two would have made a permanently-red case out of one that should go green. Verified by the same independent tag-strip scan: the heading lines read 'Item 11. Executive Compensation*' and 'Item 13. Certain Relationships and Related Transactions *', each followed by nothing but page furniture before the next item heading, and the asterisk is resolved only by the footnote quoted in the triage note. The two asserted checks are the whole of the debt; the three invariant checks above them are there so this case still notices if the fixture's spans stop being well-formed."
+}

@@ -1,0 +1,114 @@
+{
+  "id": "xom-2021-shallow",
+  "task": "sec10k",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "path": "evals/fixtures/xom-2021/filing.htm"
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "no_empty_success"
+      },
+      {
+        "type": "no_overlap_ordered"
+      },
+      {
+        "type": "verbatim"
+      },
+      {
+        "type": "known_items_only"
+      },
+      {
+        "type": "doc_status",
+        "in": [
+          "success",
+          "success_with_warning",
+          "ambiguous"
+        ]
+      },
+      {
+        "type": "item_present",
+        "item": "1",
+        "status": "extracted"
+      },
+      {
+        "type": "item_present",
+        "item": "1A",
+        "status": "extracted"
+      },
+      {
+        "type": "item_present",
+        "item": "16",
+        "status": "extracted"
+      },
+      {
+        "type": "item_present",
+        "item": "9C",
+        "status": "extracted"
+      },
+      {
+        "type": "item_absent",
+        "item": "1C",
+        "any_status": true
+      },
+      {
+        "type": "expected_set_complete",
+        "items": [
+          "1",
+          "1A",
+          "1B",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "7A",
+          "8",
+          "9",
+          "9A",
+          "9B",
+          "9C",
+          "10",
+          "11",
+          "12",
+          "13",
+          "14",
+          "15",
+          "16"
+        ]
+      },
+      {
+        "type": "only_items",
+        "items": [
+          "1",
+          "1A",
+          "1B",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "7A",
+          "8",
+          "9",
+          "9A",
+          "9B",
+          "9C",
+          "10",
+          "11",
+          "12",
+          "13",
+          "14",
+          "15",
+          "16"
+        ]
+      }
+    ]
+  },
+  "provenance": "RETIRED FROM HELD-OUT 2026-08-17 (T9 tranche 4), moved to the dev set unchanged except for this note, its id, and its fixture path. Same two reasons as ko-1997, in the same order: (1) EXHAUSTED — run at H1, H1b and H2, with its Item 9C assertion corrected from the source after H1's triage found the tag-strip scan had produced a wrong claim, so later passes measured that correction; (2) CONTAMINATED — the T9 tranche-2 blast-radius scan observed that its item 13 status moved (extracted -> incorporated_by_reference) under the semicolon ruling, ADR-015 §3. Coverage retained on the dev side: large iXBRL, petroleum, the calendar-FY2021 cohort that ADR-010 moved the 9C boundary to reach, and a filing that drops Item 6 entirely. || ORIGINAL HELD-OUT PROVENANCE, VERBATIM: HELD-OUT, FROZEN AT AUTHORING 2026-08-16 — NOT RUN. Exxon Mobil Corporation FY2021 10-K, EDGAR accession 0000034088-22-000011, filed 2022-02-23, primary document xom-20211231.htm (6,159,522 bytes — the second-largest filing in either set after JPM). Stratum: large iXBRL, energy/petroleum-refining (a sector no dev fixture covers), December FY2021 filed February 2022 — i.e. EXACTLY the calendar-FY2021 cohort that ADR-010 ruling 2 moved the Item 9C boundary to reach. This is the generalization test for that ruling on a filing the fix was not tuned against, which is why it is held out rather than added to the dev set. Verified 2026-08-16 by an INDEPENDENT tag-strip regex scan; the extractor was never invoked. Scan results: cover reads 'fiscal year ended December 31, 2021'; NO Item 9C heading anywhere (0 hits) and NO Item 6 heading anywhere (0 hits, and 0 hits for 'reserved' in any casing); Item 16 present as a real heading with a real body ('ITEM 16. FORM 10-K SUMMARY None.'). 9C is therefore asserted 'omitted' — era-valid for a February 2022 filing but absent from this document, which is the INV-S4 distinction between 'the extractor missed it' and 'the filer was permitted not to file it'. ITEM 6 IS DELIBERATELY NOT ASSERTED, and the reason is recorded here before the run: the SEC amended Regulation S-K Item 301 effective 2021-02-10 to drop Selected Financial Data, so Exxon omitting Item 6 entirely is permitted, and the honest status is 'omitted' per ADR-005 rule 2 — but segment.classify() auto-omits only codes 16 and 9C, so the extractor will most likely report 'missing'. Asserting either value would be authoring a prediction rather than ground truth, so expected_set_complete (which accepts any of the four statuses) carries item 6 and the missing-vs-omitted question is left for the milestone run and its triage to settle. BURN RULE: if this outcome influences implementation, it moves to evals/adversarial/ and is replaced. LABEL CORRECTED AFTER H1 (2026-08-16). TWO errors, both mine. (1) Item 9C was asserted 'omitted' on the strength of my independent scan finding zero 'item 9C' hits. The filing DOES carry 'ITEM 9C. DISCLOSURE REGARDING FOREIGN JURISDICTIONS THAT PREVENT INSPECTIONS' with body 'Not applicable.', and the extractor found and extracted it correctly. The lesson is about the instrument: my verification scan strips tags to spaces where the real normalizer joins within a block, so a code split across markup (9<span>C</span>) dies in the scan and survives the pipeline. I asserted an ABSENCE using a tool weaker than the thing under test -- sound for asserting presence, unsound for asserting absence, and I did not draw that distinction while authoring. (2) doc_status allowed only success / success_with_warning. The run returned 'ambiguous' because last_item_dominates fired on item 16: 'ITEM 16. FORM 10-K SUMMARY None.' is followed by the entire Financial Section, which the last item's span swallowed. That is a real tail bleed, the validator caught it unprompted on a filing nothing was tuned against, and 'ambiguous' is the honest report -- my assertion was simply too narrow. Item 6 remains deliberately unasserted; the run confirms it reports 'missing' where 'omitted' is arguably honest, which stays open. Label-corrected, not burned."
+}

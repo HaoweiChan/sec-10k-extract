@@ -1,0 +1,32 @@
+{
+  "id": "spans-transposed",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {
+    "path": "evals/fixtures/spans-transposed/filing.htm"
+  },
+  "expect": {
+    "checks": [
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "deterministic"},
+      {"type": "warning_present", "code": "numeric_density_inversion"},
+      {"type": "warning_present", "code": "keyword_fingerprint"},
+      {"type": "doc_status", "value": "success_with_warning"},
+      {"type": "item_present", "item": "1", "status": "extracted"},
+      {"type": "item_present", "item": "1A", "status": "extracted"},
+      {"type": "item_present", "item": "1B", "status": "extracted"},
+      {"type": "item_present", "item": "7", "status": "extracted"},
+      {"type": "item_present", "item": "8", "status": "extracted"},
+      {"type": "item_present", "item": "9A", "status": "extracted"},
+      {"type": "warning_absent", "code": "expected_items_mostly_missing"},
+      {"type": "warning_absent", "code": "toc_manifest_mismatch"},
+      {"type": "text_contains", "item": "8", "value": "An investment in our common stock involves"},
+      {"type": "text_contains", "item": "1A", "value": "TABLE OF CONTENTS"},
+      {"type": "min_chars", "item": "1A", "value": 20000},
+      {"type": "min_chars", "item": "8", "value": 20000}
+    ]
+  },
+  "triage": {"class": "validator-provability", "note": "This case exists to make two layer-8 validators FIRE, not to fix anything. The G1 audit recorded that four of the six validators had no case proving they ever emit a warning (ADR-010 consequences); `numeric_density_inversion` and `keyword_fingerprint` were two of them, and they had never fired on any of the thirty-one fixtures in the set. A validator with no positive case is a claim, not a check: its thresholds are free to move, its predicate is free to be inverted, and the suite stays green either way — which is the same defect ADR-010 found in the confidence table and ADR-013 found in the escalation rule. ADR-016 records the disposition of all eight codes."},
+  "provenance": "T9 tranche 3, created 2026-08-17. SELF-CREATED from evals/fixtures/sgrp-2019/filing.htm by transposing two raw byte ranges — nothing is added, deleted or edited, and the derivation asserts `sorted(out) == sorted(raw)`, so the mutated file is a character-for-character permutation of its source. Exact derivation, reproducible from the committed source fixture: the raw file has exactly two occurrences each of 'Item 1A.', 'Item 1B.', 'Item 8.' and 'Item 9.' (contents row and body heading, verified by count); cutting immediately after the body heading TITLES at offsets 85,155 ('…Risk Factors') and 168,352 ('…Financial Statements and Supplementary Data'), the 52,468-byte block running to the Item 1B heading and the 247,179-byte block running to the Item 9 heading are exchanged. Both HEADINGS stay where they were, so document order is untouched and greedy ordered assignment resolves exactly as before — the risk-factor prose now sits under 'Item 8. Financial Statements and Supplementary Data' and the financial statements under 'Item 1A. Risk Factors'. WHY THIS MUTATION AND NOT A HEADING SWAP: swapping the headings instead puts code 8 ahead of code 1A in the document, and greedy assignment then loses every item between them to a cursor jump — the run collapses, `expected_items_mostly_missing` escalates, and the case would prove the cascade rather than the density and vocabulary checks it is for. The `warning_absent` assertions on that code and on `toc_manifest_mismatch` hold it to that: this filing must look STRUCTURALLY intact and fail only on content shape, which is the exact silent-failure profile the two validators exist to catch. It models a real boundary defect, not a filer style — no filer transposes their risk factors with their financial statements — and that is stated plainly rather than dressed up as a document property. MEASURED OUTCOME AT AUTHORING: item 8's digit/$/%% density 0.006 against item 1A's 0.047 (the inversion), and the risk-factor prose now under Item 8 contains neither 'total' nor 'net' (the fingerprint). doc_status is pinned to `success_with_warning` deliberately: neither code is in AMBIGUOUS_CODES, per ADR-008's warn-don't-hard-fail policy for false-positive-prone content-shape validators, and that decision should have to be re-argued in an ADR rather than drift."
+}

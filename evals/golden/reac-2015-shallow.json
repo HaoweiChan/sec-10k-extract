@@ -1,0 +1,34 @@
+{
+  "id": "reac-2015-shallow",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {
+    "path": "evals/fixtures/reac-2015/filing.htm"
+  },
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "known_items_only"},
+      {"type": "doc_status", "in": ["success", "success_with_warning"]},
+      {"type": "expected_set_complete", "items": ["1", "1A", "1B", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "9A", "9B", "10", "11", "12", "13", "14", "15"]},
+      {"type": "only_items", "items": ["1", "1A", "1B", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "9A", "9B", "10", "11", "12", "13", "14", "15"]},
+      {"type": "item_present", "item": "1", "status": "extracted"},
+      {"type": "item_present", "item": "1A", "status": "extracted"},
+      {"type": "item_present", "item": "6", "status": "extracted"},
+      {"type": "item_present", "item": "7A", "status": "extracted"},
+      {"type": "item_present", "item": "8", "status": "extracted"},
+      {"type": "item_present", "item": "9A", "status": "extracted"},
+      {"type": "item_present", "item": "13", "status": "extracted"},
+      {"type": "text_contains", "item": "1A", "value": "Not applicable"},
+      {"type": "text_not_contains", "item": "1A", "value": "Unresolved Staff Comments"},
+      {"type": "max_chars", "item": "1A", "value": 200},
+      {"type": "max_chars", "item": "6", "value": 200},
+      {"type": "min_chars", "item": "1", "value": 8000},
+      {"type": "item_absent", "item": "16", "any_status": true},
+      {"type": "item_absent", "item": "9C", "any_status": true}
+    ]
+  },
+  "provenance": "T9 tranche 3 (BLANK-CHECK SHELL stratum + dash heading separator). Renewable Energy Acquisition Corp., sec.gov/Archives/edgar/data/1418302/000157587216000308/10k.htm, accession 0001575872-16-000308, filed 2016-03-29, FY2015 (Dec-end), 276,307 bytes, HTML. AUTHORED FROM THE DOCUMENT and verified 2026-08-17 by an independent tag-strip scan importing nothing from src/: three occurrences of 'smaller reporting company', five of 'Not applicable', no 'Item 16'. WHAT IT ADDS: every heading in the body reads 'Item N - Title' — the item number carries NO period and the separator is a hyphen ('Item 1A - Risk Factors'). No existing fixture uses that punctuation, and HEADING_RE's optional separator class is the only thing standing between this filing and total loss, so the case exists mostly to hold that character class still. The scaled-disclosure relief items (1A, 6, 7A) are one-line 'Not applicable' bodies of 41-87 chars; max_chars pins them at 200 so a boundary regression that let one swallow the next item would be caught, and text_not_contains on Item 1A pins the direction that regression would take. Item 1's 14,599-char business section is the counterweight: a blank-check shell with almost nothing else still writes a long Item 1. Expected GREEN with no new code."
+}

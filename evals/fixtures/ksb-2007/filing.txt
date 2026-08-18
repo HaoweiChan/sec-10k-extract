@@ -1,0 +1,2368 @@
+-----BEGIN PRIVACY-ENHANCED MESSAGE-----
+Proc-Type: 2001,MIC-CLEAR
+Originator-Name: webmaster@www.sec.gov
+Originator-Key-Asymmetric:
+ MFgwCgYEVQgBAQICAf8DSgAwRwJAW2sNKK9AVtBzYZmr6aGjlWyK3XmZv3dTINen
+ TWSM7vrzLADbmYQaionwg5sDW3P6oaM5D3tdezXMm7z1T+B+twIDAQAB
+MIC-Info: RSA-MD5,RSA,
+ Fu5NxdpPSyDLlsoONe+NMP9UwyvsLKo7rrbWDk8D/HwsaXTJObS6brsAmJIcZsIC
+ f6GX1O7ma7rQ0edrvoWqcw==
+
+<SEC-DOCUMENT>0000930413-08-001093.txt : 20080220
+<SEC-HEADER>0000930413-08-001093.hdr.sgml : 20080220
+<ACCEPTANCE-DATETIME>20080219175909
+ACCESSION NUMBER:		0000930413-08-001093
+CONFORMED SUBMISSION TYPE:	10KSB
+PUBLIC DOCUMENT COUNT:		5
+CONFORMED PERIOD OF REPORT:	20071231
+FILED AS OF DATE:		20080220
+DATE AS OF CHANGE:		20080219
+
+FILER:
+
+	COMPANY DATA:	
+		COMPANY CONFORMED NAME:			24HOLDINGS INC
+		CENTRAL INDEX KEY:			0001025315
+		STANDARD INDUSTRIAL CLASSIFICATION:	BLANK CHECKS [6770]
+		IRS NUMBER:				330726608
+		STATE OF INCORPORATION:			DE
+		FISCAL YEAR END:			1231
+
+	FILING VALUES:
+		FORM TYPE:		10KSB
+		SEC ACT:		1934 Act
+		SEC FILE NUMBER:	000-22281
+		FILM NUMBER:		08627754
+
+	BUSINESS ADDRESS:	
+		STREET 1:		CYBERIA HOUSE
+		STREET 2:		CHURCH STREET
+		CITY:			BASINGSTOKE RG217QN
+		STATE:			X0
+		ZIP:			00000
+		BUSINESS PHONE:		011441256867800
+
+	MAIL ADDRESS:	
+		STREET 1:		CYBERIA HOUSE
+		STREET 2:		CHURCH STREET
+		CITY:			BASINGSTOKE RG217QN
+		STATE:			X0
+		ZIP:			00000
+
+	FORMER COMPANY:	
+		FORMER CONFORMED NAME:	SCOOP INC/DE
+		DATE OF NAME CHANGE:	19970325
+</SEC-HEADER>
+<DOCUMENT>
+<TYPE>10KSB
+<SEQUENCE>1
+<FILENAME>c52419_10ksb.txt
+<TEXT>
+
+                                  UNITED STATES
+                       SECURITIES AND EXCHANGE COMMISSION
+                             WASHINGTON, D.C. 20549
+
+                                   FORM 10-KSB
+
+             ANNUAL REPORT PURSUANT TO SECTIONS 13 OR 15 (d) OF THE
+                       SECURITIES AND EXCHANGE ACT OF 1934
+
+                   FOR THE FISCAL YEAR ENDED DECEMBER 31, 2007
+
+                        COMMISSION FILE NUMBER: 000-22281
+
+                                 24HOLDINGS INC.
+                                 ---------------
+             (EXACT NAME OF REGISTRANT AS SPECIFIED IN ITS CHARTER)
+
+                 DELAWARE                                 33-0726608
+     ----------------------------------            -------------------------
+      (STATE OR OTHER JURISDICTION OF                  (I.R.S. EMPLOYER
+      INCORPORATION OR ORGANIZATION)                 IDENTIFICATION NO.)
+
+                                47 SCHOOL AVENUE
+                            CHATHAM, NEW JERSEY 07928
+                    (ADDRESS OF PRINCIPAL EXECUTIVE OFFICES)
+
+       REGISTRANT'S TELEPHONE NUMBER, INCLUDING AREA CODE: (973) 635-4047
+
+        SECURITIES REGISTERED PURSUANT TO SECTION 12(b) OF THE ACT: NONE
+
+          SECURITIES REGISTERED PURSUANT TO SECTION 12(g) OF THE ACT:
+
+                          COMMON STOCK, $.001 PAR VALUE
+                                (TITLE OF CLASS)
+
+         Check whether the issuer is not required to file reports pursuant to
+Section 13 or 15(d) of the Exchange Act.  [ ]
+
+         Check whether the issuer (1) filed all reports  required to be filed by
+Section 13 or 15(d) of the  Exchange  Act during the past 12 months (or for such
+shorter period that the  registrant was required to file such reports),  and (2)
+has been subject to such filing  requirements for the past 90 days.
+Yes |X| No [ ]
+
+         Check if there is no disclosure of delinquent  filers  pursuant to Item
+405 of  Regulation  S-B  contained  in  this  form,  and no  disclosure  will be
+contained,  to the  best of  registrant's  knowledge,  in  definitive  proxy  or
+information statements incorporated by reference in Part III of this Form 10-KSB
+or any amendment to this Form 10-KSB. |X|
+
+         Indicate  by check  mark  whether  the  issuer is a shell  company  (as
+defined in Rule 12b-2 of the Exchange Act).                 Yes |X| No [ ]
+
+         For the year ended December 31, 2007, the issuer had no revenues.
+
+         As of February 19, 2008, the aggregate market value of the voting stock
+held by non-affiliates of the issuer (based upon the closing price on the NASDAQ
+OTC Bulletin Board of $0.51 per share) was approximately $87,481.
+
+         The number of shares  outstanding of the issuer's  common stock,  $.001
+par value, as of February 19, 2008 was 1,244,902 shares.
+
+                       DOCUMENTS INCORPORATED BY REFERENCE
+                                      NONE
+
+    Transitional Small Business Disclosure Format (Check One): Yes [ ] No |X|
+
+
+<PAGE>
+
+
+                                 24HOLDINGS INC.
+                            FORM 10-KSB ANNUAL REPORT
+                                TABLE OF CONTENTS
+
+PART I
+Item 1.     Business.........................................................  2
+Item 2.     Properties.......................................................  8
+Item 3.     Legal Proceedings................................................  9
+Item 4.     Submission of Matters to a Vote of Security Holders..............  9
+
+PART II
+Item 5.     Market for Common Equity, Related Stockholder Matters
+            and Small Business Issuer Purchases of Equity Securities.........  9
+Item 6.     Plan of Operation................................................ 10
+Item 7.     Financial Statements............................................. 11
+Item 8.     Change in and Disagreements with Accountants on Accounting
+            and Financial Disclosure......................................... 11
+Item 8A(T). Controls And Procedures.......................................... 11
+Item 8B.    Other Information................................................ 12
+
+PART III
+Item 9.     Directors, Executive Officers, Promoters, Control Persons
+            and Corporate Governance; Compliance With Section 16(a) of
+            the Exchange Act................................................. 12
+Item 10.    Executive Compensation........................................... 13
+Item 11.    Security Ownership of Certain Beneficial Owners and Management
+            and Related Stockholder Matters.................................. 14
+Item 12.    Certain Relationships and Related Transactions, and Director
+            Independence..................................................... 14
+Item 13.    Exhibits......................................................... 15
+Item 14.    Principal Accountant Fees and Services........................... 15
+
+                      FORWARD LOOKING STATEMENT INFORMATION
+
+CERTAIN   STATEMENTS   MADE  IN  THIS   ANNUAL   REPORT  ON  FORM   10-KSB   ARE
+"FORWARD-LOOKING  STATEMENTS"  REGARDING THE PLANS AND  OBJECTIVES OF MANAGEMENT
+FOR  FUTURE  OPERATIONS.  SUCH  STATEMENTS  INVOLVE  KNOWN  AND  UNKNOWN  RISKS,
+UNCERTAINTIES  AND OTHER FACTORS THAT MAY CAUSE OUR ACTUAL RESULTS,  PERFORMANCE
+OR ACHIEVEMENTS TO BE MATERIALLY DIFFERENT FROM ANY FUTURE RESULTS,  PERFORMANCE
+OR ACHIEVEMENTS  EXPRESSED OR IMPLIED BY SUCH  FORWARD-LOOKING  STATEMENTS.  THE
+FORWARD-LOOKING  STATEMENTS  INCLUDED  HEREIN ARE BASED ON CURRENT  EXPECTATIONS
+THAT INVOLVE  NUMEROUS  RISKS AND  UNCERTAINTIES.  OUR PLANS AND  OBJECTIVES ARE
+BASED, IN PART, ON ASSUMPTIONS  INVOLVING JUDGMENTS WITH RESPECT TO, AMONG OTHER
+THINGS,  FUTURE ECONOMIC,  COMPETITIVE AND MARKET CONDITIONS AND FUTURE BUSINESS
+DECISIONS,  ALL OF WHICH ARE DIFFICULT OR IMPOSSIBLE TO PREDICT  ACCURATELY  AND
+MANY OF WHICH ARE BEYOND OUR CONTROL.  ALTHOUGH WE BELIEVE THAT OUR  ASSUMPTIONS
+UNDERLYING THE FORWARD-LOOKING STATEMENTS ARE REASONABLE, ANY OF THE ASSUMPTIONS
+COULD  PROVE  INACCURATE  AND,  THEREFORE,  THERE CAN BE NO  ASSURANCE  THAT THE
+FORWARD-LOOKING STATEMENTS INCLUDED IN THIS REPORT WILL PROVE TO BE ACCURATE. IN
+LIGHT  OF  THE  SIGNIFICANT   UNCERTAINTIES   INHERENT  IN  THE  FORWARD-LOOKING
+STATEMENTS  INCLUDED  HEREIN  PARTICULARLY  IN VIEW OF THE CURRENT  STATE OF OUR
+OPERATIONS,  THE  INCLUSION  OF SUCH  INFORMATION  SHOULD NOT BE  REGARDED  AS A
+STATEMENT  BY US OR ANY OTHER  PERSON  THAT OUR  OBJECTIVES  AND  PLANS  WILL BE
+ACHIEVED.  FACTORS THAT COULD CAUSE  ACTUAL  RESULTS TO DIFFER  MATERIALLY  FROM
+THOSE EXPRESSED OR IMPLIED BY SUCH  FORWARD-LOOKING  STATEMENTS INCLUDE, BUT ARE
+NOT  LIMITED TO, THE FACTORS SET FORTH  HEREIN  UNDER THE  HEADINGS  "BUSINESS,"
+"PLAN OF OPERATION" AND "RISK FACTORS".  WE UNDERTAKE NO OBLIGATION TO REVISE OR
+UPDATE PUBLICLY ANY FORWARD-LOOKING STATEMENTS FOR ANY REASON.
+
+
+
+
+                                       1
+<PAGE>
+
+
+
+                                     PART 1
+
+ITEM 1.  BUSINESS
+
+THE COMPANY'S HISTORY
+
+We are a Delaware  corporation  formerly  known as Scoop,  Inc.  In April  2001,
+Scoop,  Inc.  amended its  Certificate  of  Incorporation  to change its name to
+24Holdings  Inc. ("we",  "our",  "us" or  "24Holdings").  Prior to September 30,
+2005,  24Holdings was a holding  company that conducted its business  operations
+through  its  wholly  owned  subsidiary  24STORE  (Europe)  Limited,  a  company
+incorporated  under the laws of England  formerly known as  24STORE.com  Limited
+("24STORE").  24STORE commenced  business  operations in 1996 and focused on the
+sale of media  products and business  information  services.  Commencing in July
+1998,  24Holdings  underwent  voluntary  reorganization  under Chapter 11 of the
+United States  Bankruptcy  Code. In accordance  with the Plan of  Reorganization
+approved by the  Bankruptcy  Court in December  1999,  InfiniCom,  AB, a Swedish
+registered  company  ("Infinicom"),  acquired  91% of the  outstanding  stock of
+24Holdings  in  exchange  for  100%  of the  stock  of  24STORE.  Subsequent  to
+Infinicom's  acquisition  in 1999 and until  September  30,  2005,  the business
+operations of 24STORE,  which  represented all of 24Holding's  operations,  were
+devoted to supplying business customers with computer and electronics products.
+
+On October 23, 2006 (the "Effective  Date"),  we implemented a 1 for 125 reverse
+stock split (the "Reverse Split") of our common stock par value $0.001 per share
+(the "Common Stock").  Pursuant to the Reverse Split,  each 125 shares of Common
+Stock issued and outstanding as of the Effective Date was converted into one (1)
+share of Common  Stock.  The Reverse  Split also reduced the number of shares of
+Common Stock into which each share of Series A Convertible  Preferred Stock, par
+value $.001 per share (the "Preferred Stock") could be converted from 100 shares
+to 0.8 shares.
+
+All per share data herein has been retroactively restated to reflect the Reverse
+Split.
+
+CHANGE OF OWNERSHIP TRANSACTIONS
+
+On May 26,  2005,  we entered  into a series of  agreements  with  Infinicom  in
+connection  with  our  sale of all of the  outstanding  stock  of  24STORE  (the
+"24STORE  Sale")  and  separately,  the  assignment  of all  rights and title to
+certain  trademarks  and domain  names (the "IP  Assets")  that we held (the "IP
+Assignment").  Pursuant  to the terms of the  24STORE  Sale,  Infinicom  paid us
+$100,000 for our 24STORE shares and pursuant to the IP  Assignment,  we paid for
+the  IP  Assets  through  a  set-off  against  all  outstanding  and  contingent
+liabilities  we owed  to  Infinicom  determined  as of the  closing  date of the
+24STORE Sale, which amounted to $603,830.
+
+On May 26, 2005, we also entered into a Preferred Stock Purchase  Agreement with
+Infinicom  (the  "Preferred  Stock  Agreement")  pursuant  to  which  we sold to
+Infinicom 344,595 shares of our Preferred Stock in exchange for the discharge of
+$230,879 of  outstanding  debt owed to  Infinicom.  Each share of the  Preferred
+Stock is convertible into 0.8 shares of our Common Stock at the holder's option.
+
+On May 26, 2005,  Infinicom,  24Holdings,  Moyo  Partners,  LLC ("Moyo") and R&R
+Biotech Partners,  LLC ("R&R", and together with Moyo, the "Purchasers") entered
+into a Common Stock Purchase Agreement (the "Infinicom Sale Agreement") pursuant
+to which,  Infinicom  agreed to sell to the  Purchasers  an aggregate of 873,369
+shares of Common Stock (which  included  shares  issuable upon conversion of the
+Preferred Stock) which  represented  approximately  83.6% of the then issued and
+outstanding  shares of Common  Stock (the  "Infinicom  Sale").  In  return,  the
+Purchasers (i) paid to Infinicom $500,000 in cash, and (ii) agreed that upon the
+occurrence of one of several post-closing events, including a merger with one or
+more as yet unidentified  private  unaffiliated  operating  companies,  to cause
+24Holdings to issue to Infinicom  shares of Common Stock  representing 1% of the
+then issued and outstanding shares of Common Stock on a fully diluted basis (the
+"Infinicom  Additional  Shares").  The  consummation  of the Infinicom  Sale was
+contingent  on the  contemporaneous  closing  of the  24STORE  Sale  and  the IP
+Assignment.
+
+
+                                       2
+<PAGE>
+
+
+On September  30, 2005,  24Holdings  and Infinicom  completed  the  transactions
+contemplated  in the 24STORE  Sale,  the IP Assignment  and the Preferred  Stock
+Agreement as described above.  Infinicom forgave the $603,830 of debt 24Holdings
+owed to them in consideration of the IP Assignment.
+
+Effective  September 30, 2005,  Infinicom  completed the sale to the Purchasers,
+under the Infinicom  Sale  Agreement,  of 597,693  shares of Common Stock (which
+represented  77.7% of the  769,226  shares  of  Common  Stock  then  issued  and
+outstanding)  and 344,595 shares of Preferred Stock,  constituting  83.6% in the
+aggregate  of the  then  issued  and  outstanding  Common  Stock  (assuming  the
+conversion of the Preferred  Stock into 275,676  shares of Common  Stock).  As a
+result, the Purchasers  acquired control of 24Holdings from Infinicom,  with R&R
+beneficially  owning 698,696 shares of Common Stock  (assuming the conversion by
+R&R of 275,676  shares of Preferred  Stock into 220,541  shares of Common Stock)
+constituting  66.9% of the then issued and  outstanding  shares of Common Stock,
+and Moyo in the aggregate  beneficially  owning  174,674  shares of Common Stock
+(assuming the conversion by Moyo of 68,919 shares of Preferred Stock into 55,135
+shares of Common Stock)  constituting  16.7% of the then issued and  outstanding
+shares of Common Stock.
+
+Effective  September  30, 2005 Urban von Euler  resigned as our  president and a
+director but remained our chief executive officer. Also, effective September 30,
+2005, Larsake Sandin resigned as a director and each of Arnold P. Kling and Kirk
+M. Warshaw were  appointed  as  directors of  24Holdings.  On November 21, 2005,
+effective  with the filing of our Form 10-Q for the quarter ended  September 30,
+2005,  Mr. von Euler  resigned  as chief  executive  officer  and Mr.  Kling was
+appointed  president and treasurer and Mr. Warshaw was appointed chief financial
+officer  and  secretary.   As  of  that  same  date,  24Holdings  relocated  its
+headquarters to Chatham, New Jersey.
+
+On November 25, 2005, the Infinicom Sale Agreement was amended to provide, among
+other criteria,  that the fair market value of the Infinicom  Additional  Shares
+would be no less than  $400,000  nor more than  $600,000 at the time such shares
+are required to be issued to Infinicom.
+
+On  February  1,  2006,  a total of  250,000  shares  of  Preferred  Stock  were
+authorized for issuance to two individuals  who provided  services to us. On May
+12, 2006, we issued 150,000 and 100,000 shares of the Preferred  Stock to Arnold
+P. Kling and Kirk M.  Warshaw  for their  services  as our  president  and chief
+financial officer,  respectively.  Each share of Preferred Stock was immediately
+convertible,  at the  holder's  option,  into 0.8  shares of Common  Stock.  Mr.
+Kling's services were valued at $11,250 and Mr.  Warshaw's  services were valued
+at $7,500.
+
+As a result of the  Reverse  Split we had  adequate  shares  of Common  Stock to
+facilitate the conversion of all the issued and outstanding  shares of Preferred
+Stock. Prior to the Reverse Split, because the conversion terms of the Preferred
+Stock would have  required  more  shares of Common  Stock to be issued than were
+authorized  and  available  for  issuance,  $249,628  of  indebtedness  had been
+recorded  on our  balance  sheet as a long  term  liability.  As a result of the
+Reverse Split this amount was reclassified, pursuant to EITF 00-19, as preferred
+equity.
+
+On November 29, 2006,  the holders of all the issued and  outstanding  shares of
+Preferred  Stock elected to convert all of their  Preferred Stock into shares of
+Common Stock.  As a result,  the 594,595 shares of Preferred  Stock  outstanding
+were exchanged for 475,676 shares of Common Stock.
+
+As of December 31, 2007,  our  authorized  capital stock consists of 100,000,000
+shares  of  Common  Stock  and  5,000,000  shares  of  Preferred  Stock of which
+1,244,902  shares of Common Stock,  and no shares of Preferred Stock, are issued
+and  outstanding.  All shares of Common Stock currently  outstanding are validly
+issued, fully paid and non-assessable.
+
+THE COMPANY TODAY
+
+Since  September 30, 2005, our purpose has been to serve as a vehicle to acquire
+an operating business and we are currently considered a "shell" company inasmuch
+as we are not generating revenues, do not own an operating business, and have no
+specific plan other than to engage in a merger or acquisition transaction with a
+yet-to-be identified operating company or business.  We have no employees and no
+material assets.
+
+                                       3
+<PAGE>
+
+We  currently  have  no  definitive   agreements  or  understandings   with  any
+prospective business combination  candidates and there are no assurances that we
+will find a suitable business with which to combine.  The  implementation of our
+business objectives is wholly contingent upon a business  combination and/or the
+successful  sale of our  securities.  We intend to utilize  the  proceeds of any
+offering,  any sales of equity  securities  or debt  securities,  bank and other
+borrowings  or a combination  of those sources to effect a business  combination
+with a target business which we believe has significant growth potential.  While
+we may, under certain  circumstances,  seek to effect business combinations with
+more than one target business,  unless additional financing is obtained, we will
+not have sufficient proceeds remaining after an initial business  combination to
+undertake additional business combinations.
+
+A common reason for a target company to enter into a merger with a shell company
+is the  desire to  establish  a public  trading  market for its  shares.  Such a
+company would hope to avoid the perceived adverse  consequences of undertaking a
+public  offering  itself,  such as the  time  delays  and  significant  expenses
+incurred  to comply  with the  various  federal  and state  securities  law that
+regulate initial public offerings.
+
+As a result of our limited resources,  unless and until additional  financing is
+obtained we expect to have sufficient  proceeds to effect only a single business
+combination.  Accordingly,  the  prospects  for our  success  will  be  entirely
+dependent  upon the future  performance  of a single  business.  Unlike  certain
+entities that have the resources to consummate several business  combinations or
+entities  operating  in multiple  industries  or  multiple  segments of a single
+industry,  we will not have the resources to diversify our operations or benefit
+from the possible  spreading of risks or offsetting of losses. A target business
+may be  dependent  upon the  development  or  market  acceptance  of a single or
+limited number of products,  processes or services,  in which case there will be
+an even higher risk that the target  business will not prove to be  commercially
+viable.
+
+Our  officers  are only  required to devote a small  portion of their time (less
+than 10%) to our affairs on a part-time or as-needed  basis. Our officers may be
+entitled to receive  compensation from a target company they identify or provide
+services in  connection  with a business  combination.  We expect to use outside
+consultants,  advisors,  attorneys and  accountants as necessary,  none of which
+will be hired on a retainer  basis.  We do not  anticipate  hiring any full-time
+employees so long as we are seeking and evaluating business opportunities.
+
+We do not expect  our  present  management  to play any  managerial  role for us
+following a business  combination.  Although we intend to scrutinize closely the
+management of a prospective target business in connection with our evaluation of
+a business combination with a target business,  our assessment of management may
+be incorrect.
+
+In evaluating a prospective  target business,  we will consider several factors,
+including the following:
+
+- -   experience and skill of management and availability of  additional personnel
+    of the target business;
+
+- -   costs associated with effecting the business combination;
+
+- -   equity interest retained by our stockholders in the merged entity;
+
+- -   growth potential of the target business;
+
+- -   capital requirements of the target business;
+
+- -   capital available to the target business;
+
+- -   stage of development of the target business;
+
+- -   proprietary features and degree of intellectual property or other protection
+    of the target business;
+
+- -   the financial statements of the target business; and
+
+- -   the regulatory environment in which the target business operates.
+
+
+                                       4
+<PAGE>
+
+The  foregoing  criteria are not intended to be  exhaustive  and any  evaluation
+relating to the merits of a particular  target  business  will be based,  to the
+extent relevant,  on the above factors, as well as other  considerations we deem
+relevant. In connection with our evaluation of a prospective target business, we
+anticipate  that we will conduct a due  diligence  review which will  encompass,
+among other  things,  meeting with  incumbent  management as well as a review of
+financial, legal and other information.
+
+The time and costs required to select and evaluate a target business  (including
+conducting a due diligence  review) and to structure and consummate the business
+combination  (including  negotiating  and  documenting  relevant  agreements and
+preparing  requisite  documents for filing pursuant to applicable  corporate and
+securities  laws) cannot be  determined at this time.  Our president  intends to
+devote only a very small portion of his time to our affairs,  and,  accordingly,
+the consummation of a business  combination may require a longer time than if he
+devoted his full time to our  affairs.  However,  he will devote such time as he
+deems reasonably  necessary to carry out our business and affairs. The amount of
+time devoted to our business and affairs may vary significantly  depending upon,
+among other things,  whether we have identified a target business or are engaged
+in active negotiation of a business combination.
+
+We anticipate that various  prospective target businesses will be brought to our
+attention from various sources, including securities broker-dealers,  investment
+bankers,  venture  capitalists,  bankers  and  other  members  of the  financial
+community, including, possibly, the executive officers and our affiliates.
+
+As a general rule, federal and state tax laws and regulations have a significant
+impact upon the  structuring  of business  combinations.  We will  evaluate  the
+possible tax  consequences  of any  prospective  business  combination  and will
+endeavor to structure a business combination so as to achieve the most favorable
+tax  treatment  to  our  company,   the  target   business  and  our  respective
+stockholders.  There can be no assurance  that the Internal  Revenue  Service or
+relevant state tax authorities will ultimately  assent to our tax treatment of a
+particular consummated business combination.  To the extent the Internal Revenue
+Service  or  any  relevant   state  tax   authorities   ultimately   prevail  in
+recharacterizing  the tax  treatment  of a  business  combination,  there may be
+adverse tax consequences to our company, the target business, and our respective
+stockholders.
+
+We may  acquire a company or  business  by  purchasing  the  securities  of such
+company  or  business.  However,  we do not intend to engage  primarily  in such
+activities.  Specifically,  we intend to conduct our  activities  so as to avoid
+being classified as an "investment  company" under the Investment Company Act of
+1940, as amended (the "Investment  Act") and therefore avoid  application of the
+costly and  restrictive  registration  and other  provisions  of the  Investment
+Company Act and the regulations promulgated thereunder.
+
+Section 3(a) of the  Investment  Company Act excepts from the  definition  of an
+"investment  company" an entity which does not engage  primarily in the business
+of investing,  reinvesting or trading in securities, or which does not engage in
+the business of investing,  owning,  holding or trading "investment  securities"
+(defined as "all securities  other than  government  securities or securities of
+majority-owned  subsidiaries") the value of which exceed 40% of the value of its
+total assets (excluding government securities, cash or cash items). We intend to
+operate  any  business  in the  future  in a manner  which  will  result  in the
+availability  of this exception  from the  definition of an investment  company.
+Consequently,  our acquisition of a company or business through the purchase and
+sale of  investment  securities  will be  limited.  Although we intend to act to
+avoid  classification as an investment company, the provisions of the Investment
+Company Act are  extremely  complex and it is possible that we may be classified
+as  an  inadvertent   investment   company.   We  intend  to  vigorously  resist
+classification as an investment company, and to take advantage of any exemptions
+or exceptions  from  application of the Investment  Company Act, which allows an
+entity a one-time option during any three-year period to claim an exemption as a
+"transient"  investment company. The necessity of asserting any such resistance,
+or making any claim of exemption,  could be time  consuming and costly,  or even
+prohibitive, given our limited resources.
+
+Various  impediments  to a business  combination  may arise,  such as  appraisal
+rights  afforded the  stockholders  of a target  business  under the laws of its
+state  of  organization.  This  may  prove  to  be  deterrent  to  a  particular
+combination.
+
+
+
+                                       5
+<PAGE>
+
+RISK FACTORS
+
+        IN ADDITION TO THE OTHER INFORMATION PROVIDED IN THIS REPORT, YOU SHOULD
+CAREFULLY CONSIDER THE FOLLOWING FACTORS IN EVALUATING OUR BUSINESS,  OPERATIONS
+AND FINANCIAL CONDITION.  ADDITIONAL RISKS AND UNCERTAINTIES NOT PRESENTLY KNOWN
+TO US, THAT WE CURRENTLY  DEEM  IMMATERIAL OR THAT ARE SIMILAR TO THOSE FACED BY
+OTHER  COMPANIES  IN OUR  INDUSTRY OR BUSINESS IN GENERAL,  SUCH AS  COMPETITIVE
+CONDITIONS,  MAY ALSO IMPAIR OUR BUSINESS  OPERATIONS.  THE OCCURRENCE OF ANY OF
+THE  FOLLOWING  RISKS  COULD HAVE A  MATERIAL  ADVERSE  EFFECT ON OUR  BUSINESS,
+FINANCIAL CONDITION AND RESULTS OF OPERATIONS.
+
+WE HAVE NO RECENT OPERATING HISTORY OR BASIS FOR EVALUATING PROSPECTS.
+
+Since September 30, 2005, we have no operating business or plans to develop one.
+We are  currently  seeking to enter into a merger or business  combination  with
+another  company.  To date,  our  efforts  have  been  limited  to  meeting  our
+regulatory filing requirements and searching for a merger target.
+
+WE HAVE  LIMITED  RESOURCES  AND NO  REVENUES  FROM  OPERATIONS,  AND WILL  NEED
+ADDITIONAL FINANCING IN ORDER TO EXECUTE ANY BUSINESS PLAN.
+
+We have limited  resources,  no revenues from operations to date and our cash on
+hand may not be  sufficient  to satisfy  our cash  requirements  during the next
+twelve  months.  In  addition,  we will not  achieve  any  revenues  (other than
+insignificant  investment income) until, at the earliest,  the consummation of a
+merger and we cannot ascertain our capital requirements until such time. Further
+limiting  our  abilities  to achieve  revenues,  in order to avoid  status as an
+"Investment  Company" under the  Investment  Company Act, we can only invest our
+funds prior to a merger in limited  investments  which do not invoke  Investment
+Company status. There can be no assurance that determinations ultimately made by
+us will permit us to achieve our business objectives.
+
+WE  WILL  BE ABLE  TO  EFFECT  AT MOST  ONE  MERGER,  AND  THUS  MAY NOT  HAVE A
+DIVERSIFIED BUSINESS.
+
+Our  resources  are  limited  and we will most likely have the ability to effect
+only a single merger.  This probable lack of diversification  will subject us to
+numerous economic,  competitive and regulatory developments, any or all of which
+may have a material adverse impact upon the particular  industry in which we may
+operate  subsequent to the  consummation of a merger.  We will become  dependent
+upon the  development  or market  acceptance  of a single or  limited  number of
+products, processes or services.
+
+WE DEPEND SUBSTANTIALLY UPON OUR PRESIDENT, WHOSE EXPERIENCE IS LIMITED, TO MAKE
+ALL MANAGEMENT DECISIONS.
+
+Our  ability  to  effect a merger  will be  dependent  upon the  efforts  of our
+president,  Arnold Kling.  Notwithstanding  the importance of Mr. Kling, we have
+not entered into any employment  agreement or other understanding with Mr. Kling
+concerning  compensation  or obtained any "key man" life insurance on any of his
+life. The loss of the services of Mr. Kling will have a material  adverse effect
+on our business  objectives and success.  We will rely upon the expertise of Mr.
+Kling and do not anticipate that we will hire additional personnel.
+
+THERE MAY BE CONFLICTS OF INTEREST BETWEEN OUR MANAGEMENT AND OUR NON-MANAGEMENT
+STOCKHOLDERS.
+
+Conflicts of interest  create the risk that  management may have an incentive to
+act adversely to the interests of other investors.  Our officers may be entitled
+to receive  compensation from a target company they identify or provide services
+to in connection with a business  combination.  A conflict of interest may arise
+between our management's
+
+
+                                       6
+<PAGE>
+
+personal  pecuniary  interest  and  their  fiduciary  duty to our  stockholders.
+Further,  our management's  own pecuniary  interest may at some point compromise
+their  fiduciary  duty to our  stockholders.  In  addition,  Mr.  Kling  and Mr.
+Warshaw,  our officers and  directors,  are currently  involved with other blank
+check offerings and conflicts in the pursuit of business  combinations with such
+other blank  check  companies  with which they and  affiliates  of our  majority
+stockholder  are, and may in the future be affiliated with, may arise. If we and
+the other blank check  companies  that our officers and directors are affiliated
+with desire to take advantage of the same  opportunity,  then those officers and
+directors that are affiliated with both companies would abstain from voting upon
+the opportunity.  Further, Rodman & Renshaw, LLC, a registered broker-dealer and
+affiliate of our majority stockholder,  may act as investment banker,  placement
+agent or financial  consultant  to us in  connection  with a potential  business
+combination  transaction  and may  receive  a fee  and/or  securities  for  such
+services.  We cannot  assure  you that  conflicts  of  interest  among  us,  our
+management, Rodman & Renshaw and our stockholders will not develop.
+
+THERE  IS  COMPETITION  FOR  THOSE  PRIVATE  COMPANIES  SUITABLE  FOR  A  MERGER
+TRANSACTION OF THE TYPE CONTEMPLATED BY MANAGEMENT.
+
+We  are  in  a  highly  competitive  market  for  a  small  number  of  business
+opportunities  which could reduce the  likelihood of  consummating  a successful
+business  combination.   We  are  and  will  continue  to  be  an  insignificant
+participant  in the business of seeking  mergers with,  joint  ventures with and
+acquisitions of small private and public entities. A large number of established
+and well-financed entities, including small public companies and venture capital
+firms, are active in mergers and acquisitions of companies that may be desirable
+target candidates for us. Nearly all these entities have  significantly  greater
+financial resources, technical expertise and managerial capabilities than we do;
+consequently,  we will be at a competitive  disadvantage in identifying possible
+business opportunities and successfully completing a business combination. These
+competitive   factors  may  reduce  the  likelihood  of  our   identifying   and
+consummating a successful business combination.
+
+FUTURE  SUCCESS IS HIGHLY  DEPENDENT ON THE ABILITY OF  MANAGEMENT TO LOCATE AND
+ATTRACT A SUITABLE ACQUISITION.
+
+The nature of our operations is highly  speculative.  The success of our plan of
+operation will depend to a great extent on the operations,  financial  condition
+and management of the identified business opportunity.  While management intends
+to seek business  combination(s)  with  entities  having  established  operating
+histories,  we  cannot  assure  you  that  we  will be  successful  in  locating
+candidates  meeting  that  criterion.  In  the  event  we  complete  a  business
+combination,  the success of our operations may be dependent upon  management of
+the successor firm or venture partner firm and numerous other factors beyond our
+control.
+
+WE HAVE NO AGREEMENT FOR A BUSINESS COMBINATION OR OTHER TRANSACTION.
+
+We have no definitive agreement with respect to engaging in a merger with, joint
+venture with or acquisition of, a private or public entity. No assurances can be
+given  that  we  will  successfully  identify  and  evaluate  suitable  business
+opportunities  or  that we will  conclude  a  business  combination.  We  cannot
+guarantee that we will be able to negotiate a business  combination on favorable
+terms,  and there is consequently a risk that funds allocated to the purchase of
+our shares will not be invested in a company with active business operations.
+
+MANAGEMENT WILL CHANGE UPON THE CONSUMMATION OF A MERGER.
+
+After the closing of a merger or business combination,  it is likely our current
+management will not retain any control or managerial responsibilities. Upon such
+event, Mr. Kling and Mr. Warshaw intend to resign from their positions with us.
+
+
+
+
+                                       7
+<PAGE>
+
+CURRENT STOCKHOLDERS WILL BE IMMEDIATELY AND SUBSTANTIALLY DILUTED UPON A MERGER
+OR BUSINESS COMBINATION.
+
+Our Certificate of Incorporation  authorized the issuance of 100,000,000  shares
+of Common Stock. There are currently  98,755,098  authorized but unissued shares
+of Common Stock available for issuance.  To the extent that additional shares of
+Common Stock are authorized  and issued in connection  with a merger or business
+combination,  our stockholders  could experience  significant  dilution of their
+respective  ownership  interests.  Furthermore,  the  issuance of a  substantial
+number of shares of Common Stock may adversely affect  prevailing market prices,
+if any, for the Common  Stock and could  impair our ability to raise  additional
+capital through the sale of equity securities.
+
+CONTROL BY EXISTING STOCKHOLDER.
+
+R&R beneficially owns over 56% of the outstanding shares of our Common Stock. As
+a result,  this stockholder is able to exercise  control over matters  requiring
+stockholder approval,  including the election of directors,  and the approval of
+mergers, consolidations and sales of all or substantially all of our assets.
+
+OUR  COMMON  STOCK  IS A  "PENNY  STOCK"  WHICH  MAY  RESTRICT  THE  ABILITY  OF
+STOCKHOLDERS TO SELL OUR COMMON STOCK IN THE SECONDARY MARKET.
+
+The SEC has adopted  regulations  which generally  define "penny stock" to be an
+equity  security  that has a market  price,  as defined,  of less than $5.00 per
+share,  or an  exercise  price of less than $5.00 per share,  subject to certain
+exceptions,  including an exception  of an equity  security  that is quoted on a
+national securities  exchange.  Our Common Stock is not now quoted on a national
+exchange but is traded on Nasdaq's OTC Bulletin Board ("OTCBB").  Thus, they are
+subject  to  rules  that  impose  additional  sales  practice   requirements  on
+broker-dealers  who sell these securities.  For example,  the broker-dealer must
+make a special  suitability  determination  for the purchaser of such securities
+and have received the purchaser's  written consent to the transactions  prior to
+the  purchase.  Additionally,  the  rules  require  the  delivery,  prior to the
+transaction,  of a disclosure schedule prepared by the SEC relating to the penny
+stock market.  The broker-dealer  also must disclose the commissions  payable to
+both the broker-dealer and the registered  underwriter,  and current  quotations
+for the  securities,  and, if the  broker-dealer  is the sole market maker,  the
+broker-dealer must disclose this fact and the  broker-dealer's  presumed control
+over the market.  Finally, among other requirements,  monthly statements must be
+sent disclosing recent price information for the penny stock held in the account
+and information on the limited market in penny stocks.  The "penny stock" rules,
+may  restrict  the  ability of our  stockholders  to sell our  Common  Stock and
+warrants in the secondary market.
+
+OUR COMMON STOCK HAS BEEN THINLY  TRADED,  LIQUIDITY  IS LIMITED,  AND WE MAY BE
+UNABLE TO OBTAIN LISTING OF OUR COMMON STOCK ON A MORE LIQUID MARKET.
+
+Our Common Stock is quoted on the NASDAQ OTC  Bulletin  Board  ("OTCBB"),  which
+provides  significantly  less liquidity than a securities  exchange (such as the
+American or New York Stock Exchange) or an automated  quotation  system (such as
+the Nasdaq Global Market or Capital  Market).  There is uncertainty that we will
+ever be  accepted  for a listing on an  automated  quotation  system or national
+securities exchange.
+
+Often there is currently a limited volume of trading in our Common Stock, and on
+many days there has been no trading activity at all. The purchasers of shares of
+our Common Stock may find it  difficult to resell their shares at prices  quoted
+in the market or at all.
+
+ITEM 2.  PROPERTIES
+
+Our principal offices are located at 47 School Avenue, Chatham, New Jersey which
+are owned by an affiliate of Kirk  Warshaw,  a director and our chief  financial
+officer and secretary. We occupy our principal offices on a month to month basis
+for no  rent.  We do not own or  intend  to  invest  in any  real  property.  We
+currently  have no policy
+
+
+                                       8
+<PAGE>
+
+with respect to investments or interests in real estate,  real estate  mortgages
+or securities  of, or interests  in,  persons  primarily  engaged in real estate
+activities.
+
+ITEM 3.  LEGAL PROCEEDINGS
+
+We are not a party to any pending legal proceedings.
+
+ITEM 4.  SUBMISSION OF MATTERS TO A VOTE OF SECURITY HOLDERS
+
+None.
+
+                                     PART II
+
+ITEM 5.    MARKET FOR OUR COMMON EQUITY, RELATED STOCKHOLDER MATTERS
+           AND  ISSUER PURCHASES OF EQUITY SECURITIES
+
+(a) Market Information:
+
+            Our Common  Stock is traded on  Nasdaq's  Over-The-Counter  Bulletin
+Board ("OTCBB") market under the symbol "TWFH".  The following table sets forth,
+for the periods  indicated  and as  reported on the OTCBB,  the high and low bid
+prices  for our Common  Stock.  Such  quotations  reflect  inter-dealer  prices,
+without retail mark-up, markdown or commission and may not necessarily represent
+actual transactions.
+
+                                     BID PRICE
+
+                               High             Low
+      2007
+
+First Quarter                 $0.27           $0.27
+Second Quarter                $0.27           $0.27
+Third Quarter                 $1.55           $0.27
+Fourth Quarter *              $0.51           $0.51
+
+
+
+      2006
+
+First Quarter                 $2.50           $1.25
+Second Quarter                $3.75           $1.50
+Third Quarter                 $3.25           $1.13
+Fourth Quarter                $1.37           $0.51
+
+
+* A 1 for 125 reverse  stock split was effected on October 23, 2006.  All prices
+prior to October 23, 2006 have been  adjusted as if the reverse  stock split had
+occurred at the beginning of the first quarter of 2006.
+
+(b) Holders:
+
+     There were 240  stockholders  of record of our Common  Stock as of February
+15, 2008.
+
+(c) Dividend:
+
+     We have not declared any cash dividends and do not intend to declare or pay
+any cash dividends in the foreseeable future.
+
+
+                                       9
+<PAGE>
+
+ITEM 6.    PLAN OF OPERATION
+
+
+PLAN OF OPERATION
+
+GENERAL
+
+Our plan is to seek,  investigate,  and  consummate  a merger or other  business
+combination,  purchase of assets or other strategic  transaction (i.e. a merger)
+with a corporation,  partnership,  limited  liability company or other operating
+business  entity (a  "Merger  Target")  desiring  the  perceived  advantages  of
+becoming  a  publicly  reporting  and  publicly  held  corporation.  We  have no
+operating business,  and conduct minimal operations necessary to meet regulatory
+requirements.  Our  ability  to  commence  any  operations  is  contingent  upon
+obtaining adequate financial resources.
+
+We are not currently engaged in any business  activities that provide cash flow.
+The costs of investigating and analyzing  business  combinations for the next 12
+months and beyond such time will be paid with money in our treasury.
+
+During the next twelve months we anticipate incurring costs related to:
+
+     (i) filing of Exchange Act reports, and
+
+    (ii) costs  relating to identifying and  consummating  a transaction  with a
+Merger Target.
+
+We  believe  we will be able to meet  these  costs  through  use of funds in our
+treasury and additional amounts, as necessary, to be loaned to or invested in us
+by our stockholders, management or other investors.
+
+We may  consider  a  business  which has  recently  commenced  operations,  is a
+developing  company in need of additional  funds for expansion into new products
+or markets, is seeking to develop a new product or service, or is an established
+business which may be experiencing financial or operating difficulties and is in
+need of additional  capital.  In the  alternative,  a business  combination  may
+involve  the  acquisition  of, or merger  with,  a company  which  does not need
+substantial  additional capital, but which desires to establish a public trading
+market for its shares,  while  avoiding,  among other  things,  the time delays,
+significant  expense,  and loss of  voting  control  which may occur in a public
+offering.
+
+On November 22,  2005,  following  the filing of our 10-Q for the quarter  ended
+September  30,  2005,  Arnold P. Kling  joined us as our  president  and Kirk M.
+Warshaw joined us as our chief financial  officer and secretary.  Messrs.  Kling
+and Warshaw are only required to devote a small portion of their time (less than
+10%) to our affairs on a part-time or as-needed  basis. No regular  compensation
+has or will be paid to any officer or director in their  capacities  as such. We
+do not anticipate  hiring any full-time  employees as long as we are seeking and
+evaluating business opportunities.
+
+Since  September  30, 2005,  we had not incurred any material  costs or expenses
+other  than those  associated  with our  minimal  operations  necessary  to meet
+regulatory requirements.  As of December 31, 2007 we had cash on hand of $28,604
+and working  capital of  $10,455.  Since we have no revenue or plans to generate
+any  revenue,  if our  expenses  exceed  our cash  currently  on hand we will be
+dependent upon loans to fund losses incurred in excess of our cash.
+
+EQUIPMENT AND EMPLOYEES
+
+As of December 31, 2007,  we had no operating  business,  no  equipment,  and no
+employees.  We do not intend to develop our own  operating  business but instead
+plan to merge with another operating company.
+
+
+
+                                       10
+<PAGE>
+
+OPERATIONAL EXPENSES FOR THE YEARS ENDED DECEMBER 31, 2007 and 2006
+
+During the year ended  December  31,  2007,  we  incurred  $44,562 of  operating
+expenses and for the year ended December 31, 2006,  our operating  expenses were
+$75,593.   During   both   periods  the   expenses   resulted   primarily   from
+accounting/auditing, legal and SEC report filing expenses.
+
+ITEM 7. FINANCIAL STATEMENTS
+
+See the index to the Financial Statements below, beginning on page F-1.
+
+
+ITEM  8.  CHANGES  IN AND  DISAGREEMENTS  WITH  ACCOUNTANTS  ON  ACCOUNTING  AND
+FINANCIAL DISCLOSURE.
+
+Effective March 7, 2006, we dismissed Stonefield Josephson, Inc., ("Stonefield")
+from  serving  as our  independent  accountants  and  engaged  Sherb & Co.,  LLP
+("Sherb")  as our new  independent  accountants.  There  were no  disagreements,
+adverse  opinions  or  disclaimer  of opinion by  Stonefield  at the time of the
+change.
+
+ITEM 8A(T). CONTROLS AND PROCEDURES.
+
+       (a)   EVALUATION OF DISCLOSURE CONTROLS AND PROCEDURES
+
+Our  management,  with the  participation  of our president and chief  financial
+officer,  carried out an  evaluation  of the  effectiveness  of our  "disclosure
+controls and procedures" (as defined in the Securities Exchange Act of 1934 (the
+"Exchange  Act") Rules  13a-15(e)  and  15-d-15(e))  as of the end of the period
+covered by this report (the "Evaluation Date"). Based upon that evaluation,  the
+president and chief financial officer,  who are our sole officers and directors,
+concluded that as of the Evaluation Date, our disclosure controls and procedures
+are effective to ensure that  information  required to be disclosed by us in the
+reports  that  we  file or  submit  under  the  Exchange  Act  (i) is  recorded,
+processed,  summarized  and reported,  within the time periods  specified in the
+SEC's  rules  and  forms  and  (ii)  is  accumulated  and  communicated  to  our
+management,  including our president and chief financial officer, as appropriate
+to allow timely decisions regarding required disclosure.
+
+Our management,  including our president and chief financial  officer,  does not
+expect that our disclosure controls and procedures or our internal controls will
+prevent all errors and all fraud. A control system, no matter how well conceived
+and operated,  can provide only  reasonable,  not absolute,  assurance  that the
+objectives  of the  control  system  are met.  Further,  the design of a control
+system  must  reflect  the fact that  there  are  resource  constraints  and the
+benefits of controls must be considered relative to their costs.  Because of the
+inherent  limitations  in all control  systems,  no  evaluation  of controls can
+provide  absolute  assurance that all control issues and instances of fraud,  if
+any, within 24Holdings have been detected.
+
+       (b) MANAGEMENT'S REPORT ON INTERNAL CONTROL OVER FINANCIAL REPORTING
+
+Our management is responsible for establishing and maintaining adequate internal
+control  over  financial  reporting  (as  defined  in Rule  13a-15(f)  under the
+Exchange Act). Our management assessed the effectiveness of our internal control
+over financial reporting as of December 31, 2007. In making this assessment, our
+management   used  the  criteria  set  forth  by  the  Committee  of  Sponsoring
+Organizations  of  the  Treadway   Commission  in  Internal   Control-Integrated
+Framework.  Our  management  has concluded  that,  as of December 31, 2007,  our
+internal control over financial  reporting is effective based on these criteria.
+This  annual  report does not include an  attestation  report of our  registered
+public  accounting  firm regarding  internal  control over financial  reporting.
+Management's  report was not subject to  attestation  by our  registered  public
+accounting firm pursuant to temporary rules of the SEC that permit us to provide
+only management's report in this annual report."
+
+       (c)   CHANGES IN INTERNAL CONTROL OVER FINANCIAL REPORTING
+
+There were no changes in our internal  controls over  financial  reporting  that
+occurred during the period covered by this report that has materially  affected,
+or is  reasonably  likely  to  materially  affect,  our  internal  control  over
+financial reporting.
+
+
+
+                                       11
+<PAGE>
+
+ITEM 8B.   OTHER INFORMATION
+
+         None.
+
+                                    PART III
+
+ITEM 9. DIRECTORS,  EXECUTIVE OFFICERS, PROMOTERS, CONTROL PERSONS AND CORPORATE
+GOVERNANCE; COMPLIANCE WITH SECTION 16(A) OF THE EXCHANGE ACT.
+
+The following table sets forth information concerning our officers and directors
+as of February 15, 2008:
+
+Name                   Age    Title
+- -------                ---    -----
+
+Arnold P. Kling        49     President, treasurer and director
+Kirk M. Warshaw        49     Chief financial officer, secretary and director
+
+ARNOLD P. KLING.  Mr. Kling has served as a director since September 2005 and as
+our president  and  treasurer  since  November,  2005.  Mr. Kling is currently a
+Managing  Director of GH Venture  Partners,  LLC, a private  equity and merchant
+banking  boutique  for which he also served as a Managing  Director  and General
+Counsel  from 1995 to 1999.  From 1999 through  August  2005,  Mr. Kling was the
+president of Adelphia  Holdings,  LLC, a  merchant-banking  firm, as well as the
+managing member of several private  investment funds. From 1993 to 1995 he was a
+senior executive and General Counsel of Buckeye  Communications,  Inc., a Nasdaq
+listed licensing and multimedia  company.  From 1990 through 1993, Mr. Kling was
+an associate and partner in the corporate and financial  services  department of
+Tannenbaum,  Helpern,  Syracuse & Hirschtritt LLP, a mid-size New York law firm.
+Mr.  Kling  received a Bachelor of Science  degree from New York  University  in
+International  Business in 1980 and a Juris Doctor degree from Benjamin  Cardozo
+School of Law in 1983. Mr. Kling currently serves as a director and president of
+Twin Lakes Delaware, Inc., R&R Acquisition, III, Inc., R&R Acquisition, V, Inc.,
+R&R Acquisition,  VI, Inc., R&R Acquisition,  VII, Inc., R&R Acquisition,  VIII,
+Inc. R&R  Acquisition IX, Inc., R&R  Acquisition X, Inc.,  Rodman  International
+Enterprises  I, Ltd.,  Rodman  International  Enterprise  II,  Ltd.,  and Rodman
+International  Enterprise  III,  Ltd.  (each a publicly  reporting,  non-trading
+company) and Newtown Lane Marketing, Incorporated (OTCBB:NWLM).
+
+KIRK M. WARSHAW.  Mr. Warshaw has served as a director since  September 2005 and
+our chief financial officer and secretary,  since November, 2005. Mr. Warshaw is
+a financial professional who, since 1990, has provided clients in a multitude of
+different  industries with advice on accounting,  corporate finance, and general
+business matters.  Prior to starting his own consulting firm, from 1983 to 1990,
+he held the various titles of controller,  chief financial  officer,  president,
+and chief  executive  officer at three separate  financial  institutions  in New
+Jersey.  From 1980 through  1983,  Mr.  Warshaw was a Senior  Accountant  at the
+public  accounting  firm of  Deloitte,  Haskins & Sells.  Mr.  Warshaw is a 1980
+graduate of Lehigh  University  and has been a CPA in New Jersey since 1982. Mr.
+Warshaw is currently the chief financial  officer of Twin Lakes Delaware,  Inc.,
+R&R Acquisition, III, Inc., R&R Acquisition, V, Inc., R&R Acquisition, VI, Inc.,
+R&R Acquisition, VII, Inc., and R&R Acquisition,  VIII, Inc. R&R Acquisition IX,
+Inc., R&R Acquisition X, Inc., Rodman International  Enterprises I, Ltd., Rodman
+International Enterprise II, Ltd., and Rodman International Enterprise III, Ltd.
+(each a publicly reporting, non-trading company), the chief financial officer of
+Newtown  Lane  Marketing,  Incorporated  (OTCBB:NWLM),  and a  director  of  two
+privately owned entities.
+
+Mr.  Kling and Mr.  Warshaw are not  required  to commit  their full time to our
+business  affairs and they will not devote a  substantial  amount of time to our
+business affairs.
+
+COMPENSATION AND AUDIT COMMITTEES
+
+As we only have two board  members and given our limited  operations,  we do not
+have separate or  independent  audit or  compensation  committees.  Our Board of
+Directors has  determined  that it does not have an "audit  committee  financial
+expert,"  as that term is  defined  in Item  407(d)(5)  of  Regulation  S-B.  In
+addition,  we have not  adopted any
+
+
+                                       12
+<PAGE>
+
+procedures  by which our  stockholders  may  recommend  nominees to our Board of
+Directors.
+
+SECTION 16(a) BENEFICIAL OWNERSHIP REPORTING COMPLIANCE
+
+Section 16(a) of the Exchange Act requires our directors and executive  officers
+and  persons  who  beneficially  own more than ten  percent of our Common  Stock
+(collectively,  the  "Reporting  Persons")  to  report  their  ownership  of and
+transactions  in our Common Stock to the SEC.  Copies of these  reports are also
+required to be supplied to us. To our  knowledge,  during the fiscal year ending
+December 31, 2007 the Reporting  Persons  complied with all  applicable  Section
+16(a) reporting requirements.
+
+CODE OF ETHICS
+
+We have not  adopted a Code of Ethics  given our limited  operations.  We expect
+that our Board of Directors following a merger or other acquisition  transaction
+will adopt a Code of Ethics.
+
+ITEM 10. EXECUTIVE COMPENSATION.
+
+Mr. Kling and Mr. Warshaw are our sole officers and directors.  Neither receives
+any regular compensation for their services rendered on our behalf.
+
+Since  September 30, 2005 we have paid no cash  compensation  to our officers or
+directors.  On February 1, 2006, our Board of Directors  authorized the issuance
+to Mr. Kling and Mr.  Warshaw,  an aggregate of 250,000  shares of our Preferred
+Stock for services  they  provided to us. On May 12, 2006 we issued to Mr. Kling
+150,000  shares of Preferred  Stock which was determined to be worth $11,250 and
+to Mr.  Warshaw  100,000  shares of Preferred  Stock which was  determined to be
+worth $7,500.  The expense was recognized in our 2006 financial  statements.  No
+officer or director is required to make any specific amount or percentage of his
+business time available to us.
+
+While we do not presently anticipate engaging the services of professional firms
+that  specialize in finding  business  acquisitions  on any formal basis, we may
+engage  such firms in the  future,  in which  event we may be  required to pay a
+finder's  fee or other  compensation.  In no event,  however,  will the we pay a
+finder's fee or  commission  to any of our officers and  directors or any entity
+with which an  officer or  director  is. We do not have any  incentive  or stock
+option plan in effect.
+
+DIRECTOR COMPENSATION
+
+We do not currently pay any cash fees to our directors, nor do we pay directors'
+expenses in attending board meetings.
+
+EMPLOYMENT AGREEMENTS
+
+We are not a party to any employment agreements.
+
+
+                                       13
+<PAGE>
+
+ITEM 11.  SECURITY  OWNERSHIP OF CERTAIN  BENEFICIAL  OWNERS AND  MANAGEMENT AND
+RELATED STOCKHOLDER MATTERS.
+
+The  following  table sets forth  certain  information  as of February  15, 2008
+regarding  the number and  percentage of our Common Stock (being our only voting
+securities)  beneficially  owned  by each  officer  and  director,  each  person
+(including any "group" as that term is used in Section  13(d)(3) of the Exchange
+Act) known by us to own 5% or more of our Common  Stock,  and all  officers  and
+directors as a group.
+
+                                               SHARES OF COMMON
+                                              STOCK BENEFICIALLY   PERCENTAGE OF
+               NAME OF BENEFICIAL OWNER           OWNED (1)          OWNERSHIP
+- --------------------------------------------  ------------------   -------------
+R&R Biotech Partners, LLC
+1270 Avenue of the Americas - 16th Floor
+New York, NY 10020
+Attention: Thomas Pinou, CFO                        698,696           56.1%
+
+Moyo Partners, LLC (2)
+c/o Arnold P. Kling
+712 Fifth Avenue - 11th Floor
+New York, NY 10019                                  174,674           14.0%
+
+Arnold P. Kling (3)
+712 Fifth Avenue - 11th Floor
+New York, NY 10019                                  294,674           23.7%
+
+Kirk M. Warshaw (4)
+47 School Avenue
+Chatham, NJ 07928                                    80,000            6.4%
+
+All Directors and Officers (2 persons) as a group   374,674           30.1%
+- -------------------------------------------------
+
+   (1) Unless otherwise indicated,  we have been advised that all individuals or
+       entities  listed have the sole power to vote and dispose of the number of
+       shares set forth  opposite  their names.  For  purposes of computing  the
+       number and percentage of shares  beneficially owned by a security holder,
+       any shares  which such person has the right to acquire  within 60 days of
+       February 15, 2008 are deemed to be outstanding,  but those shares are not
+       deemed to be  outstanding  for the purpose of  computing  the  percentage
+       ownership of any other security holder.
+
+   (2) Arnold P. Kling,  our president and a director,  controls Moyo  Partners,
+       LLC and  therefore  is the  beneficial  owner of the shares  held by this
+       entity.
+
+   (3) Includes all the shares held by Moyo Partners, LLC.
+
+   (4) Mr. Warshaw is our chief financial officer, secretary and a director.
+
+We currently do not have any equity compensation plans.
+
+ITEM  12.  CERTAIN   RELATIONSHIPS  AND  RELATED   TRANSACTIONS,   AND  DIRECTOR
+INDEPENDENCE
+
+Our Board of  Directors  consists of Arnold Kling and Kirk  Warshaw.  Neither of
+them is independent as such term is defined by a national securities exchange or
+an  inter-dealer  quotation  system.  During the fiscal year ended  December 31,
+2007, R&R Biotech Partners, LLC made a $40,000 capital contribution to us.
+
+
+
+
+                                       14
+<PAGE>
+
+ITEM 13. EXHIBITS
+
+    EXHIBIT
+       NO.                             DESCRIPTION
+    -------                            -----------
+
+       3.1    Certificate of  Designations,  Rights and  Preferences of Series A
+              Preferred   Stock   $.001  Par   Value(1)   3.2   Certificate   of
+              Incorporation (2)
+
+       3.3    Certificate of Amendment of the Certificate of Incorporation dated
+              October 20, 1999 (2)
+
+       3.4    Certificate of Amendment of the Certificate of Incorporation dated
+              April 1, 2001 (2)
+
+       3.5    By-Laws of the Company(3)
+
+       3.6    Certificate of Amendment of the Bylaws of the Company (3)
+
+       3.7    Certificate of Amendment of the Certificate of Incorporation dated
+              October 11, 2006 (5)
+       4.1    Form of Common Stock Certificate(4)
+
+      31.1    Chief Executive Officer  Certification  pursuant to section 302 of
+              the Sarbanes-Oxley Act of 2002*
+
+      31.2    Chief Financial Officer  Certification  pursuant to section 302 of
+              the Sarbanes-Oxley Act of 2002*
+
+      32.1    Chief Executive Officer  Certification  pursuant to section 906 of
+              the Sarbanes-Oxley Act of 2002.*
+
+      32.2    Chief Financial Officer  Certification  pursuant to section 906 of
+              the Sarbanes-Oxley Act of 2002.*
+
+- ----------------------------
+*Included herewith
+
+   (1) Previously  filed as an Exhibit in the company's  Current  Report on Form
+       8-K, filed on October 6, 2005, and incorporated herein by reference.
+
+   (2) Previously  filed as an Exhibit in the  company's  Annual  Report on Form
+       10-K, filed on April 13, 2001, and incorporated herein by reference.
+
+   (3) Previously  filed as an Exhibit in the  company's  Annual  Report on Form
+       10-K, filed on February 21, 2001, and incorporated herein by reference.
+
+   (4) Previously filed as an Exhibit in the company's Registration Statement on
+       Form SB-2  (Registration  No.  333-15129),  filed on October 30, 1996 and
+       incorporated herein by reference.
+
+   (5) Previously filed as an Exhibit in the company's  quarterly report on Form
+       10-QSB for the period ended September 30, 2006, and  incorporated  herein
+       by this reference.
+
+ITEM 14. PRINCIPAL ACCOUNTANT FEES AND SERVICES.
+
+AUDIT FEES:
+
+We incurred audit and financial statement review fees totaling $7,500 and $7,500
+to Sherb, our current independent accountants,  for the years ended December 31,
+2007 and 2006, respectively.
+
+AUDIT-RELATED FEES:
+
+NONE.
+
+TAX FEES:
+
+We  incurred  tax  preparation  fees  totaling  $1,500 and $1,500 to Sherb,  our
+current independent  accountants for the years ended December 31, 2007 and 2006,
+respectively.
+
+ALL OTHER FEES:
+
+NONE.
+
+AUDIT COMMITTEE POLICIES AND PROCEDURES:
+
+We do not currently  have a standing  audit  committee.  The above services were
+approved by our Board of Directors.
+
+
+
+                                       15
+<PAGE>
+
+
+
+                                   SIGNATURES
+
+            In accordance  with Section 13 or 15(d) of the Exchange Act of 1934,
+the  registrant  has  caused  this  report  to be  signed  on its  behalf by the
+undersigned, thereunto duly authorized.
+
+                                    24HOLDINGS INC.
+
+Date: February 19, 2008
+
+                                    By: /S/ARNOLD P. KLING
+                                    -------------------------------
+                                    Arnold P. Kling, President
+
+            In  accordance  with the Exchange  Act,  this report has been signed
+below by the following persons on behalf of the registrant and in the capacities
+and on the dates indicated.
+
+Date: February 19, 2008
+
+                                    By: /S/ARNOLD P. KLING
+                                    ------------------------
+                                    Arnold P. Kling, President and Director
+                                    (Principal Executive Officer)
+
+Date: February 19, 2008
+
+                                    By: /S/KIRK M. WARSHAW
+                                     -----------------------------------
+                                    Kirk M. Warshaw, Chief Financial Officer
+                                    and Director
+                                    (Principal Financial and Accounting Officer)
+
+
+                                       16
+<PAGE>
+
+                                 24HOLDINGS INC.
+
+                                      INDEX
+
+Report of Independent Registered Public Accounting Firm                      F-2
+
+Financial Statements:
+
+Balance Sheet as of December 31, 2007                                        F-3
+
+Statements of Operations for Years Ended December 31, 2007 and 2006          F-4
+
+Statement of Shareholders' Equity Years Ended December 31, 2007 and 2006     F-5
+
+Statements of Cash Flows Years Ended December 31, 2007 and 2006              F-6
+
+Notes to Financial Statements                                                F-7
+
+
+
+
+
+
+
+
+
+
+                                       F-1
+<PAGE>
+
+
+REPORT OF INDEPENDENT REGISTERED PUBLIC ACCOUNTING FIRM
+
+
+Shareholders and Directors
+24Holdings Inc.
+Chatham, New Jersey
+
+We have audited the accompanying balance sheet of 24Holdings Inc. as of December
+31,  2007,  and the  related  statements  of  operations,  shareholders'  equity
+(deficit),  cash flows for each of the years then ended  December  31,  2007 and
+2006.  These  financial  statements  are  the  responsibility  of the  Company's
+management.  Our  responsibility  is to express  an  opinion on these  financial
+statements based on our audit.
+
+We conducted our audits in accordance  with the standards of the Public  Company
+Accounting Oversight Board (United States). Those standards require that we plan
+and perform the audit to obtain reasonable assurance about whether the financial
+statements are free of material misstatement.  An audit includes examining, on a
+test basis,  evidence  supporting  the amounts and  disclosures in the financial
+statements.  An audit also includes assessing the accounting principles used and
+significant  estimates  made by  management,  as well as evaluating  the overall
+financial  statement  presentation.   We  believe  that  our  audit  provides  a
+reasonable basis for our opinion.
+
+In our opinion,  the financial  statements  referred to above present fairly, in
+all material respects,  the financial position of 24Holdings Inc. as of December
+31, 2007,  and the results of its  operations and its cash flows for each of the
+years then ended  December  31, 2007 and 2006,  in  conformity  with  accounting
+principles generally accepted in the United States.
+
+
+
+
+                                             /s/ Sherb & Co., LLP
+
+Certified Public Accountants
+New York, New York
+February 15, 2008
+
+
+
+
+
+
+
+                                       F-2
+<PAGE>
+
+
+
+
+                                 24HOLDINGS INC.
+                                  BALANCE SHEET
+                                December 31, 2007
+
+                                     ASSETS
+
+Current Assets
+     Cash and cash equivalents                                 $      28,604
+                                                              ------------------
+     Total current Assets                                             28,604
+                                                              ------------------
+     TOTAL ASSETS                                              $      28,604
+                                                              ==================
+
+                   LIABILITIES AND SHAREHOLDERS' EQUITY
+
+Current Liabilities
+     Accrued expenses                                          $      18,149
+                                                              ------------------
+        TOTAL CURRENT LIABILITIES                                     18,149
+                                                              ------------------
+     TOTAL LIABILITIES                                                18,149
+
+SHAREHOLDERS' EQUITY
+Convertible Preferred stock; $0.001 par value, 5,000,000
+authorized, no shares issued and outstanding                               -
+Common stock, $.001 par value; 100,000,000 shares
+authorized, 1,244,902 shares issued and outstanding                    1,245
+Additional paid-in capital                                        10,687,358
+Accumulated deficit                                              (10,678,148)
+                                                              ------------------
+
+
+        TOTAL SHAREHOLDERS' EQUITY                                    10,455
+                                                              ------------------
+
+TOTAL LIABILITIES AND SHAREHOLDERS' EQUITY                     $      28,604
+                                                              ==================
+
+
+The accompanying notes are an integral part of these financial statements.
+
+
+
+
+                                       F-3
+<PAGE>
+
+
+                                 24HOLDINGS INC.
+                            STATEMENTS OF OPERATIONS
+
+                                                         YEAR ENDED
+                                                        DECEMBER 31,
+                                                    2007            2006
+                                            ---------------------------------
+Revenues                                     $        -         $        -
+
+Expenses
+General and administrative                          44,562            75,593
+                                            ---------------------------------
+Total operating expenses                            44,562            75,593
+
+Net Loss                                     $     (44,562)     $    (75,593)
+                                            =================================
+
+Net loss per share - basic and diluted       $       (0.04)            (0.09)
+                                            =================================
+
+Weighted average number of common shares
+- - basic and diluted                              1,244,902      $    842,407
+                                            =================================
+
+
+   The accompanying notes are an integral part of these financial statements.
+
+
+
+
+
+
+                                      F-4
+<PAGE>
+
+
+                                 24HOLDINGS INC
+             STATEMENTS OF CHANGES IN SHAREHOLDERS' EQUITY (DEFICIT)
+
+
+
+<TABLE>
+<CAPTION>
+                                                                                                                          TOTAL
+                                        PREFERRED STOCK             COMMON STOCK        ADDITIONAL                    SHAREHOLDERS'
+                                   ------------------------- ---------------------------  PAID-IN        ACCUMULATED     EQUITY
+                                       SHARES      AMOUNT         SHARES    AMOUNT        CAPITAL          DEFICIT      (DEFICIT)
+                                   ------------------------------------------------------------------------------------------------
+<S>                                   <C>        <C>        <C>           <C>           <C>             <C>             <C>
+Balance at December 31, 2005               -     $     -         769,226  $      769    $ 10,398,206    $(10,557,993)   $  (159,018)
+
+Reclassification of Debt into
+Preferred Stock                         594,879         595                                  249,033                        249,628
+
+Conversion of Preferred Stock
+into Common                            (594,879)       (595)     475,676         476             119            -              -
+
+Net loss for year ended
+December 31, 2006                          -           -           -           -               -            (75,593)        (75,593)
+                                   ------------------------------------------------------------------------------------------------
+
+
+Balance at December 31, 2006                -           -      1,244,902       1,245      10,647,358     (10,633,586)        15,017
+
+Capital Contribution                        -           -           -           -             40,000                         40,000
+
+Net loss for year ended
+December 31, 2007                           -           -           -           -                            (44,562)       (44,562)
+                                   ------------------------------------------------------------------------------------------------
+
+Balance at December 31, 2007                -   $       -      1,244,902  $    1,245    $ 10,687,358    $(10,678,148)   $    10,455
+                                   ================================================================================================
+</TABLE>
+
+   The accompanying notes are an integral part of these financial statements.
+
+
+                                      F-5
+<PAGE>
+
+
+
+                                 24HOLDINGS INC.
+                            STATEMENTS OF CASH FLOWS
+
+                                                            Year Ended
+                                                   December 31,     December 31,
+                                                       2007            2006
+                                                  -------------    -------------
+
+CASH FLOWS FROM OPERATING ACTIVITIES
+
+Net loss                                               (44,562)        (75,593)
+
+Preferred shares issues for services                      -             18,750
+Changes in operating assets and liabilities
+
+Accounts receivable                                       -              7,500
+
+Increase (decrease) in accrued expenses                  3,530         (21,022)
+                                                  -------------    -------------
+
+NET CASH USED IN OPERATING ACTIVITIES                  (41,032)        (70,365)
+                                                  -------------    -------------
+
+CASH FLOWS FROM INVESTING ACTIVITIES
+
+                         Investing Activities             -                -
+                                                  -------------    -------------
+CASH FLOWS FROM FINANCING ACTIVITIES
+
+                         Contributed Capital            40,000             -
+                                                  -------------    -------------
+NET CASH PROVIDED BY FINANCING ACTIVITIES               40,000             -
+                                                  -------------    -------------
+
+
+NET DECREASE IN CASH AND CASH EQUIVALENTS               (1,032)        (70,364)
+
+
+CASH AND CASH EQUIVALENTS AT BEGINNING OF YEAR          29,636         100,000
+                                                  -------------    -------------
+CASH AND CASH EQUIVALENTS AT END OF YEAR            $   28,604      $   29,636
+                                                  =============    =============
+
+SUPPLEMENTAL DISCLOSURE OF CASH FLOWS
+INFORMATION
+                         Interest paid              $     -         $      -
+                                                  =============    =============
+                         Income taxes               $     -         $      -
+                                                  =============    =============
+
+   The accompanying notes are an integral part of these financial statements.
+
+
+
+
+                                      F-6
+<PAGE>
+
+
+                                 24HOLDINGS INC.
+                          NOTES TO FINANCIAL STATEMENTS
+                     YEARS ENDED DECEMBER 31, 2007 and 2006
+
+
+NOTE 1 - DESCRIPTION OF COMPANY:
+
+We are a Delaware corporation formerly known as Scoop, Inc. In April 2001 Scoop,
+Inc.  amended its Certificate of  Incorporation to change its name to 24Holdings
+Inc. ("we", "our", "us", "24Holdings" or the "Company").  Prior to September 30,
+2005,  24Holdings was a holding  company that conducted its business  operations
+through  its  wholly  owned  subsidiary  24STORE  (Europe)  Limited,  a  company
+incorporated  under the laws of England  formerly known as  24STORE.com  Limited
+("24STORE").  24STORE commenced  business  operations in 1996 and focused on the
+sale of media  products and business  information  services.  Commencing in July
+1998, the Company  underwent  voluntary  reorganization  under Chapter 11 of the
+United States  Bankruptcy  Code. In accordance  with the Plan of  Reorganization
+approved by the  Bankruptcy  Court in December  1999,  InfiniCom,  AB, a Swedish
+registered company  ("Infinicom"),  acquired 91% of the outstanding stock of the
+Company in exchange for 100% of the stock of 24STORE.  Subsequent to Infinicom's
+acquisition  in 1999 and until  September 30, 2005,  the business  operations of
+24STORE,  which  represented  all of the Company's  operations,  were devoted to
+supplying business customers with computer and electronics products.
+
+On October 23, 2006 (the "Effective Date"), the Company  implemented a 1 for 125
+reverse stock split (the  "Reverse  Split") of its common stock par value $0.001
+per share (the "Common Stock").  Pursuant to the Reverse Split,  each 125 shares
+of Common Stock issued and  outstanding  as of the Effective  Date was converted
+into one (1) share of Common Stock. The Reverse Split also reduced the number of
+shares of  Common  Stock  into  which  each  share of our  Series A  Convertible
+Preferred  Stock,  par value $0.001 (the  "Preferred  Stock") could be converted
+from 100 shares to 0.8 shares.  All per share data herein has been retroactively
+restated to reflect the Reverse Split.
+
+Since  September 30, 2005, our purpose has been to serve as a vehicle to acquire
+an operating business and we are currently considered a "shell" company inasmuch
+as we are not generating revenues, do not own an operating business, and have no
+specific plan other than to engage in a merger or acquisition transaction with a
+yet-to-be identified operating company or business.  We have no employees and no
+material assets.
+
+CHANGE OF OWNERSHIP TRANSACTIONS
+
+On May 26,  2005,  we entered  into a series of  agreements  with  Infinicom  in
+connection  with  our  sale of all of the  outstanding  stock  of  24STORE  (the
+"24STORE  Sale")  and  separately,  the  assignment  of all  rights and title to
+certain  trademarks  and domain  names (the "IP  Assets")  that we held (the "IP
+Assignment").  Pursuant  to the terms of the  24STORE  Sale,  Infinicom  paid us
+$100,000 for our 24STORE shares and pursuant to the IP  Assignment,  we paid for
+the  IP  Assets  through  a  set-off  against  all  outstanding  and  contingent
+liabilities  we owed  to  Infinicom  determined  as of the  closing  date of the
+24STORE Sale, which amounted to $603,830.
+
+
+                                      F-7
+<PAGE>
+
+
+                                 24HOLDINGS INC.
+                          NOTES TO FINANCIAL STATEMENTS
+                     YEARS ENDED DECEMBER 31, 2007 and 2006
+
+
+NOTE 1 - DESCRIPTION OF COMPANY (continued):
+
+On May 26, 2005, we also entered into a Preferred Stock Purchase  Agreement with
+Infinicom  (the  "Preferred  Stock  Agreement")  pursuant  to  which  we sold to
+Infinicom  344,595  shares of Preferred  Stock in exchange for the  discharge of
+$230,879 of  outstanding  debt owed to  Infinicom.  Each share of the  Preferred
+Stock is convertible into 0.8 shares of our Common Stock at the holder's option.
+
+On May 26, 2005,  Infinicom,  24Holdings,  Moyo  Partners,  LLC ("Moyo") and R&R
+Biotech Partners,  LLC ("R&R", and together with Moyo, the "Purchasers") entered
+into a Common Stock Purchase Agreement (the "Infinicom Sale Agreement") pursuant
+to which,  Infinicom  agreed to sell to the  Purchasers  an aggregate of 873,369
+shares of Common Stock (which  included  shares  issuable upon conversion of the
+Preferred Stock) which  represented  approximately  83.6% of the then issued and
+outstanding  shares of Common  Stock (the  "Infinicom  Sale").  In  return,  the
+Purchasers (i) paid to Infinicom $500,000 in cash, and (ii) agreed that upon the
+occurrence of one of several post-closing events, including a merger with one or
+more as yet unidentified  private  unaffiliated  operating  companies,  to cause
+24Holdings to issue to Infinicom  shares of Common Stock  representing 1% of the
+then issued and outstanding shares of Common Stock on a fully diluted basis (the
+"Infinicom  Additional  Shares").  The  consummation  of the Infinicom  Sale was
+contingent  on the  contemporaneous  closing  of the  24STORE  Sale  and  the IP
+Assignment.
+
+On September  30, 2005,  24Holdings  and Infinicom  completed  the  transactions
+contemplated  in the 24STORE  Sale,  the IP Assignment  and the Preferred  Stock
+Agreement as described above.  Infinicom forgave the $603,830 of debt 24Holdings
+owed to them in consideration of the IP Assignment.
+
+Effective  September 30, 2005,  Infinicom  completed the sale to the Purchasers,
+under the Infinicom  Sale  Agreement,  of 597,693  shares of Common Stock (which
+represented  77.7% of the  769,226  shares  of  Common  Stock  then  issued  and
+outstanding)  and 344,595 shares of Preferred Stock,  constituting  83.6% in the
+aggregate  of the  then  issued  and  outstanding  Common  Stock  (assuming  the
+conversion of the Preferred  Stock into 275,676  shares of Common  Stock).  As a
+result, the Purchasers  acquired control of 24Holdings from Infinicom,  with R&R
+beneficially  owning 698,696 shares of Common Stock  (assuming the conversion by
+R&R of 275,676  shares of Preferred  Stock into 220,541  shares of Common Stock)
+constituting  66.9% of the then issued and  outstanding  shares of Common Stock,
+and Moyo in the aggregate  beneficially  owning  174,674  shares of Common Stock
+(assuming the conversion by Moyo of 68,919 shares of Preferred Stock into 55,135
+shares of Common Stock)  constituting  16.7% of the then issued and  outstanding
+shares of Common Stock.
+
+
+
+
+                                      F-8
+<PAGE>
+
+
+                                 24HOLDINGS INC.
+                          NOTES TO FINANCIAL STATEMENTS
+                     YEARS ENDED DECEMBER 31, 2007 and 2006
+
+
+NOTE 1 - DESCRIPTION OF COMPANY (continued):
+
+Effective  September  30, 2005 Urban von Euler  resigned as our  president and a
+director but remained our chief executive officer. Also, effective September 30,
+2005, Larsake Sandin resigned as a director and each of Arnold P. Kling and Kirk
+M. Warshaw were  appointed  as  directors of  24Holdings.  On November 21, 2005,
+effective  with the filing of our Form 10-Q for the quarter ended  September 30,
+2005,  Mr. von Euler  resigned  as chief  executive  officer  and Mr.  Kling was
+appointed  president and treasurer and Mr. Warshaw was appointed chief financial
+officer  and  secretary.   As  of  that  same  date,  24Holdings  relocated  its
+headquarters to Chatham, New Jersey.
+
+On November 25, 2005, the Infinicom Sale Agreement was amended to provide, among
+other criteria,  that the fair market value of the Infinicom  Additional  Shares
+would be no less than  $400,000  nor more than  $600,000 at the time such shares
+are required to be issued to Infinicom.
+
+On  February  1,  2006,  a total of  250,000  shares  of  Preferred  Stock  were
+authorized for issuance to two individuals who provided services to the Company.
+On May 12, 2006, we issued 150,000 and 100,000 shares of the Preferred  Stock to
+Arnold  P.  Kling  and Kirk M.  Warshaw  for  their  services  as the  Company's
+president and chief  financial  officer,  respectively.  Each share of Preferred
+Stock is immediately  convertible,  at the holder's  option,  into 0.8 shares of
+Common Stock.  Mr.  Kling's  services  were valued at $11,250 and Mr.  Warshaw's
+services were valued at $7,500.
+
+As a result of the  Reverse  Split we had  adequate  shares  of Common  Stock to
+facilitate the conversion of all the issued and outstanding  shares of Preferred
+Stock. Prior to the Reverse Split, because the conversion terms of the Preferred
+Stock would have  required  more  shares of Common  Stock to be issued than were
+authorized  and  available  for  issuance,  $249,628  of  indebtedness  had been
+recorded  on our  balance  sheet as a long  term  liability.  As a result of the
+Reverse Split this amount was reclassified, pursuant to EITF 00-19, as preferred
+equity.
+
+On November 29, 2006,  the holders of all the issued and  outstanding  shares of
+Preferred  Stock elected to convert all of their  Preferred Stock into shares of
+Common Stock.  As a result,  the 594,595 shares of Preferred  Stock  outstanding
+were exchanged for 475,676 shares of Common Stock.
+
+As of December 31, 2007,  our  authorized  capital stock consists of 100,000,000
+shares  of  Common  Stock  and  5,000,000  shares  of  Preferred  Stock of which
+1,244,902  shares of Common Stock,  and no shares of Preferred Stock, are issued
+and  outstanding.  All shares of Common Stock currently  outstanding are validly
+issued, fully paid and non-assessable.
+
+During the year ended  December  31,  2007,  R&R  Biotech  Partners,  LLC made a
+$40,000 capital contribution to the Company.
+
+
+
+                                      F-9
+<PAGE>
+
+
+
+                                 24HOLDINGS INC.
+                          NOTES TO FINANCIAL STATEMENTS
+                     YEARS ENDED DECEMBER 31, 2007 and 2006
+
+NOTE 1 - DESCRIPTION OF COMPANY (continued):
+
+THE COMPANY TODAY
+
+Since  September 30, 2005, our purpose has been to serve as a vehicle to acquire
+an operating business and we are currently considered a "shell" company inasmuch
+as we are not generating revenues, do not own an operating business, and have no
+specific plan other than to engage in a merger or acquisition transaction with a
+yet-to-be identified operating company or business.  We have no employees and no
+material assets.
+
+Commencing with the filing of our Form 10-Q for the quarter ended June 30, 2004,
+all of our computer related business services activities have been accounted for
+as Discontinued Operations. As such, all of the prior activity has been shown in
+the financials as one line item that is labeled "Income (Loss) from Discontinued
+Operations,  net of taxes." Our activities since September 2005 are shown in the
+Income  Statement under the section  labeled "Loss from Continuing  Operations."
+These amounts are for expenses  incurred since September 30, 2005 and are of the
+nature  we  expect  to incur in the  future,  whereas  the  Income  (loss)  from
+Discontinued Operations are from activities we are no longer engaged in.
+
+NOTE 2 - SUMMARY OF SIGNIFICANT ACCOUNTING POLICIES:
+
+The Company's  accounting policies are in accordance with accounting  principles
+generally  accepted in the United  States of America.  Outlined  below are those
+policies considered particularly significant.
+
+     (a) Use of Estimates:
+
+            In preparing  financial  statements  in accordance  with  accounting
+            principles  generally  accepted  in the  United  States of  America,
+            management   makes   certain   estimates  and   assumptions,   where
+            applicable,   that  affect  the  reported   amounts  of  assets  and
+            liabilities and disclosures of contingent  assets and liabilities at
+            the  date of the  financial  statements,  as  well  as the  reported
+            amounts of revenues and expenses during the reporting period.  While
+            actual results could differ from those  estimates,  management  does
+            not expect such variances,  if any, to have a material effect on the
+            financial statements.
+
+     (b) Statements of Cash Flows:
+
+            For purposes of the  statements of cash flows the Company  considers
+            all highly liquid investments purchased with a remaining maturity of
+            three months or less to be cash equivalents.
+
+     (c) Earnings (Loss) Per Share:
+
+            Basic  earnings  (loss) per share has been  computed on the basis of
+            the weighted average number of common shares outstanding during each
+            period  presented  according  to the  provisions  of  SFAS  No.  128
+            "EARNINGS PER SHARE". Diluted earnings (loss) per share reflects the
+            potential dilution that could occur if options or other contracts to
+            issue shares of common  stock were  exercised or converted to common
+            stock as long as the effect of their inclusion is not anti-dilutive.
+            We currently  have no options or contracts to issue shares of common
+            stock outstanding.
+
+
+                                      F-10
+<PAGE>
+
+
+                                 24HOLDINGS INC.
+                          NOTES TO FINANCIAL STATEMENTS
+                     YEARS ENDED DECEMBER 31, 2007 and 2006
+
+NOTE 2 - SUMMARY OF SIGNIFICANT ACCOUNTING POLICIES (continued):
+
+     (d) Income Taxes:
+
+            The asset and  liability  method is used in  accounting  for  income
+            taxes.  Under this method,  deferred tax assets and  liabilities are
+            recognized  for operating loss and tax credit carry forwards and for
+            the future tax consequences  attributable to differences between the
+            financial   statement   carrying  amounts  of  existing  assets  and
+            liabilities and their respective tax bases.  Deferred tax assets and
+            liabilities  are measured  using enacted tax rates expected to apply
+            to taxable income in the years in which those temporary  differences
+            are expected to be recovered or settled.  The effect on deferred tax
+            assets and liabilities of a change in tax rates is recognized in the
+            results of  operations  in the period that  includes  the  enactment
+            date.  A valuation  allowance  is  recorded  to reduce the  carrying
+            amounts of  deferred  tax assets  unless it is more  likely than not
+            that such assets will be realized.
+
+     (e) Financial Instruments
+
+           The  estimated  fair values of all  reported  assets and  liabilities
+           which  represent  financial  instruments,  none of which are held for
+           trading  purposes,  approximate  their  carrying value because of the
+           short term maturity of these instruments or the stated interest rates
+           are indicative of market interest rates.
+
+     (f) Equity Based Compensation
+
+         The Company  adopted SFAS No. 123R,  "Share Based  Payments."  SFAS No.
+         123R requires  companies to expense the value of employee stock options
+         and  similar  awards  and  applies  to  all   outstanding   and  vested
+         stock-based awards.
+
+         In computing the impact,  the fair value of each option is estimated on
+         the date of  grant  based on the  Black-Scholes  options-pricing  model
+         utilizing   certain   assumptions   for  a  risk  free  interest  rate;
+         volatility; and expected remaining lives of the awards. The assumptions
+         used in  calculating  the fair  value  of  share-based  payment  awards
+         represent  management's  best estimates,  but these  estimates  involve
+         inherent uncertainties and the application of management judgment. As a
+         result,  if factors change and the Company uses different  assumptions,
+         the  Company's  stock-based  compensation  expense  could be materially
+         different  in the  future.  In  addition,  the  Company is  required to
+         estimate the expected  forfeiture  rate and only recognize  expense for
+         those shares  expected to vest. In estimating the Company's  forfeiture
+         rate,  the  Company  analyzed  its  historical   forfeiture  rate,  the
+         remaining lives of unvested  options,  and the amount of vested options
+         as a percentage of total options  outstanding.  If the Company's actual
+         forfeiture  rate is materially  different from its estimate,  or if the
+         Company  reevaluates the forfeiture rate in the future, the stock-based
+         compensation expense could be significantly different from what we have
+         recorded in the current  period.  The last  equity  based  compensation
+         issued by the  Company was more than two years ago and such shares were
+         fully vested upon issuance, hence an expense was recorded at that time.
+
+
+                                      F-11
+<PAGE>
+
+
+                                 24HOLDINGS INC.
+                          NOTES TO FINANCIAL STATEMENTS
+                     YEARS ENDED DECEMBER 31, 2007 and 2006
+
+NOTE 2 - SUMMARY OF SIGNIFICANT ACCOUNTING POLICIES (continued):
+
+     (g) New Accounting Pronouncements
+
+         FASB 141(revised 2007) - Business Combinations
+
+         In  December  2007,  the FASB issued FASB  Statement  No. 141  (revised
+         2007),  Business  Combinations.  This Statement replaces FASB Statement
+         No. 141, Business Combinations.  This Statement retains the fundamental
+         requirements in Statement 141 that the acquisition method of accounting
+         (which  Statement  141  called  the  purchase  method)  be used for all
+         business  combinations  and for an acquirer to be  identified  for each
+         business combination. This Statement defines the acquirer as the entity
+         that  obtains  control  of  one or  more  businesses  in  the  business
+         combination and  establishes the acquisition  date as the date that the
+         acquirer achieves control.  This Statement's scope is broader than that
+         of Statement 141, which applied only to business  combinations in which
+         control was  obtained by  transferring  consideration.  By applying the
+         same method of accounting--the  acquisition method--to all transactions
+         and other events in which one entity  obtains  control over one or more
+         other  businesses,  this Statement  improves the  comparability  of the
+         information about business combinations provided in financial reports.
+
+         This Statement  requires an acquirer to recognize the assets  acquired,
+         the  liabilities  assumed,  and  any  noncontrolling  interest  in  the
+         acquiree at the acquisition  date,  measured at their fair values as of
+         that date,  with limited  exceptions  specified in the Statement.  That
+         replaces Statement 141's  cost-allocation  process,  which required the
+         cost  of an  acquisition  to be  allocated  to  the  individual  assets
+         acquired and liabilities assumed based on their estimated fair values.
+
+         This Statement  applies to all transactions or other events in which an
+         entity (the acquirer)  obtains  control of one or more  businesses (the
+         acquirer),  including those sometimes  referred to as "true mergers" or
+         "mergers of equals" and  combinations  achieved without the transfer of
+         consideration,  for example,  by contract alone or through the lapse of
+         minority veto rights.  This Statement applies to all business entities,
+         including mutual entities that previously used the pooling-of-interests
+         method of accounting for some business combinations.  It does not apply
+         to: (a) The formation of a joint  venture,  (b) The  acquisition  of an
+         asset or a group of assets that does not  constitute a business,  (c) A
+         combination between entities or businesses under common control,  (d) A
+         combination between not-for-profit  organizations or the acquisition of
+         a for-profit business by a not-for-profit organization.
+
+         This Statement applies prospectively to business combinations for which
+         the  acquisition  date is on or after the beginning of the first annual
+         reporting period beginning on or after December 15, 2008. An entity may
+         not apply it before that date.  Management believes this Statement will
+         have no impact on the financial  statements of the Company once adopted
+         until the Company  effectuates a merger or acquisition with a yet-to-be
+         identified operating company or business.
+
+
+                                      F-12
+<PAGE>
+
+
+                                 24HOLDINGS INC.
+                          NOTES TO FINANCIAL STATEMENTS
+                     YEARS ENDED DECEMBER 31, 2007 and 2006
+
+
+NOTE 2 - SUMMARY OF SIGNIFICANT ACCOUNTING POLICIES (continued):
+
+     (g) New Accounting Pronouncements (continued):
+
+         FASB  160  -   Noncontrolling   Interests  in  Consolidated   Financial
+         Statements - an amendment of ARB No. 51
+
+         In  December   2007,   the  FASB  issued  FASB   Statement  No.  160  -
+         Noncontrolling  Interests  in  Consolidated  Financial  Statements - an
+         amendment of ARB No. 51. This  Statement  applies to all entities  that
+         prepare  consolidated   financial  statements,   except  not-for-profit
+         organizations,  but  will  affect  only  those  entities  that  have an
+         outstanding noncontrolling interest in one or more subsidiaries or that
+         deconsolidate  a  subsidiary.   Not-for-profit   organizations   should
+         continue to apply the guidance in Accounting  Research Bulletin No. 51,
+         Consolidated  Financial Statements,  before the amendments made by this
+         Statement,  and any other applicable standards,  until the Board issues
+         interpretative guidance.
+
+         This  Statement  amends ARB 51 to establish  accounting  and  reporting
+         standards for the  noncontrolling  interest in a subsidiary and for the
+         deconsolidation  of a subsidiary.  It clarifies  that a  noncontrolling
+         interest in a subsidiary is an ownership  interest in the  consolidated
+         entity that should be reported as equity in the consolidated  financial
+         statements.  Before this Statement was issued, limited guidance existed
+         for  reporting  noncontrolling  interests.  As a  result,  considerable
+         diversity  in  practice  existed.  So-called  minority  interests  were
+         reported  in  the  consolidated  statement  of  financial  position  as
+         liabilities or in the mezzanine section between liabilities and equity.
+         This Statement improves comparability by eliminating that diversity.
+
+         A noncontrolling interest, sometimes called a minority interest, is the
+         portion  of  equity  in a  subsidiary  not  attributable,  directly  or
+         indirectly,  to a parent. The objective of this Statement is to improve
+         the  relevance,   comparability,  and  transparency  of  the  financial
+         information  that a  reporting  entity  provides  in  its  consolidated
+         financial statements by establishing accounting and reporting standards
+         that  require:  (a) The  ownership  interests in  subsidiaries  held by
+         parties  other  than the  parent be clearly  identified,  labeled,  and
+         presented in the  consolidated  statement of financial  position within
+         equity,  but  separate  from the  parent's  equity,  (b) The  amount of
+         consolidated  net  income   attributable  to  the  parent  and  to  the
+         noncontrolling interest be clearly identified and presented on the face
+         of the  consolidated  statement  of income,  (c)  Changes in a parent's
+         ownership  interest while the parent retains its controlling  financial
+         interest in its  subsidiary be accounted for  consistently.  A parent's
+         ownership  interest  in a  subsidiary  changes if the parent  purchases
+         additional ownership interests in its subsidiary or if the parent sells
+         some of its ownership  interests in its subsidiary.  It also changes if
+         the  subsidiary  reacquires  some  of its  ownership  interests  or the
+         subsidiary  issues  additional  ownership   interests.   All  of  those
+         transactions are economically similar, and this Statement requires that
+         they be accounted for  similarly,  as equity  transactions,  (d) When a
+         subsidiary  is  deconsolidated,   any  retained  noncontrolling  equity
+         investment  in the former  subsidiary  be  initially  measured  at fair
+         value.  The gain or loss on the  deconsolidation  of the  subsidiary is
+         measured using the fair value of any  noncontrolling  equity investment
+         rather than
+
+
+                                      F-13
+<PAGE>
+
+
+                                 24HOLDINGS INC.
+                          NOTES TO FINANCIAL STATEMENTS
+                     YEARS ENDED DECEMBER 31, 2007 and 2006
+
+NOTE 2 - SUMMARY OF SIGNIFICANT ACCOUNTING POLICIES (continued):
+
+     (g) New Accounting Pronouncements (continued):
+
+         the carrying amount of that retained  investment,  (e) Entities provide
+         sufficient  disclosures that clearly  identify and distinguish  between
+         the  interests of the parent and the  interests  of the  noncontrolling
+         owners.
+
+         This  Statement  is effective  for fiscal  years,  and interim  periods
+         within those  fiscal  years,  beginning  on or after  December 15, 2008
+         (that is,  January 1, 2009,  for  entities  with  calendar  year-ends).
+         Earlier  adoption  is  prohibited.  This  Statement  shall  be  applied
+         prospectively  as of the  beginning  of the  fiscal  year in which this
+         Statement  is  initially  applied,  except  for  the  presentation  and
+         disclosure  requirements.  The presentation and disclosure requirements
+         shall be applied retrospectively for all periods presented.  Management
+         believes this Statement will have no impact on the financial statements
+         of the Company once adopted.
+
+NOTE 3 - OTHER RECEIVABLES - RELATED PARTY
+
+An amount of $7,500 was agreed upon to be reimbursed to the Company by Infinicom
+AB for certain  post-closing  expenses yet to be paid. Such monies were received
+in March 2006.
+
+NOTE 4 - SHAREHOLDERS' EQUITY:
+
+On the Effective  Date, the Company  implemented the Reverse Split of its Common
+Stock. Pursuant to the Reverse Split, each 125 shares of Common Stock issued and
+outstanding  as of the Effective Date was converted into one (1) share of Common
+Stock.  The Reverse Split also reduced the number of shares of Common Stock into
+which each share of Preferred  Stock could be  converted  from 100 shares to 0.8
+shares. All per share data herein has been retroactively restated to reflect the
+Reverse Split.
+
+On  September  30,  2005,  Moyo  Partners,  LLC and R&R  Biotech  Partners,  LLC
+purchased  597,693 shares of Common Stock and 344,595 shares of Preferred  Stock
+from  Infinicom,  AB in exchange for aggregate gross proceeds of $500,000 and 1%
+of our outstanding  shares  following the occurrence of one of several  possible
+post-closing  corporate events.  The Common Stock acquired  represented 77.7% of
+the shares of Common  Stock then  outstanding  and  together  with the shares of
+Preferred Stock  constituted 83.6% in the aggregate of the Company's then issued
+and outstanding  Common Stock  (assuming  conversion of the Preferred Stock into
+275,676 shares of Common Stock).
+
+
+
+
+
+                                      F-14
+<PAGE>
+
+
+                                 24HOLDINGS INC.
+                          NOTES TO FINANCIAL STATEMENTS
+                     YEARS ENDED DECEMBER 31, 2007 and 2006
+
+NOTE 4 - SHAREHOLDERS' EQUITY(continued):
+
+On  February  1,  2006,  a total of  250,000  shares  of  Preferred  Stock  were
+authorized for issuance to two individuals who provided services to the Company.
+On May 12, 2006, the Company filed a Certificate of Amendment to the Certificate
+of Designation  for the Preferred Stock with the Secretary of State of the State
+of Delaware,  increasing the number of shares designated as Preferred Stock from
+500,000  to 600,000  shares.  As a result of this  filing,  the  Company  issued
+150,000  and  100,000  shares of the  Preferred  Stock to Arnold  Kling and Kirk
+Warshaw  for their  services  as the  Company's  President  and Chief  Financial
+Officer,  respectively.  Each share of Preferred Stock was  convertible,  at the
+holder's  option,  into 0.8 share of Common  Stock.  Mr.  Kling's  services were
+valued at $11,250 and Mr. Warshaw's services were valued at $7,500.
+
+On November 29, 2006,  the holders of all the issued and  outstanding  shares of
+Preferred  Stock elected to convert all of their  Preferred Stock into shares of
+Common Stock.  As a result,  the 594,595 shares of Preferred  Stock  outstanding
+were exchanged for 475,676 shares of Common Stock.
+
+As of December 31, 2007,  our  authorized  capital stock consists of 100,000,000
+shares  of  Common  Stock  and  5,000,000  shares  of  Preferred  Stock of which
+1,244,902  shares of Common Stock,  and no shares of Preferred Stock, are issued
+and  outstanding.  All shares of Common Stock currently  outstanding are validly
+issued, fully paid and non-assessable.
+
+During the year, the majority  stockholder  contributed an additional $40,000 to
+the Company.
+
+
+
+
+
+
+                                      F-15
+<PAGE>
+
+
+
+                                 24HOLDINGS INC.
+                          NOTES TO FINANCIAL STATEMENTS
+                     YEARS ENDED DECEMBER 31, 2007 and 2006
+
+NOTE 5 - INCOME TAXES:
+
+
+                                                2007              2006
+                                              ---------        ---------
+Deferred tax assets and liabilities consist
+of the following:
+
+Deferred tax assets:
+
+    Net operating loss carry forwards         $ 325,000        $ 310,000
+
+    Less valuation allowance                   (325,000)        (310,000)
+                                              ---------        ---------
+                                                  -                -
+                                              =========        =========
+
+The provision for income taxes differs from the amount  computed by applying the
+US statutory income tax rate as follows:
+
+                                                      December 31,
+                                                   2007          2006
+Provision for expected federal statutory rate     (35)%          (35)%
+Loss for which no benefit is available or a         35%            35%
+valuation allowance has been recorded
+                                                    --%            --%
+
+At December 31, 2007,  the Company had  approximately  $930,000 of net operating
+loss carry forwards ("NOL's") available which expires in various years beginning
+in 2027.  The  deferred  tax asset and related  valuation  increased  by $15,000
+during 2007. The  utilization of the net operating  loss  carryforward  has been
+limited as to its use pursuant to the  Internal  Revenue Code Section 382 due to
+the recent  change in ownership of the Company.  The benefits of these NOL's may
+be reduced in the future if the  Company is  successful  in  establishing  a new
+business.
+
+NOTE 6 - COMMITMENTS AND CONTINGENCIES
+
+Currently  the Company  operates  from the offices of its CFO and  director on a
+rent-free  basis. No amounts have been recorded for the use of such office space
+used since such rent expense is deemed to be insignificant.
+
+
+</TEXT>
+</DOCUMENT>
+<DOCUMENT>
+<TYPE>EX-31.1
+<SEQUENCE>2
+<FILENAME>c52419_ex31-1.txt
+<TEXT>
+
+
+
+                                                                    EXHIBIT 31.1
+
+                                  CERTIFICATION
+
+I, Arnold P. Kling, certify that:
+
+1.   I have reviewed this annual report on Form 10-KSB of 24Holdings Inc.;
+
+2.   Based on my knowledge, this report does not contain any untrue statement of
+     a material  fact or omit to state a  material  fact  necessary  to make the
+     statements made, in light of the circumstances  under which such statements
+     were made,  not  misleading  with  respect  to the  period  covered by this
+     report;
+
+3.   Based on my  knowledge,  the  financial  statements,  and  other  financial
+     information  included  in  this  report,  fairly  present  in all  material
+     respects the financial  condition,  results of operations and cash flows of
+     the small  business  issuer as of, and for,  the periods  presented in this
+     report;
+
+4.   The  small  business  issuer's  other  certifying   officer(s)  and  I  are
+     responsible  for  establishing  and  maintaining  disclosure  controls  and
+     procedures  (as defined in Exchange Act Rules  13a-15(e) and 15d-15(e)) and
+     internal control over financial reporting (as defined in Exchange Act Rules
+     13a-15(f) and 15d-15(f))for the small business issuer and have:
+
+         a) Designed such  disclosure  controls and  procedures,  or caused such
+            disclosure   controls  and  procedures  to  be  designed  under  our
+            supervision,  to ensure that  material  information  relating to the
+            small business issuer, including its consolidated  subsidiaries,  is
+            made  known to us by  others  within  those  entities,  particularly
+            during the period in which this report is being prepared;
+
+         b) Designed such internal control over financial  reporting,  or caused
+            such internal control over financial  reporting to be designed under
+            our  supervision,  to provide  reasonable  assurance  regarding  the
+            reliability of financial  reporting and the preparation of financial
+            statements  for  external  purposes  in  accordance  with  generally
+            accepted accounting principles;
+
+         c) Evaluated  the   effectiveness   of  the  small  business   issuer's
+            disclosure  controls and procedures and presented in this report our
+            conclusions about the  effectiveness of the disclosure  controls and
+            procedures, as of the end of the period covered by this report based
+            on such evaluation; and
+
+         d) Disclosed in this report any change in the small  business  issuer's
+            internal  control over financial  reporting that occurred during the
+            small  business  issuer's  most  recent  fiscal  quarter  (the small
+            business  issuer's  fourth  fiscal  quarter in the case of an annual
+            report) that has  materially  affected,  or is reasonably  likely to
+            materially affect, the small business issuer's internal control over
+            financial reporting; and
+
+5.   The  small  business  issuer's  other  certifying  officer(s)  and  I  have
+     disclosed,  based on our most recent  evaluation  of internal  control over
+     financial reporting,  to the small business issuer's auditors and the audit
+     committee of the small  business  issuer's  board of directors  (or persons
+     performing the equivalent functions):
+
+         a) All significant  deficiencies and material  weaknesses in the design
+            or operation of internal control over financial  reporting which are
+            reasonably  likely to adversely affect the  registrant's  ability to
+            record, process, summarize and report financial information; and
+
+         b) Any fraud,  whether or not  material,  that  involves  management or
+            other  employees  who have a  significant  role in the  registrant's
+            internal control over financial reporting.
+
+Date:  February 19, 2008
+
+                                         /S/ ARNOLD P. KLING
+                                         -------------------
+                                             Arnold P. Kling,
+                                             President
+                                             (Principal Executive Officer)
+</TEXT>
+</DOCUMENT>
+<DOCUMENT>
+<TYPE>EX-31.2
+<SEQUENCE>3
+<FILENAME>c52419_ex31-2.txt
+<TEXT>
+
+                                                                    EXHIBIT 31.2
+
+                                  CERTIFICATION
+
+I Kirk M. Warshaw, certify that:
+
+1.   I have reviewed this annual report on Form 10-KSB of 24Holdings Inc.;
+
+2.   Based on my knowledge, this report does not contain any untrue statement of
+     a material  fact or omit to state a  material  fact  necessary  to make the
+     statements made, in light of the circumstances  under which such statements
+     were made,  not  misleading  with  respect  to the  period  covered by this
+     report;
+
+3.   Based on my  knowledge,  the  financial  statements,  and  other  financial
+     information  included  in  this  report,  fairly  present  in all  material
+     respects the financial  condition,  results of operations and cash flows of
+     the small  business  issuer as of, and for,  the periods  presented in this
+     report;
+
+4.   The  small  business  issuer's  other  certifying   officer(s)  and  I  are
+     responsible  for  establishing  and  maintaining  disclosure  controls  and
+     procedures  (as defined in Exchange Act Rules  13a-15(e) and 15d-15(e)) and
+     internal control over financial reporting (as defined in Exchange Act Rules
+     13a-15(f) and 15d-15(f))for the small business issuer and have:
+
+         a) Designed such  disclosure  controls and  procedures,  or caused such
+            disclosure   controls  and  procedures  to  be  designed  under  our
+            supervision,  to ensure that  material  information  relating to the
+            small business issuer, including its consolidated  subsidiaries,  is
+            made  known to us by  others  within  those  entities,  particularly
+            during the period in which this report is being prepared;
+
+         b) Designed such internal control over financial  reporting,  or caused
+            such internal control over financial  reporting to be designed under
+            our  supervision,  to provide  reasonable  assurance  regarding  the
+            reliability of financial  reporting and the preparation of financial
+            statements  for  external  purposes  in  accordance  with  generally
+            accepted accounting principles;
+
+         c) Evaluated  the   effectiveness   of  the  small  business   issuer's
+            disclosure  controls and procedures and presented in this report our
+            conclusions about the  effectiveness of the disclosure  controls and
+            procedures, as of the end of the period covered by this report based
+            on such evaluation; and
+
+         d) Disclosed in this report any change in the small  business  issuer's
+            internal  control over financial  reporting that occurred during the
+            small  business  issuer's  most  recent  fiscal  quarter  (the small
+            business  issuer's  fourth  fiscal  quarter in the case of an annual
+            report) that has  materially  affected,  or is reasonably  likely to
+            materially affect, the small business issuer's internal control over
+            financial reporting; and
+
+5.   The  small  business  issuer's  other  certifying  officer(s)  and  I  have
+     disclosed,  based on our most recent  evaluation  of internal  control over
+     financial reporting,  to the small business issuer's auditors and the audit
+     committee of the small  business  issuer's  board of directors  (or persons
+     performing the equivalent functions):
+
+         a) All significant  deficiencies and material  weaknesses in the design
+            or operation of internal control over financial  reporting which are
+            reasonably  likely to adversely affect the  registrant's  ability to
+            record, process, summarize and report financial information; and
+
+         b) Any fraud,  whether or not  material,  that  involves  management or
+            other  employees  who have a  significant  role in the  registrant's
+            internal control over financial reporting.
+
+Date:  February 19, 2008
+
+                                             /s/ Kirk M. Warshaw
+                                            -----------------------
+                                            Kirk M. Warshaw
+                                            Chief Financial Officer
+                                            (Principal Financial Officer)
+</TEXT>
+</DOCUMENT>
+<DOCUMENT>
+<TYPE>EX-32.1
+<SEQUENCE>4
+<FILENAME>c52419_ex32-1.txt
+<TEXT>
+
+
+                                                                    EXHIBIT 32.1
+
+                            CERTIFICATION PURSUANT TO
+                             18 U.S.C. SECTION 1350,
+                             AS ADOPTED PURSUANT TO
+                  SECTION 906 OF THE SARBANES-OXLEY ACT OF 2002
+
+      In connection with the annual report of 24Holdings Inc. (the "Company") on
+Form 10-KSB for the period ending December 31, 2007 as filed with the Securities
+and Exchange  Commission on the date hereof (the "Report"),  I, Arnold P. Kling,
+President of the Company,  certify,  pursuant to 18 U.S.C.  ss. 1350, as adopted
+pursuant to ss. 906 of the Sarbanes-Oxley Act of 2002, that:
+
+      (1) The Report fully  complies with the  requirements  of section 13(a) or
+15(d) of the Securities Exchange Act of 1934, as amended; and
+
+      (2) The  information  contained  in the  Report  fairly  presents,  in all
+material  respects,  the  financial  condition  and result of  operations of the
+Company.
+
+Dated: February 19, 2008
+
+
+
+/s/ Arnold P. Kling
+- -------------------
+Arnold P. Kling
+President
+(Principal Executive Officer)
+
+A signed  original of this  certification  has been  provided to the Company and
+will be retained by the Company and  furnished  to the  Securities  and Exchange
+Commission or its staff upon request.
+
+
+</TEXT>
+</DOCUMENT>
+<DOCUMENT>
+<TYPE>EX-32.2
+<SEQUENCE>5
+<FILENAME>c52419_ex32-2.txt
+<TEXT>
+
+
+                                                                    EXHIBIT 32.2
+
+                            CERTIFICATION PURSUANT TO
+                             18 U.S.C. SECTION 1350,
+                             AS ADOPTED PURSUANT TO
+                  SECTION 906 OF THE SARBANES-OXLEY ACT OF 2002
+
+      In connection  with the annual report of 24Holdings Inc. ( (the "Company")
+on Form  10-KSB  for the  period  ending  December  31,  2007 as filed  with the
+Securities and Exchange Commission on the date hereof (the "Report"), I, Kirk M.
+Warshaw, Chief Financial Officer of the Company,  certify, pursuant to 18 U.S.C.
+ss.  1350,  as adopted  pursuant to ss. 906 of the  Sarbanes-Oxley  Act of 2002,
+that:
+
+      (1) The Report fully  complies with the  requirements  of section 13(a) or
+15(d) of the Securities Exchange Act of 1934, as amended; and
+
+      (2) The  information  contained  in the  Report  fairly  presents,  in all
+material  respects,  the  financial  condition  and result of  operations of the
+Company.
+
+Dated: February 19, 2008
+
+/s/ Kirk M. Warshaw
+- ----------------------
+Kirk M. Warshaw
+Chief Financial Officer
+(Principal Financial Officer)
+
+A signed  original of this  certification  has been  provided to the Company and
+will be retained by the Company and  furnished  to the  Securities  and Exchange
+Commission or its staff upon request.
+
+
+
+
+
+
+</TEXT>
+</DOCUMENT>
+</SEC-DOCUMENT>
+-----END PRIVACY-ENHANCED MESSAGE-----

@@ -1,0 +1,36 @@
+{
+  "id": "ksb-unsupported",
+  "task": "sec10k",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "path": "evals/fixtures/ksb-2007/filing.txt"
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "doc_status",
+        "value": "unsupported"
+      },
+      {
+        "type": "warning_present",
+        "code": "unsupported_form"
+      },
+      {
+        "type": "warning_absent",
+        "code": "normalization_collapse"
+      },
+      {
+        "type": "warning_present",
+        "code": "whole_submission_fallback"
+      },
+      {
+        "type": "only_items",
+        "items": []
+      }
+    ]
+  },
+  "provenance": "T9 tranche 3 (SRC / shell stratum), authored 2026-08-17 from the document before any code moved. 24Holdings Inc annual report on Form 10-KSB, EDGAR accession 0000930413-08-001093, filed 2008-02-20 for the period ended 2007-12-31, CIK 1025315, 117,768 bytes, plain-text full submission. Verified independently of src/: the SGML header reads 'CONFORMED SUBMISSION TYPE: 10KSB', the five <TYPE> blocks are 10KSB + four certification exhibits, and the cover page reads 'FORM 10-KSB' three times. WHY THIS FORM AND NOT ANOTHER: 10-KSB was the annual report for small business issuers until it was phased out for fiscal years ending after 2008-12-15, so it is the single most likely wrong-form upload from anyone assembling small-cap annual reports for 1996-2008 — the same stratum as the three shell/SRC goldens authored beside it — and 1,457 of them were filed in 2008 Q1 alone (EDGAR form index). It is also the SHARPER refusal test: `10q-unsupported` is a far miss, while '10-KSB' is a prefix match for '10-K' that any form check written with `startswith` would wave through. EXPECTED RED AT AUTHORING TIME (watched before any fix, hard rule 2): the pipeline returned `doc_status: failed` with 'normalization_collapse: 117768 raw chars normalized to 0'. Document selection is form-gated — `select_and_normalize` returns empty text the moment no <DOCUMENT> block carries an ACCEPTED_FORMS type — and empty text trips the collapse branch, which the contract fixes AHEAD of form identity. So a perfectly readable file that is simply not a 10-K was reported with the one diagnosis ADR-010 ruling 4 exists to keep it away from: `failed` sends a user to re-download a file that downloaded fine, `unsupported` sends them to check what they uploaded. The three checks are written so a fix cannot half-land: the status must be `unsupported`, the refusal warning must fire, and the collapse warning must NOT — the last is what distinguishes a real fix from one that merely relabels the status while still believing the parse collapsed. || CODE-REVIEW FOLLOW-UP, 2026-08-17: `warning_present(whole_submission_fallback)` added. The review found that the fix above traded one silent report for another — on this path the span universe becomes every <DOCUMENT> block concatenated, exhibits included, and `document_selected: \"whole file (no 10-K block to select)\"` says so only in `meta`, which is not where a consumer looks for problems. The dangerous shape is not this fixture but its sibling: a submission whose SGML header omits <TYPE> entirely gives `blocks[0]['type'] == ''`, `form_type` then falls through to the cover page, the submission is ACCEPTED as a 10-K, and an EX-13 carrying its own 'Item 1.' headings sits inside the text being segmented — `doc_status: success`, zero warnings, the last item's span swallowing the whole exhibit. Verified against the review's reproduction before the warning was added. The warning is deliberately NOT in AMBIGUOUS_CODES: the parse is real and usually right, it is the SCOPE that needs declaring. This fixture is the only one in the set that reaches the path, so it carries the assertion; the untyped-submission variant is asserted in normalize._demo, where a synthetic two-block submission can be built exactly."
+}
