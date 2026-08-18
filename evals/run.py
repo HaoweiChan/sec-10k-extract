@@ -64,9 +64,11 @@ def git_sha():
             ["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True,
             text=True, timeout=5, check=True,
         ).stdout.strip()
-        # a report's sha must not claim code the run wasn't actually on
+        # a report's sha must not claim code the run wasn't actually on. -uno:
+        # every run writes an untracked report into evals/report/, so without
+        # it the second run in a session always stamps -dirty on identical code
         dirty = subprocess.run(
-            ["git", "status", "--porcelain"], cwd=ROOT, capture_output=True,
+            ["git", "status", "--porcelain", "-uno"], cwd=ROOT, capture_output=True,
             text=True, timeout=5, check=True,
         ).stdout.strip()
         return sha + "-dirty" if dirty else sha

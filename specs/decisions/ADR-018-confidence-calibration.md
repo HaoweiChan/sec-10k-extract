@@ -130,6 +130,13 @@ disclosure, the debt-gate claim).
    against the full fixture set. The finding also stands as a caution: "could"
    makes the 1A fingerprint weak on any English prose; tightening the wordlist
    is a threshold change that would need its own measured basis.
+   *Refined on PR review*: the one-line strip assumed the title lives on line
+   1, but ADR-013's bare-heading shape promotes it to its own next line
+   ("Item 1A." / blank / "RISK FACTORS"), where it would survive the strip and
+   satisfy its own fingerprint — latent, no fixture false-passes. The cut now
+   prefers `accepted[code]["heading_end"]`, which `find_candidates` already
+   advances past a promoted title; proved red→green at the layer the same way,
+   zero-delta re-verified over all 45 fixtures.
 2. **A crashed case counted its declared checks as passing** in metrics 1–6
    (cold review): the runner's exception path emits no `failures` list, and the
    join read absence as green. Fixed conservatively — an errored row's declared
@@ -154,6 +161,10 @@ disclosure, the debt-gate claim).
    `git_sha()` now appends `-dirty` when the working tree is not clean, so a
    report can no longer claim a commit it wasn't run on. The net-zero evidence
    chain for this ADR rests on the algebraic proof above, not on report pairs.
+   *Refined on PR review*: the check ignores untracked files (`-uno`) — every
+   run writes an untracked report into `evals/report/`, so the original form
+   stamped `-dirty` on the second and every later run of a session on
+   identical code, which is this repo's normal case, not its edge case.
 7. **Ruled, no action**: `CEIL = 0.95` cannot currently bind (max base equals
    it) — kept deliberately as the "never 1.0" guard should a base ever rise;
    metric 2 ≡ metric 1 is declared in its own note and splitting the check

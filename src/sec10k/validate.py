@@ -155,11 +155,22 @@ def validate(text, items, accepted, manifest):
     for code, words in FINGERPRINTS.items():
         span = body.get(code, "")
         if len(span) < SUBSTANTIVE_MIN:
-            continue  # a pointer paragraph has no vocabulary to judge
+            continue  # a pointer paragraph has no vocabulary to judge (measured basis: full span)
         # cold review: the heading line itself ("Item 1A. Risk Factors") always
         # satisfies its own fingerprint, and plain substring matching let "net"
-        # match "internet"/"network" — strip the heading, match whole words only
-        low = span.split("\n", 1)[-1].lower()
+        # match "internet"/"network" — strip the heading, match whole words only.
+        # A one-line strip assumes the title lives on line 1; ADR-013's bare-
+        # heading shape promotes it to its OWN next line ("Item 1A.\n\nRISK
+        # FACTORS\n\n<body>"), which survives that strip and satisfies 1A's own
+        # fingerprint. accepted[code]["heading_end"] is find_candidates' own cut
+        # (already advanced past a promoted title) — prefer it when it actually
+        # falls inside this span, else fall back to the line-1 strip.
+        s, e = spans[code]
+        heading_end = (accepted.get(code) or {}).get("heading_end")
+        if heading_end is not None and s < heading_end < e:
+            low = text[heading_end:e].lower()
+        else:
+            low = span.split("\n", 1)[-1].lower()
         if not any(re.search(r"\b" + re.escape(w) + r"\b", low) for w in words):
             warn("keyword_fingerprint",
                  f"item {code} contains none of {words} — span may not be its item",
@@ -265,6 +276,27 @@ def _demo():
                 {"item": "15", "part": "IV", "status": "extracted", "start": fp_cut,
                  "end": len(fp_text), "evidence": {}}]
     codes = [x["code"] for x in validate(fp_text, fp_items, {"1A": {}, "15": {}}, [])
+             if x.get("item") == "1A"]
+    assert "keyword_fingerprint" in codes, codes
+
+    # ADR-013 bare-heading shape: title promoted to its OWN line ("Item 1A.\n\n
+    # RISK FACTORS\n\n<body>"). A one-line strip only removes "Item 1A." and
+    # leaves "RISK FACTORS" in the judged text, which satisfies 1A's own
+    # fingerprint on the heading alone — the same bug as above, different
+    # shape. heading_end (find_candidates already advances it past a promoted
+    # title, ADR-013) is the correct cut; it must come from accepted[code], not
+    # a fixed strip.
+    title_line = "RISK FACTORS"
+    fp2_text = ("Item 1A.\n\n" + title_line + "\n\n" + clean_body +
+                "\nItem 15. Exhibits\n" + "z" * 40)
+    fp2_cut = fp2_text.index("Item 15.")
+    fp2_heading_end = fp2_text.index(title_line) + len(title_line)  # computed, not hand-typed
+    fp2_items = [{"item": "1A", "part": "I", "status": "extracted", "start": 0, "end": fp2_cut,
+                  "evidence": {}},
+                 {"item": "15", "part": "IV", "status": "extracted", "start": fp2_cut,
+                  "end": len(fp2_text), "evidence": {}}]
+    fp2_accepted = {"1A": {"heading_end": fp2_heading_end}, "15": {}}
+    codes = [x["code"] for x in validate(fp2_text, fp2_items, fp2_accepted, [])
              if x.get("item") == "1A"]
     assert "keyword_fingerprint" in codes, codes
 
