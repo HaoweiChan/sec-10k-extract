@@ -267,6 +267,25 @@ to stop this exact threshold from being loosened.
   validator is a capability and the T8 freeze forbids one. It is the strongest
   candidate for the first post-freeze exception and is recorded as such in
   `tasks/TODO.md`.
+
+  **Correction (T11, 2026-08-19, ADR-019 §d) — both halves of the paragraph
+  above are wrong, and the row built on them is retired.** Coverage is
+  already measured, exactly: `coverage ≡ 1 − unattributed_content`'s own
+  "outside" fraction, identity holds to float equality on 33 of 33 span-
+  bearing fixtures, verified by direct computation. The largest inter-span
+  gap is structurally always 0.0 on every fixture with no exception —
+  `assign_boundaries` sets each accepted span's end to the next accepted
+  span's start, so two accepted spans can never have daylight between them;
+  a gap validator built on this architecture could never fire on real
+  pipeline output. And "invisible to eight validators" overstates §0 itself:
+  `unattributed_content` fired on Intel (0.47% coverage,
+  `success_with_warning`) — detected and non-escalating, a severity gap not
+  a detection gap. Target's failure was a different shape again (item 4 at
+  81%, not the last span; `last_item_dominates` only inspects the last one).
+  The planned capability would have caught neither filing cited above. See
+  ADR-019 §d for the full evidence and the correctly-specified successor —
+  a non-last span dominating the document, plus the escalation-policy
+  question — that replaces this row in `tasks/TODO.md`.
 - **Cross-item footnote conventions.** Boeing marks five items IBR with a bare
   asterisk resolved once, inside item 14's body; items 11 and 13 therefore
   report `extracted` at confidence 0.95 over empty spans. Carried as the

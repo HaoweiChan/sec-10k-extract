@@ -378,6 +378,22 @@ def filter_candidates(cands):
 TAIL_RE = re.compile(r"(?im)^[ \t]*(SIGNATURES?|Pursuant to the requirements "
                      r"of Section 13)\b")
 
+# trap 9: Item 401(b) of Reg S-K requires "Executive Officers of the
+# Registrant" as a named disclosure but assigns it no item code, so filers
+# place it as an unnumbered section wherever they like in Part I/II -- end of
+# Item 1, end of Item 4, even mid-Item-2 (IBM 1997). Recurs across 7 fixtures,
+# 1997-2016 (T11 recurrence scan). When it lands inside a NON-item-10 span it
+# is orphaned content, not that item's answer, so it terminates the item
+# exactly as TAIL_RE terminates the last item at Signatures. Item 10 itself
+# ("Directors, Executive Officers and Corporate Governance") legitimately
+# carries this heading as its own subsection and must NOT be clipped there.
+# `(?!\.)` excludes a wrapped-prose false match: GE 1994 item 1 reads "...for
+# information about\nExecutive Officers of the Registrant.\n\nOther" -- a
+# sentence that happens to start a wrapped line, not a heading; real headings
+# never carry a trailing period.
+EXEC_OFFICERS_RE = re.compile(
+    r"(?im)^[ \t]*executive officers of (the )?(registrant|company)\b(?!\.)")
+
 
 def assign_boundaries(survivors, expected, text):
     """Greedy ordered assignment: earliest surviving candidate after the last
@@ -393,6 +409,10 @@ def assign_boundaries(survivors, expected, text):
     picks = sorted(accepted.values(), key=lambda c: c["start"])
     for i, c in enumerate(picks):
         c["end"] = picks[i + 1]["start"] if i + 1 < len(picks) else len(text)
+        if c["item"] != "10":
+            eo = EXEC_OFFICERS_RE.search(text, c["heading_end"], c["end"])
+            if eo:
+                c["end"] = eo.start()
     if picks:  # last item stops at the signature block, not at end-of-file
         tail = TAIL_RE.search(text, picks[-1]["heading_end"])
         if tail:

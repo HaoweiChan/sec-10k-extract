@@ -120,3 +120,10 @@ rate < 5%) are **provisional** — reset after the first full baseline run, with
 the change recorded in the analysis report. `metrics.py` output is pasted
 verbatim into `docs/analysis-report.md` at each milestone; the report JSONs in
 `evals/report/` remain the committed raw record.
+
+**Silent-failure target, status (T11, ADR-019):** measured by sampling, not by
+metric 6 (which reads 0.0 by construction — the gate forces every declared
+check green, see `evals/metrics.py`'s metric-6 note). Sampled rate 1/30 =
+3.3%, 95% CI [0.1%, 17.2%]. The point estimate meets the < 5% target; the CI
+upper bound does not — **the target is not demonstrated, only not
+contradicted**. n=30 is small; the honest statement is the interval.

@@ -226,7 +226,12 @@ def compute(report, cases):
                      f"items in the run: {unaudited} are targeted by NO check (unaudited, not "
                      f"verified) and {excluded_nonsuccess} more sit in non-success docs and are "
                      f"outside the metric's definition — including items this report names as "
-                     f"wrongly bounded"},
+                     f"wrongly bounded. This value is BOUNDED BY THE GATE, not a measurement: "
+                     f"the pre-commit gate forces every declared check green, so untargeted "
+                     f"items are the only place a real failure could show up here, and it never "
+                     f"will while the gate holds. The actual silent-failure rate is measured by "
+                     f"sampling the untargeted population outside this metric entirely — see "
+                     f"ADR-019 (T11): 1/30 adjudicated = 3.3%, 95% CI [0.1%, 17.2%]"},
             {"n": 7, "name": "doc-level success rate (golden)",
              "value": _rate(ok(golden), len(golden)), "sample": len(golden),
              "note": f"golden filings only. Pooled over the whole suite it reads "
