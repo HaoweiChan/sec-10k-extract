@@ -217,8 +217,21 @@ disagreement in ADR-019 §e, not resolved by fiat.
 | instrument | what it found | coverage |
 |---|---|---|
 | extraction-auditor sample (blind, n=30) | 1 confirmed WRONG (`textron-2001` item 4, Executive-Officers bleed — fixed); 1 standing disagreement (`cvx-2015` item 6) | 30 of 447 unaudited confident items, 6.7% |
-| stdlib screen (`evals/oracle.py`, 4 signals) | 107/521 flagged; net **zero** new confirmed defects, 1 known defect re-confirmed (`ba-2003`) | all 36 fixtures, every confident item |
+| stdlib screen (`evals/oracle.py`, 4 signals) | 107/521 flagged (pre-fix); net **zero** new confirmed defects, 1 known defect re-confirmed (`ba-2003`) | all 36 fixtures, every confident item |
 | OSS cross-check (`evals/oracle_oss.py`, edgartools 5.50.0, dev-only) | 25/574 disagreements (4.4%); 2 are the `jpm-2024` items 7/8 internal-pointer finding this ADR adopts as debt, rest traced to edgartools' own defects or expected-by-design | 28 of 30 HTML/iXBRL fixtures; **zero plain-text coverage** (6 fixtures) |
+
+**Correction (2026-08-19, post-commit review):** the stdlib-screen row's
+107/521 was measured before this same milestone's `EXEC_OFFICERS_RE` fix
+landed. At head, post-fix, the committed `evals/report/20260819-014559-
+oracle.json` and a fresh run both read **224/521 = 0.4299** (the artifact's
+own `screened_rate` field). Every one of the 117 new flags traces to the
+fix itself — the now self-induced `large_interior_gap` check firing on its
+own deliberate clip (7 fixtures, by design not defect), plus a small
+`short_span` ripple from the shortened spans (3 items, all legitimate
+"Reserved"-shaped Item 4 bodies). Net **zero** new confirmed defects still
+holds. Full method, and the reconciliation between this confident-population
+count and the CLI's own differently-scoped per-check tallies: ADR-019 §b
+correction.
 
 The screen with the widest coverage found nothing new; the judge with the
 narrowest scope found the one real defect and the one open disagreement. Read

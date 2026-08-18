@@ -27,11 +27,24 @@ Four checks, each deliberately NOT the pipeline's own method:
    BOTH accepted are always contiguous — `end[i] == start[i+1]` by
    construction (each pick's end is set to the next pick's start) — so an
    interior hole can never appear as literal uncovered space between two
-   resolved spans. Verified empirically across all 34 committed fixtures:
-   coverage here equals `1 - unattributed_content`'s own "outside" fraction
-   to the fourth decimal place, EVERY time. That makes checks 1 and 2
+   resolved spans. Verified empirically across all 34 committed fixtures at
+   the time: coverage equalled `1 - unattributed_content`'s own "outside"
+   fraction to the fourth decimal place, EVERY time.
+   CORRECTED 2026-08-19 (post-commit review; cause: this PR's own
+   `EXEC_OFFICERS_RE` fix in src/sec10k/segment.py, which lands AFTER the
+   verification above ran): no longer true on 7 of 36 fixtures. The EO clip
+   is the one case where `assign_boundaries` sets a non-last span's `end`
+   below the next span's `start`, so two accepted spans are no longer
+   contiguous there. On those 7 (ibm-1997, textron-2001, wmt-2010,
+   wfc-2008, msft-2013, jnj-2016, nike-2006), coverage now reads up to 9.7
+   points BELOW `1 - unattributed_content` -- the interior gap the clip
+   leaves sits inside the outer hull `unattributed_content` measures, but
+   isn't itself covered by any span. The identity still holds exactly on
+   the other 29. See ADR-019 section d's 2026-08-19 correction for the full
+   table. That makes checks 1 and 2
    algebraically redundant with an existing validator FOR THIS PIPELINE'S
-   CURRENT ARCHITECTURE — not because span coverage is a bad idea (ADR-015 §5
+   CURRENT ARCHITECTURE except on those 7 fixtures — not because span
+   coverage is a bad idea (ADR-015 §5
    still calls it "the obvious missing member of the battery"), but because
    a hole here does not show up as absence, it shows up as a NEIGHBOURING
    SPAN THAT SILENTLY GREW to cover text that belongs to a different, unfound
@@ -46,12 +59,21 @@ Four checks, each deliberately NOT the pipeline's own method:
 
 2. **Largest interior gap** — the widest run of chars between two
    consecutively ACCEPTED spans, as a fraction of the document. Per the
-   finding above, this reads exactly 0.0 for every one of the 34 fixtures —
-   a genuine, verified result, not a bug in this instrument. `--self-check`
-   proves the metric itself can detect a gap when one exists (synthetic
-   spans, bypassing `assign_boundaries` entirely), the same "proved at the
-   layer, not by a fixture" treatment `validate.py` gives `boundary_hygiene`
-   (ADR-016).
+   finding above, this read exactly 0.0 for every one of the 34 fixtures
+   verified at the time — a genuine, verified result, not a bug in this
+   instrument.
+   CORRECTED 2026-08-19 (same cause and date as the note on check 1 above):
+   no longer 0.0 on 7 of 36 fixtures — it is nonzero exactly where the EO
+   clip fires, 0.0019 to 0.0971 of the document. This is still not a bug in
+   this instrument: the EO clip is a deliberate exclusion (ADR-019 §f), so
+   the gap check now correctly reports the one intentional gap source this
+   pipeline has, rather than finding nothing. `--self-check` originally
+   proved the metric could detect a gap only via a synthetic, hand-built
+   input bypassing `assign_boundaries`; real fixtures now exhibit one too,
+   which does not retire that synthetic proof (it is still the only way to
+   prove the metric fires independent of which real fixtures happen to
+   carry a gap this run), the same "proved at the layer, not by a fixture"
+   treatment `validate.py` gives `boundary_hygiene` (ADR-016).
 
 3. **Implausibly short span for a canonical item** — the `ba-2003` shape:
    a span-carrying item under `SHORT_SPAN_FLOOR` chars in a

@@ -72,6 +72,42 @@ disagree with the pipeline on a fifth of confident items on this specific,
 adversarially curated corpus, and 58 of 60 short-span flags and all 48 of the
 coverage flags were traced by hand to a legitimate, already-disclosed cause.
 
+**Correction (2026-08-19, post-commit review) — 107/521 was measured
+PRE-fix.** At head, `evals/report/20260819-014559-oracle.json` (committed)
+and a fresh run both read **224/521 = 0.4299** confident items flagged —
+this matches the artifact's own `screened_rate` field. Excluding the
+self-induced `large_interior_gap` check (§d's correction: it now fires on
+the 7 EO-clip fixtures by design, not defect) leaves **110** distinct
+confident items still flagged by some other check — up from the pre-fix 107
+(re-derived directly, not estimated: simulating the pre-fix state by making
+`EXEC_OFFICERS_RE` never match reproduces 107/521 exactly). The +3 is all in
+`short_span` (58 pre-fix → 61 post-fix); `low_span_coverage` (48) and
+`heading_divergence` (8) are unchanged — the EO clip shortened a handful of
+spans on the 7 fixtures enough to cross `SHORT_SPAN_FLOOR` where they didn't
+before, the same self-induced mechanism as the gap check, just on a
+different signal. The complementary count is **114**: the number of
+confident items whose *only* firing check is `large_interior_gap`
+(224 − 110 = 114, and 114 + the 3 new `short_span` flags = 117, the full
+gap between 224 and 107) — this is the figure obtained by counting straight
+off the gap check's own hits rather than by subtracting non-gap hits from
+the total, and it is what "the excluding-gap figure" means under a
+CLI-style count rather than the `screened_rate`-style one. Both numbers are
+correct; they answer "how many items survive if the gap check is removed"
+(110) versus "how many items exist only because of the gap check" (114).
+Per-check counts over the confident population: `large_interior_gap` 127,
+`short_span` 61, `low_span_coverage` 48, `heading_divergence` 8. The CLI's
+own printed per-check tallies read 131 / 63 / 48 / 11 — that is not a third
+disagreement, it is a different denominator again: the CLI sums hits over
+**all** items (`render()`'s `by_check` loop), while `screened_rate` and the
+counts above filter to the confident population only. All three views are
+legitimate reads of the same run; they are not comparable without saying
+which is which, which prior text here did not do. **The conclusion is
+unchanged**: every one of the 117 newly-flagged items (224 − 107) traces to
+the self-induced `large_interior_gap` check firing on the EO clip's own
+deliberate exclusion (§d), or to the same clip's boundary shift newly
+crossing the `short_span` floor — net zero new confirmed silent failures,
+same as the pre-fix reading.
+
 **OSS cross-check (`evals/oracle_oss.py`, `edgartools==5.50.0`):** 25/574
 item-level disagreements (4.4%) over 28 of 30 HTML/iXBRL fixtures (2 excluded
 as doc-level refusals, not comparable). Of the 25: two are the `jpm-2024`
@@ -169,6 +205,53 @@ question** (should any single-item dominance, first or last, escalate
 `doc_status` the way `last_item_dominates` already does for the last item) —
 named here as the real candidate, not built (T8 freeze). ADR-015 §5 is amended
 with a dated correction note pointing here; its history is not rewritten.
+
+**Correction (2026-08-19, post-commit review) — points 1 and 2 above were
+verified against the PRE-fix codebase and are false post-fix, because this
+same milestone's own `EXEC_OFFICERS_RE` fix (§f) is the one exception to
+"contiguous by construction".** `assign_boundaries` clips a non-last span's
+`end` to the EO heading's start (`src/sec10k/segment.py:assign_boundaries`),
+which is exactly a case where a non-last span's `end` sits below the next
+accepted span's `start` — the premise both points 1 and 2 depend on. Re-
+verified at head, over all 36 fixtures:
+
+| fixture | coverage | 1 − unattributed | max gap frac |
+|---|---|---|---|
+| ibm-1997 | 0.4692 | 0.5663 | 0.0971 |
+| textron-2001 | 0.6686 | 0.7186 | 0.0500 |
+| nike-2006 | 0.9414 | 0.9751 | 0.0336 |
+| wmt-2010 | 0.8421 | 0.8757 | 0.0336 |
+| msft-2013 | 0.9548 | 0.9751 | 0.0203 |
+| jnj-2016 | 0.9174 | 0.9375 | 0.0201 |
+| wfc-2008 | 0.6668 | 0.6687 | 0.0019 |
+
+Exactly the 7 fixtures the EO clip touches, and no others. So: the coverage
+identity now holds on 29 of 36 fixtures, not 33 of 33 (all 36 fixtures were
+checked, not only the 33 span-bearing ones the original count scoped to);
+the largest-interior-gap is no longer structurally 0.0 on every fixture —
+it is nonzero on exactly these 7, ranging 0.0019 to 0.0971.
+
+**The retirement still stands, but for a different, weaker reason, and that
+is the reason to record, not the original one.** Post-fix, the *only* source
+of an inter-span gap anywhere in the corpus is the EO clip itself, and every
+one of the 7 gaps is a *deliberate* exclusion of orphaned Executive-Officer
+content (§f) — not a defect. A gap validator built today would fire 7/7 on
+our own intentional behaviour: it would detect the clip, not catch anything
+wrong. Coverage now diverges from `unattributed_content` by up to 9.7
+percentage points on these 7, and that divergence, too, *is* the deliberate
+exclusion, not evidence against the retirement.
+
+**The honest consequence, stated plainly because nobody had written it down:
+the EO clip creates interior unattributed content that no item covers and no
+validator reports.** That is correct behaviour — officer bios are not any
+item's answer — but it is a new surface this milestone's own fix opened, and
+it means a coverage/gap check would regain real value the moment a *second*,
+non-deliberate gap source appears in this pipeline (something other than a
+recognized, intentional clip leaving daylight between two accepted spans).
+That is the condition under which this retirement should be revisited — not
+"never", and not "only if `assign_boundaries` changes again", but specifically
+the appearance of an unintentional gap the EO clip's own accounting cannot
+explain.
 
 ## e) Ruling — the internal-pointer class (NOT fixed)
 
@@ -280,6 +363,33 @@ last sentence, "Our practice is to ship our products promptly upon receipt of
 purchase orders from customers; consequently, backlog is not significant.",
 grep/occurrence-verified against `normalized_text` at count 1.
 
+**Open debt (2026-08-19, post-commit review) — `EXEC_OFFICERS_RE` has no TOC
+awareness.** Every other candidate path in `segment.py` routes through
+`_toc_runs` before trusting a heading-shaped match; `EXEC_OFFICERS_RE` is a
+raw `text.search()` with no such filter. It already matches TOC *entries*
+for the heading it is meant to clip on, confirmed directly against
+`normalized_text`:
+
+- `jnj-2016`: `"…Registrant\n\n10\n\nPART II\n\n5\n\nMarket"`
+- `msft-2013`: `"…Registrant\n12\n\nItem 1A."`
+- `nike-2006`: `"…Registrant\n8\n\nItem 1A."`
+
+None of this breaks anything today — every TOC hit above falls outside the
+window `assign_boundaries` searches (`c["heading_end"]` to `c["end"]` of the
+*preceding* item's own accepted span), so the match is found and then simply
+unused. But a filing whose table of contents sits *after* the first accepted
+heading — rather than before it, as in every fixture on file — would have
+its TOC hit land inside that search window and clip the item down to almost
+nothing, silently. Same class of gap as the `(?!\.)` guard: that lookahead
+excludes `ge-1994`'s wrapped-prose false match (a sentence ending in a
+period), but not the same shape ending in a comma or continuing without
+punctuation. **Not fixed here.** TOC routing is a real change to a frozen
+pipeline (T8), and no fixture in this corpus can demonstrate the bug firing
+— shipping an untestable code path is the ADR-010 sin. Recorded as debt in
+`tasks/TODO.md`; the condition that would make it bite is a TOC placed after
+the first accepted item heading, which no committed or held-out fixture
+does.
+
 ## g) What T11 did not measure
 
 30 of 447 is 6.7% of the unaudited population — most of it remains unlooked
@@ -288,7 +398,8 @@ the era this repo's own README already calls hardest, has no OSS cross-check
 at all; its silent-failure evidence is auditor sampling alone, with nothing
 independent to corroborate a CORRECT verdict the way the HTML stratum's 97.8%
 agreement rate does. The screen with the widest coverage (the stdlib oracle,
-107/521 flagged) found zero new confirmed defects; the judge with the
+107/521 flagged pre-fix, **224/521 post-fix — see the §b correction, 2026-08-19**)
+found zero new confirmed defects; the judge with the
 narrowest scope (30 hand-adjudicated items) found the one real defect this
 milestone fixed and surfaced the one standing disagreement it didn't resolve.
 That is an argument about where audit effort belongs — depth over breadth, on

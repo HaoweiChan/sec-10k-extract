@@ -416,7 +416,10 @@ def assign_boundaries(survivors, expected, text):
     if picks:  # last item stops at the signature block, not at end-of-file
         tail = TAIL_RE.search(text, picks[-1]["heading_end"])
         if tail:
-            picks[-1]["end"] = tail.start()
+            # min(), not =: the EO clip above may have already pulled this
+            # item's end below tail.start() (trap 9 on the last item) — an
+            # unconditional overwrite would revert that clip.
+            picks[-1]["end"] = min(picks[-1]["end"], tail.start())
     return accepted
 
 
@@ -598,6 +601,22 @@ def _demo():
                              exp3, echo + body + echo)
     assert all(got3[c]["end"] - got3[c]["start"] > 2000 for c in exp3), \
         {c: got3[c]["end"] - got3[c]["start"] > 2000 for c in exp3}
+
+    # trap 9's clip on the LAST accepted item: TAIL_RE used to overwrite
+    # picks[-1]["end"] unconditionally, reverting the EO clip whenever the
+    # last item is not item 10 and carries an EO heading before SIGNATURES.
+    # No fixture reaches this (confirmed by the T11 reviewer), so it is
+    # proved here, same "at the layer" treatment ADR-016 gives
+    # boundary_hygiene. Fix: picks[-1]["end"] = min(picks[-1]["end"], tail.start()).
+    eo_text = ("Item 1. Business\nWe make things. " + "x" * 3000 + "\n"
+              "Item 2. Properties\nWe own buildings. " + "y" * 3000 + "\n"
+              "Executive Officers of the Registrant\n" + "z" * 500 + "\n"
+              "SIGNATURES\n" + "Signed, sealed, delivered. " * 20)
+    exp5 = ["1", "2"]
+    got5 = assign_boundaries(filter_candidates(find_candidates(eo_text, exp5))[0],
+                             exp5, eo_text)
+    assert "Executive Officers" not in eo_text[got5["2"]["start"]:got5["2"]["end"]], \
+        eo_text[got5["2"]["start"]:got5["2"]["end"]][-80:]
 
     # ...and the MIRROR shape, in BOTH its layouts. A dormant shell answers
     # "None." to most items, so its bodies sit closer than TOC_GAP_MAX and the

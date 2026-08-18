@@ -286,6 +286,22 @@ to stop this exact threshold from being loosened.
   ADR-019 §d for the full evidence and the correctly-specified successor —
   a non-last span dominating the document, plus the escalation-policy
   question — that replaces this row in `tasks/TODO.md`.
+
+  **Second correction (2026-08-19, post-commit review, ADR-019 §d) — the
+  "33 of 33" and "structurally 0.0 ... with no exception" claims in the
+  correction directly above were themselves verified pre-fix and are false
+  post-fix.** This same T11 milestone's own `EXEC_OFFICERS_RE` fix (ADR-019
+  §f) is the one exception: it clips a non-last span's `end` below the next
+  accepted span's `start` on exactly 7 fixtures (`ibm-1997`, `textron-2001`,
+  `wmt-2010`, `wfc-2008`, `msft-2013`, `jnj-2016`, `nike-2006`), so the
+  coverage identity now holds on 29 of 36, not 33 of 33, and the largest
+  interior gap is nonzero on those same 7 (0.0019–0.0971 of the document).
+  The retirement of the debt row still stands — every one of those 7 gaps
+  is the EO clip's own deliberate exclusion of orphaned officer-bio content,
+  not a defect, so a gap validator today would fire 7/7 on intentional
+  behaviour rather than catching anything. Full table and the condition
+  that would make the retirement worth revisiting (a second, non-deliberate
+  gap source appearing): ADR-019 §d's 2026-08-19 correction.
 - **Cross-item footnote conventions.** Boeing marks five items IBR with a bare
   asterisk resolved once, inside item 14's body; items 11 and 13 therefore
   report `extracted` at confidence 0.95 over empty spans. Carried as the
