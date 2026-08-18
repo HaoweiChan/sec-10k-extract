@@ -50,6 +50,21 @@ def _rate(hit, total):
     return None if not total else round(hit / total, 4)
 
 
+def _unmatched_failures(rows, cases):
+    """Failures whose check JSON matches nothing the case currently declares —
+    the report predates a rewrite of that case's checks. Error-path rows (Fix
+    2) have no failures list, so they never contribute here."""
+    n = 0
+    for r in rows:
+        case = cases.get(r["id"], {})
+        declared_keys = {json.dumps(c, sort_keys=True)
+                          for c in case.get("expect", {}).get("checks", [])}
+        for f in r.get("failures", []):
+            if json.dumps(f["check"], sort_keys=True) not in declared_keys:
+                n += 1
+    return n
+
+
 def compute(report, cases):
     results = report["results"]
     checks_total, checks_failed = Counter(), Counter()
@@ -60,6 +75,10 @@ def compute(report, cases):
         case = cases.get(r["id"], {})
         declared = case.get("expect", {}).get("checks", [])
         failed_keys = [json.dumps(f["check"], sort_keys=True) for f in r.get("failures", [])]
+        # a crashed run (evals/run.py's exception path) has no failures list at
+        # all, so every declared check of that case counts as failed rather
+        # than silently passing by omission
+        crashed = "error" in r
         for chk in declared:
             t = chk["type"]
             checks_total[t] += 1
@@ -67,7 +86,7 @@ def compute(report, cases):
             item = chk.get("item")
             if item:
                 targeted_items.add((r["id"], item))
-            if key in failed_keys:
+            if crashed or key in failed_keys:
                 checks_failed[t] += 1
                 if item:
                     failed_items.add((r["id"], item))
@@ -123,6 +142,20 @@ def compute(report, cases):
             debt_targeted_items.add(key)
             if json.dumps(chk, sort_keys=True) in failed_keys:
                 debt_failed_items.add(key)
+
+    # metric 6 never reads report["debt"] — its unaudited count (`unaudited`
+    # above) is scored-suite only. A debt row's own confident-but-untargeted
+    # items are counted here, and nowhere else, so metric 8's note can stop
+    # claiming metric 6 covers them.
+    debt_unaudited = 0
+    for r in report.get("debt", []):
+        if "items_summary" not in r:
+            continue
+        for it in r.get("items_summary", []):
+            if (it.get("confidence") or 0) < CONFIDENT:
+                continue
+            if (r["id"], it.get("item")) not in debt_targeted_items:
+                debt_unaudited += 1
 
     conf_rows = {}
 
@@ -206,8 +239,10 @@ def compute(report, cases):
                      "BOUNDS, not accuracy — nothing scored is currently failing by "
                      "construction. debt rows (evals/run.py's unscored 'debt' suite) are the "
                      "only current-code failure channel and are enumerated in full here, not "
-                     "sampled. unaudited confident items — not targeted by any check, scored "
-                     "or debt — are counted in metric 6's note, not here"},
+                     "sampled. scored unaudited confident items — not targeted by any check — "
+                     f"are counted in metric 6's note, not here. metric 6 never reads debt rows, "
+                     f"so debt rows' own unaudited confident items are counted here as "
+                     f"debt_unaudited={debt_unaudited} and nowhere else"},
             {"n": 9, "name": "latency p50 / p95 (s)",
              "value": [pct(0.5), pct(0.95)], "sample": len(secs)},
             {"n": 10, "name": "cost per filing (USD)", "value": 0.0, "sample": len(results),
@@ -217,12 +252,19 @@ def compute(report, cases):
              "value": _rate(det, len(methods)), "sample": len(methods)},
         ],
         "unaudited_confident_items": unaudited,
+        "debt_unaudited_confident_items": debt_unaudited,
+        "unmatched_failures": (_unmatched_failures(results, cases)
+                                + _unmatched_failures(report.get("debt", []), cases)),
     }
 
 
 def render(m):
     r = m["report"]
     out = [f"suite={r['suite']}  score={r['score']}  cases={r['n_cases']}  git={r['git_sha']}", ""]
+    if m.get("unmatched_failures"):
+        out.append(f"!! {m['unmatched_failures']} failure(s) match no check the case currently "
+                    f"declares — report predates current case files; failed columns undercount")
+        out.append("")
     for x in m["metrics"]:
         v = x["value"]
         if isinstance(v, list) and x["n"] == 8:
@@ -246,16 +288,27 @@ def _self_check():
             {"type": "text_contains", "item": "1", "value": "x"}]}},
         "d1": {"id": "d1", "expect": {"checks": [
             {"type": "item_present", "item": "1", "status": "extracted"}]}},
+        # a case whose run crashed: evals/run.py's exception path emits
+        # {"passed": False, "error": ...} with no failures/items_summary at
+        # all, so a naive join finds no failing check JSON and every declared
+        # check of the case looks green by omission.
+        "c2": {"id": "c2", "expect": {"checks": [
+            {"type": "item_present", "item": "5", "status": "extracted"}]}},
     }
     report = {"suite": "fast", "score": 0.0, "git_sha": "abc1234", "results": [{
         "id": "c1", "kind": "golden", "passed": False, "doc_status": "success", "seconds": 0.5,
         "failures": [{"check": {"type": "item_present", "item": "7", "status": "extracted"},
-                      "why": "x"}],
+                      "why": "x"},
+                     # a stale failure: this check isn't in c1's declared checks
+                     # above (the case file was rewritten after this report ran)
+                     {"check": {"type": "min_chars", "item": "1", "value": 999},
+                      "why": "stale, case no longer declares this check"}],
         "items_summary": [
             {"item": "1", "status": "extracted", "confidence": 0.95, "method": "heading_strict"},
             {"item": "7", "status": "missing", "confidence": 0.95, "method": "status_keyword"},
             {"item": "9", "status": "extracted", "confidence": 0.95, "method": "heading_strict"},
-        ]}],
+        ]},
+        {"id": "c2", "kind": "golden", "passed": False, "error": "boom", "seconds": 0}],
         # a failing debt case (evals/run.py's unscored suite) targeting item 1
         # at the same confidence, plus an old-style debt row (pre this change,
         # no items_summary) that must not crash the join.
@@ -266,17 +319,26 @@ def _self_check():
                            "why": "y"}],
              "items_summary": [
                  {"item": "1", "status": "missing", "confidence": 0.95, "method": "status_keyword"},
+                 # untargeted by any declared check -> debt_unaudited, not metric 6
+                 {"item": "9", "status": "extracted", "confidence": 0.95, "method": "heading_strict"},
              ]},
             {"id": "d2", "passed": True},
         ]}
     m = compute(report, cases)
     by = {x["n"]: x for x in m["metrics"]}
-    assert by[1]["value"] == 0.5, by[1]          # 1 of 2 item_present passed
+    # c2's declared item_present check must count as FAILED (denominator +1,
+    # numerator +0), not silently pass because the error row has no failures
+    assert by[1]["value"] == round(1 / 3, 4) and by[1]["sample"] == 3, by[1]
     assert by[3]["value"] == 1.0, by[3]          # the anchor passed
     # item 7 is confident, targeted, and failed -> silent failure. Item 9 is
     # confident but targeted by nothing -> excluded, counted as unaudited.
     assert by[6]["value"] == 0.5 and by[6]["sample"] == 2, by[6]
     assert m["unaudited_confident_items"] == 1, m
+    # d1's item 9 is confident, in a debt row, and targeted by nothing declared
+    # -> debt_unaudited, which metric 6 (scored-only) never sees
+    assert m["debt_unaudited_confident_items"] == 1, m
+    # c1's stale failure matches nothing declared -> counted, not silently 0
+    assert m["unmatched_failures"] == 1, m
     assert by[11]["value"] == 1.0, by[11]        # no llm_fallback anywhere
     assert by[10]["value"] == 0.0
     # metric 8: one row for confidence 0.95 — scored columns unchanged by the

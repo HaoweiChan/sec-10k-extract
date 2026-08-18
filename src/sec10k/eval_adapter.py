@@ -93,8 +93,14 @@ def eval_check(result, chk, path=None):
             return f"normalized_text contains {chk['value']!r} ({n}x)"
     elif t == "warning_present":
         # layer-8 validators are only worth having if a case can prove one
-        # FIRES when it should — the counterpart to warning_absent
-        if not [w for w in result.get("warnings", []) if w.get("code") == chk["code"]]:
+        # FIRES when it should — the counterpart to warning_absent. An "item"
+        # key narrows the match to that item — without it, any item (or none)
+        # satisfies the code, which is how a heading-line false-pass on 1A/3
+        # hid behind a fingerprint firing on some other item.
+        hits = [w for w in result.get("warnings", []) if w.get("code") == chk["code"]]
+        if "item" in chk:
+            hits = [w for w in hits if w.get("item") == chk["item"]]
+        if not hits:
             got = sorted({w.get("code") for w in result.get("warnings", [])})
             return f"expected warning {chk['code']!r}, got {got}"
     elif t == "warning_absent":
@@ -102,6 +108,8 @@ def eval_check(result, chk, path=None):
         # success_with_warning and move confidence, so a validator that cries
         # wolf on a normal filing is a defect the doc_status checks can't see
         hits = [w for w in result.get("warnings", []) if w.get("code") == chk["code"]]
+        if "item" in chk:
+            hits = [w for w in hits if w.get("item") == chk["item"]]
         if hits:
             return f"unexpected warning {chk['code']!r}: {hits[0].get('message')}"
     elif t == "item_field":

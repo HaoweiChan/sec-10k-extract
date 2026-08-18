@@ -61,9 +61,16 @@ unchanged; field rationale lives in `docs/product/task2-problem-definition.md`.
   absent/incorporated, not missed).
 - `confidence` ∈ [0,1] and must be honest: downstream consumers will threshold
   on it. Cases pin the scale's constants via the `confidence` check type
-  (ADR-010). They do **not** yet punish overconfident wrongness — the scale is
-  uncalibrated (ADR-008) and measuring it is A-level work. This line previously
-  claimed the stronger thing while no case read the field at all.
+  (ADR-010). The scale is now *measured*, not merely asserted: metric 8 v2
+  publishes a per-value table (docs/analysis-report.md), scored rates there are
+  upper bounds because the suite is gated green, and the enumerated debt
+  channel demonstrates real overconfident wrongness at both a high and a mid
+  scale value. ADR-018 rules on the remap question this measurement raised:
+  magnitudes stand (no constant moves), and the phantom `BASE_MISSING = 0.55`
+  — a value no item could ever actually carry — collapsed to the 0.40 every
+  missing item already scored. The scale itself is an ordinal evidence
+  encoding — status tier, title-match quality, warning count — not a
+  probability.
 - Offsets are into `normalized_text`, NOT the raw file. Normalization is owned
   by the extractor but must be deterministic for a given input.
 

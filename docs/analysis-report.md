@@ -1,4 +1,8 @@
-# Analysis report v1 — sec-10k-extract at B-freeze
+# Analysis report v2 — sec-10k-extract at B-freeze
+
+v2 (2026-08-18): T10 calibration update. Adds the confidence-calibration
+before/after section (metric 8 v2, ADR-018) and reconciles the sections it
+touches; everything else below is unchanged from v1.
 
 Written from committed artifacts, not from memory. Every number below is
 reproducible from `evals/report/*.json` and `evals/metrics.py`; where a number
@@ -64,11 +68,11 @@ immediately after it.
   among them the JPM item 15 that §6 of this report names as wrongly bounded.
   An earlier version of this section quoted 27% by counting only the first
   exclusion; the pre-B audit caught it, and `metrics.py` now publishes both.
-- **Metric 8 is not calibration, it is a placeholder shaped like calibration.**
-  Every bucket reads 1.0 because every targeted check passes. A calibration
-  curve needs failures to have any shape at all. ADR-008 already states the
-  confidence scale is uncalibrated; this table confirms we cannot yet measure
-  it, which is different from confirming it is good.
+- **Metric 8 v2 is a real measurement channel, not the placeholder v1 was.**
+  It now reports per distinct confidence value, with debt columns alongside
+  the scored ones, and states plainly that the scored side is an upper bound.
+  See "Confidence calibration — before and after (T10, ADR-018)" below for the
+  table and what it does and does not license.
 - **Metric 4 is a proxy.** It is the length-band pass rate. True IoU is
   impossible without offset ground truth, which the design forbids.
 - **Metric 7 is reported for goldens only.** Pooled it reads 0.7407, and that
@@ -91,6 +95,70 @@ immediately after it.
   the item has no span. It reads as 63 independent opportunities to fail; it is
   fewer. (`item_absent` is the strong form throughout — all 15 use
   `any_status` — that part is sound.)
+
+### Confidence calibration — before and after (T10, ADR-018)
+
+**Before (v1), for reference — the placeholder table above, bucketed and
+structurally unable to fail:**
+
+```
+ 8. confidence calibration
+         [0.0,0.60)  n=2    pass=1.0
+         [0.6,0.80)  n=5    pass=1.0
+         [0.8,0.90)  n=37   pass=1.0
+         [0.9,1.01)  n=92   pass=1.0
+```
+
+**After (v2, metric 8 v2), verbatim from `python3 -m evals.metrics` against
+`evals/report/20260818-130421-all.json` (the post-audit-fixes run; the table is
+numerically identical to the pre-remap measurement in `20260818-123114`):**
+
+```
+ 8. confidence calibration
+       conf=0.95  n_targeted=162  failed=0    n_debt_targeted=1    debt_failed=1
+       conf=0.85  n_targeted=66   failed=0    n_debt_targeted=0    debt_failed=0
+       conf=0.8   n_targeted=8    failed=0    n_debt_targeted=0    debt_failed=0
+       conf=0.75  n_targeted=14   failed=0    n_debt_targeted=1    debt_failed=1
+       conf=0.65  n_targeted=1    failed=0    n_debt_targeted=0    debt_failed=0
+       conf=0.4   n_targeted=2    failed=0    n_debt_targeted=0    debt_failed=0
+       note: the scored suite is gated green, so scored pass rates here are UPPER
+       BOUNDS, not accuracy — nothing scored is currently failing by construction.
+       debt rows (evals/run.py's unscored 'debt' suite) are the only current-code
+       failure channel and are enumerated in full here, not sampled. scored
+       unaudited confident items — not targeted by any check — are counted in
+       metric 6's note, not here. metric 6 never reads debt rows, so debt rows'
+       own unaudited confident items are counted here as debt_unaudited=12 and
+       nowhere else
+```
+
+The measurement itself was audited (cold-reviewer + extraction-auditor, both
+dispositions in ADR-018): among the fixes, debt cases now load on *every* suite
+run including the pre-commit gate, a crashed case's checks can no longer count
+as passing, a report run from a dirty tree stamps its sha `-dirty`, and metrics
+run against a report older than its case files now announce the mismatch
+instead of printing silent zeros.
+
+The debt channel is what makes this table more than a re-bucketed v1: it
+enumerates real failures instead of a gate-forced 1.0. `ba-2003-asterisk-ibr`
+fails at two confidence values, not one — items 11 and 13, `extracted` at
+0.95 over 34 chars and at 0.75 over 59 chars respectively, in a document that
+otherwise reports plain `success`. Both are wrong for the same reason (the
+IBR pointer for both lives in another item's span, ADR-005 rule 1), so this is
+overconfident wrongness at the top of the scale and in the middle of it, not
+a single outlier. Scored rates in the table above remain upper bounds, not
+accuracy: the pre-commit gate forces every targeted scored item green, so a
+1.0 row measures the gate, not correctness — the debt row is the only place a
+real failure can currently show up at all. ADR-018's ruling from this table:
+remap-to-empirical is rejected (mapping through gate-biased single-digit
+samples, especially n=2 and n=14, would be fake precision of the kind ADR-008
+already banned); no scored magnitude moves, because the demonstrated
+overstatement is a status defect (an item that should never have been
+`extracted`), not a scale defect; and the one thing the table did license is
+collapsing `BASE_MISSING` from a phantom 0.55 — a value no item could ever
+actually carry, since every missing item's own `expected_item_missing`
+warning always pulled it to 0.40 — down to the 0.40 it always scored, net
+zero behavioral change. The *rate* of this failure shape, sampled rather than
+enumerated, is T11's charter.
 
 ### Provisional targets, reset
 
@@ -233,7 +301,11 @@ README carries the same list for a general reader.
    caught and flagged, neither is correctly bounded.
 3. **Eval coverage is thinner than the pass rate suggests** — four vacuous
    checks, four validators with no firing proof, 284 unaudited confident items.
-4. **Confidence is uncalibrated** and cannot currently be measured (metric 8).
+4. **Confidence is measured, not accuracy-calibrated.** Magnitudes stand per
+   ADR-018 — the T10 measurement found no scored value overstating, only a
+   status defect wrongly reaching a real confidence value. Demonstrated
+   overconfident wrongness lives in the enumerated debt channel (metric 8 v2,
+   §1); the sampled *rate* of that shape across unseen filings is T11's work.
 5. **`missing` vs `omitted`** is decided by a hardcoded two-code list, so
    permitted omissions outside it are reported as failures to find.
 
@@ -251,4 +323,7 @@ Ranked by evaluation value per unit of effort, consistent with
    change (INV-S3) rather than a bug fix.
 4. **Held-out expansion and a second refresh cycle**; five filings found two
    real defects, and the marginal return is clearly still high.
-5. **Calibration**, once there are enough failures for a curve to have shape.
+5. **Sampled confident-wrong rate (T11)** — the magnitude question is settled
+   (ADR-018, §1); what remains is measuring how often the debt channel's shape
+   (a status defect reaching a real confidence value) occurs across unseen
+   filings, not enumerated as now but sampled.

@@ -156,8 +156,11 @@ def validate(text, items, accepted, manifest):
         span = body.get(code, "")
         if len(span) < SUBSTANTIVE_MIN:
             continue  # a pointer paragraph has no vocabulary to judge
-        low = span.lower()
-        if not any(w in low for w in words):
+        # cold review: the heading line itself ("Item 1A. Risk Factors") always
+        # satisfies its own fingerprint, and plain substring matching let "net"
+        # match "internet"/"network" — strip the heading, match whole words only
+        low = span.split("\n", 1)[-1].lower()
+        if not any(re.search(r"\b" + re.escape(w) + r"\b", low) for w in words):
             warn("keyword_fingerprint",
                  f"item {code} contains none of {words} — span may not be its item",
                  item=code)
@@ -170,7 +173,14 @@ def validate(text, items, accepted, manifest):
 # ADR-008: coarse and clamped — no fake precision. Every input is recorded in
 # the item's evidence{} so an auditor can recompute or dispute the number.
 BASE_STRICT, BASE_WEAK = 0.95, 0.75
-BASE_IBR, BASE_OMITTED, BASE_MISSING = 0.85, 0.80, 0.55
+BASE_IBR, BASE_OMITTED = 0.85, 0.80
+# ADR-018: was 0.55. Every missing item carries its own expected_item_missing
+# warning (the only item-targeted warning a missing item can ever catch), so
+# the old constant double-counted that status into the penalty and never
+# actually landed — every missing item scored 0.55 - 0.15 = 0.40. Collapsed
+# the phantom: 0.40 is now the published base, and the restating warning is
+# excluded from the penalty below.
+BASE_MISSING = 0.40
 WARN_PENALTY = 0.15
 FLOOR, CEIL = 0.20, 0.95
 
@@ -186,7 +196,11 @@ def score(item, warns):
         base = BASE_OMITTED
     else:
         base = BASE_MISSING  # missing: we expected it and found nothing
-    hits = [w["code"] for w in warns if w.get("item") == item["item"]]
+    # ADR-018: expected_item_missing restates the status that already set
+    # BASE_MISSING — it is the one item-targeted warning a missing item can
+    # ever catch, so counting it too double-counts the same fact.
+    hits = [w["code"] for w in warns if w.get("item") == item["item"]
+            and w["code"] != "expected_item_missing"]
     conf = max(FLOOR, min(CEIL, base - WARN_PENALTY * len(hits)))
     ev["warnings"] = hits
     ev["confidence_base"] = base
@@ -235,12 +249,37 @@ def _demo():
     codes = [x["code"] for x in validate(big, items2, {"1": {}, "15": {}}, [])]
     assert "last_item_dominates" in codes, codes
 
+    # keyword_fingerprint on item 1A: no committed fixture can prove this red
+    # (the only candidate, spans-transposed, has transposed financial prose
+    # that still carries "risk"/"could" as whole words), so — same treatment
+    # as boundary_hygiene above, ADR-016's precedent — it is proved at the
+    # validator's own layer instead. A span whose body is genuinely clean of
+    # the fingerprint vocabulary must still warn; the heading alone ("Item 1A.
+    # Risk Factors") must not be enough to satisfy it.
+    clean_body = "We sell widgets to customers worldwide. " * 200
+    assert not re.search(r"\b(risk|adversely|could)\b", clean_body, re.I), clean_body
+    fp_text = "Item 1A. Risk Factors\n" + clean_body + "\nItem 15. Exhibits\n" + "z" * 40
+    fp_cut = fp_text.index("Item 15.")
+    fp_items = [{"item": "1A", "part": "I", "status": "extracted", "start": 0, "end": fp_cut,
+                 "evidence": {}},
+                {"item": "15", "part": "IV", "status": "extracted", "start": fp_cut,
+                 "end": len(fp_text), "evidence": {}}]
+    codes = [x["code"] for x in validate(fp_text, fp_items, {"1A": {}, "15": {}}, [])
+             if x.get("item") == "1A"]
+    assert "keyword_fingerprint" in codes, codes
+
     # confidence: warnings on an item pull it down, others leave it alone
     it = {"item": "8", "status": "extracted", "evidence": {"title_similarity": 1.0}}
     assert score(it, [])[0] == BASE_STRICT
     assert score(it, [{"code": "keyword_fingerprint", "item": "8"}])[0] < BASE_STRICT
     assert score(it, [{"code": "keyword_fingerprint", "item": "1"}])[0] == BASE_STRICT
     assert score({"item": "9", "status": "missing", "evidence": {}}, [])[0] == BASE_MISSING
+
+    # ADR-018: a missing item ALWAYS carries its own expected_item_missing warning
+    # in the real pipeline, and that warning must not double-count against the
+    # base that already encodes the status.
+    miss = {"item": "9", "status": "missing", "evidence": {}}
+    assert score(miss, [{"code": "expected_item_missing", "item": "9"}])[0] == BASE_MISSING
     print("[validate self-check] ok")
 
 
