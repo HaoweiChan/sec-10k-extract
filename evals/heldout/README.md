@@ -48,7 +48,7 @@ first run, so it cannot be retrofitted afterwards.
 | `csco-2016/filing.htm` | sec.gov/Archives/edgar/data/858877/000085887716000117/csco-2016730x10k.htm | 0000858877-16-000117 | 2016-09-08 | 2016-07-30 | mid-2010s HTML, computer-communications equipment; 52/53-week FY ending in **July**. Replaces `jnj-2016`, burned by H1 | 4,476,127 |
 | `cost-2022/filing.htm` | sec.gov/Archives/edgar/data/909832/000090983222000021/cost-20220828.htm | 0000909832-22-000021 | 2022-10-05 | 2022-08-28 | iXBRL, retail, **August** FY end; separates every item code from its title with an **em dash**, a heading shape no dev fixture contains | 1,861,894 |
 | `mrk-1995/filing.txt` | sec.gov/Archives/edgar/data/64978/0000950130-96-000896.txt | 0000950130-96-000896 | 1996-03-20 | 1995-12-31 | pre-2001 txt, **pharmaceutical** (the sector jnj-2016 took with it when H1 burned it); form 10-K405; earliest filing in either set that predates Item 7A, so the 14-code taxonomy is exercised by a real document; **no table of contents at all** | 322,618 |
-| `axp-2008/filing.htm` | sec.gov/Archives/edgar/data/4962/000119312509041008/d10k.htm | 0001193125-09-041008 | 2009-02-27 | 2008-12-31 | legacy HTML, **crisis-era financial** — a window neither set had. No table of contents, and the strings 'Item 10' through 'Item 13' occur **zero** times: Part III is addressed without its item headings. Replaces `wfc-2008`, moved to the dev set before its first run | 1,296,375 |
+| ~~`axp-2008/filing.htm`~~ | sec.gov/Archives/edgar/data/4962/000119312509041008/d10k.htm | 0001193125-09-041008 | 2009-02-27 | 2008-12-31 | **BURNED AND MOVED 2026-08-19 (T12, ADR-020)** — now `evals/fixtures/axp-2008/filing.htm`, case now `evals/adversarial/axp-2008-combined-heading-burned.json`. legacy HTML, **crisis-era financial**. It DOES have a table of contents — raw bytes carry `<A NAME="toc"></A>TABLE OF CONTENTS` at offset 13689, and the contents page lists Part III's four items individually — but the pipeline's `toc_manifest` comes back **empty** on it, because those entries are bare `10.` / `11.` / `12.` / `13.` with no `Item` prefix and so generate no heading candidates. *(Corrected 2026-08-19, repair round 2: this row and the original case provenance both claimed 'no table of contents', and the stratum rationale — a filing that gives the TOC machinery nothing to work with — was built on it. The machinery does come back empty; the stated reason was wrong.)* The original row here also read "the strings 'Item 10' through 'Item 13' occur **zero** times: Part III is addressed without its item headings" — the first clause is true of the SINGULAR forms and the second does not follow from it. There is one combined heading, at raw offset 1225493: `<B>ITEMS&nbsp;10,&nbsp;11,&nbsp;12&nbsp;and&nbsp;13.</B>` plus the four-item title. See the burn note below. Replaced `wfc-2008`, moved to the dev set before its first run | 1,296,375 |
 | `spg-2019/filing.htm` | sec.gov/Archives/edgar/data/1063761/000155837020001135/spg-20191231x10k.htm | 0001558370-20-001135 | 2020-02-21 | 2019-12-31 | iXBRL, **REIT** — Item 2 Properties runs ~101K chars of mall-by-mall tables, an order of magnitude past any other Item 2; the FY2017–FY2020 window; the first filing in either set with a **present and substantive Item 16**; 9.8 MB, second-largest anywhere here | 9,812,403 |
 
 Re-fetch pattern, same as `evals/fixtures/README.md`:
@@ -171,4 +171,35 @@ normally) and the one about a document was wrong. No support for ADR-017 was
 gained: AXP's pointers use the single-sentence phrasing the old rule already
 matched, and that claim was checked and withdrawn rather than made.
 
-Next refresh should retire `csco-2016` and `cost-2022`, now run three times each.
+**Burn, 2026-08-19 — `axp-2008`. Moved, not deferred.** Not from a run: from T12's ruling. Reading
+H3's committed report while enumerating the fallback-addressable surface
+([ADR-020](../../specs/decisions/ADR-020-fallback-not-justified.md) §b) turned
+this case's outcome — items 10–13 `missing` at 0.40 — into load-bearing evidence
+for a documented decision to decline a fix, and produced a new case from it
+(`evals/adversarial/axp-2008-combined-part-iii.json`). The burn rule names both
+of those as influence, and the `gs-2002` precedent above already established
+that declining a fix burns a case as surely as fixing does. So `axp-2008` counts
+in no held-out denominator from here. Per the rule above and the `gs-2002` precedent it was **moved in the same milestone**: the case to `evals/adversarial/axp-2008-combined-heading-burned.json`, the fixture to `evals/fixtures/axp-2008/`. The held-out set is **5 cases / 101 items**, enforced by the file system rather than asserted here — nothing in `evals/run.py` could have excluded a burned case that stayed in this directory, so leaving it would have meant the next `--dir evals/heldout` run scoring a contaminated, known-mislabelled case as green.
+
+It also carries a wrong label. This case's provenance concluded that American
+Express "addressed Part III without writing the item headings at all, and jumped
+straight from Item 9B to Item 14". The **singular** strings `Item 10`…`Item 13`
+do occur zero times, which is what the verification scan checked — but the raw
+bytes contain exactly one `ITEMS\b` match, at offset 1225493:
+`<B>ITEMS&nbsp;10,&nbsp;11,&nbsp;12&nbsp;and&nbsp;13.</B>` plus the four-item
+title, immediately followed by an explicit proxy incorporation by reference. The
+correct status for all four is `extracted` — the body is not pointer-only (ADR-004
+shape 3: ~1,139 chars of Reg S-K Item 406 code-of-ethics prose after the proxy
+pointers, against ADR-007's 300-char remainder threshold), which is what
+`segment.classify` returns on it. Either way `missing` is not the correct label,
+so the four `item_present` checks were dropped in the move rather than
+re-enshrined; the desired state is asserted, and kept permanently red, by
+`evals/adversarial/axp-2008-combined-part-iii.json`. **Sixth
+time the instrument rather than the pipeline has been at fault** — the
+authoring-discipline section above counts the first five, and this one is a
+scan that checked the singular form of a string and generalized past its own
+evidence. The move is done; only a replacement filing for the
+crisis-era stratum rides T14's expansion.
+
+Next refresh should retire `csco-2016` and `cost-2022`, now run three times each,
+and replace `axp-2008`.

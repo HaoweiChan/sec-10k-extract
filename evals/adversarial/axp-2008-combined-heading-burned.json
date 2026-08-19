@@ -1,0 +1,157 @@
+{
+  "id": "axp-2008-combined-heading-burned",
+  "task": "sec10k",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "path": "evals/fixtures/axp-2008/filing.htm"
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "no_empty_success"
+      },
+      {
+        "type": "no_overlap_ordered"
+      },
+      {
+        "type": "verbatim"
+      },
+      {
+        "type": "known_items_only"
+      },
+      {
+        "type": "expected_set_complete",
+        "items": [
+          "1",
+          "1A",
+          "1B",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "7A",
+          "8",
+          "9",
+          "9A",
+          "9B",
+          "10",
+          "11",
+          "12",
+          "13",
+          "14",
+          "15"
+        ]
+      },
+      {
+        "type": "only_items",
+        "items": [
+          "1",
+          "1A",
+          "1B",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "7A",
+          "8",
+          "9",
+          "9A",
+          "9B",
+          "10",
+          "11",
+          "12",
+          "13",
+          "14",
+          "15"
+        ]
+      },
+      {
+        "type": "item_present",
+        "item": "1",
+        "status": "extracted"
+      },
+      {
+        "type": "item_present",
+        "item": "1A",
+        "status": "extracted"
+      },
+      {
+        "type": "item_present",
+        "item": "3",
+        "status": "extracted"
+      },
+      {
+        "type": "item_present",
+        "item": "9B",
+        "status": "extracted"
+      },
+      {
+        "type": "item_present",
+        "item": "14",
+        "status": "incorporated_by_reference"
+      },
+      {
+        "type": "item_present",
+        "item": "15",
+        "status": "extracted"
+      },
+      {
+        "type": "text_not_contains",
+        "item": "1",
+        "value": "RISK FACTORS"
+      },
+      {
+        "type": "text_not_contains",
+        "item": "1A",
+        "value": "LEGAL PROCEEDINGS"
+      },
+      {
+        "type": "text_not_contains",
+        "item": "5",
+        "value": "SELECTED FINANCIAL DATA"
+      },
+      {
+        "type": "min_chars",
+        "item": "1",
+        "value": 80000
+      },
+      {
+        "type": "min_chars",
+        "item": "1A",
+        "value": 25000
+      },
+      {
+        "type": "min_chars",
+        "item": "3",
+        "value": 15000
+      },
+      {
+        "type": "min_chars",
+        "item": "15",
+        "value": 400
+      },
+      {
+        "type": "item_absent",
+        "item": "16",
+        "any_status": true
+      },
+      {
+        "type": "item_absent",
+        "item": "9C",
+        "any_status": true
+      },
+      {
+        "type": "text_not_contains",
+        "item": "14",
+        "value": "EXHIBITS, FINANCIAL STATEMENT SCHEDULES"
+      }
+    ]
+  },
+  "provenance": "BURNED HELD-OUT CASE, moved 2026-08-19 (T12, ADR-020) from evals/heldout/axp-2008-heldout.json, fixture moved from evals/heldout/fixtures/axp-2008/ to evals/fixtures/axp-2008/ -- the same procedure evals/heldout/README.md's burn rule prescribes and the gs-2002 burn of 2026-08-17 followed. WHY BURNED: ADR-020 used this case's H3 outcome (items 10-13 `missing` at 0.40) as load-bearing evidence in a documented decision to DECLINE building an LLM fallback stage, and authored a new case from it (axp-2008-combined-part-iii.json). The burn rule names both -- 'a new case written because of it' -- as influence, and the gs-2002 precedent established that declining a fix burns a case as surely as fixing does. FIVE CHECKS REMOVED IN THE MOVE. The fifth is `warning_present: expected_item_missing` (dropped in repair round 2, PR #11 finding R9): src/sec10k/extract.py emits that code once per `missing` item and nowhere else, and on this filing it fires for items 10-13 and nothing else -- so keeping it would have pinned the exact behaviour the debt case asks to change, and this scored case would have gone red on the day the debt case went green. TWO FACTS IN THE ORIGINAL PROVENANCE BELOW ARE FALSE and are corrected here rather than edited out of it. FIRST, 'this filing has NO TABLE OF CONTENTS' -- it has one: raw bytes carry `<A NAME=\"toc\"></A>TABLE OF CONTENTS` at offset 13689, and the normalized contents page at offset ~3224 lists Part III's four items individually as bare '10.' / '11.' / '12.' / '13.' entries. The stratum rationale built on that claim ('a filing that gives the TOC-cluster machinery nothing to work with') is wrong as stated, though the machinery does in fact come back empty here (trace layer 'candidates' reports toc_manifest: []) -- for a different reason: the contents entries omit the word 'Item', so they generate no heading candidates. SECOND, the four-item claim:  this case asserted `item_present 10/11/12/13 = missing`, on the authority of a provenance scan that searched only the SINGULAR strings 'Item 10'..'Item 13', found zero, and concluded American Express 'addressed Part III without writing the item headings at all'. American Express did not: raw bytes offset 1225493 carry one combined heading, `<B>ITEMS&nbsp;10,&nbsp;11,&nbsp;12&nbsp;and&nbsp;13.</B>` plus the four-item title (exactly one `ITEMS\\b` match in 1,296,375 bytes). `missing` is what the pipeline produces today but is not the correct label, so the four assertions are dropped rather than re-enshrined; `expected_set_complete` still requires all twenty codes to be reported with some status, and the DESIRED post-fix state for these four items is asserted -- and kept permanently red -- by evals/adversarial/axp-2008-combined-part-iii.json instead. Sixth time in this project that the verification instrument rather than the pipeline was at fault (the round-1 IBR mislabel in ADR-020 is the seventh). ORIGINAL HELD-OUT PROVENANCE, preserved verbatim below because the frozen pre-run predictions are the point of a held-out case and must not be lost in the move:\n\nT9 tranche 4, authored 2026-08-17, NEVER RUN. American Express Company, sec.gov/Archives/edgar/data/4962/000119312509041008/d10k.htm, accession 0001193125-09-041008, filed 2009-02-27, FY2008 (Dec-end), 1,296,375 bytes, legacy HTML. REPLACES wfc-2008 IN THE HELD-OUT SET: that filing was fetched for this refresh and moved to evals/fixtures/ before its first run, because reading its scan produced a belief about the pipeline that implied a code change, and a prediction you would ACT on is influence. The crisis-era financial stratum stays here, on a different filer. Verified by the independent tag-strip scan (imports nothing from src/): cover reads 'fiscal year ended December 31, 2008'; sixteen item headings; raw anchor counts 'RISK FACTORS' 1x, 'LEGAL PROCEEDINGS' 1x, 'SELECTED FINANCIAL DATA' 1x, 'CONTROLS AND PROCEDURES' 1x, 'PRINCIPAL ACCOUNTING FEES AND SERVICES' 1x — every one occurring exactly ONCE, because this filing has NO TABLE OF CONTENTS. That is itself a stratum: every HTML fixture in either set has a contents page, and the TOC-cluster machinery is the most heavily-ruled part of the pipeline (ADR-007, ADR-013, ADR-015), so a filing that gives it nothing to work with is a gap worth closing. THE DOCUMENT FACT THIS CASE IS REALLY FOR: the strings 'Item 10', 'Item 11', 'Item 12' and 'Item 13' occur ZERO times in the entire filing, in any case, with or without a period. American Express addressed Part III without writing the item headings at all, and jumped straight from Item 9B to Item 14. Four expected items with no heading anywhere is a shape neither set contains, and the honest report for each is `missing` — ADR-005 rule 3, the era expects them and none was found, as against `omitted`, which would claim the absence was permitted. That is what the four item_present checks assert, on the authority of the document. PREDICTION, FROZEN BEFORE THE FIRST RUN and deliberately NOT asserted: four missing of twenty expected is a fraction of 0.20, which sits just under validate.MISSING_MAX = 0.25, so `expected_items_mostly_missing` should NOT fire and doc_status should be `success_with_warning` rather than `ambiguous` — a document that silently drops a whole Part passing as a qualified success, four percentage points below the line ADR-013 measured. Whether 0.25 is the right number is a calibration question for T10 and must not be answered by tuning against this filing; the prediction is recorded so that the run scores it rather than my memory. || H3 TRIAGE, 2026-08-17 — THIS CASE'S RED WAS AN AUTHORING ERROR, NOT AN EXTRACTOR DEFECT. Item 15's real body is 745 chars: American Express lists neither its financial statements nor its exhibits inline, pointing instead to 'page F-1 hereof' and 'pages E-1 through E-4 hereof under Exhibit Index'. The 19,895 chars I floored against were the gap from the Item 15 heading to the end of the scan text — the exhibit index and signature block, which the extractor correctly cuts at TAIL_RE. Same systematic mistake as spg-2019 item 16, made on the last item of both filings in the same sitting: A LENGTH FLOOR DERIVED FROM THE GAP TO THE NEXT HEADING IS MEANINGLESS FOR THE LAST ITEM. Floor corrected to 400 from the document, and a cross-item exclusion added to pin the 14/15 boundary, which is what the floor was standing in for. From here these two assertions measure the correction rather than the extractor, on the H1 precedent. EVERYTHING THIS CASE WAS ACTUALLY FOR HELD: items 10-13 all reported `missing` from a filing that contains no Item 10-13 heading of any kind, and the frozen threshold prediction held exactly — 4 missing of 20 is 0.20, `expected_items_mostly_missing` did not fire, and a document that drops a whole Part reported `success_with_warning`, four percentage points under the ADR-013 line. That number is T10's to calibrate and was NOT tuned against this filing."
+}

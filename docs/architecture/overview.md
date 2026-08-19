@@ -16,8 +16,11 @@ REJECTED.
 Planned layout: `src/sec10k/extract.py` (orchestration + assembly),
 `normalize.py` (selection + normalization), `segment.py` (candidates + filter +
 boundaries + status), `validate.py` (validation + confidence). Four files.
-Built so far (T5): all four files — layers 1–9 and 11. Layer 10 (fallback)
-stays deferred by design until residual-failure data justifies it.
+Built so far: all four files — layers 1–9 and 11. Layer 10 (fallback) was
+deferred by design until residual-failure data existed; that data was measured
+(ADR-019) and the decision taken — **ruled out, T12,
+[ADR-020](../../specs/decisions/ADR-020-fallback-not-justified.md)**. It is not
+pending. See §10 below for the reasoning.
 
 ## Pipeline layers
 
@@ -206,12 +209,30 @@ Eval: feeds `doc_status`/warning cases.
 
 **9. Confidence scoring** — see below.
 
-**10. Fallback (A-level, design deferred)** — no concrete design until T8
-residual-failure data exists; a dedicated ADR will choose then, sized to what
-actually fails. Candidate noted for the record only: an LLM returning **verbatim anchor
-quotes** that we re-locate to offsets (preserves INV-S2 by construction —
-invented quotes fail relocation and become explicit failures), cached by
-content-hash + prompt-version, budget-capped, `full` suite only.
+**10. Fallback — RULED OUT (T12, [ADR-020](../../specs/decisions/ADR-020-fallback-not-justified.md)).**
+The candidate was an LLM returning **verbatim anchor quotes** re-located to
+offsets (preserving INV-S2 by construction — invented quotes fail relocation
+and become explicit failures), cached by content-hash + prompt-version,
+budget-capped, `full` suite only. T11's residual-failure data (ADR-019) was
+measured and the decision taken: **not justified, no fallback ships.** The
+layer number is kept so the numbering below does not shift.
+
+The reason, in two clauses. **First**: a fallback fires on *absence*, and six of
+the seven residual-failure classes on the books are *presence* — a confidently
+wrong span at 0.95 that no honest trigger reaches. Five never fire at all; one
+(`msft-2013`) is structurally impossible for this candidate, because the fix
+needs a discontiguous span and one contiguous verbatim slice is the candidate's
+own safety property. **Second**: the seventh class is real and the candidate
+would fix it — `axp-2008`'s combined Part III heading, 4 items — but a
+combined-heading fan-out produces the identical spans and statuses through the
+same classifier, deterministically, at $0, for the whole class rather than the
+instances a model is invoked on. (The block's caption bullets interleave the
+four items, 10, 10, 11, 10, 11, 12, 10, 11, 13, 10, which costs item-10
+*coverage* under a four-way partition — 956 of 3,263 chars — but leaves all four
+items contract-reachable.) The measured fallback-addressable surface across both
+eval sets is **4 of 768 items (0.52%)**. Cost stays structurally $0.00 and ADR-003's
+stdlib-only pipeline is untouched. `method: llm_fallback` stays in the contract
+enum, unemitted. ADR-020 §e names the measurements that would reopen this.
 
 **11. Assembly** — derive `doc_status`, attach trace/timings/meta, emit the
 contract-v2 envelope.

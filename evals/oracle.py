@@ -23,11 +23,22 @@ Four checks, each deliberately NOT the pipeline's own method:
    before the first span and after the last (the "outer hull"); an interior
    hole between two ACCEPTED spans is invisible to it by definition. Under
    `assign_boundaries` (segment.py), two accepted spans are contiguous by
-   construction — `end[i] == start[i+1]` — on 29 of 36 fixtures, so coverage
-   there equals `1 - unattributed_content`'s own "outside" fraction exactly.
-   On the other 7 (the `EXEC_OFFICERS_RE` clip, ADR-019 §f/§d), that identity
-   breaks: coverage reads up to 9.7 points below `1 - unattributed_content`,
-   because the clip opens a real interior gap the outer hull can't see.
+   construction — `end[i] == start[i+1]` — on 29 of the 36 fixtures MEASURED
+   2026-08-19, so coverage there equals `1 - unattributed_content`'s own
+   "outside" fraction exactly. On the other 7 (the `EXEC_OFFICERS_RE` clip,
+   ADR-019 §f/§d), that identity breaks: coverage reads up to 9.7 points below
+   `1 - unattributed_content`, because the clip opens a real interior gap the
+   outer hull can't see.
+   **Restated 2026-08-19 (T12, ADR-020 §g): the corpus is now 37 fixtures and
+   the EO clip is no longer the only exception.** `axp-2008`, moved into
+   `evals/fixtures/` when its held-out case was burned, is an 8th
+   non-contiguous fixture — gap 0.1264, above the 0.0971 ceiling below — and
+   it is NOT an `EXEC_OFFICERS_RE` fixture: its gap is the un-found combined
+   Part III block (ADR-020 §c row 7). All per-fixture numbers in this
+   docstring, and ADR-019 §d's table, describe the 36-fixture corpus at their
+   own SHA and are left as measured; whether a second, non-EO gap source
+   weakens the redundancy argument below is a question for whoever revisits
+   ADR-019 §d's debt row, and is deliberately not answered here.
    (2026-08-19 post-commit review: this was first verified contiguous on all
    34 fixtures then committed; the EO fix landed after and is the sole
    exception.) Full per-fixture table: ADR-019 §d. That makes checks 1 and 2
@@ -48,8 +59,10 @@ Four checks, each deliberately NOT the pipeline's own method:
 
 2. **Largest interior gap** — the widest run of chars between two
    consecutively ACCEPTED spans, as a fraction of the document. Per check 1,
-   this is 0.0 on 29 of 36 fixtures and nonzero only on the 7
-   `EXEC_OFFICERS_RE` fixtures, 0.0019 to 0.0971 of the document — the clip
+   this was 0.0 on 29 of the 36 fixtures measured 2026-08-19 and nonzero only
+   on the 7 `EXEC_OFFICERS_RE` fixtures, 0.0019 to 0.0971 of the document (see
+   check 1's restatement: at 37 fixtures `axp-2008` is an 8th, non-EO, at
+   0.1264) — the clip
    is a deliberate exclusion (ADR-019 §f), so the gap check correctly
    reports the one intentional gap source this pipeline has, rather than
    finding nothing. Full table: ADR-019 §d. `--self-check` proves the metric
