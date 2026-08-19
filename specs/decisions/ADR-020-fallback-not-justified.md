@@ -14,6 +14,38 @@ rather than trusted. The ruling is unchanged across every round, and rests on
 the escalation ladder: the same deterministic fan-out reaches all four items at
 $0 and closes the whole class.
 
+**Correction, 2026-08-20 (PR #11 round-4 verification, finding R19) — a fourth
+defect, uncorrected in the text below.** Where this ADR says `segment.classify`
+returns `extracted` on **all four** partition bodies — §a clause 2, §b's
+policy-1 table row, §c row 7, and §h3's code block — **that is false, and the
+claim is left standing in place rather than rewritten.** The computation behind
+it passes the combined heading line inside `body`; the pipeline never does
+(`src/sec10k/extract.py:111` derives `body = text[c["heading_end"]:c["end"]]`,
+and `segment.py:508` documents `body` as "the span minus its heading line").
+Heading-stripped, item 10's partition body is pointer-only and classifies
+**`incorporated_by_reference`** (remainder 0 ≤ `IBR_REMAINDER_MAX` 300); the
+1,139 chars of Reg S-K prose the `extracted` reading rests on sit at absolute
+331084, *after* item 13's span end 330343, so no ordered partition that gives
+items 11–13 their own spans can place it inside item 10's body.
+
+Consequence: `evals/adversarial/axp-2008-combined-part-iii.json` asserts a
+status set no contract-valid fan-out produces — under the partition
+`item_present 10 = extracted` fails, under whole-block items 11–13 stay
+`missing` — so its "NOW GREEN → promote it" contract is **unreachable**, the
+fourth survival of the defect R1 first raised. Full statement, and the five
+documentation defects found with it, in `tasks/TODO.md`'s open-debt table.
+
+**The ruling and the 4-of-768 headline are unaffected**: all four items still
+go `missing` → span-carrying under a combined-heading fan-out, which is the
+only property the decision rests on. Choosing which design the case pins, and
+re-deriving its asserted status set, is T13/T14 work.
+
+**This is the fifth instance of this milestone's recurring error — reasoning
+about an executable contract in prose instead of running it — and the first
+committed by the review loop's orchestrator**, which ran the heading-inclusive
+computation and relayed it as already adjudicated, foreclosing the check it
+existed to perform. §h3's count is one short and is not rewritten here.
+
 ## a) The ruling
 
 **A layer-10 LLM fallback stage is NOT justified on the evidence T11 produced.
