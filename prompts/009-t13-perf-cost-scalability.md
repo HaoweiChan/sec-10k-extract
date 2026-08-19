@@ -64,10 +64,15 @@ day. A headline that moved four times under review lands where §h3 left it.
 
 - Assumed: §3's numbers were stale — measured over 21 fixtures instead of 37 —
   and a re-run at the current corpus would restate them larger.
-- Eval said: `evals/report/20260820-020815-bench.json` — aggregate throughput
-  **14.34 MB/s** against v3's 18.9, p95 **0.533 s** against 0.249, and a
-  per-fixture spread of **6.3–42.8 MB/s** against a claimed "roughly flat
-  8–37". `bac-2006` (4.5 MB) takes 2.1× longer than `xom-2021` (6.2 MB).
+- Eval said: the bench artifact — aggregate throughput **14.61 MiB/s** against
+  v3's 18.9, p95 **0.508 s** against 0.249, and a per-fixture spread of
+  **6.62–33.68 MiB/s** against a claimed "roughly flat 8–37". `bac-2006`
+  (4.31 MiB) takes 2.1× longer than `xom-2021` (5.87 MiB). *(Figures are the
+  artifact of record `20260820-024620-bench.json`, after round 1 pulled the
+  three refusal fixtures out of the rate statistics and put everything on
+  binary units; the first run of the same instrument,
+  `20260820-020815-bench.json`, read 14.34 MB/s and 6.3–42.8 with `ksb-2007`
+  setting the top.)*
 - Corrected: four numbers **retracted rather than replaced** — ADR-021 §c and
   report v4 §3 both print the old value beside the new one. "Cost tracks bytes,
   not document complexity" is narrowed to a first-order term plus a
@@ -76,8 +81,12 @@ day. A headline that moved four times under review lands where §h3 left it.
 - Assumed: peak RSS scales with the single largest document, so the corpus peak
   and the largest filing's peak are the same number (v3 said 110 MB for both).
 - Eval said: with fixtures processed in **descending** size order, `jpm-2024`
-  alone takes the high-water to 96.4 MB and the corpus reaches 122.1 MB by
-  roughly the tenth fixture, then holds flat for the remaining 27.
+  alone takes the high-water to **94.6 MiB** and the corpus reaches its
+  **122.8 MiB** peak within the first handful, then holds within 0.5 MiB of it
+  for the rest. (Round 1, R11: my first write-up said "122.1 MB by roughly the
+  tenth", which did not match its own artifact. The plateau index is now a
+  computed field and is run-variable — 4 here, 9 on the previous run — so the
+  report states the plateau, not the index.)
 - Corrected: v4 §5 says *plateau*, not *largest document*. The 256 MB per-worker
   sizing survives; the reason given for it did not. Recorded because the sizing
   advice being accidentally right is not the same as it being justified.
@@ -87,8 +96,12 @@ day. A headline that moved four times under review lands where §h3 left it.
 - Eval said: `count_tokens` is a network call, and neither `anthropic` nor
   `tiktoken` is importable here or listed in `requirements.txt` — checked by
   import, not assumed from the file.
-- Corrected: chars/4 carried forward **with its caveat intact**, the ±20%
-  margin stated, and the price basis marked *carried, not re-verified* with
+- Corrected: chars/4 carried forward **with its caveat intact**, **no margin
+  quoted** — a draft of this record said "the ±20% margin stated", which was
+  the opposite of what shipped and is corrected here (PR #12, R6). §4.1 says
+  plainly that how far off the estimate is, is itself unmeasured, because
+  quoting a margin would be the same guess wearing a confidence interval. The
+  price basis is marked *carried, not re-verified*, with
   `cost.price_basis_date` stamped in the artifact next to every dollar figure.
   ADR-021 §b choice 7 records the non-result as a decision rather than leaving
   a silently unexecuted instruction in ADR-020.
@@ -111,9 +124,80 @@ day. A headline that moved four times under review lands where §h3 left it.
   being demonstrated.
 
 - Assumed: correcting the report was enough.
-- Eval said: `README.md`'s performance table carried the same four retracted
+- Eval said: `README.md`'s performance table carried the same retracted
   figures, plus a claim that "analysis-report v2 re-measures at T10", which it
   did not.
 - Corrected: README's table rebuilt from the same artifact, with its own dated
   correction note. A number is not retracted while a copy of it is still
   published one file over.
+- Then eval said it **again**, on the file I had just rewritten: `README.md`
+  line 107 still published the retracted `0.53 s` large-filing latency, 77
+  lines above the note retracting it, and my correction note said "four of
+  those figures are wrong" while naming three — importing ADR-021 §c's count of
+  four *claims* into a table that never carried the flatness claim at all
+  (PR #12, R1 and R9). Corrected by grepping all four retracted figures
+  repo-wide rather than fixing the line the reviewer cited: the only surviving
+  uncorrected copy was line 107; every other hit is inside an explicit
+  correction table or a dated audit file. The note now enumerates exactly the
+  five rows that table had and what each became, including the one that did not
+  change. **The rule I wrote two paragraphs above is the rule I then broke in
+  the same commit**, which is the reason it is worth stating twice.
+
+### Round 1 of PR #12 review — three more, and the pattern behind them
+
+- Assumed: `evals/bench.py --self-check` covered the instrument's arithmetic,
+  because that is what I wrote in ADR-021 §b6 and §e.
+- Eval said: the reviewer mutated `med = statistics.median(times)` to
+  `max(times)` and `pct`'s return to `vals[0]`, and `--self-check` still
+  printed `ok`. I ran both mutations myself before touching anything: both
+  reproduced. `_demo` had been asserting `statistics.median([...]) == x` — a
+  test of the standard library — and never read `latency_p50_s` or
+  `latency_p95_s` at all, so the p50, p95 and every per-fixture median in the
+  published report were produced by code no assertion touched.
+- Corrected: `make_record` extracted out of `run_all` so `_demo` drives the
+  real median path with a known list of times; percentile assertions moved onto
+  the fields `summarize` emits, over a 20-row set whose p50 and p95 differ from
+  each other and from both extremes. Seven mutations now go red, each one
+  applied to a copy and **run**, listed in ADR-021 §e. This is the fourth
+  instance in two PRs of asserting a property of an executable thing without
+  executing it — the shape ADR-020 §h3 named — and the first where the thing
+  was mine and brand new.
+
+- Assumed: "all 37 committed fixtures" described the benchmark's population,
+  and the mean filing size of that population was the right multiplier for a
+  full-EDGAR sweep.
+- Eval said: three separate findings (R3, R4, R5) that turned out to be one
+  question — which filings count. **42** fixture directories are committed, not
+  37; the 5 held-out ones were excluded by an accident of which helper I reused
+  (`evals.oracle.iter_fixtures`), not by a decision I had written down. Nine of
+  the 37 are self-created derivatives, seven of them from the corpus's
+  *smallest* real filings, so the mean I published (1.578 MiB) was diluted —
+  and my explanation for its drop from v3's assumed 1.8 MB ("the corpus mean
+  fell as the fixture set grew") had it backwards: v3's *guess* was closer to
+  the real-filing mean than my *measurement*. And the top of my published
+  throughput range, 42.8 MB/s on `ksb-2007`, was a document the pipeline
+  refuses before segmentation — I had explained it as "text-like input".
+- Corrected: resolved as one population question, not three sentences. The
+  artifact now emits three populations with a `rate_source` each and names
+  `real_edgar_committed` (33 real EDGAR filings, 2.104 MiB mean) as
+  `projection_of_record`; the EDGAR-year sweep moves ~12.6 → ~16.9 min. Held-out
+  filings contribute **sizes only**, by `stat`, never a pipeline call, so no
+  held-out outcome enters a committed artifact. Refusals are flagged in the
+  artifact and excluded from the rate statistics but not from latency or
+  memory. All of it is ADR-021 §b choice 8 — a decision, now written down.
+
+- Assumed: the numbers I quoted were traceable because I named the file they
+  came from.
+- Eval said: R7 — about a third of §3's numbers were *derivations* from
+  `records`, not fields, while the section claimed "every number in this
+  section is a field of that file"; and R8 — sizes were quoted in decimal MB
+  against rates in binary MiB/s, so dividing a published size by a published
+  time missed the published rate by 4–5%.
+- Corrected: the derivations became fields (`perf.derived`, `perf.populations`)
+  rather than the sentence becoming vaguer, and every unit is binary with
+  `*_mib_*` field names and a `units` block. Two of my own v4 claims were
+  **withdrawn as run-unstable** in the process — "11 fixtures were fastest on
+  their first run" (11 → 3 → 3 across three runs of identical code) and the
+  repeat-spread maximum — which only became visible once the statistics were
+  computed by the instrument on every run instead of by me once.
+
