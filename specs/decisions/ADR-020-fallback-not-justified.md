@@ -6,16 +6,13 @@ question that `README.md`, `docs/evals/evaluation-strategy.md` metric 11 and
 `docs/analysis-report.md` §4 currently point at. Enumerates one new debt class
 (`combined-multi-item-heading`) and burns one held-out case (`axp-2008`).
 
-**Corrected twice under review (PR #11, findings R1 and R8) — see §h.** The
-headline number moved twice, in both directions, and the derivation is stated
-in full below so the movement can be checked rather than trusted. Round 0
-claimed **0** improvable items on a status label the classifier contradicts;
-round 1 corrected that to **4**; round 2 found that three of those four cannot
-be given a span-carrying status at all without amending INV-S1, leaving **1**
-contract-reachable improvable item of 768. The ruling is unchanged across all
-three, and now rests on two independent grounds: the escalation ladder for the
-one reachable item, and an invariant no extraction method can buy past for the
-other three.
+**Corrected three times under review (PR #11, findings R1, R8 and R15) — see
+§h, §h2 and §h3.** The headline moved four times — **0 of 989 → 4 of 989 → 1 of
+768 → 4 of 768** — and three of those four figures were wrong. The final number
+is **4 of 768**, and the derivation is written out below so it can be checked
+rather than trusted. The ruling is unchanged across every round, and rests on
+the escalation ladder: the same deterministic fan-out reaches all four items at
+$0 and closes the whole class.
 
 ## a) The ruling
 
@@ -37,23 +34,22 @@ The ruling in two clauses, because one is not enough:
    recall instrument. It fires where the pipeline produced nothing. Five of the
    six never trigger at all; the sixth is structurally impossible for this
    candidate to fix.
-2. **The seventh class is real, and mostly unreachable by any extraction
-   method.** `axp-2008` names four item codes in one heading, and all four come
-   back `missing` with content present to find. But only **one of the four can
-   be given a span-carrying status at all** under the current contract: INV-S1
-   requires span-carrying ranges to be non-overlapping *and* in document order,
-   ADR-011 gives `incorporated_by_reference` real offsets (only
-   `missing`/`omitted` may be span-free), and the block's caption bullets
-   address items in the interleaved order 10, 10, 11, 10, 11, 12, 10, 11, 13,
-   10 — so no document-ordered disjoint partition into 10 < 11 < 12 < 13
-   exists. Items 11–13 are blocked by an **invariant**, which a model cannot
-   buy past any more than a regex can. That leaves **1 contract-reachable
-   improvable item of 768 (0.13%)** — attach the block to item 10, the first
-   code the heading names — and a heading-shape change produces the *identical*
-   span and the *identical* status through the *same* classifier,
-   deterministically, at $0, for every filing of that shape rather than the
-   instances a model happens to be invoked on. That is rung 1 of the escalation
-   ladder answering a rung-4 proposal.
+2. **The seventh class is real, and the fallback would fix it — but so would a
+   regex.** `axp-2008` names four item codes in one heading, and all four come
+   back `missing` with content present to find: **4 improvable items of 768
+   (0.52%)**, one filing, one root cause. All four are contract-reachable. The
+   block's ten caption bullets address items in the interleaved order 10, 10,
+   11, 10, 11, 12, 10, 11, 13, 10, and what that interleaving forecloses is
+   narrow: **no partition gives item 10 the *complete* block AND items 11–13
+   their own spans.** It costs item-10 coverage — 956 of the block's 3,263
+   chars — and nothing else. It does not put items 11–13 beyond the contract:
+   the four caption regions sit at strictly increasing, disjoint offsets,
+   `no_overlap_ordered` passes on that assignment, and `segment.classify`
+   returns `extracted` on each of the four bodies. A combined-heading fan-out
+   produces the *identical* spans and the *identical* statuses through the
+   *same* classifier, deterministically, at $0, for every filing of that shape
+   rather than the instances a model happens to be invoked on. That is rung 1
+   of the escalation ladder answering a rung-4 proposal.
 
 ## b) Disposing of metric 11's circularity
 
@@ -104,18 +100,18 @@ Three candidate trigger policies, and the disposal of each:
 | `xom-2021` item 6 | The item **is not in the document**. `Item 6` and `Selected Financial Data` occur zero times in 388,862 normalized chars — FY2021 filings no longer contain it. Nothing to find; an LLM offered this filing can only invent. **Not addressable.** |
 | `malformed-html` item 1A | `RISK FACTORS` occurs exactly once, in the table of contents. The body does not survive the corruption this fixture exists to model. **Not addressable.** |
 | `heading-unnumbered` item 8; `items-stripped-escalation` items 5/6/7/7A/8/9/9A/9B (9 items, 2 synthetic fixtures) | Content is present but de-numbered — and **the committed cases assert `missing` is the CORRECT answer**, with `doc_status: ambiguous` and `expected_item_missing`. These fixtures exist to prove the pipeline refuses rather than guesses (`README.md`: "it never emits a best-effort parse of a document it could not identify"). A fallback here does not fix a failure; it deletes a guarantee. **Not addressable.** |
-| `axp-2008` item 10 | **ADDRESSABLE — and the whole of it.** A real EDGAR filing, content present, and the candidate would produce a contract-valid `extracted` span. See §c row 7 for what that costs and why it still loses. |
-| `axp-2008` items 11, 12, 13 | **Real recall gaps, but unreachable by any extraction method.** Giving them a status other than `missing` means giving them offsets (ADR-011), and there is nowhere to put those offsets: sharing item 10's span breaks INV-S1's non-overlap rule, and partitioning the block breaks its document-order rule, because the caption bullets address items in the order 10, 10, 11, 10, 11, 12, 10, 11, 13, 10. The blocker is the **contract**, not the extractor — an LLM whose safety property is one contiguous verbatim slice hits it identically. Closing this needs an INV-S1 amendment (a shared or joint span kind), which is its own ADR and a bigger decision than the fallback question. Same family as `msft-2013`, which needs a discontiguous span kind. **Not addressable.** |
+| `axp-2008` items 10, 11, 12, 13 | **ADDRESSABLE — and the whole of it.** A real EDGAR filing, content present, and all four are contract-reachable: the caption regions are disjoint and in order, `no_overlap_ordered` passes, `classify` returns `extracted` on each. The interleaved bullet order costs only item-10 *coverage* (956 of 3,263 chars), not the other three items' spans. See §c row 7 for what fixing them costs and why the fallback still loses. |
 
-**Policy 2 — `confidence < 0.8`.** **31 items** deduplicated by fixture (43 as a
-per-case sum over `results` + `debt`, 34 over `results` alone — the dedup basis
-is the one used everywhere in this section). All excluded for one structural
+**Policy 2 — `confidence < 0.8`.** **32 items** across both sets, deduplicated
+by fixture — 31 dev (43 as a per-case sum over `results` + `debt`, 34 over
+`results` alone) plus 1 held-out (`cost-2022` item 7, 0.75). All excluded for one structural
 reason: ADR-019 §b/§e/§f measured where the residual defects actually live, and
 it is **at 0.95** — `textron-2001` item 4, `cvx-2015` items 7/8, `jpm-2024`
 items 7/8, `ba-2003` items 11/13. A confidence trigger cannot reach the
-population that is actually wrong. It adds nothing to policy 1. *(Repair round
-2, R12: this read 35, which is the figure from `20260819-134001-all.json` — the
-pre-branch report — and does not reproduce from the report this section cites.)*
+population that is actually wrong. It adds nothing to policy 1. *(Repair round 2, R12: this read 35, the figure from
+`20260819-134001-all.json` — the pre-branch report — which does not reproduce
+from the report this section cites. Round 3, R18: it then read 31, a dev-only
+count inside a section whose stated basis is both sets.)*
 
 **Policy 3 — `doc_status ∈ {ambiguous, unsupported, failed}`.** 9 cases:
 `jpm-2024-content`, `jpm-2024-structure`, `xom-2021-shallow`,
@@ -142,17 +138,15 @@ or not complete — the maximal hallucination surface in the corpus, bought by
 deleting the refusal guarantee that is the product's headline honesty property.
 **Not addressable.**
 
-**Net addressable surface: 1 of 768 items = 0.13%** — `axp-2008` item 10. Two
-numbers matter here and collapsing them into one is how this ADR went wrong
-twice, so both are stated: **4** items are genuine recall gaps (real filing,
-content present, a reader can point to it), and **1** of those four can be
-converted into a **contract-valid** output by any extraction method at all. The
-gap between 4 and 1 is INV-S1, not the extractor.
+**Net addressable surface: 4 of 768 items = 0.52%** — `axp-2008` items 10–13,
+one filing, one root cause. Every other `missing` item in either set is either
+absent from its document or asserted `missing` on purpose.
 
 The number is non-circular (it needs no fallback to compute), falsifiable, and
 recomputable from any committed report by counting `status: missing` in
 `items_summary` and checking each against the filing and the contract — no new
-metric, no new code.
+metric, no new code. Check it against **both**, and by running the checks rather
+than reading them: §h3 is what happens otherwise.
 
 ## c) The residual-failure classes, one at a time
 
@@ -168,7 +162,7 @@ cost, with what new failure mode?
 | 4 | **Internal pointer to a paginated section** — `cvx-2015` 7/8, `ge-1994` 8, `jpm-2024` 7/8 | **No** at item level (`extracted`, 0.95; ADR-004/005 rule that call correct). `jpm-2024` is the one place a *doc-level* trigger exists (`last_item_dominates` → `ambiguous`). | Under a doc-level policy it would have to relocate a **431,755-char** span from anchor quotes on a **12.8 MB** filing. | Two short quotes bounding a 431 KB span is a relocation problem with real ambiguity; a wrong `end` anchor yields a confidently wrong span carrying `llm_fallback` provenance — the silent-failure shape T11 exists to hunt, with a bill attached. |
 | 5 | **`msft-2013` Executive-Officers/website-block interleaving** (ADR-019 §f) | Only under a doc-level or heuristic trigger — the item is `extracted` at 0.95 inside its length band. | **Structurally impossible.** The fix needs a discontiguous span. The candidate's entire safety property is one contiguous verbatim slice (INV-S2 by construction). What makes the design safe makes it useless here. | — |
 | 6 | **`EXEC_OFFICERS_RE` has no TOC awareness** (ADR-019 §f) | **No.** If it fired it would clip an item to near-nothing while still reporting `extracted`. | No. | TOC routing: deterministic, $0. |
-| 7 | **`axp-2008` combined Part III heading** — *new, this ADR* | **Yes.** Items 10–13 come back `missing` at 0.40. The only real-filing recall gap in either set. | **For item 10, yes. For items 11–13, no — and neither would a regex.** It would locate the Part III block, and feeding that span to the existing classifier returns `extracted`, correct under ADR-004 (see below). But only one item can hold that span: INV-S1 forbids the other three from sharing it and forbids the partition that would separate them (see below). | **A regex produces the identical output on the reachable half, and hits the identical wall on the other.** The heading is present, bold, machine-readable, and names its codes: `ITEMS 10, 11, 12 and 13.` Fan-out is a heading-shape change that closes the class deterministically at $0, versus a metered call closing the instances it is invoked on and happens to get right — and for items 11–13 the blocker is an invariant, which neither instrument can spend its way past. |
+| 7 | **`axp-2008` combined Part III heading** — *new, this ADR* | **Yes.** Items 10–13 come back `missing` at 0.40. The only real-filing recall gap in either set. | **Yes, all four.** It would locate the Part III block, and feeding the four caption regions to the existing classifier returns `extracted` on each — correct under ADR-004 (see below), and INV-S1-clean (see below). | **A regex produces the identical output.** The heading is present, bold, machine-readable, and names its codes: `ITEMS 10, 11, 12 and 13.` Combined-heading fan-out is a heading-shape change that closes the class deterministically at $0, versus a metered call closing the instances it is invoked on and happens to get right. |
 
 **Row 7's status, corrected.** The first draft of this ADR asserted the correct
 status was `incorporated_by_reference` and that the candidate — which emits
@@ -184,18 +178,31 @@ into this report". That is ADR-004 **shape 3**, ruled `extracted`, and
 `segment.classify('10', body, True)` returns `extracted` on it today. So the
 candidate would get item 10 *right*, not wrong.
 
-**Row 7's scope, corrected again (round 2, R8).** Re-labelling the debt case to
-`extracted` ×4 moved the error rather than removing it. Four items cannot share
-one span: INV-S1 requires span-carrying ranges to be non-overlapping **and** in
-document order, and ADR-011 makes `incorporated_by_reference` span-carrying too,
-so `missing`/`omitted` are the only span-free statuses. Nor can the block be
-partitioned into four ordered pieces — its caption bullets address items in the
-order **10, 10, 11, 10, 11, 12, 10, 11, 13, 10**, and a partition satisfying
-`10 < 11 < 12 < 13` would have to un-interleave text the filing wrote
-interleaved. The debt case asserted this against its own `no_overlap_ordered`
-check. **What is reachable without amending anything is item 10 alone** — one
-span, no overlap, `classify` returns `extracted` — and that is what the case now
-asserts, with items 11–13 explicitly *not* asserted and their blocker named.
+**Row 7's scope, and what the interleaving actually costs (round 3, R15).**
+Round 2 claimed the block admits no ordered disjoint partition and narrowed this
+row to item 10. That claim was false, and the way to see it is to build a
+partition and run the check: item 10 `[328690,329646)` 956 chars, item 11
+`[329646,330009)` 363, item 12 `[330009,330085)` 76, item 13 `[330264,330343)`
+79 — strictly increasing, disjoint, and `no_overlap_ordered` returns `None`
+(pass). Items 12 and 13 land on precisely their own content. `classify` returns
+`extracted` on all four bodies. INV-S1's only executable form checks exactly
+`s2 < e1` over spans in item order and nothing more.
+
+What the interleaved bullet order *does* foreclose is narrower and real: **no
+partition gives item 10 the complete block AND items 11–13 their own spans.**
+Item 10 takes 956 of the block's 3,263 chars under the partition above. So the
+fan-out design has a genuine choice — whole block to item 10, or four
+sub-spans — and it costs item-10 coverage, not items 11–13's reachability. The
+debt case pins the four-way partition (that is what stops a *partial* fan-out
+from satisfying it) and its item-10 `min_chars` floor is 500, cleared by both
+designs, rather than round 1's 2,000, which silently encoded the whole-block
+design alone.
+
+One design constraint found while validating the partition, recorded so the
+eventual fix does not trip on it: the adapter's `verbatim` check requires a span
+to open with its own `heading_text`, so a fan-out must not copy the combined
+heading string onto all four items. That is a question about what `heading_text`
+means for a shared heading, not a reachability problem.
 
 **The second deterministic route, disposed of (round 2, R10).** This filing does
 have a table of contents, and it lists all four Part III codes individually — so
@@ -212,11 +219,9 @@ confirms which items are expected — which the era table already does, which is
 why `expected_item_missing` fires — and locates nothing. It changes neither the
 count nor the ruling.
 
-**Score: 1 of 7 partially fixed — one item of four, and by the more expensive of
-two instruments that produce identical output on it. 5 of 7 never trigger. 1 of
-7 is structurally impossible for this design. And the unreachable 3 items in row
-7 are blocked by the same kind of thing that blocks row 5: an invariant, not an
-extraction method.**
+**Score: 1 of 7 fixed, and by the more expensive of two instruments that produce
+identical output. 5 of 7 never trigger. 1 of 7 is structurally impossible for
+this design.**
 
 The general form of the finding still holds and is what carries the ruling:
 **a fallback fires on absence, and six of this pipeline's seven residual
@@ -227,13 +232,13 @@ answer is wrong — and any such detector would be the fix, deterministically,
 without the model. The one absence that remains is a heading-shape gap, which
 is the cheapest kind of fix this repo has.
 
-**A fourth cost the candidate carries, worth naming**: ten committed cases
-assert `{"type": "deterministic"}`, which re-runs `extract_items` and requires
-byte-identical output. A model in the extraction path satisfies that only for
+**A fourth cost the candidate carries, worth naming**: **13** committed cases
+assert `{"type": "deterministic"}` (11 dev + 2 held-out), which re-runs
+`extract_items` and requires byte-identical output. A model in the extraction path satisfies that only for
 inputs whose responses are already cached and committed. The deployed service
 takes arbitrary EDGAR URLs (§d.2), which is exactly the mode where the cache is
 cold — so the candidate trades a checked invariant for 4 items that a
-deterministic change already reaches.
+deterministic change already reaches at $0.
 
 ## d) Cost, and why the candidate is most expensive exactly where it is needed
 
@@ -289,18 +294,17 @@ of 4 does not overturn the decision. Any one of these reopens T12 with its own
 ADR:
 
 1. **An addressable item appears that a deterministic change cannot reach *and*
-   a fallback can.** Both halves are required, and round 2 showed why: a real
-   EDGAR filing produces an item reported `missing` whose content a reader can
-   point to, whose location is *not* reachable by a heading-shape or table
-   change, **and** which a single contiguous verbatim slice could carry without
-   violating INV-S1. `axp-2008` item 10 fails the first half (a heading-shape
-   change reaches it); `axp-2008` items 11–13 fail the second (no span-carrying
-   status is available to them at all, so the fallback is as blocked as the
-   regex). An item failing *only* the first half is an argument for the
-   deterministic fix; an item failing *only* the second is an argument for
-   amending INV-S1, not for buying a model. Instrument: count `status:
-   "missing"` in any committed report's `items_summary`, then check each against
-   the filing **and** the contract. Threshold: **one** such item.
+   a fallback can.** Both halves are required: a real EDGAR filing produces an
+   item reported `missing` whose content a reader can point to, whose location
+   is *not* reachable by a heading-shape or table change, **and** which a single
+   contiguous verbatim slice could carry without violating INV-S1. All four
+   `axp-2008` items fail the first half — a heading-shape change reaches every
+   one of them — which is the whole of §c row 7. An item failing *only* the
+   first half is an argument for the deterministic fix; an item failing *only*
+   the second is an argument for amending INV-S1, not for buying a model.
+   Instrument: count `status: "missing"` in any committed report's
+   `items_summary`, then check each against the filing **and** the contract —
+   by running the checks, not by reading them. Threshold: **one** such item.
 2. **A residual precision failure acquires an honest trigger.** If the
    escalation-policy successor named in ADR-019 §d ships and gives non-last span
    dominance a doc-level signal, rows 4 and 5 acquire a trigger they lack today,
@@ -333,12 +337,11 @@ ships, so T13's §4 should carry, in its place:
    the 37-fixture corpus, with the chars/4 caveat, the as-of-2026-06-24 price
    basis, and the note that the Haiku tier cannot hold the largest filings. This
    is what makes "$0" a *decision* rather than an absence.
-3. **The addressable-surface count** (§b): of 768 distinct items, 4 are real
-   recall gaps and **1** is convertible into a contract-valid improvement by any
-   extraction method — carry both numbers, not one, since collapsing them is how
-   this ADR went wrong twice. Metric 11 demoted in the prose from "the number
-   that justifies or kills a fallback stage" to "a dependence monitor, vacuous
-   while no fallback exists".
+3. **The addressable-surface count** (§b): **4 of 768** distinct items, one
+   filing, one root cause, all four reachable by a deterministic heading-shape
+   change at $0. Metric 11 demoted in the prose from "the number that justifies
+   or kills a fallback stage" to "a dependence monitor, vacuous while no
+   fallback exists".
 4. **The §e reopening conditions**, so the report says what would change the
    answer rather than implying the answer is permanent.
 
@@ -466,27 +469,20 @@ median and price basis are recomputed and cited.
 Round 2 returned eight findings. All eight were confirmed by running their
 repros; none was rejected. Two changed the substance:
 
-- **R8** found that round 1's fix relocated the error instead of removing it.
-  Asserting `extracted` ×4 requires four items to share one span, which the debt
-  case's own `no_overlap_ordered` check forbids (INV-S1), and the block cannot be
-  partitioned because its caption bullets interleave the four items. The
-  consequence is larger than the finding stated: **no extraction method** —
-  deterministic fan-out or LLM — can give items 11–13 a non-`missing` status
-  without amending INV-S1, because ADR-011 makes every non-`missing` status
-  span-carrying. The debt case is now scoped to item 10, which is reachable, and
-  the surface is **1 of 768**.
+- **R8** found that round 1's fix relocated the error instead of removing it:
+  asserting `extracted` ×4 requires four items to share one span, which the debt
+  case's own `no_overlap_ordered` check forbids. **That much was correct.** What
+  I then built on it was not — see §h3.
 - **R7** found the denominator was a per-case sum labelled "deduplicated" and
   paired with a fixture column; the true distinct count is **768**, not 989.
+  This one holds.
 
 **This moved the headline in my favour, immediately after round 1 moved it
-against me, and that deserves to be flagged rather than buried.** The derivation
-is written out in §a clause 2 and §b so it can be checked: the movement comes
-entirely from applying INV-S1 and ADR-011 to items 11–13, both of which are
-committed specs, and the interleaved bullet order is a fact about the document
-that anyone can print. If that reasoning is wrong, the surface returns to 4 and
-the ruling still holds on the escalation ladder alone — the conclusion does not
-depend on which of the two numbers is right, which is the honest summary of
-three rounds of correction.
+against me, and I flagged the pattern at the time rather than letting it read as
+vindication.** Round 3 showed the flag was warranted: the round-2 reasoning was
+itself wrong. What I wrote next — "if that reasoning is wrong, the surface
+returns to 4 and the ruling still holds on the escalation ladder alone" — is
+exactly what happened.
 
 The other six were presentation defects with no pipeline behaviour to pin: R9
 (the burned case kept `warning_present: expected_item_missing`, which is true
@@ -497,26 +493,69 @@ the TOC route is now disposed of in §c row 7); R11 (oracle shift, disclosed in
 §g); R12 (the low-confidence figure cited the wrong report); R13 (an ordinal
 disagreed across four artifacts); R14 (missing fixture provenance row).
 
-Three rounds, three headline numbers — 0, 4, 1 — and one unchanged ruling. The
-first was wrong because I read a status from memory instead of running the
-classifier. The second was wrong because I checked the status rule and not the
-span rule. Both are the same failure: reasoning about an executable contract in
-prose. What survived every round is the part that was never a number — that a
-fallback fires on absence, that six of seven residual defects are presence, and
-that the seventh is cheaper to reach with a regex than with a model.
+## h3) Repair round 3 (PR #11, R15) — the round-2 correction was itself wrong
+
+Round 2's claim, in §a, §b, §c row 7, §h2 and four other files, was that "no
+document-ordered disjoint partition into 10 < 11 < 12 < 13 exists". **It is
+false.** One exists, and the way to find out is to build it and run the check —
+which is what the reviewer did and I had not:
+
+```
+item 10  [328690,329646)  len 956  -> extracted
+item 11  [329646,330009)  len 363  -> extracted
+item 12  [330009,330085)  len  76  -> extracted
+item 13  [330264,330343)  len  79  -> extracted
+no_overlap_ordered -> None      # pass
+```
+
+Items 12 and 13 land on precisely their own captions. INV-S1's only executable
+form checks `s2 < e1` over spans in item order and nothing else; nothing in it
+forbids this. The true claim is narrower than the one I made: **no partition
+gives item 10 the *complete* block AND items 11–13 their own spans.** The
+interleaving costs item-10 coverage — 956 chars of 3,263 — and does not put
+items 11–13 beyond the contract. The surface returns to **4 of 768**, and the
+debt case is back to four `extracted` assertions with its item-10 floor lowered
+from 2,000 (which silently encoded the whole-block design) to 500 (cleared by
+both designs). Watched red again.
+
+**The headline has now moved four times: 0 of 989 → 4 of 989 → 1 of 768 → 4 of
+768. Three of those four figures were wrong, and three of the four corrections
+were the same error — reasoning about an executable contract in prose instead of
+running it.** Round 0: read a status rule from memory without running `classify`.
+Round 2: read the span rule without running `no_overlap_ordered` on a candidate
+assignment. Round 3 corrected round 2 by doing the one thing neither earlier
+round did — constructing the object under discussion and executing the check
+against it. The pattern is not incidental to this ADR; it is the thing this repo
+exists to prevent, committed four times inside the document arguing that
+correctness must be executable rather than asserted. The number in this ADR
+should be read as the fourth attempt, not as a result that arrived correctly.
+
+What survived every round, unchanged, is the part that was never a number: a
+fallback fires on absence, six of seven residual defects are presence, and the
+seventh is cheaper to reach with a regex than with a model. The ruling never
+depended on which of the four figures was right — which is why it is still the
+ruling, and also why it was worth four rounds to get the figure honest.
 
 ## Verification
 
-New case watched **red first**, before this ADR existed and with no fix
-attempted, and red again after the round-1 re-labelling:
-`axp-2008-combined-part-iii` — `[DEBT] STILL RED — combined-multi-item-heading`,
-five failures (`item 10/11/12/13 not extracted: missing`, plus the item-10
-`min_chars` floor reporting no span), three hygiene checks green.
+`axp-2008-combined-part-iii` was watched **red before this ADR existed**, with
+no fix attempted, and watched red again after each of the three review re-scopes
+(rounds 1, 2 and 3). As it ships, at the commit this section describes:
+`[DEBT] STILL RED — combined-multi-item-heading`, **5 failures** — `item
+10/11/12/13 not extracted: missing`, plus `item has no span` from the item-10
+`min_chars` floor — with both hygiene checks green. That reproduces from the
+report of record for this commit, `evals/report/20260820-013206-fast.json`.
+*(Round 3, R16: this section previously reported the round-1 case's failure
+count, which the round-2 re-scope had already made wrong.)*
 
 `--suite invariant` 12/12 = 1.000 (+4 enumerated debt, unscored).
 `--suite fast` 45/45 = 1.000 (+ the same 4 debt rows) — 45, not 44, because the
 burned held-out case moved into `evals/adversarial/`.
+`--suite fast --dir evals/heldout` 5/5 = 1.000 — 5, not 6, because `axp-2008`
+was burned and moved (§g).
 `.eval-baseline.json` untouched (`{"fast": 1.0}`; the gate compares score, and
 the score is unchanged at 1.0). No `--update-baseline`, no `--no-verify`.
-**No paid API call was made in this milestone**, and no code path capable of
-making one exists.
+`src/` is untouched by this milestone: the only code change is a `note` on
+metric 11 in `evals/metrics.py` and a dated docstring correction in
+`evals/oracle.py`. **No paid API call was made in this milestone**, and no code
+path capable of making one exists.

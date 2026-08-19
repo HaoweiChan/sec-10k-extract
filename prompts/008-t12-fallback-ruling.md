@@ -67,10 +67,10 @@ burned held-out case.
   Corrected: the ruling rests on a different quantity — the fallback-**addressable
   surface**, an *input* (which items any honest trigger would fire on),
   computable today from committed reports with zero fallback code: **15 of 768**
-  distinct items across both eval sets report `missing`, of which 4 are real
-  recall gaps and **1 is convertible into a contract-valid improvement** (that
-  figure was published as 0, then 4, then 1 across two review rounds — see the
-  last two chain entries). Metric 11 is demoted to a dependence monitor in
+  distinct items across both eval sets report `missing`, of which **4 are
+  improvable** (that figure was published as 0, then 4, then 1, then 4 again
+  across three review rounds — see the last three chain entries). Metric 11 is
+  demoted to a dependence monitor in
   `evaluation-strategy.md`, in `evals/metrics.py` (a `note`, the only code change
   this milestone makes), and by a dated correction in `analysis-report.md` §4.
 
@@ -186,9 +186,12 @@ burned held-out case.
   surface becomes **1 of 768**, and §e condition 1 is tightened to require BOTH
   halves (an item no deterministic change reaches AND that a contiguous slice
   could legally carry), because the untightened version would have been tripped
-  by items a fallback is equally unable to help. The deeper correction is to the
-  ruling's shape: for three of those four items the blocker is an **invariant**,
-  and a model cannot buy past an invariant any more than a regex can.
+  by items a fallback is equally unable to help.
+  **THIS ENTRY'S CORRECTION WAS ITSELF WRONG — superseded, see the next entry.**
+  The claim that no ordered disjoint partition exists is false; only §e
+  condition 1's tightening survived. Left in place rather than deleted, because
+  the point of this file is the correction chain, and a chain that quietly drops
+  its wrong links is not one.
 
 - Assumed: the review loop's job is to catch overclaiming, so each round should
   move the headline against the author.
@@ -204,3 +207,40 @@ burned held-out case.
   prose — first the status rule without running `classify`, then the span rule
   without running the check the case itself declares. What survived every round
   was the part that was never a number.
+
+- Assumed: the round-2 correction was sound — INV-S1 plus ADR-011 plus the
+  interleaved bullet order put items 11–13 beyond any extraction method, so the
+  surface was 1 of 768. I even flagged that this moved the number back in my own
+  favour immediately after review had moved it against me, and wrote that if the
+  reasoning were wrong the surface would return to 4.
+  Eval said: review round 3 built the partition and ran the check. Item 10
+  `[328690,329646)`, item 11 `[329646,330009)`, item 12 `[330009,330085)`,
+  item 13 `[330264,330343)` — strictly increasing, disjoint,
+  `no_overlap_ordered` returns `None` (pass), and `segment.classify` returns
+  `extracted` on all four bodies. Items 12 and 13 land on precisely their own
+  captions. INV-S1's only executable form checks `s2 < e1` over spans in item
+  order and nothing more. My claim — "no document-ordered disjoint partition
+  exists" — was false; the true claim is narrower: no partition gives item 10
+  the *complete* block AND items 11–13 their own spans. The interleaving costs
+  item-10 coverage, not items 11–13's reachability.
+  Corrected: surface restored to **4 of 768** everywhere; the debt case back to
+  four `extracted` assertions with the item-10 floor lowered from 2,000 (which
+  had silently encoded the whole-block design) to 500, cleared by both
+  contract-valid fan-out designs; watched red again. ADR-020 §h3 records the
+  round-2 reasoning as defective in the same voice as the earlier two, rather
+  than presenting the final number as one that arrived correctly.
+
+- Assumed: the two wrong headline numbers were separate lapses.
+  Eval said: four movements — 0 of 989 → 4 of 989 → 1 of 768 → 4 of 768 — and
+  three of the four corrections were the same error. Round 0 read a status rule
+  from memory without running `classify`. Round 2 read the span rule without
+  running `no_overlap_ordered` on a candidate assignment. Round 3 fixed round 2
+  by doing the one thing neither earlier round did: constructing the object under
+  discussion and executing the check against it.
+  Corrected: stated as the generalization it is, in ADR-020 §h3 and here. The
+  failure was committed four times inside a document arguing that correctness
+  must be executable rather than asserted, in a repo whose working contract opens
+  with "the eval set IS the spec". The prompt discipline that would have caught
+  every instance is one line: before writing a claim about what the pipeline does,
+  run the function that decides it. Not "check your work" — *execute the
+  contract*. What survived all four rounds is the part that was never a number.
