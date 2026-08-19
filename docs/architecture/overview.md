@@ -222,13 +222,16 @@ the seven residual-failure classes on the books are *presence* — a confidently
 wrong span at 0.95 that no honest trigger reaches. Five never fire at all; one
 (`msft-2013`) is structurally impossible for this candidate, because the fix
 needs a discontiguous span and one contiguous verbatim slice is the candidate's
-own safety property. **Second**: the seventh class is real and the candidate
-would fix it — `axp-2008`'s combined Part III heading, 4 items — but a
-heading-shape change produces the identical span and the identical status
-through the same classifier, deterministically, at $0, for the whole class
-rather than the instances a model is invoked on. The measured
-fallback-addressable surface across both eval sets is **4 of 989 items (0.40%)**,
-one filing, one root cause. Cost stays structurally $0.00 and ADR-003's
+own safety property. **Second**: the seventh class is real — `axp-2008`'s
+combined Part III heading, 4 items — but only one of its four items can be given
+a span-carrying status at all, because INV-S1 forbids four items sharing one
+span and the block's caption bullets interleave them (10, 10, 11, 10, 11, 12,
+10, 11, 13, 10) so no ordered partition exists; items 11–13 are blocked by an
+invariant a model cannot buy past. On the one reachable item a heading-shape
+change produces the identical span and status through the same classifier,
+deterministically, at $0, for the whole class rather than the instances a model
+is invoked on. The measured fallback-addressable surface across both eval sets
+is **1 of 768 items (0.13%)**. Cost stays structurally $0.00 and ADR-003's
 stdlib-only pipeline is untouched. `method: llm_fallback` stays in the contract
 enum, unemitted. ADR-020 §e names the measurements that would reopen this.
 

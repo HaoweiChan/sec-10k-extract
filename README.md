@@ -72,8 +72,10 @@ Full rationale in `specs/decisions/` (18 ADRs). The ones that shaped the system:
   circular while no fallback exists — but because six of the seven residual
   failures measured here are confidently *wrong* spans, which no honest trigger
   reaches, and the seventh is a heading-shape gap a regex closes identically at
-  $0. Addressable surface across both eval sets: **4 of 989 items**, one filing,
-  one root cause. ADR-020 §e says what would reopen it.
+  $0. Addressable surface across both eval sets: **1 of 768 items** that any
+  extraction method could convert into a contract-valid improvement — 4 are real
+  recall gaps, but 3 of those are blocked by INV-S1 rather than by the
+  extractor. ADR-020 §e says what would reopen it.
 - **Stdlib-only parsing** (ADR-003). `html.parser`, no dependencies. The
   revisit clause has never fired; malformed HTML normalizes cleanly.
 - **Offsets, not text** (contract + INV-S2). Makes drift structurally

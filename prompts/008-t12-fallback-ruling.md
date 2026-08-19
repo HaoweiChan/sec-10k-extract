@@ -66,10 +66,11 @@ burned held-out case.
   later.
   Corrected: the ruling rests on a different quantity — the fallback-**addressable
   surface**, an *input* (which items any honest trigger would fire on),
-  computable today from committed reports with zero fallback code: **15 of 989**
-  distinct items across both eval sets report `missing`, of which **4 would be
-  improved** (that figure was first published as 0 and corrected in review — see
-  the last chain entry). Metric 11 is demoted to a dependence monitor in
+  computable today from committed reports with zero fallback code: **15 of 768**
+  distinct items across both eval sets report `missing`, of which 4 are real
+  recall gaps and **1 is convertible into a contract-valid improvement** (that
+  figure was published as 0, then 4, then 1 across two review rounds — see the
+  last two chain entries). Metric 11 is demoted to a dependence monitor in
   `evaluation-strategy.md`, in `evals/metrics.py` (a `note`, the only code change
   this milestone makes), and by a dated correction in `analysis-report.md` §4.
 
@@ -166,3 +167,40 @@ burned held-out case.
   classifier that owns the decision, on a repo whose entire premise is that
   correctness is executable. Seventh time in this project that the instrument —
   here, me — rather than the pipeline was at fault.
+
+- Assumed: with the status label corrected to `extracted`, the missing
+  capability is simply "attach the combined heading's one span to each of the
+  four codes it names" — and the ruling's comparison is regex-vs-model on an
+  otherwise buildable fix.
+  Eval said: review round 2 pointed the case's own check at it.
+  `no_overlap_ordered` enforces INV-S1 — span-carrying ranges non-overlapping
+  **and** in document order — and ADR-011 makes `incorporated_by_reference`
+  span-carrying too, leaving `missing`/`omitted` as the only span-free statuses.
+  Four items cannot share one span. Nor can the block be partitioned: printing
+  its caption bullets shows they address items in the order 10, 10, 11, 10, 11,
+  12, 10, 11, 13, 10, so an ordered partition into 10 < 11 < 12 < 13 would have
+  to un-interleave text the filing wrote interleaved.
+  Corrected: the debt case is re-scoped to **item 10 alone** — the one
+  assignment that is contract-valid without amending anything — with items 11–13
+  explicitly not asserted and their blocker named; watched red again. ADR-020's
+  surface becomes **1 of 768**, and §e condition 1 is tightened to require BOTH
+  halves (an item no deterministic change reaches AND that a contiguous slice
+  could legally carry), because the untightened version would have been tripped
+  by items a fallback is equally unable to help. The deeper correction is to the
+  ruling's shape: for three of those four items the blocker is an **invariant**,
+  and a model cannot buy past an invariant any more than a regex can.
+
+- Assumed: the review loop's job is to catch overclaiming, so each round should
+  move the headline against the author.
+  Eval said: round 1 moved it against me (0 → 4), round 2 moved it back (4 → 1),
+  and round 2's movement came from applying two committed specs the reviewer had
+  cited at me one round earlier.
+  Corrected: ADR-020 §h2 flags the favourable movement explicitly rather than
+  letting it read as vindication, writes out the derivation so it can be checked,
+  and states what happens if the derivation is wrong — the surface returns to 4
+  and the ruling still holds on the escalation ladder alone. Three rounds
+  produced three headline numbers (0, 4, 1) and one unchanged ruling. The two
+  wrong numbers failed the same way: I reasoned about an executable contract in
+  prose — first the status rule without running `classify`, then the span rule
+  without running the check the case itself declares. What survived every round
+  was the part that was never a number.
