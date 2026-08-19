@@ -99,6 +99,9 @@ REFUSAL_STATUSES = {"unsupported", "failed"}
 # the exclusion is auditable rather than a quiet filter (ADR-021 §b9).
 RATIO_FLOOR_S = 0.001
 
+DERIVED_NOTE = ("computed from `records`; the report quotes these, so they are "
+                "fields here rather than arithmetic done in prose")
+
 # Fixtures that are NOT real EDGAR documents — self-created copies/mutations of
 # other members of this same corpus. Eight are marked SELF-CREATED in
 # evals/fixtures/README.md; `items-stripped` has no README row and its
@@ -323,8 +326,7 @@ def summarize(records, batch_s, rss_start, repeats, heldout=None):
     spreads = [(r["max_s"] - r["min_s"]) / r["median_s"] for r in ratio_pop]
     tp = sorted(r["mib_per_s"] for r in processed if r["mib_per_s"] is not None)
     perf["derived"] = {
-        "note": "computed from `records`; the report quotes these, so they are "
-                "fields here rather than arithmetic done in prose",
+        "note": DERIVED_NOTE,
         "sum_of_medians_s": round(sum(r["median_s"] for r in records), 3),
         "processed_n": len(processed),
         "refused_n": len(records) - len(processed),
@@ -334,16 +336,12 @@ def summarize(records, batch_s, rss_start, repeats, heldout=None):
         "processed_mib_per_s_median": round(statistics.median(tp), 2) if tp else None,
         "processed_mib_per_s_spread": round(tp[-1] / tp[0], 2) if tp and tp[0] else None,
         "processed_size_vs_time_r2": _round_r2(processed),
-        "all_fixtures_size_vs_time_r2": _round_r2(records),
         "ratio_floor_s": RATIO_FLOOR_S,
         "ratio_population_n": len(ratio_pop),
         "ratio_excluded_fixtures": [r["fixture"] for r in records
                                     if r["median_s"] < RATIO_FLOOR_S],
         "warmup_first_over_min_median": round(statistics.median(ratios), 4) if ratios else None,
         "warmup_first_over_min_max": round(max(ratios), 4) if ratios else None,
-        # run-unstable near-tie count: kept as a field, deliberately NOT quoted
-        # in the report (it swung 11 -> 3 between two runs of identical code)
-        "n_first_repeat_was_fastest": sum(1 for r in ratio_pop if r["first_s"] == r["min_s"]),
         "repeat_spread_median": round(statistics.median(spreads), 4) if spreads else None,
         "repeat_spread_max": round(max(spreads), 4) if spreads else None,
         "rss_plateau_first_index": plateau_i,
@@ -360,7 +358,7 @@ def summarize(records, batch_s, rss_start, repeats, heldout=None):
     real_dev_rate = real_dev_bytes / MIB / real_dev_secs if real_dev_secs else batch_mib_s
     pops = dict(p for p in (
         _population("all_dev_fixtures", [r["raw_bytes"] for r in records],
-                    batch_mib_s, "measured: batch pass over these 37 fixtures"),
+                    batch_mib_s, f"measured: batch pass over all {len(records)} timed fixtures"),
         _population("real_edgar_dev", [r["raw_bytes"] for r in real_dev],
                     real_dev_rate, "measured: sum(bytes)/sum(medians) over these fixtures"),
         _population("real_edgar_committed",
@@ -464,17 +462,145 @@ def render(records, perf, cost):
 
 
 # -------------------------------------------------------------- self-check
+#
+# THE RULE THIS SECTION ENFORCES (PR #12 R18, round 2): **no field this module
+# publishes may be without an assertion pinning its value.** R2 caught two
+# unpinned statistics in round 1; the round-1 fix pinned those two and left
+# five more free, which is a correction that relocates the gap instead of
+# closing it (ADR-020 §h3's shape). Pinning statistics one at a time cannot
+# terminate, so the check is inverted: `summarize` is run over ONE golden
+# corpus and its ENTIRE `perf` block is compared against a hand-derived
+# expected dict. A new published field therefore fails `--self-check` until
+# someone computes its expected value by hand and adds it here. See ADR-021
+# §b10.
+#
+# The corpus is built so that no statistic lands on a degenerate value that
+# would hide a mutation: the percentile indices are fractional before `ceil`,
+# the throughput spread is not 1.0, R² is not 1.0, a refused row carries the
+# extreme rate, a sub-millisecond row would poison the ratio statistics, the
+# largest row is first, and one row is synthetic.
 
 def _rec(name, mib, times, chars=1000, status="success", rss=100.0):
     return make_record(name, "f", int(mib * MIB), times, chars, status, rss)
 
 
+# Five fixtures, descending raw size, exactly as `run_all` emits them.
+# Names are real corpus names because `refused`/`synthetic` are derived from
+# status and from membership of SYNTHETIC, not passed in.
+def _golden_corpus():
+    return [
+        #      name                 MiB      times                     chars   status
+        _rec("cat-2023",            3,     [0.6],                     300000, rss=50.0),
+        _rec("nvda-2024",           2,     [0.24, 0.20, 0.20],        200000, rss=99.6),
+        _rec("ko-1997",             1,     [0.11, 0.10, 0.10],        100000, rss=100.0),
+        _rec("aapl-2026-10q",       1,     [0.01],                     10000, "unsupported", 100.0),
+        make_record("truncated-download", "f", 1048, [0.0004, 0.0001, 0.0001],
+                    100, "failed", 100.0),
+    ]
+
+
+# Hand-derived, not blessed from a run. The load-bearing derivations, so a
+# reviewer can re-check them without executing anything:
+#   percentiles  n=5, sorted medians [0.0001, 0.01, 0.1, 0.2, 0.6];
+#                p50 index ceil(2.5)-1 = 2 -> 0.1  (floor would give 0.01)
+#                p95 index ceil(4.75)-1 = 4 -> 0.6 (floor would give 0.2)
+#   processed    rows 0-2 only; rates 3/0.6=5, 2/0.2=10, 1/0.1=10
+#                -> min 5, max 10, median 10, spread 2.0
+#                (with the two refusals in: max 100, spread 20 — R18b)
+#   R²           x = 1,2,3 MiB against y = 0.1,0.2,0.6: mx=2, my=0.3,
+#                Sxx=2, Sxy=0.5, a=0.25, b=-0.2; residuals 0.05,-0.1,0.05
+#                -> SSR 0.015, SST 0.14, R² = 1 - 0.015/0.14 = 0.892857
+#   ratios       floor excludes only the 0.0001 s row; first/min per row
+#                1.0, 1.2, 1.1, 1.0 -> median 1.05, max 1.2
+#                spreads 0.0, 0.2, 0.1, 0.0 -> median 0.05, max 0.2
+#   plateau      peak 100.0; first index whose tail stays within 0.5 is 1
+#                (99.6), which is deliberately NOT the peak value
+#   populations  total 7,341,080 B = 7.000999 MiB over batch_s 1.0 -> 7.0 MiB/s
+#                real (non-synthetic) rows 0-3: 7,340,032 B = 7.0 MiB over
+#                sum-of-medians 0.91 s -> 7.6923 MiB/s, mean 1.75 MiB
+#                committed adds the 4 MiB held-out size: mean 11/5 = 2.2 MiB,
+#                2.2 / 7.6923 = 0.286 s per filing -> 286 s / 2002 s
+_GOLDEN_HELDOUT = {"spg-2019": 4 * MIB}
+_GOLDEN_PERF = {
+    "n_fixtures": 5, "repeats": 3,
+    "raw_bytes_total": 7341080, "raw_mib_total": 7.0,
+    "normalized_chars_total": 610100,
+    "latency_p50_s": 0.1, "latency_p95_s": 0.6, "latency_max_s": 0.6,
+    "slowest_fixture": "cat-2023",
+    "largest_fixture": "cat-2023", "largest_raw_bytes": 3145728,
+    "largest_mib": 3.0, "largest_median_s": 0.6,
+    "batch_seconds": 1.0, "batch_mib_per_s": 7.0,
+    "median_raw_bytes": 1048576, "mean_raw_bytes": 1468216,
+    "rss_mib_before_any_extraction": 20.0,
+    "peak_rss_mib_corpus": 100.0,
+    "peak_rss_mib_after_largest_only": 50.0,
+    "derived": {
+        "note": DERIVED_NOTE,
+        "sum_of_medians_s": 0.91,
+        "processed_n": 3, "refused_n": 2,
+        "refused_fixtures": ["aapl-2026-10q", "truncated-download"],
+        "processed_mib_per_s_min": 5.0,
+        "processed_mib_per_s_max": 10.0,
+        "processed_mib_per_s_median": 10.0,
+        "processed_mib_per_s_spread": 2.0,
+        "processed_size_vs_time_r2": 0.8929,
+        "ratio_floor_s": 0.001,
+        "ratio_population_n": 4,
+        "ratio_excluded_fixtures": ["truncated-download"],
+        "warmup_first_over_min_median": 1.05,
+        "warmup_first_over_min_max": 1.2,
+        "repeat_spread_median": 0.05,
+        "repeat_spread_max": 0.2,
+        "rss_plateau_first_index": 1,
+        "rss_plateau_first_fixture": "nvda-2024",
+        "rss_plateau_first_value_mib": 99.6,
+    },
+    "populations": {
+        "all_dev_fixtures": {
+            "n": 5, "mean_raw_bytes": 1468216, "mean_mib": 1.4,
+            "mib_per_s": 7.0,
+            "rate_source": "measured: batch pass over all 5 timed fixtures",
+            "seconds_per_filing": 0.2, "n_1000_seconds": 200.0,
+            "n_1000_gib_read": 1.37, "edgar_year_7000_seconds": 1400.0,
+        },
+        "real_edgar_dev": {
+            "n": 4, "mean_raw_bytes": 1835008, "mean_mib": 1.75,
+            "mib_per_s": 7.69,
+            "rate_source": "measured: sum(bytes)/sum(medians) over these fixtures",
+            "seconds_per_filing": 0.2275, "n_1000_seconds": 227.5,
+            "n_1000_gib_read": 1.71, "edgar_year_7000_seconds": 1592.5,
+        },
+        "real_edgar_committed": {
+            "n": 5, "mean_raw_bytes": 2306867, "mean_mib": 2.2,
+            "mib_per_s": 7.69,
+            "rate_source": "sizes include held-out filings (stat only, never timed); "
+                           "rate borrowed from real_edgar_dev",
+            "seconds_per_filing": 0.286, "n_1000_seconds": 286.0,
+            "n_1000_gib_read": 2.15, "edgar_year_7000_seconds": 2002.0,
+        },
+    },
+    "projection_of_record": "real_edgar_committed",
+    "heldout_sizes_bytes": _GOLDEN_HELDOUT,
+}
+
+
+def _diff(got, want, path=""):
+    """Every leaf that differs, so a red self-check names the field."""
+    out = []
+    if isinstance(want, dict) and isinstance(got, dict):
+        for k in sorted(set(want) | set(got)):
+            out += _diff(got.get(k, "<MISSING>"), want.get(k, "<UNASSERTED FIELD>"),
+                         f"{path}.{k}" if path else k)
+    elif got != want:
+        out.append(f"  {path}: got {got!r}, expected {want!r}")
+    return out
+
+
 def _demo():
-    # 1. THE ESTIMATOR, through the code path run_all uses. Asserting
+    # 1. THE ESTIMATOR, through the code path `run_all` uses. Asserting
     # `statistics.median([...]) == x` tests the stdlib; this drives
-    # make_record, which is where `med` is actually computed. Five distinct
-    # times so median, first, min and max are four different values and no
-    # two can be confused for each other.
+    # `make_record`, where `med` is actually computed. Five distinct times so
+    # median, first, min and max are four different values.
     r = _rec("x", 2.0, [0.30, 0.11, 0.12, 0.90, 0.13])
     assert r["median_s"] == 0.13, r          # not first (0.30), not min, not max
     assert r["first_s"] == 0.30, r           # cold repeat, NOT the fastest
@@ -484,83 +610,46 @@ def _demo():
     # refusal + synthetic classification must come off the data, not a guess
     assert _rec("toc-titled", 1.0, [0.1])["synthetic"] is True
     assert _rec("q", 1.0, [0.1], status="unsupported")["refused"] is True
+    assert _rec("q", 1.0, [0.1], status="failed")["refused"] is True
     assert _rec("q", 1.0, [0.1], status="ambiguous")["refused"] is False
 
-    # 2. THE PERCENTILES, asserted on the fields summarize actually emits.
-    # 20 fixtures with medians 0.01..0.20: nearest-rank p50 = ceil(10)-1 = idx
-    # 9 = 0.10, p95 = ceil(19)-1 = idx 18 = 0.19. Distinct from min, max and
-    # each other, so `vals[0]`, `vals[-1]` and an off-by-one all go red.
-    many = [_rec(f"f{i}", float(i), [i / 100]) for i in range(1, 21)]
-    perf, _ = summarize(many, batch_s=21.0, rss_start=1.0, repeats=1)
-    assert perf["latency_p50_s"] == 0.10, perf["latency_p50_s"]
-    assert perf["latency_p95_s"] == 0.19, perf["latency_p95_s"]
-    assert perf["latency_max_s"] == 0.20, perf["latency_max_s"]
-    assert perf["median_raw_bytes"] == 10 * MIB, perf["median_raw_bytes"]
-    # largest is LAST here, so the descending-order-only field must be None
-    # rather than silently reporting the smallest fixture's high-water
-    assert perf["peak_rss_mib_after_largest_only"] is None
-    # 210 MiB / 21 s
-    assert perf["batch_mib_per_s"] == 10.0, perf["batch_mib_per_s"]
-    assert perf["derived"]["sum_of_medians_s"] == round(sum(i / 100 for i in range(1, 21)), 3)
+    # 2. THE WHOLE PUBLISHED SURFACE, against hand-derived values. This is the
+    # assertion that makes the rule at the top of this section enforceable
+    # rather than aspirational: it fails on a wrong value AND on a new field
+    # nobody has computed an expected value for.
+    perf, _ = summarize(_golden_corpus(), batch_s=1.0, rss_start=20.0, repeats=3,
+                        heldout=dict(_GOLDEN_HELDOUT))
+    d = _diff(perf, _GOLDEN_PERF)
+    assert not d, "summarize() drifted from the hand-derived golden values:\n" + "\n".join(d)
 
-    # 3. DERIVED STATISTICS the report quotes must be fields, and must be
-    # computed, not restated: perfectly proportional size/time is R²=1 and a
-    # flat throughput, so a set built to be flat must READ flat.
-    d = perf["derived"]
-    assert d["processed_size_vs_time_r2"] == 1.0, d["processed_size_vs_time_r2"]
-    assert d["processed_mib_per_s_spread"] == 1.0, d
-    assert d["processed_n"] == 20 and d["refused_n"] == 0
-    # warm-up: single-repeat rows are first == min by construction
-    assert d["n_first_repeat_was_fastest"] == 20 and d["warmup_first_over_min_max"] == 1.0
-    # and a set with a real cold penalty must NOT read as no-warm-up
-    warm = [_rec("w", 1.0, [0.20, 0.10, 0.10])]
-    wperf, _ = summarize(warm, batch_s=1.0, rss_start=1.0, repeats=3)
-    assert wperf["derived"]["warmup_first_over_min_max"] == 2.0, wperf["derived"]
-    # ...and a SUB-MILLISECOND row must not be allowed to set that maximum:
-    # at 0.1 ms one scheduler tick is a 300% ratio, which is clock
-    # quantization, not a warm-up effect. Excluded from the ratio stats ONLY,
-    # and named in the artifact so the exclusion is auditable.
-    noisy = [_rec("real", 1.0, [0.20, 0.10, 0.10]),
-             _rec("truncated-download", 0.001, [0.0003, 0.0001, 0.0001])]
-    nperf, _ = summarize(noisy, batch_s=1.0, rss_start=1.0, repeats=3)
-    nd = nperf["derived"]
-    assert nd["warmup_first_over_min_max"] == 2.0, nd    # not 3.0
-    assert nd["repeat_spread_max"] == 1.0, nd            # not 2.0
-    assert nd["ratio_population_n"] == 1, nd
-    assert nd["ratio_excluded_fixtures"] == ["truncated-download"], nd
-    # the excluded row still counts everywhere else
-    assert nperf["n_fixtures"] == 2 and nperf["populations"]["all_dev_fixtures"]["n"] == 2
+    # 2b. The same corpus with the largest row NOT first. `run_all` always
+    # emits descending size, so `peak_rss_mib_after_largest_only` is only
+    # meaningful under that order; out of order it must be None rather than
+    # silently reporting some other fixture's high-water mark. (The golden
+    # corpus alone cannot catch a dropped guard — its largest row is first.)
+    shuffled = _golden_corpus()
+    shuffled.append(shuffled.pop(0))
+    sperf, _ = summarize(shuffled, batch_s=1.0, rss_start=20.0, repeats=3)
+    assert sperf["peak_rss_mib_after_largest_only"] is None, sperf
+    # everything order-independent must be untouched by the reorder
+    assert sperf["latency_p50_s"] == _GOLDEN_PERF["latency_p50_s"]
+    assert sperf["peak_rss_mib_corpus"] == _GOLDEN_PERF["peak_rss_mib_corpus"]
 
-    # 4. PLATEAU INDEX — the RSS claim in §3/§5. High-water climbs then flattens;
-    # the reported index must be where it flattens, not where it started.
-    climb = [_rec(f"c{i}", 1.0, [0.1], rss=v)
-             for i, v in enumerate([50.0, 80.0, 99.8, 100.0, 100.0])]
-    cperf, _ = summarize(climb, batch_s=1.0, rss_start=10.0, repeats=1)
-    assert cperf["peak_rss_mib_corpus"] == 100.0
-    assert cperf["derived"]["rss_plateau_first_index"] == 2, cperf["derived"]
-    assert cperf["derived"]["rss_plateau_first_value_mib"] == 99.8
+    # 2c. Plateau index, other boundary. The golden corpus's plateau is at
+    # index 1, so it pins a scan that always answers 0; this pins the reverse —
+    # a corpus already at its peak on the first fixture must report 0, not 1.
+    flat = [_rec(f"f{i}", float(4 - i), [0.1 * (4 - i)], rss=100.0) for i in range(4)]
+    assert summarize(flat, 1.0, 1.0, 1)[0]["derived"]["rss_plateau_first_index"] == 0
 
-    # 5. POPULATIONS — the §5 multiplier. Synthetic members must change the
-    # mean, and held-out sizes must be included without being timed.
-    mixed = [_rec("real-a", 4.0, [0.4]), _rec("toc-titled", 1.0, [0.1])]
-    mperf, _ = summarize(mixed, batch_s=0.5, rss_start=1.0, repeats=1,
-                         heldout={"spg-2019": int(10.0 * MIB)})
-    pops = mperf["populations"]
-    assert pops["all_dev_fixtures"]["n"] == 2
-    assert pops["all_dev_fixtures"]["mean_mib"] == 2.5      # (4 + 1) / 2
-    assert pops["real_edgar_dev"]["n"] == 1
-    assert pops["real_edgar_dev"]["mean_mib"] == 4.0        # synthetic excluded
-    assert pops["real_edgar_committed"]["n"] == 2
-    assert pops["real_edgar_committed"]["mean_mib"] == 7.0  # (4 + 10) / 2
-    # real-dev rate = 4 MiB / 0.4 s = 10 MiB/s, so 7 MiB mean = 0.7 s/filing
-    assert pops["real_edgar_dev"]["mib_per_s"] == 10.0
-    assert pops["real_edgar_committed"]["seconds_per_filing"] == 0.7
-    assert pops["real_edgar_committed"]["edgar_year_7000_seconds"] == 4900.0
-    assert mperf["projection_of_record"] == "real_edgar_committed"
-    # and the batch rate must stay the MEASURED one, not the real-only rate
-    assert pops["all_dev_fixtures"]["mib_per_s"] == 10.0    # 5 MiB / 0.5 s
+    # 3. R² must also read 1.0 when the relationship really is perfect —
+    # the golden corpus pins the 0.8929 side, this pins the other, so a
+    # constant-returning `_r2` cannot satisfy both.
+    perfect = [_rec(f"p{i}", float(i), [i / 10]) for i in (1, 2, 3, 4)]
+    pperf, _ = summarize(perfect, batch_s=1.0, rss_start=1.0, repeats=1)
+    assert pperf["derived"]["processed_size_vs_time_r2"] == 1.0, pperf["derived"]
+    assert pperf["derived"]["processed_mib_per_s_spread"] == 1.0, pperf["derived"]
 
-    # 6. THE COST MODEL must price the corpus, not one filing, and must FLAG a
+    # 4. THE COST MODEL must price the corpus, not one filing, and must FLAG a
     # filing that does not fit the cheap tier's context — that flag is the
     # whole of ADR-020 §d consequence 1 and must not be a prose claim.
     _, cost = summarize([_rec("a", 1.0, [0.1], chars=500_000)],
@@ -575,7 +664,7 @@ def _demo():
                        batch_s=1.0, rss_start=1.0, repeats=1)
     assert big["counterfactual"]["whole_corpus"]["fits_haiku_context"] is False
 
-    # 7. No network/API surface exists in this module — the price table is
+    # 5. No network/API surface exists in this module — the price table is
     # data, and nothing here can be talked into spending money.
     # (parsed, not grepped — a string search would match its own banned list)
     imported = set()
