@@ -137,6 +137,10 @@ actually ruled on the fallback stage is the fallback-*addressable* surface** —
 the count of items on which any honest trigger policy would fire, which is an
 *input* and therefore measurable with no fallback in existence: count
 `status: "missing"` in a committed report's `items_summary`, then check each one
-against the filing. It read 11/868 dev and 4/121 held-out, of which **0 of 989
-would be improved** by the candidate design. ADR-020 walks each one and names
-the conditions that would reopen the decision.
+against the filing. It read **15 of 989** distinct items across both eval sets,
+of which **4 would be improved** by the candidate design — all four from one
+filing's combined `ITEMS 10, 11, 12 and 13.` heading, which a deterministic
+heading-shape change reaches identically at $0. The other 11 are either
+genuinely absent from their documents or sit in fixtures whose own committed
+expectations assert `missing` is the correct answer. ADR-020 walks each one and
+names the conditions that would reopen the decision.

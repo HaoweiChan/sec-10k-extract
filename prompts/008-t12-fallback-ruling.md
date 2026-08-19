@@ -39,9 +39,11 @@ burned held-out case.
 - **The evidence was enumerated as a checklist of failure classes, each with a
   forced question**: "*for each, would the candidate fallback have fixed this,
   and at what cost, and with what new failure mode?*" Requiring the third
-  clause — the new failure mode — is what surfaced the strongest single result,
-  that on the one case where the fallback *would* fire it makes the output
-  worse rather than better.
+  clause — the new failure mode — is what drove the walk-through of all seven
+  classes. It also produced the draft's one real error: on the single row where
+  the fallback *would* fire I asserted a new failure mode that did not exist,
+  and review caught it (last chain entry). The forced question was right; the
+  answer wanted a run, not a recollection.
 
 - **Spending was fenced off from the agent's authority.** "*Any code path that
   would spend money must not be exercised against a live paid endpoint in this
@@ -64,9 +66,10 @@ burned held-out case.
   later.
   Corrected: the ruling rests on a different quantity — the fallback-**addressable
   surface**, an *input* (which items any honest trigger would fire on),
-  computable today from committed reports with zero fallback code: 11/868 dev
-  items and 4/121 held-out items report `missing`, of which **0 of 989 would be
-  improved**. Metric 11 is demoted to a dependence monitor in
+  computable today from committed reports with zero fallback code: **15 of 989**
+  distinct items across both eval sets report `missing`, of which **4 would be
+  improved** (that figure was first published as 0 and corrected in review — see
+  the last chain entry). Metric 11 is demoted to a dependence monitor in
   `evaluation-strategy.md`, in `evals/metrics.py` (a `note`, the only code change
   this milestone makes), and by a dated correction in `analysis-report.md` §4.
 
@@ -95,11 +98,12 @@ burned held-out case.
   Corrected: enumerated as a new debt class
   (`evals/adversarial/axp-2008-combined-part-iii.json`, `debt` suite, permanently
   red, **watched red before the ADR was written**, no fix attempted under the
-  T8 freeze). And it strengthened rather than weakened the ruling: the candidate
-  fallback would locate this text and emit `extracted` where the truth is
-  `incorporated_by_reference` — converting an honest `missing` (low confidence,
-  warning fired, `doc_status` escalated) into a confident misclassification, for
-  money, when a heading-shape change fixes it deterministically at $0.
+  T8 freeze). These four items are the entire real-filing addressable surface.
+  They do not flip the ruling, because combined-heading fan-out — a heading-shape
+  change — produces the identical span and status through the same classifier,
+  deterministically, at $0, for the whole class rather than the instances a model
+  is invoked on. *(This entry originally claimed the fallback would make the row
+  **worse** by emitting the wrong status. That was wrong — see the last entry.)*
 
 - Assumed: citing a held-out result in a written ruling is reporting, not
   influence — nothing was fixed because of it.
@@ -108,12 +112,17 @@ burned held-out case.
   established that *declining* a fix with a case's outcome in hand burns it as
   surely as fixing does.
   Corrected: `axp-2008` is declared burned in ADR-020 §g and in the held-out run
-  history; the effective held-out set drops to 5 until T14's refresh. While
-  recording the burn, the case's own label turned out to be wrong — its
-  provenance scan checked only the **singular** strings `Item 10`…`Item 13`,
-  found zero, and concluded Part III had no headings at all. Sixth time in this
-  project that the verification instrument rather than the pipeline was at
-  fault. Re-labelling it is T14 taxonomy work and was deliberately not done here.
+  history, and — after review pointed out that a burn declared in prose while the
+  file stays put is enforced by nobody — **moved in the same milestone**, per the
+  rule's own wording and the `gs-2002` precedent: case to
+  `evals/adversarial/axp-2008-combined-heading-burned.json`, fixture to
+  `evals/fixtures/axp-2008/`. Held-out is now 5 cases / 101 items because the
+  file system says so, not because a README asserts it. While recording the burn,
+  the case's own label turned out to be wrong — its provenance scan checked only
+  the **singular** strings `Item 10`…`Item 13`, found zero, and concluded Part III
+  had no headings at all. Sixth time in this project that the verification
+  instrument rather than the pipeline was at fault. The four wrong assertions were
+  dropped in the move rather than re-enshrined.
 
 - Assumed: closing the metric-11 circularity properly means shipping a metric
   that computes the addressable surface, so the reopening condition has an
@@ -125,3 +134,35 @@ burned held-out case.
   names where to look instead. Adding a second way to compute a number the
   reports already carry is the speculative instrument both the ADR-010 sin and
   the repo's own laziness rule argue against.
+
+- Assumed: `axp-2008`'s Part III items are `incorporated_by_reference` — the
+  block opens with "a definitive proxy statement… is incorporated herein by
+  reference" followed by ten caption bullets, which is ADR-004 shape 1 on sight.
+  The first draft of ADR-020 built its headline on that reading: the candidate
+  fallback emits `extracted`, so it would get this row *wrong*, so the
+  addressable surface was **0 of 989** and the fallback fixed nothing.
+  Eval said: the pr-reviewer, with no access to any of this reasoning, ran the
+  classifier. `segment.classify('10', body, True)` returns **`extracted`**.
+  ADR-004 reserves IBR for bodies that are *solely* pointers and ADR-007
+  implements it as `rest <= IBR_REMAINDER_MAX (300)`; this body carries **1,139
+  chars** of substantive standalone prose after the pointers — the Corporate
+  Governance Principles / Code of Conduct paragraph, Reg S-K Item 406
+  code-of-ethics content that explicitly says the linked material "is not
+  incorporated by reference into this report". Shape 3, `extracted`. So the
+  candidate would have got the row **right**, the surface was **4**, and the
+  debt case's `incorporated_by_reference` assertions were unreachable — it could
+  never have gone green even after the capability it names shipped, breaking its
+  own "NOW GREEN — promote it" contract.
+  Corrected: the case is re-labelled to `extracted` ×4 (plus a `min_chars` floor
+  pinning that the real block is attached, not the heading line) and watched red
+  again; ADR-020 §a/§b/§c row 7 are rewritten and §h records the whole exchange;
+  every propagated number is updated. **The ruling was re-derived, not
+  preserved** — it survives on the escalation ladder, which is also what §e
+  condition 1 had already said. The prompt instruction that made this
+  recoverable was the coordinator's: *"if the evidence now points the other way,
+  say so. A reversed ruling caught by review is a success of this loop."*
+  The lesson is narrower and sharper than "check your work": I matched a
+  pointer-shaped opening to an ADR shape **from memory** and never ran the
+  classifier that owns the decision, on a repo whose entire premise is that
+  correctness is executable. Seventh time in this project that the instrument —
+  here, me — rather than the pipeline was at fault.

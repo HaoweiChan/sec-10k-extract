@@ -346,13 +346,15 @@ kills it" — is circular and is withdrawn as an argument. Metric 11 reads 100%
 because nothing emits `llm_fallback`, not because a fallback was measured
 against. The fallback stage is ruled out by
 [ADR-020](../specs/decisions/ADR-020-fallback-not-justified.md) on a different
-number: the fallback-addressable surface, **0 of 989 items improvable** across
-both eval sets, because every residual failure measured here is a confidently
-wrong span rather than an absence. The $0.00 figure is unaffected. T13's §4
-should carry ADR-020 §f's four items — the reported $0.00, the counterfactual
-price of the road not taken (~$0.14 median filing, ~$1.52 for `jpm-2024`, ~$10
-for one uncached pass over the 36-fixture corpus), the addressable-surface
-count, and the reopening conditions.)*
+number: the fallback-addressable surface, **4 of 989 items improvable** across
+both eval sets — six of the seven residual failures measured here are
+confidently wrong spans rather than absences, and the seventh is one filing's
+combined-item heading that a deterministic heading-shape change reaches
+identically at $0. The $0.00 figure is unaffected. T13's §4 should carry
+ADR-020 §f's four items — the reported $0.00, the counterfactual price of the
+road not taken (~$0.14 median filing, ~$1.52 for `jpm-2024`, ~$10.56 for one
+uncached pass over the 37-fixture corpus, at Anthropic list prices as of
+2026-06-24), the addressable-surface count, and the reopening conditions.)*
 
 ## 5. Scalability
 

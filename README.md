@@ -69,10 +69,11 @@ Full rationale in `specs/decisions/` (18 ADRs). The ones that shaped the system:
   "cheap", zero. The fallback stage was gated on residual-failure data; that
   data was measured (ADR-019) and the decision taken (ADR-020): **not
   justified**. Not because deterministic coverage reads 100% — that number is
-  circular while no fallback exists — but because a fallback fires on absence
-  and every residual failure measured here is a confidently *wrong* span, which
-  no honest trigger reaches. Addressable surface across both eval sets: 0 of
-  989 items. ADR-020 §e says what would reopen it.
+  circular while no fallback exists — but because six of the seven residual
+  failures measured here are confidently *wrong* spans, which no honest trigger
+  reaches, and the seventh is a heading-shape gap a regex closes identically at
+  $0. Addressable surface across both eval sets: **4 of 989 items**, one filing,
+  one root cause. ADR-020 §e says what would reopen it.
 - **Stdlib-only parsing** (ADR-003). `html.parser`, no dependencies. The
   revisit clause has never fired; malformed HTML normalizes cleanly.
 - **Offsets, not text** (contract + INV-S2). Makes drift structurally

@@ -262,7 +262,9 @@ def compute(report, cases):
                      "stage is the fallback-ADDRESSABLE surface — items on which any honest "
                      "trigger would fire — counted as `status: missing` in this report's own "
                      "items_summary and then checked against the filing. See ADR-020 (T12), "
-                     "which ruled the stage not justified at 0 of 989 items improvable"},
+                     "which ruled the stage not justified: 4 of 989 items across both eval sets "
+                     "are improvable, all from one filing's combined-item heading, and a "
+                     "heading-shape change reaches them identically at $0"},
         ],
         "unaudited_confident_items": unaudited,
         "debt_unaudited_confident_items": debt_unaudited,
