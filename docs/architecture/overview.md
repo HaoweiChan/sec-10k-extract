@@ -206,12 +206,25 @@ Eval: feeds `doc_status`/warning cases.
 
 **9. Confidence scoring** — see below.
 
-**10. Fallback (A-level, design deferred)** — no concrete design until T8
-residual-failure data exists; a dedicated ADR will choose then, sized to what
-actually fails. Candidate noted for the record only: an LLM returning **verbatim anchor
-quotes** that we re-locate to offsets (preserves INV-S2 by construction —
-invented quotes fail relocation and become explicit failures), cached by
-content-hash + prompt-version, budget-capped, `full` suite only.
+**10. Fallback — RULED OUT (T12, [ADR-020](../../specs/decisions/ADR-020-fallback-not-justified.md)).**
+The candidate was an LLM returning **verbatim anchor quotes** re-located to
+offsets (preserving INV-S2 by construction — invented quotes fail relocation
+and become explicit failures), cached by content-hash + prompt-version,
+budget-capped, `full` suite only. T11's residual-failure data (ADR-019) was
+measured and the decision taken: **not justified, no fallback ships.** The
+layer number is kept so the numbering below does not shift.
+
+The reason in one line: a fallback fires on *absence*, and every residual
+failure this repo has measured is *presence* — a confidently wrong or
+wrongly-classified span at 0.95, where no honest trigger reaches. Of the seven
+residual-failure classes on the books, the candidate would fix **zero**, never
+trigger on five, and make one strictly worse (`axp-2008`: it would locate the
+combined Part III heading and then report `extracted` where the truth is
+`incorporated_by_reference`, turning an honest `missing` at 0.40 confidence into
+a confident misclassification). The measured fallback-addressable surface across
+both eval sets is **0 of 989 items**. Cost stays structurally $0.00 and ADR-003's
+stdlib-only pipeline is untouched. `method: llm_fallback` stays in the contract
+enum, unemitted. ADR-020 §e names the measurements that would reopen this.
 
 **11. Assembly** — derive `doc_status`, attach trace/timings/meta, emit the
 contract-v2 envelope.

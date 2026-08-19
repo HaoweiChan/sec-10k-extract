@@ -254,7 +254,15 @@ def compute(report, cases):
              "note": "structurally zero: no paid dependency exists in the pipeline. "
                      "A reported result, not an estimate"},
             {"n": 11, "name": "deterministic coverage",
-             "value": _rate(det, len(methods)), "sample": len(methods)},
+             "value": _rate(det, len(methods)), "sample": len(methods),
+             "note": "VACUOUS BY CONSTRUCTION, not a measurement: no code path emits "
+                     "`llm_fallback`, so this reads 1.0 whatever the pipeline does. It is a "
+                     "dependence monitor for the day a fallback exists, and was never able to "
+                     "justify or kill one. The non-circular number that ruled on the fallback "
+                     "stage is the fallback-ADDRESSABLE surface — items on which any honest "
+                     "trigger would fire — counted as `status: missing` in this report's own "
+                     "items_summary and then checked against the filing. See ADR-020 (T12), "
+                     "which ruled the stage not justified at 0 of 989 items improvable"},
         ],
         "unaudited_confident_items": unaudited,
         "debt_unaudited_confident_items": debt_unaudited,

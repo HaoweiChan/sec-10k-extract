@@ -113,7 +113,7 @@ as *unaudited high-confidence items*, never silently counted as fine.
 | 8 | Confidence calibration | bucket items by confidence band (edges provisional); empirical accuracy of anchored checks per bucket | overconfidence — explicitly graded |
 | 9 | Latency p50/p95 | per-case `seconds` + per-stage `timings` | perf analysis input |
 | 10 | Cost per filing | envelope `cost` field | cost analysis input (B: structurally $0 — a reported result) |
-| 11 | Deterministic coverage % | share of extracted items with `method != llm_fallback` | LLM dependence; the number that justifies or kills a fallback stage |
+| 11 | Deterministic coverage % | share of extracted items with `method != llm_fallback` | LLM dependence — a monitor, ~~the number that justifies or kills a fallback stage~~ (that claim was circular; see below) |
 
 Aspirational initial targets (presence recall ≥ 0.95 on golden, silent-failure
 rate < 5%) are **provisional** — reset after the first full baseline run, with
@@ -127,3 +127,16 @@ check green, see `evals/metrics.py`'s metric-6 note). Sampled rate 1/30 =
 3.3%, 95% CI [0.1%, 17.2%]. The point estimate meets the < 5% target; the CI
 upper bound does not — **the target is not demonstrated, only not
 contradicted**. n=30 is small; the honest statement is the interval.
+
+**Metric 11, corrected (T12, ADR-020).** Metric 11 was written as "the number
+that justifies or kills a fallback stage". It cannot be: it counts an *output*
+of a stage that does not exist, so it reads 1.0 whatever the pipeline does, and
+"100% deterministic coverage kills the fallback" is circular. It is retained as
+a dependence monitor, meaningful only once a fallback exists. **The number that
+actually ruled on the fallback stage is the fallback-*addressable* surface** —
+the count of items on which any honest trigger policy would fire, which is an
+*input* and therefore measurable with no fallback in existence: count
+`status: "missing"` in a committed report's `items_summary`, then check each one
+against the filing. It read 11/868 dev and 4/121 held-out, of which **0 of 989
+would be improved** by the candidate design. ADR-020 walks each one and names
+the conditions that would reopen the decision.

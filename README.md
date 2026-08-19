@@ -64,10 +64,15 @@ not identify.
 
 Full rationale in `specs/decisions/` (18 ADRs). The ones that shaped the system:
 
-- **Deterministic first, LLM deferred** (ADR-000/003). No model is in the
-  extraction path. Cost is therefore structurally $0 — not "cheap", zero — and
-  a fallback stage is deliberately not built until residual-failure data
-  justifies one. Deterministic coverage is currently **100%**.
+- **Deterministic first, LLM ruled out** (ADR-000/003, settled in ADR-020). No
+  model is in the extraction path. Cost is therefore structurally $0 — not
+  "cheap", zero. The fallback stage was gated on residual-failure data; that
+  data was measured (ADR-019) and the decision taken (ADR-020): **not
+  justified**. Not because deterministic coverage reads 100% — that number is
+  circular while no fallback exists — but because a fallback fires on absence
+  and every residual failure measured here is a confidently *wrong* span, which
+  no honest trigger reaches. Addressable surface across both eval sets: 0 of
+  989 items. ADR-020 §e says what would reopen it.
 - **Stdlib-only parsing** (ADR-003). `html.parser`, no dependencies. The
   revisit clause has never fired; malformed HTML normalizes cleanly.
 - **Offsets, not text** (contract + INV-S2). Makes drift structurally

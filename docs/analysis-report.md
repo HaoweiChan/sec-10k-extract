@@ -100,6 +100,11 @@ immediately after it.
   byte-identical to metric 1 for the same reason. Metric 11 is likewise true by
   construction — no code path emits `llm_fallback`, so "100% deterministic
   coverage kills the fallback stage" is circular until a fallback exists.
+  *(2026-08-19, T12: this circularity is now disposed of rather than merely
+  noted. ADR-020 rules on the fallback stage from the fallback-**addressable**
+  surface — an input, measurable with no fallback in existence — not from
+  metric 11. Metric 11 is demoted to a dependence monitor and carries a note in
+  `evals/metrics.py` saying so.)*
 - **Metric 5's denominator is padded.** Of its 63 checks, the 5
   `known_items_only` cannot fail, and `text_not_contains` is vacuous whenever
   the item has no span. It reads as 63 independent opportunities to fail; it is
@@ -334,6 +339,20 @@ The cost of the *project* is engineering time and the SEC's free bandwidth. The
 only per-request external dependency is the optional EDGAR URL mode, which is
 one fetch of a public document with a declared User-Agent, far under SEC's
 10 req/s fair-access ceiling.
+
+*(2026-08-19, T12 correction: the sentence above — "deterministic coverage is
+100%, which is the number that would justify or kill a fallback stage; today it
+kills it" — is circular and is withdrawn as an argument. Metric 11 reads 100%
+because nothing emits `llm_fallback`, not because a fallback was measured
+against. The fallback stage is ruled out by
+[ADR-020](../specs/decisions/ADR-020-fallback-not-justified.md) on a different
+number: the fallback-addressable surface, **0 of 989 items improvable** across
+both eval sets, because every residual failure measured here is a confidently
+wrong span rather than an absence. The $0.00 figure is unaffected. T13's §4
+should carry ADR-020 §f's four items — the reported $0.00, the counterfactual
+price of the road not taken (~$0.14 median filing, ~$1.52 for `jpm-2024`, ~$10
+for one uncached pass over the 36-fixture corpus), the addressable-surface
+count, and the reopening conditions.)*
 
 ## 5. Scalability
 

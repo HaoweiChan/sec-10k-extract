@@ -171,4 +171,32 @@ normally) and the one about a document was wrong. No support for ADR-017 was
 gained: AXP's pointers use the single-sentence phrasing the old rule already
 matched, and that claim was checked and withdrawn rather than made.
 
-Next refresh should retire `csco-2016` and `cost-2022`, now run three times each.
+**Burn, 2026-08-19 — `axp-2008`.** Not from a run: from T12's ruling. Reading
+H3's committed report while enumerating the fallback-addressable surface
+([ADR-020](../../specs/decisions/ADR-020-fallback-not-justified.md) §b) turned
+this case's outcome — items 10–13 `missing` at 0.40 — into load-bearing evidence
+for a documented decision to decline a fix, and produced a new case from it
+(`evals/adversarial/axp-2008-combined-part-iii.json`). The burn rule names both
+of those as influence, and the `gs-2002` precedent above already established
+that declining a fix burns a case as surely as fixing does. So `axp-2008` counts
+in no held-out denominator from here; the effective held-out set is **5**.
+
+It also carries a wrong label. This case's provenance concluded that American
+Express "addressed Part III without writing the item headings at all, and jumped
+straight from Item 9B to Item 14". The **singular** strings `Item 10`…`Item 13`
+do occur zero times, which is what the verification scan checked — but the raw
+bytes contain exactly one `ITEMS\b` match, at offset 1225493:
+`<B>ITEMS&nbsp;10,&nbsp;11,&nbsp;12&nbsp;and&nbsp;13.</B>` plus the four-item
+title, immediately followed by an explicit proxy incorporation by reference. The
+correct status for all four is `incorporated_by_reference`, not `missing`, so the
+four `item_present` checks encode a label the document does not support. **Sixth
+time the instrument rather than the pipeline has been at fault** — the
+authoring-discipline section above counts the first five, and this one is a
+scan that checked the singular form of a string and generalized past its own
+evidence. The label correction and the physical move to `evals/adversarial/`,
+plus a replacement filing for the crisis-era stratum, ride T14's expansion; the
+fixture stays here in the meantime and the new debt case references it in place,
+so nothing is duplicated.
+
+Next refresh should retire `csco-2016` and `cost-2022`, now run three times each,
+and replace `axp-2008`.
