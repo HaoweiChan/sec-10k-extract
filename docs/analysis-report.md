@@ -1,4 +1,22 @@
-# Analysis report v3 — sec-10k-extract, A-track
+# Analysis report v4 — sec-10k-extract, A-track
+
+v4 (2026-08-20): T13 performance / cost / scalability update
+([ADR-021](../specs/decisions/ADR-021-benchmark-instrument.md)). §3, §4 and §5
+are **rewritten, not amended**: their v3 numbers came from ad-hoc timing that
+left no committed input, and were measured over 21 fixtures when the corpus is
+now 37. Every figure in those three sections is now read from
+`evals/report/20260820-020815-bench.json` (a new dev instrument,
+`evals/bench.py`) or `evals/report/20260820-020944-all.json`, cited inline.
+Four v3 claims turned out to be **wrong**, not merely stale — aggregate
+throughput, p95 latency, "throughput is flat", and "peak RSS scales with the
+largest document" — and each is corrected with the old value shown next to the
+new one rather than silently replaced. §4 additionally carries
+[ADR-020](../specs/decisions/ADR-020-fallback-not-justified.md) §f items 1–4,
+which stand in for the fallback cost model T12 ruled out. Two forward
+references to T11 as future work (§6 item 4, §7 item 5) are closed — T11
+shipped in ADR-019. **§1 and §2 are untouched and still quote their own,
+older run of record** (`20260816-234718-all.json`, 27 cases); §3–§5 quote the
+current 45-case run. Both are real runs; neither is a typo for the other.
 
 v3 (2026-08-19): T11 silent-failure update. Adds the "Silent-failure rate —
 measured (T11)" section (ADR-019) and reconciles metric 6's discussion, which
@@ -295,88 +313,261 @@ What H1 actually bought, in order of value:
 
 ## 3. Runtime performance
 
-Measured over all 21 committed fixtures, median of 3 runs each, single process,
-no caching (verified: a 5.7 MB filing takes 0.260 s cold and 0.249 s on repeat
-— there is no warm-up effect beyond module import).
+**Input:** `evals/report/20260820-020815-bench.json`, written by
+`python3 -m evals.bench --json …` (a dev instrument added in T13; design and
+its seven measurement choices in
+[ADR-021](../specs/decisions/ADR-021-benchmark-instrument.md)). All 37
+committed fixtures, median of 3 repeats each, single process, no caching,
+Python 3.14.6 on macOS arm64, pipeline at git `20f8be0`. Re-run it and the
+artifact regenerates; every number in this section is a field of that file.
+(The artifact's `git_sha` is this branch's *parent* commit, and correctly so:
+`evals/bench.py` was still untracked when the run of record was taken, and
+`src/` is byte-identical in this milestone — the sha names the pipeline that
+was measured. Timings are wall-clock on one machine and will not reproduce to
+the last decimal on another; the artifact records `platform` and `python` so a
+divergent re-run can be told from a regression.)
 
 | | |
 |---|---|
-| Latency p50 | **0.041 s** (metric 9 quotes `[0.08, 0.53]` over a different population — 27 cases including re-runs, single run each, versus 21 fixtures at median-of-3 here; both are reproducible and neither is wrong) |
-| Latency p95 | **0.249 s** |
-| Slowest filing | JPM FY2024, 12.8 MB → **0.526 s** |
-| Aggregate throughput | **18.9 MB/s** (37.8 MB in 2.00 s) |
-| Peak RSS | **110 MB** driving all 21 filings in one process |
+| Latency p50 | **0.044 s** |
+| Latency p95 | **0.533 s** (`bac-2006`) |
+| Slowest filing | **`jpm-2024`**, 12.8 MB → **0.578 s** |
+| Aggregate throughput, batch | **14.3 MB/s** (58.4 MB in 4.072 s) |
+| Per-fixture throughput | **6.3 – 42.8 MB/s**, median 13.9 |
+| Peak RSS | **122.1 MB** driving all 37 filings in one process (25.8 MB baseline) |
 
-Selected points showing the size relationship:
+Metric 9 in §1 quotes p50/p95 over eval **cases** rather than fixtures — today
+`[0.07, 0.52]` over 45 cases in `evals/report/20260820-020944-all.json`. Cases
+re-run some fixtures and skip others, so the two populations differ by
+construction and both are reproducible; ADR-021 §b choice 1 explains why the
+fixture is the right unit here.
 
-| raw bytes | normalized chars | median s | MB/s |
-|---|---|---|---|
-| 69,521 | 69,398 | 0.004 | 17.8 |
-| 642,332 | 67,592 | 0.042 | 15.5 |
-| 1,776,947 | 312,483 | 0.223 | 8.0 |
-| 5,687,600 | 430,733 | 0.249 | 22.8 |
-| 12,849,180 | 1,213,298 | 0.526 | 24.4 |
+Selected points, showing that the size relationship is not the whole story:
 
-**Throughput is roughly flat across two orders of magnitude of input size**
-(8–37 MB/s), which is the signature of a single-pass parse: cost tracks bytes,
-not item count or document complexity. The outliers are low-throughput rather
-than high — MSFT 2013 at 8.0 MB/s is a filing with 858 mid-sentence source
-wraps, i.e. normalization work, not segmentation work.
+| fixture | raw bytes | normalized chars | median s | MB/s |
+|---|---|---|---|---|
+| `textron-2001` | 69,521 | 69,398 | 0.0049 | 13.6 |
+| `caps-cover-2016` | 642,332 | 67,592 | 0.0440 | 13.9 |
+| `msft-2013` | 1,776,947 | 312,483 | 0.2355 | 7.2 |
+| `bac-2006` | 4,517,513 | 705,899 | 0.5331 | 8.1 |
+| `cvx-2015` | 5,606,365 | 417,523 | 0.3851 | 13.9 |
+| `jpm-2024` | 12,849,180 | 1,213,298 | 0.5781 | 21.2 |
 
-Deployed instance (Zeabur, 2026-08-16): AAPL 285 ms, JPM 1,683 ms end-to-end
-over HTTPS including JSON serialization of the response. The ~3× gap versus
-local is transport and serialization, not extraction.
+**Bytes are the first-order term and nothing else is close — but throughput is
+not flat.** A least-squares fit of elapsed time on raw bytes explains
+**R² = 0.78** of the variance, and the residual is real work, not noise:
+`bac-2006` (4.5 MB) takes 0.533 s while `xom-2021` (6.2 MB) takes 0.248 s —
+**2.1× longer on 27% less input**. The low-throughput end is
+normalization-heavy markup (`tgt-2002` 6.3, `intc-2002` 6.5, `gs-2002` 7.0,
+`ba-2003` 7.2, `msft-2013` 7.2 MB/s); the high end is text-like input
+(`ksb-2007` 42.8, `ibm-1997` 32.8 MB/s). The shape is still a single-pass
+parse — cost tracks input size, not item count — with a markup-density
+coefficient on top of it.
+
+**No warm-up effect beyond module import.** Across 37 fixtures the
+first-repeat / fastest-repeat ratio has median **1.007** and worst case
+**1.04**, and 11 fixtures were fastest on their *first* run. The per-fixture
+`first_s`, `min_s`, `mean_s` and `max_s` are all in the artifact; repeat spread
+`(max−min)/median` has median 1.4% and worst case 8% — stable enough that the
+artifact's four-decimal latencies are quoted to three here and no further.
+
+**Memory plateaus; it is not set by the largest document.** Fixtures are timed
+in descending size order precisely so this is readable off the artifact. The
+largest filing (`jpm-2024`, 12.8 MB) alone takes the process high-water from a
+25.8 MB baseline to **96.4 MB**. A further 26 MB accrues over the next several
+fixtures, reaching **122.1 MB** by roughly the tenth, and then stays flat for
+the remaining 27 — a plateau, not a leak.
+
+**Corrections to v3 (2026-08-20, T13).** v3's §3 was measured over 21 fixtures
+with an ad-hoc script that committed nothing, and four of its claims are wrong
+at 37 fixtures rather than merely stale. Recorded here rather than silently
+replaced, per ADR-021 §c:
+
+| v3 said | measured now |
+|---|---|
+| aggregate throughput 18.9 MB/s (37.8 MB in 2.00 s) | **14.34 MB/s** (58.4 MB in 4.072 s) |
+| latency p95 0.249 s | **0.533 s** |
+| "throughput is roughly flat … 8–37 MB/s", one outlier (`msft-2013`) | **6.3–42.8 MB/s**, R²=0.78, five low-throughput fixtures sharing a cause |
+| "peak RSS scales with the single largest document … 110 MB" | largest filing alone **96.4 MB**, corpus peak **122.1 MB** |
+
+The operational conclusions are unchanged — everything here is fast and small —
+but v3's *explanations* of why were partly wrong, and a 21-fixture throughput
+figure was propagating into every §5 projection.
+
+**The one figure in this section with no committed artifact:** the deployed
+instance (Zeabur, 2026-08-16) measured AAPL 285 ms and JPM 1,683 ms end-to-end
+over HTTPS including JSON serialization, the ~3× gap versus local being
+transport and serialization rather than extraction. That was a manual
+observation, it is not reproducible from `evals/report/`, and re-measuring it
+requires a network call this milestone is not making. It is flagged rather than
+restated as though it were measured like the rest.
 
 ## 4. Cost
 
-**$0.00 per filing, structurally.** Not "low" — there is no paid dependency in
-the pipeline to incur one. No LLM call, no paid API, no managed service beyond
-the container itself. Deterministic coverage is 100% (metric 11, n=413 items),
-which is the number that would justify or kill a fallback stage; today it kills
-it, which is why ADR-000's deferred-LLM decision has never been revisited.
+**Reported: $0.00 per filing** — metric 10, n=45, from
+`evals/report/20260820-020944-all.json`. This is a *measurement*, not an
+estimate or a target: the pipeline has no paid dependency to incur a cost. No
+LLM call, no paid API, no managed service beyond the container. The extractor's
+own envelope carries `cost: {llm_calls: 0, tokens: 0, usd: 0.0}` on every run.
 
 The cost of the *project* is engineering time and the SEC's free bandwidth. The
-only per-request external dependency is the optional EDGAR URL mode, which is
-one fetch of a public document with a declared User-Agent, far under SEC's
-10 req/s fair-access ceiling.
+only per-request external dependency is the optional EDGAR URL mode: one fetch
+of a public document with a declared User-Agent, far under SEC's 10 req/s
+fair-access ceiling.
 
-*(2026-08-19, T12 correction: the sentence above — "deterministic coverage is
-100%, which is the number that would justify or kill a fallback stage; today it
-kills it" — is circular and is withdrawn as an argument. Metric 11 reads 100%
-because nothing emits `llm_fallback`, not because a fallback was measured
-against. The fallback stage is ruled out by
-[ADR-020](../specs/decisions/ADR-020-fallback-not-justified.md) on a different
-number: the fallback-addressable surface, **4 of 768 items improvable** across
-both eval sets — six of the seven residual failures measured here are
-confidently wrong spans rather than absences, and the seventh is one filing's
-combined-item heading, which a deterministic heading-shape change reaches
-identically at $0. The $0.00 figure is unaffected. T13's §4 should carry
-ADR-020 §f's four items — the reported $0.00, the counterfactual price of the
-road not taken (~$0.14 median filing, ~$1.52 for `jpm-2024`, ~$10.56 for one
-uncached pass over the 37-fixture corpus, at Anthropic list prices as of
-2026-06-24), the addressable-surface count, and the reopening conditions.)*
+T12's ledger row said a shipped fallback's cost model would land here. Nothing
+shipped — [ADR-020](../specs/decisions/ADR-020-fallback-not-justified.md) ruled
+the LLM fallback stage **not justified** — so per its §f this section carries
+four things in that model's place.
+
+### 4.1 The counterfactual: what the road not taken would have cost
+
+Recomputed for v4 from `evals/report/20260820-020815-bench.json`
+(`cost.counterfactual`), not inherited from ADR-020: the three character counts
+underneath it were re-measured independently here and match §d **to the
+character** (corpus 8,450,478; median fixture 108,938, `wmt-2010`; `jpm-2024`
+1,213,298).
+
+| one input pass over | est. tokens | `claude-opus-5` | `claude-haiku-4-5` |
+|---|---|---|---|
+| median filing | ~27,200 | **$0.14** | $0.03 |
+| largest filing (`jpm-2024`) | ~303,300 | **$1.52** | $0.30 — **does not fit** |
+| whole 37-fixture corpus, uncached | ~2,112,600 | **$10.56** | $2.11 — does not fit |
+
+**Every dollar figure above is an estimate and is labelled one.** Tokens are
+`chars / 4`, not a tokenizer count. ADR-020 §d asked T13 to firm them with
+`count_tokens`; that is a network call, and neither `anthropic` nor `tiktoken`
+is importable here or listed in `requirements.txt` — checked, not assumed.
+ADR-020 §f forbids adding a dependency for it and forbids a live extraction
+against a paid endpoint, so the approximation is carried forward with its
+caveat intact. **How far off it is, is itself unmeasured** — that is what
+"estimate" means here, and no margin is quoted because quoting one would be the
+same guess wearing a confidence interval. What the table supports is an
+order-of-magnitude comparison, which is all the ruling ever needed.
+
+**The price basis is carried, not re-verified.** Anthropic first-party API list
+price **as of 2026-06-24** — `claude-opus-5` $5.00/MTok input at 1M context,
+`claude-haiku-4-5` $1.00/MTok input at 200K context. ADR-020 §d asked T13 to
+re-check the published list before quoting it; re-checking is a network call.
+The artifact stamps `cost.price_basis_date` next to every figure. **Treat the
+date as the fact, not the number.**
+
+Two properties of that table are structural rather than incidental, and they
+are why the number is a decision instead of an absence:
+
+1. **The unit of spend is the filing, not the item.** A locate-an-item fallback
+   must see the whole document, because if we already knew which region to send
+   we would not need it.
+2. **The cheap tier does not divide the problem.** `claude-haiku-4-5`'s 200K
+   context does not hold `jpm-2024`'s ~303K estimated tokens at all — the
+   artifact computes that flag rather than asserting it in prose. So the
+   largest filings, which have the hardest boundaries and carry the set's only
+   doc-level `ambiguous`, force either a 1M-context model or a
+   chunking/retrieval subsystem far larger than "a fallback stage".
+
+And one property of caching, which is the trap this project would have walked
+into: **caching bounds the eval bill and not the product bill.** Content-hash +
+prompt-version caching makes the second `full`-suite run ~$0 (`cost-discipline`
+rule 2). But this ships as a deployed service accepting arbitrary EDGAR URLs,
+and cache hit rate on an unseen filing is zero by definition. The fallback's
+cost would be bounded exactly where it does not matter.
+
+### 4.2 The addressable surface: what that money would have bought
+
+**4 of 768 distinct items.** Re-derived for v4 from today's committed reports —
+`evals/report/20260820-020944-all.json` (dev) unioned with
+`evals/report/20260820-013515-fast.json` (held-out), keyed on (fixture, item):
+**768** distinct items, of which **15** come back `missing`. Of those 15, nine
+sit in synthetic fixtures built by deleting the headings — eight in
+`items-stripped`, one in `heading-unnumbered` — where `missing` is the correct
+answer by construction of the fixture; two are genuinely absent from their real
+documents (`xom-2021` item 6, `malformed-html` item 1A); and the remaining
+**four are `axp-2008` items 10–13**, one filing, one root cause, a single
+heading naming four item codes. ADR-020's arithmetic, which was corrected four
+times under review, reproduces exactly.
+
+One refinement to §b's wording while re-deriving it: ADR-020 describes those
+nine as items "whose own committed expectations assert `missing` is the CORRECT
+answer". The **counts** are right, but only two of the nine are asserted
+item-by-item (`items-stripped` item 8, `heading-unnumbered` item 8); for the
+other seven the case asserts the aggregate consequence instead —
+`doc_status: ambiguous` plus the `expected_items_mostly_missing` warning. The
+distinction does not move the surface, and it is written down rather than
+smoothed over.
+
+All four are reachable by a deterministic combined-heading fan-out, at $0, for
+the whole class rather than the instances a model happens to be invoked on and
+get right. That is rung 1 of the escalation ladder answering a rung-4 proposal,
+and it is the whole of the ruling.
+
+### 4.3 Metric 11 is a dependence monitor, not an argument
+
+v1 of this report said deterministic coverage being 100% "is the number that
+would justify or kill a fallback stage; today it kills it." **That was
+circular and is withdrawn** (first noted in the 2026-08-19 T12 correction, now
+folded into the section body). Metric 11 reads 1.0 — n=647 in
+`20260820-020944-all.json` — because no code path emits `llm_fallback`, so it
+reads 1.0 whatever the pipeline does. It monitors the day a fallback exists.
+It never measured one. The non-circular substitute is §4.2's *input*-side
+count, measurable with no fallback in existence.
+
+### 4.4 What would reopen the question
+
+Stated so this section reads as a decision with falsifiers rather than a
+permanent answer. Any one of these reopens T12 with its own ADR; full text in
+ADR-020 §e.
+
+1. **One** addressable item appears that a deterministic change cannot reach
+   *and* a fallback can — both halves required. Instrument: count
+   `status: "missing"` in any committed report's `items_summary`, then check
+   each against the filing **and** the contract by running the checks.
+2. A residual *precision* failure acquires an honest doc-level trigger (the
+   escalation-policy successor named in ADR-019 §d).
+3. The plain-text stratum — six fixtures with **zero** independent
+   cross-check — gets a second read and it disagrees.
+4. ADR-019's sampled silent-failure CI moves, specifically its *lower* bound,
+   and the new defects turn out to be absences rather than precision failures.
+
+Explicitly **not** sufficient: metric 11 reading 100% (§4.3); the deployed
+service being asked for an LLM; a filing merely being large or old.
 
 ## 5. Scalability
 
-Projections from the measured 18.9 MB/s single-process throughput. An average
-10-K in this fixture set is ~1.8 MB.
+**Input:** `evals/report/20260820-020815-bench.json`, `perf.projection`.
+Projections divide into the measured **batch** throughput of 14.34 MB/s — one
+sequential pass over the whole corpus timed as a unit — rather than into the
+sum of per-fixture medians, so per-file open and allocator churn are paid for.
+(The two agree closely: batch 4.072 s vs sum-of-medians 4.13 s, which is the
+evidence that no batch overhead is hiding.) Mean filing in this corpus is
+**1.58 MB** (median 0.61 MB — 10-K sizes are heavily right-skewed, so the mean
+is the right multiplier for a sweep and the median is not).
 
 | Workload | Single process | Notes |
 |---|---|---|
-| 1 filing | ~0.10 s | p50 0.041 s, p95 0.249 s |
-| 1,000 filings | ~3 minutes | ~1.8 GB read |
-| Full EDGAR year (~7,000 10-Ks) | ~20 minutes | embarrassingly parallel |
+| 1 filing | ~0.11 s | mean-sized; p50 0.044 s, p95 0.533 s |
+| 1,000 filings | **~1.8 min** (110 s) | 1.54 GB read |
+| Full EDGAR year (~7,000 10-Ks) | **~13 min** (770 s) | embarrassingly parallel |
+
+These replace v3's ~3 min / ~20 min, which divided into the 18.9 MB/s figure
+§3 now corrects to 14.34 MB/s and assumed a 1.8 MB average filing. The
+projections got *faster* despite the slower throughput, because the corpus mean
+filing size fell as the fixture set grew.
 
 `extract_items` is a pure function of the file bytes — no shared state, no
-cross-call caching, no database — so horizontal scaling is linear and requires
-no coordination. Memory is the practical per-worker constraint: peak RSS scales
-with the single largest document, and 12.8 MB of raw input produced a 110 MB
-process peak, so a 256 MB worker is sufficient and 512 MB comfortable.
+cross-call caching, no database — so horizontal scaling is linear and needs no
+coordination. Memory is the practical per-worker constraint, and §3's
+measurement changes the reasoning without changing the answer: peak RSS is not
+set by the single largest document (that alone reaches 96.4 MB) but by a
+122.1 MB plateau the process reaches after ~10 filings and holds for the next
+27. A 256 MB worker is sufficient and 512 MB comfortable.
 
-**The honest limit is not throughput, it is correctness coverage.** At 19 MB/s
-a full-year sweep is trivial; what a full-year sweep would actually surface is
-format variance far beyond 21 fixtures, and the held-out result is the evidence
-for that — one unseen filer's markup choice cost 18 of 21 items.
+**The honest limit is not throughput, it is correctness coverage.** At 14 MB/s
+a full-year sweep is 13 minutes; what a full-year sweep would actually surface
+is format variance far beyond 37 fixtures, and the held-out result in §2 is the
+evidence for that — one unseen filer's markup choice cost 18 of 21 items. Every
+projection above is a *capacity* number and none of them is a *correctness*
+number.
+
 
 ## 6. Where this system is weak
 
@@ -396,7 +587,11 @@ README carries the same list for a general reader.
    ADR-018 — the T10 measurement found no scored value overstating, only a
    status defect wrongly reaching a real confidence value. Demonstrated
    overconfident wrongness lives in the enumerated debt channel (metric 8 v2,
-   §1); the sampled *rate* of that shape across unseen filings is T11's work.
+   §1). *(Corrected 2026-08-20, T13: this bullet used to end "the sampled rate
+   of that shape across unseen filings is T11's work." **T11 shipped** —
+   ADR-019 measured it at 1/30 = 3.3%, 95% CI [0.1%, 17.2%], and §1 reports it.
+   What is still open is the CI, not the measurement: n=30 leaves an upper
+   bound the < 5% target does not clear.)*
 5. **`missing` vs `omitted`** is decided by a hardcoded two-code list, so
    permitted omissions outside it are reported as failures to find.
 
@@ -414,7 +609,9 @@ Ranked by evaluation value per unit of effort, consistent with
    change (INV-S3) rather than a bug fix.
 4. **Held-out expansion and a second refresh cycle**; five filings found two
    real defects, and the marginal return is clearly still high.
-5. **Sampled confident-wrong rate (T11)** — the magnitude question is settled
-   (ADR-018, §1); what remains is measuring how often the debt channel's shape
-   (a status defect reaching a real confidence value) occurs across unseen
-   filings, not enumerated as now but sampled.
+5. ~~**Sampled confident-wrong rate (T11)**~~ — **done, 2026-08-19, ADR-019.**
+   Sampled at 1/30 = 3.3%, 95% CI [0.1%, 17.2%]. *(Corrected 2026-08-20, T13:
+   this item still read as future work after T11 shipped.)* Its successor on
+   this list is **tighten the interval, not repeat the point estimate** —
+   n=30's upper bound is what stops the < 5% target being demonstrated, and
+   only a larger blind sample moves it.
