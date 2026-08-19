@@ -5,7 +5,7 @@ v4 (2026-08-20): T13 performance / cost / scalability update
 are **rewritten, not amended**: their v3 numbers came from ad-hoc timing that
 left no committed input, and were measured over 21 fixtures when the dev corpus
 is now 37. Every figure in those three sections is now read from
-`evals/report/20260820-024620-bench.json` (a new dev instrument,
+`evals/report/20260820-031540-bench.json` (a new dev instrument,
 `evals/bench.py`) or `evals/report/20260820-020944-all.json`, cited inline.
 Four v3 claims turned out to be **wrong**, not merely stale — aggregate
 throughput, p95 latency, "throughput is flat", and "peak RSS scales with the
@@ -34,8 +34,8 @@ first draft of v4 is superseded rather than merely tidied:
 - **The throughput range's maximum was a document the pipeline refuses.**
   `ksb-2007` (44.1 MiB/s) returns `unsupported` before segmentation, as do
   `aapl-2026-10q` and `truncated-download`. The range and spread are now over
-  the **34 processed** fixtures: 6.62–33.68 MiB/s, spread 5.09× rather than
-  6.7×.
+  the **34 processed** fixtures — 6.62–33.68 MiB/s, spread 5.09× rather than
+  6.7×, at that round's measurement; re-measured again in round 2 below.
 - **"All 37 committed fixtures" was false**: 42 are committed, and the 5
   held-out ones are excluded for a reason that was never written down. It is
   now measurement choice 8 in ADR-021 §b, and their sizes (never their
@@ -51,6 +51,34 @@ retracted-figure note and its stale 0.53 s large-filing row are fixed; and the
 warm-up and repeat-spread statistics now exclude the one sub-millisecond
 fixture, with the exclusion named in the artifact. Two v4 claims of my own are
 withdrawn in §3 as run-unstable rather than restated.
+
+**v4 repair round 2 (PR #12 review, 2026-08-20).** Eight findings, all
+confirmed, none rejected. Round 1 corrected the report and left the ADR behind,
+and pinned two unasserted statistics while leaving five more free — both are
+the "correction that relocates the gap" shape ADR-020 §h3 names. What changed:
+
+- **The artifact of record was measured on a dirty tree.** It stamped
+  `30b001a…-dirty` while this report claimed a clean `20f8be0`. Re-run: three
+  full clean-tree runs at `13761cc` are now committed, and the run of record is
+  the middle of the three on every headline.
+- **Two round-1 "confirmations" do not reproduce.** The warm-up maximum of 1.40
+  and the repeat-spread maximum of 40% were both single-run artifacts of that
+  dirty run — on three clean runs they read 1.02–1.04 and 2.4–7.5%. Round 1
+  withdrew the *reproducible* siblings of these two and published the outliers.
+  Both are now withdrawn; §3.1 states the instrument's real precision (**±3%**)
+  once, and every figure is quoted to the digits that survive it.
+- **§3's "stable to their third decimal" was false.** The repo's own committed
+  artifacts differ by 2–6% per fixture. Replaced by a measured spread.
+- **Five more published statistics had no assertion behind them**, including
+  one whose mutation moves p95 from 0.51 s to 0.37 s and one that silently
+  reverts round 1's own refusal-exclusion fix. `evals/bench.py --self-check`
+  now compares its **entire** published output against a hand-derived golden
+  dict, so an unasserted field fails the check by construction; 19 mutations
+  were watched red (ADR-021 §e).
+- **ADR-021 §b still quoted the superseded run's numbers** while naming the new
+  artifact as their source, and §b4's design claim about which rate the
+  projection divides into stopped being true when round 1 changed the
+  population. Both fixed against the artifact.
 
 v3 (2026-08-19): T11 silent-failure update. Adds the "Silent-failure rate —
 measured (T11)" section (ADR-019) and reconciles metric 6's discussion, which
@@ -347,15 +375,29 @@ What H1 actually bought, in order of value:
 
 ## 3. Runtime performance
 
-**Input:** `evals/report/20260820-024620-bench.json`, written by
+**Input:** `evals/report/20260820-031540-bench.json`, written by
 `python3 -m evals.bench --json …` (a dev instrument added in T13; design and
-its nine measurement choices in
+its ten measurement choices in
 [ADR-021](../specs/decisions/ADR-021-benchmark-instrument.md)). Every number in
 this section is a **field** of that file, or a ratio of two of its fields taken
 inline — the statistics the prose used to compute (R², the throughput range,
-the warm-up ratio, the repeat spread, the RSS plateau index) are now emitted
-into `perf.derived` so that "cites its inputs" names a field rather than an
-argument.
+the warm-up ratio, the repeat spread, the RSS plateau index, all three sweep
+populations) are emitted into `perf.derived` and `perf.populations`, so "cites
+its inputs" names a field rather than an argument.
+
+**Provenance:** measured on a **clean tree** at git `13761cc`, the commit that
+introduced this revision of the instrument; `src/` is byte-identical to
+`20f8be0` and has not changed anywhere in this milestone. The artifact stamps
+that sha itself, with no `-dirty` suffix.
+
+*(Correction, PR #12 R15. v4's first two artifacts did not have this property.
+`20260820-024620-bench.json` stamps `30b001a…-dirty` — it was run while
+`evals/bench.py` itself was uncommitted mid-edit — while this section claimed
+"pipeline at git 20f8be0", which was the sha of the **earlier** artifact and
+was already stale. The pipeline claim happened to be true in substance (`src/`
+never changed), but the stamp was wrong and the `-dirty` flag that ADR-018
+added specifically to make this detectable was firing, unmentioned, on the
+artifact of record. The remedy is a clean-tree re-run, not a footnote.)*
 
 **Population: the 37 dev-corpus fixtures in `evals/fixtures/`.** Forty-two
 fixture directories are committed; the other five are the held-out filings in
@@ -366,18 +408,39 @@ extraction outcomes. Their file *sizes* are read (`stat` only, no pipeline
 call) and used in §5, because a byte count leaks no outcome. ADR-021 §b8.
 
 Median of 3 repeats each, single process, no caching, Python 3.14.6 on macOS
-arm64, pipeline at git `20f8be0`. **All sizes and rates are binary** — MiB =
-1,048,576 bytes — so a quoted size divided by a quoted time reproduces the
-quoted MiB/s.
+arm64. **All sizes and rates are binary** — MiB = 1,048,576 bytes — so a quoted
+size divided by a quoted time reproduces the quoted MiB/s.
 
-| | |
-|---|---|
-| Latency p50 | **0.041 s** |
-| Latency p95 | **0.508 s** (`bac-2006`) |
-| Slowest filing | **`jpm-2024`**, 12.25 MiB → **0.551 s** |
-| Aggregate throughput, batch | **14.61 MiB/s** (58.37 MiB in 3.995 s) |
-| Per-fixture throughput, 34 processed | **6.62 – 33.68 MiB/s**, median 14.39, spread **5.09×** |
-| Peak RSS | **122.8 MiB** driving all 37 filings in one process (26.3 MiB baseline) |
+### 3.1 How precise these numbers are
+
+Stated before the numbers, because it governs how many digits of any of them
+mean anything. **Three full runs of identical code on a clean tree at
+`13761cc`** are committed — `20260820-031501`, `-031540`, `-031620` — and the
+per-fixture median latency moves across them by **2.7% at the median fixture
+and 4.2% at the worst**. Aggregate figures move about as much: batch throughput
+14.53–15.02 MiB/s, p95 0.500–0.521 s, corpus peak RSS 119.5–123.5 MiB.
+
+So: **this instrument is good to roughly ±3%, and no better.** Figures below
+are quoted to two significant figures for that reason, and the run of record is
+`20260820-031540-bench.json` — chosen because it is the **middle of the three
+on every headline** (p50, p95, max, batch rate, peak RSS, and the sweep
+projection), not because of what it says.
+
+Two statistics are **too unstable to publish at all** and are named here rather
+than quoted anywhere: the RSS plateau *index* (4, 9, 9 across the three runs)
+and the per-run maximum of the repeat spread (2.4%, 3.1%, 7.5%), both of which
+land on whichever sub-10 ms fixture the scheduler happened to interrupt.
+
+### 3.2 The numbers
+
+| | | run-to-run |
+|---|---|---|
+| Latency p50 | **0.041 s** | 0.040–0.041 |
+| Latency p95 | **0.51 s** (`bac-2006`) | 0.500–0.521 |
+| Slowest filing | **`jpm-2024`**, 12.25 MiB → **0.55 s** | 0.541–0.557 |
+| Aggregate throughput, batch | **14.8 MiB/s** (58.37 MiB in 3.942 s) | 14.53–15.02 |
+| Per-fixture throughput, 34 processed | **6.6 – 33.8 MiB/s**, median 14.6, spread **5.1×** | spread 5.09–5.14 |
+| Peak RSS | **123 MiB** driving all 37 filings in one process (26 MiB baseline) | 119.5–123.5 |
 
 **Three fixtures are refusals and are excluded from the throughput
 statistics.** `ksb-2007` and `aapl-2026-10q` return `unsupported` and
@@ -386,9 +449,8 @@ statistics.** `ksb-2007` and `aapl-2026-10q` return `unsupported` and
 validation, so they time a shorter code path. They are still timed, still in
 the artifact (`refused: true`) and still in the latency and memory figures —
 they just do not set the range of a rate that is meant to describe extraction.
-This matters: `ksb-2007` is the fastest fixture in the corpus at 44.1 MiB/s,
-and including it would put the top of the range on a document the pipeline
-never parsed.
+This matters: `ksb-2007` is the fastest fixture in the corpus, and including it
+would put the top of the range on a document the pipeline never parsed.
 
 Metric 9 in §1 quotes p50/p95 over eval **cases** rather than fixtures — today
 `[0.07, 0.52]` over 45 cases in `evals/report/20260820-020944-all.json`. Cases
@@ -400,57 +462,57 @@ Selected points, showing that the size relationship is not the whole story:
 
 | fixture | raw bytes | MiB | normalized chars | median s | MiB/s |
 |---|---|---|---|---|---|
-| `textron-2001` | 69,521 | 0.07 | 69,398 | 0.005 | 14.1 |
+| `textron-2001` | 69,521 | 0.07 | 69,398 | 0.005 | 14.0 |
 | `premier-pacific-2016` | 642,332 | 0.61 | 67,592 | 0.042 | 14.6 |
-| `msft-2013` | 1,776,947 | 1.69 | 312,483 | 0.225 | 7.5 |
-| `bac-2006` | 4,517,513 | 4.31 | 705,899 | 0.508 | 8.5 |
-| `cvx-2015` | 5,606,365 | 5.35 | 417,523 | 0.374 | 14.3 |
-| `jpm-2024` | 12,849,180 | 12.25 | 1,213,298 | 0.551 | 22.2 |
+| `msft-2013` | 1,776,947 | 1.69 | 312,483 | 0.223 | 7.6 |
+| `bac-2006` | 4,517,513 | 4.31 | 705,899 | 0.505 | 8.5 |
+| `cvx-2015` | 5,606,365 | 5.35 | 417,523 | 0.368 | 14.5 |
+| `xom-2021` | 6,159,522 | 5.87 | 388,862 | 0.239 | 24.6 |
+| `jpm-2024` | 12,849,180 | 12.25 | 1,213,298 | 0.548 | 22.4 |
 
 **Bytes are the first-order term and nothing else is close — but throughput is
 not flat.** A least-squares fit of elapsed time on raw bytes over the 34
-processed fixtures explains **R² = 0.779** of the variance
-(`derived.processed_size_vs_time_r2`), and the residual is real work, not
-noise: `bac-2006` (4.31 MiB) takes 0.508 s while `xom-2021` (5.87 MiB) takes
-0.242 s — **2.1× longer on 27% less input**. The low-throughput end is
-normalization-heavy markup (`tgt-2002` 6.6, `intc-2002` 6.8, `gs-2002` 7.1,
-`msft-2013` 7.5, `ba-2003` 7.6 MiB/s); the high end is plain-text and
-lightly-marked-up input (`ibm-1997` 33.7, `ko-1997` 26.8 MiB/s — both real
-1990s `.txt` submissions the pipeline fully processes). The shape is still a
+processed fixtures explains **R² = 0.78** of the variance
+(`derived.processed_size_vs_time_r2`, 0.774–0.778 across the three runs), and
+the residual is far larger than the ±3% noise: `bac-2006` (4.31 MiB) takes
+0.505 s while `xom-2021` (5.87 MiB) takes 0.239 s — **2.1× longer on 27% less
+input**, a gap that survives on all three runs. The low-throughput end is
+normalization-heavy markup (`tgt-2002` 6.6, `intc-2002` 6.9, `gs-2002` 7.2,
+`ba-2003` 7.6, `msft-2013` 7.6 MiB/s); the high end is real plain-text
+submissions (`ibm-1997` 33.8, `ko-1997` 27.6 MiB/s). The shape is still a
 single-pass parse — cost tracks input size, not item count — with a
 markup-density coefficient on top of it.
 
-**No warm-up effect worth the name.** Over the 36 fixtures above the 1 ms
-ratio floor, the first-repeat / fastest-repeat ratio has median **1.022**
-(`derived.warmup_first_over_min_median`). The maximum, **1.40**, is
-`ksb-2007`: 3.5 ms first, 2.5 ms fastest — a **1.0 ms** absolute difference,
-which is what a ratio looks like on a 2.5 ms workload, not a warm-up cost.
+**No warm-up effect.** Over the 36 fixtures above the 1 ms ratio floor, the
+first-repeat / fastest-repeat ratio has median **1.004** and maximum **1.02**
+(`derived.warmup_*`). Across the three runs the maximum is 1.021 / 1.031 /
+1.042 and lands on a different fixture each time — i.e. it is the noise floor,
+which is exactly what "no warm-up" should look like.
 `truncated-download` (1,200 bytes, ~0.1 ms) is excluded from this statistic and
 from the repeat spread, and named in the artifact as excluded
 (`derived.ratio_excluded_fixtures`), because at one scheduler tick a ratio is
 quantization rather than measurement.
 
-Repeat spread `(max−min)/median` has median **2.4%**; its maximum is **40%**,
-again `ksb-2007`, again the same 1.0 ms. Take that as the honest precision
-statement: the multi-hundred-millisecond fixtures that set p95 and the batch
-rate are stable to their third decimal; the sub-10 ms fixtures are not, and no
-conclusion here rests on one.
-
-*(v4 quoted "worst case 8%" for this spread and "11 fixtures were fastest on
-their first run" from an earlier run of the same code. The first figure was
-right for that run and is 40% in this one; the second swung 11 → 3 → 3 across
-three runs and is a near-tie count, not a property. It is dropped from the
-prose and kept only as an artifact field.)*
+*(Correction, PR #12 R16 — and this one is worse than a stale number. The
+round-1 draft published a warm-up maximum of **1.40**, attributed to `ksb-2007`
+at "3.5 ms first versus 2.5 ms fastest", in the same paragraph that withdrew
+two sibling statistics as run-unstable. **It does not reproduce at all**: on all
+three clean runs `ksb-2007` reads `first_s == min_s == 0.0025`, and the corpus
+maximum never exceeds 1.042. The published outlier came from the same dirty-tree
+run R15 is about. So round 1 retracted the reproducible figure and kept the
+irreproducible one — the exact error it was written to correct. The same applies
+to the round-1 repeat-spread maximum of **40%**, also `ksb-2007`, also from that
+run: on clean runs it is 2.4% / 3.1% / 7.5%. Both are withdrawn. The repeat
+spread's stable half — median **0.8%** — is what survives.)*
 
 **Memory plateaus; it is not set by the largest document.** Fixtures are timed
 in descending size order precisely so this is readable off the artifact. The
-largest filing (`jpm-2024`, 12.25 MiB) alone takes the process high-water from
-a 26.3 MiB baseline to **94.6 MiB**. It reaches the **122.8 MiB** corpus peak
-at the fifth fixture (`bac-2006`, index 4 — `derived.rss_plateau_first_index`)
-and holds within 0.5 MiB of it for the remaining 32 — a plateau, not a leak.
-Which fixture first touches the plateau moves between runs (index 4 here, 9 in
-an earlier run of the same code); that the plateau exists, and where it sits,
-does not.
+largest filing (`jpm-2024`, 12.25 MiB) alone takes the process high-water from a
+26 MiB baseline to **94.6 MiB** — a value stable to 0.1 MiB across all three
+runs. A further ~28 MiB accrues over the next several fixtures and the process
+settles at a **119–124 MiB** plateau it holds for the remainder. *Which* fixture
+first touches the plateau is not stable (index 4, 9, 9) and is therefore not
+quoted; that a plateau exists, and roughly where, is stable.
 
 **Corrections to v3 (2026-08-20, T13).** v3's §3 was measured over 21 fixtures
 with an ad-hoc script that committed nothing, and four of its claims are wrong
@@ -459,10 +521,10 @@ replaced, per ADR-021 §c:
 
 | v3 said | measured now |
 |---|---|
-| aggregate throughput 18.9 MB/s (37.8 MB in 2.00 s) | **14.61 MiB/s** (58.37 MiB in 3.995 s) |
-| latency p95 0.249 s | **0.508 s** |
-| "throughput is roughly flat … 8–37 MB/s", one outlier (`msft-2013`) | **6.62–33.68 MiB/s** over the 34 processed fixtures, R²=0.779, five low-throughput fixtures sharing a cause |
-| "peak RSS scales with the single largest document … 110 MB" | largest filing alone **94.6 MiB**, corpus peak **122.8 MiB** |
+| aggregate throughput 18.9 MB/s (37.8 MB in 2.00 s) | **14.8 MiB/s** (58.37 MiB in 3.942 s) |
+| latency p95 0.249 s | **0.51 s** |
+| "throughput is roughly flat … 8–37 MB/s", one outlier (`msft-2013`) | **6.6–33.8 MiB/s** over the 34 processed fixtures, R²=0.78, five low-throughput fixtures sharing a cause |
+| "peak RSS scales with the single largest document … 110 MB" | largest filing alone **94.6 MiB**, corpus plateau **119–124 MiB** |
 
 The operational conclusions are unchanged — everything here is fast and small —
 but v3's *explanations* of why were partly wrong, and a 21-fixture throughput
@@ -497,7 +559,7 @@ four things in that model's place.
 
 ### 4.1 The counterfactual: what the road not taken would have cost
 
-Recomputed for v4 from `evals/report/20260820-024620-bench.json`
+Recomputed for v4 from `evals/report/20260820-031540-bench.json`
 (`cost.counterfactual`), not inherited from ADR-020: the three character counts
 underneath it were re-measured independently here, over the same 37 dev-corpus
 fixtures §d used, and match it **to the character** (corpus 8,450,478; median fixture 108,938, `wmt-2010`; `jpm-2024`
@@ -608,9 +670,10 @@ service being asked for an LLM; a filing merely being large or old.
 
 ## 5. Scalability
 
-**Input:** `evals/report/20260820-024620-bench.json`, `perf.populations` — the
+**Input:** `evals/report/20260820-031540-bench.json`, `perf.populations` — the
 projections are fields of the artifact, computed by `evals/bench.py`, not
-arithmetic done here.
+arithmetic done here. They inherit §3.1's **±3%** run-to-run precision, so the
+sweep figures below are quoted to two significant figures.
 
 **Which filings the multiplier is averaged over decides the answer, so it is
 stated once and used consistently.** A sweep projection multiplies a rate by
@@ -626,15 +689,23 @@ The artifact therefore reports three populations and names one as of record:
 
 | population | n | mean filing | rate | 1,000 filings | ~7,000 (EDGAR year) |
 |---|---|---|---|---|---|
-| `all_dev_fixtures` | 37 | 1.578 MiB | 14.61 MiB/s (measured batch) | 108 s | 12.6 min |
-| `real_edgar_dev` | 28 | 1.868 MiB | 14.51 MiB/s (measured) | 129 s | 15.0 min |
-| **`real_edgar_committed`** ← of record | **33** | **2.104 MiB** | 14.51 MiB/s | **145 s ≈ 2.4 min** | **1,015 s ≈ 17 min** |
+| `all_dev_fixtures` | 37 | 1.578 MiB | 14.8 MiB/s (batch) | 107 s | 12 min |
+| `real_edgar_dev` | 28 | 1.868 MiB | 14.6 MiB/s (sum-of-medians) | 128 s | 15 min |
+| **`real_edgar_committed`** ← of record | **33** | **2.104 MiB** | 14.6 MiB/s | **144 s ≈ 2.4 min** | **1,006 s ≈ 17 min** |
+
+**The two rates are not the same measurement, and the artifact says which is
+which on every row.** `all_dev_fixtures` divides into the *batch* rate — one
+timed sequential pass over the whole corpus. The two real-EDGAR populations
+divide into a *sum-of-medians* rate computed over their own members, because a
+batch pass over a subset was never run. `rate_source` records this per row.
+(ADR-021 §b4 originally claimed §5's projection divides into the batch number;
+after the round-1 population fix that was true only of the row that is *not* of
+record — PR #12 R14.)
 
 `real_edgar_committed` is the 28 real dev fixtures plus the 5 held-out filings.
 The held-out five contribute their **sizes only** — `stat`, never a pipeline
-call — so the rate is the one measured over the real dev fixtures and every row
-says so in its own `rate_source` field. A sweep of 1,000 filings reads
-**2.05 GiB**.
+call — so the rate is the one measured over the real dev fixtures. A sweep of
+1,000 filings reads **2.05 GiB**.
 
 *(This replaces v4's single "~1.8 min / ~13 min" line, which used the
 all-fixtures mean of 1.578 MiB. That number was not wrong for the population it
@@ -650,11 +721,11 @@ cross-call caching, no database — so horizontal scaling is linear and needs no
 coordination. Memory is the practical per-worker constraint, and §3's
 measurement changes the reasoning without changing the answer: peak RSS is not
 set by the single largest document (that alone reaches 94.6 MiB) but by a
-122.8 MiB plateau the process reaches within the first handful of filings and
-holds for the rest. A 256 MiB worker is sufficient and 512 MiB comfortable.
+119–124 MiB plateau the process settles at and holds. A 256 MiB worker is
+sufficient and 512 MiB comfortable.
 
 **The honest limit is not throughput, it is correctness coverage.** At
-14.5 MiB/s a full-year sweep is under 20 minutes; what a full-year sweep would
+~15 MiB/s a full-year sweep is under 20 minutes; what a full-year sweep would
 actually surface is format variance far beyond 37 fixtures, and the held-out
 result in §2 is the evidence for that — one unseen filer's markup choice cost
 18 of 21 items. Every projection above is a *capacity* number and none of them

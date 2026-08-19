@@ -64,15 +64,16 @@ day. A headline that moved four times under review lands where §h3 left it.
 
 - Assumed: §3's numbers were stale — measured over 21 fixtures instead of 37 —
   and a re-run at the current corpus would restate them larger.
-- Eval said: the bench artifact — aggregate throughput **14.61 MiB/s** against
-  v3's 18.9, p95 **0.508 s** against 0.249, and a per-fixture spread of
-  **6.62–33.68 MiB/s** against a claimed "roughly flat 8–37". `bac-2006`
+- Eval said: the bench artifact — aggregate throughput **14.8 MiB/s** against
+  v3's 18.9, p95 **0.51 s** against 0.249, and a per-fixture spread of
+  **6.6–33.8 MiB/s** against a claimed "roughly flat 8–37". `bac-2006`
   (4.31 MiB) takes 2.1× longer than `xom-2021` (5.87 MiB). *(Figures are the
-  artifact of record `20260820-024620-bench.json`, after round 1 pulled the
-  three refusal fixtures out of the rate statistics and put everything on
-  binary units; the first run of the same instrument,
-  `20260820-020815-bench.json`, read 14.34 MB/s and 6.3–42.8 with `ksb-2007`
-  setting the top.)*
+  artifact of record `20260820-031540-bench.json`, the middle of three
+  clean-tree runs at `13761cc`, quoted to the two significant figures the
+  instrument's measured ±3% supports. Two superseded artifacts remain
+  committed: `20260820-020815` read 14.34 MB/s and 6.3–42.8 before round 1
+  pulled the refusals out of the rate statistics, and `20260820-024620` read
+  14.61 from a dirty tree.)*
 - Corrected: four numbers **retracted rather than replaced** — ADR-021 §c and
   report v4 §3 both print the old value beside the new one. "Cost tracks bytes,
   not document complexity" is narrowed to a first-order term plus a
@@ -82,11 +83,11 @@ day. A headline that moved four times under review lands where §h3 left it.
   and the largest filing's peak are the same number (v3 said 110 MB for both).
 - Eval said: with fixtures processed in **descending** size order, `jpm-2024`
   alone takes the high-water to **94.6 MiB** and the corpus reaches its
-  **122.8 MiB** peak within the first handful, then holds within 0.5 MiB of it
-  for the rest. (Round 1, R11: my first write-up said "122.1 MB by roughly the
-  tenth", which did not match its own artifact. The plateau index is now a
-  computed field and is run-variable — 4 here, 9 on the previous run — so the
-  report states the plateau, not the index.)
+  **119–124 MiB** plateau within the first handful and holds it. (Round 1, R11:
+  my first write-up said "122.1 MB by roughly the tenth", which did not match
+  its own artifact. The plateau index became a computed field and turned out to
+  read 4, 9, 9 across three clean runs — so round 2 stopped publishing the
+  index at all, and publishes only the plateau, which is stable.)
 - Corrected: v4 §5 says *plateau*, not *largest document*. The 256 MB per-worker
   sizing survives; the reason given for it did not. Recorded because the sizing
   advice being accidentally right is not the same as it being justified.
@@ -180,7 +181,7 @@ day. A headline that moved four times under review lands where §h3 left it.
 - Corrected: resolved as one population question, not three sentences. The
   artifact now emits three populations with a `rate_source` each and names
   `real_edgar_committed` (33 real EDGAR filings, 2.104 MiB mean) as
-  `projection_of_record`; the EDGAR-year sweep moves ~12.6 → ~16.9 min. Held-out
+  `projection_of_record`; the EDGAR-year sweep moves ~12.6 → ~17 min. Held-out
   filings contribute **sizes only**, by `stat`, never a pipeline call, so no
   held-out outcome enters a committed artifact. Refusals are flagged in the
   artifact and excluded from the rate statistics but not from latency or
@@ -200,4 +201,64 @@ day. A headline that moved four times under review lands where §h3 left it.
   their first run" (11 → 3 → 3 across three runs of identical code) and the
   repeat-spread maximum — which only became visible once the statistics were
   computed by the instrument on every run instead of by me once.
+
+### Round 2 of PR #12 review — the repair that had to be repaired
+
+Round 2's eight findings are, in substance, three statements about round 1.
+
+- Assumed: round 1's fix for R2 — pinning the median and percentile paths that
+  the reviewer's two mutations had walked through — closed that class.
+- Eval said: R18. Five more published statistics mutate freely with
+  `--self-check` green, including `math.ceil` → `math.floor` in `pct` (moves the
+  headline p95 from 0.51 s to 0.37 s) and `processed = list(records)`, which
+  **silently reverts round 1's own R5 refusal-exclusion fix**. I reproduced all
+  five, plus R19's rate swap, before changing anything: 7 of 14 mutations caught.
+- Corrected: the check is **inverted** rather than extended. `_demo` now runs
+  `summarize` over one golden corpus and compares its *entire* `perf` block
+  against a hand-derived expected dict, so a published field that nobody has
+  computed an expected value for fails by construction and the failure names it.
+  19 mutations red, each applied to a copy and run. The lesson is not "assert
+  more"; it is that a checklist of assertions cannot close a class, because the
+  next gap is always the one not on the checklist. Choice 10 in ADR-021 records
+  it, including what the check still does *not* prove — the sentence that
+  overclaimed twice is now bounded on purpose.
+
+- Assumed: correcting the report corrected the milestone.
+- Eval said: R12 and R13. `ADR-021` §b2 and §b4 still quoted the **superseded**
+  artifact's numbers while naming the new one as their source — and one of them,
+  "worst 8%", was a figure round 1's own report text had explicitly retracted
+  two files away. R14 added that §b4's design claim ("§5's projection divides
+  into the batch number") stopped being true the moment round 1 changed the
+  projection's population.
+- Corrected: swept every number in ADR-021 attributed to "the run of record"
+  against the artifact's actual fields, not only the two lines cited. The
+  general rule this makes explicit: **a spec is not documentation of a
+  correction, it is a place corrections have to land too.** Round 1's own
+  finding was "a number is not retracted while a copy of it is still published
+  one file over" — and the copy was in the ADR that recorded the retraction.
+
+- Assumed: I could tell which of my statistics were run-unstable by looking at
+  two runs.
+- Eval said: R15, R16, R17 together. The artifact of record had been produced
+  from a **dirty tree** (`30b001a-dirty`, `evals/bench.py` uncommitted mid-edit)
+  while the report claimed a clean `20f8be0` — the `-dirty` machinery ADR-018
+  added for exactly this was firing and nobody read it. And the two statistics
+  round 1 published as *confirmations* — warm-up max 1.40 and repeat-spread max
+  40%, both `ksb-2007` — came from that run and **do not reproduce at all**: on
+  three clean runs `ksb-2007` reads `first_s == min_s == 0.0025`. Round 1
+  withdrew the reproducible siblings of those two figures and kept the
+  irreproducible ones, citing run-instability as the reason.
+- Corrected: three full clean-tree runs at `13761cc` are committed, the run of
+  record is the middle of the three on every headline (a rule, written down, so
+  the choice is checkable), and §3.1 now states the instrument's measured
+  precision — **±3%**, from a 2.7% median and 4.2% worst-case per-fixture spread
+  — before any number that inherits it. Every figure is rounded to two
+  significant figures, and two statistics whose run-to-run swing exceeds their
+  own magnitude are **not published at all**. "Round to the precision you
+  actually have" turned out to be the whole answer to a finding I had been
+  treating as a wording problem.
+
+The count worth keeping: across PR #11 and PR #12 this is the **seventh**
+occurrence of asserting a property of an executable thing without running it,
+and two of those seven happened inside the correction for an earlier one.
 

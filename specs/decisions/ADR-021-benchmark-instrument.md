@@ -33,11 +33,13 @@ instrument that runs the real pipeline through its existing public entry point
 (`extract_items`) read-only, is never imported by `src/`, is not part of any
 scored suite, and writes `evals/report/<stamp>-bench.json`.
 
-**Nine** measurement choices, each of which could reasonably have gone the
+**Eleven** measurement choices, each of which could reasonably have gone the
 other way, so each is recorded rather than left in the code. (Seven at first
-draft; choices 8 and 9 were added in PR #12 repair round 1, where the reviewer
-showed that the population boundary and the sub-millisecond ratio noise were
-decisions being made silently by the code rather than recorded here.)
+draft; 8 and 9 added in PR #12 repair round 1, where the reviewer showed that
+the population boundary and the sub-millisecond ratio noise were decisions the
+code was making silently; 10 and 11 in round 2, where it turned out that *which
+statistics are asserted* and *how many digits of any of them mean anything*
+were also being decided by accident.)
 
 1. **The unit is the fixture, not the eval case.** Several cases run the same
    fixture (`aapl-2025` appears in more than one) and some carry no fixture at
@@ -50,9 +52,18 @@ decisions being made silently by the code rather than recorded here.)
    laptop is noisy; the median of a small odd N discards one scheduler hiccup
    at minimal cost. `min`, `mean`, `max` and the **first** (cold) repeat are
    all recorded per fixture, so a reader can see the spread instead of trusting
-   the median. Measured spread on the run of record: `(max-min)/median` has
-   median **1.4%**, worst **8%** — the median is stable at the precision
-   published.
+   the median. Measured spread on the run of record
+   (`derived.repeat_spread_*`): median **0.8%**, maximum **2.4%**.
+
+   *(Corrected, PR #12 R12. This choice previously read "median 1.4%, worst
+   8%" and attributed it to the run of record; those were the **superseded**
+   first artifact's values, left standing when round 1 regenerated the
+   artifact — and the 8% was a figure round 1's own report text had already
+   retracted. The wider lesson is §b10's: a number in a spec attributed to an
+   artifact must be read out of that artifact. The stability conclusion also
+   no longer rests on this statistic — the per-run maximum ranges 2.4–7.5%
+   across three clean runs and is not published; §3.1 of the report states the
+   instrument's precision from the cross-run spread instead.)*
 
 3. **The throughput denominator is raw bytes on disk, not normalized chars.**
    The pipeline reads and normalizes the whole file, so bytes-in is the
@@ -62,9 +73,19 @@ decisions being made silently by the code rather than recorded here.)
 4. **The batch pass is timed as a unit, separately from the per-fixture
    medians.** A real batch pays per-file open and allocator churn that a
    median-of-3 loop amortizes. §5's projection divides into the *batch*
-   number. On the run of record the two agree closely (batch 4.072 s vs
-   sum-of-medians 4.13 s), which is itself the evidence that no batch overhead
-   is hiding.
+   number. On the run of record the two agree closely (batch **3.942 s** vs
+   sum-of-medians **3.925 s**), which is itself the evidence that no batch
+   overhead is hiding.
+
+   **Which rate each population divides into, precisely** — the sentence above
+   is true only of `all_dev_fixtures`. After choice 8 changed the projection of
+   record to a real-EDGAR population, `real_edgar_dev` and
+   `real_edgar_committed` divide into a **sum-of-medians** rate computed over
+   their own members, because a batch pass over a subset was never run. Every
+   row carries a `rate_source` field saying which it used. *(Corrected, PR #12
+   R13 and R14: the seconds quoted here were the superseded artifact's, and the
+   design claim stopped being true of the row that matters when round 1 moved
+   the population.)*
 
 5. **Peak memory is `resource.getrusage(RUSAGE_SELF).ru_maxrss`, and fixtures
    are processed in descending size order.** `ru_maxrss` is a monotone
@@ -177,28 +198,96 @@ decisions being made silently by the code rather than recorded here.)
    `_demo` asserts that a sub-millisecond row cannot set either maximum, and
    that assertion was watched red against the unfloored version.
 
+10. **No published field may be without an assertion pinning its value — and
+    that is enforced by inversion, not by discipline.** Round 1 answered R2 by
+    pinning the two statistics the reviewer named; round 2 (R18) found five
+    more that mutate freely with `--self-check` green, including one whose
+    mutation moves the headline p95 from 0.51 s to 0.37 s and one that silently
+    reverts round 1's own refusal-exclusion fix. Pinning statistics one at a
+    time does not terminate — it is the "correction that relocates the gap"
+    shape ADR-020 §h3 names, and it had now happened twice.
+
+    So `_demo` no longer asserts selected values. It runs `summarize` over one
+    **golden corpus** and compares the **entire** `perf` block against a
+    hand-derived expected dict. A newly published field fails the check until
+    someone computes its expected value by hand; the failure names it
+    (`derived.brand_new_unasserted_stat: got 42, expected <UNASSERTED FIELD>`).
+    The corpus is built so no statistic sits on a degenerate value that could
+    hide a mutation: percentile indices are fractional before `ceil`, the
+    throughput spread is 2.0 rather than 1.0, R² is exactly 0.892857 from a
+    hand-derived three-point fit, a refused row carries the extreme rate, a
+    sub-millisecond row would poison the ratio statistics, and one row is
+    synthetic. Three boundary cases a single corpus cannot reach keep their own
+    two-line blocks: largest-row-last, already-at-peak, and a perfectly
+    proportional set.
+
+    The corollary, adopted at the same time: **the artifact emits only fields
+    that are published or that back a published claim.** Two fields were
+    deleted rather than given expected values — `all_fixtures_size_vs_time_r2`
+    and `n_first_repeat_was_fastest`. An unpublished field is not free; it is
+    an unasserted number waiting to be quoted.
+
+    What this does **not** claim: that no bug can survive. It claims that no
+    *field* is unasserted, and that the 19 mutations in §e are red. Those are
+    different statements, and the difference is written down here because
+    overclaiming this check is precisely what R2 and R18 caught.
+
+11. **The instrument is good to ±3%, and figures are rounded to say so.**
+    Round 1 withdrew two statistics as "run-unstable" while publishing a third
+    that was a worse single-run outlier, and asserted that the large fixtures
+    were "stable to their third decimal". Neither the withdrawal nor the
+    stability claim was measured (R16, R17).
+
+    It is measured now. **Three full runs of identical code on a clean tree at
+    `13761cc`** are committed — `20260820-031501`, `-031540`, `-031620`. Across
+    them, per-fixture median latency moves **2.7% at the median fixture and
+    4.2% at the worst**; batch throughput spans 14.53–15.02 MiB/s, p95
+    0.500–0.521 s, corpus peak RSS 119.5–123.5 MiB. Every published figure is
+    therefore quoted to two significant figures, and anything whose run-to-run
+    swing exceeds its own magnitude — the RSS plateau *index* (4, 9, 9) and the
+    per-run repeat-spread maximum (2.4%, 3.1%, 7.5%) — is **not published**.
+
+    The run of record, `20260820-031540-bench.json`, is the **middle of the
+    three on every headline** (p50, p95, max, batch rate, peak RSS, sweep
+    projection). Chosen by that rule rather than by what it says, and the rule
+    is written here so the choice can be checked.
+
+    This also disposes of R15. The previous artifact of record stamped
+    `30b001a…-dirty` — run while `evals/bench.py` was itself uncommitted
+    mid-edit — while the report claimed a clean `20f8be0`, which was the
+    *earlier* artifact's sha. `src/` was in fact unchanged (it is byte-identical
+    from `20f8be0` to head), so the pipeline claim was true in substance and
+    false as a stamp. ADR-018 added the `-dirty` suffix precisely so this would
+    be visible, and it was visible, and nothing read it. The remedy is a
+    clean-tree re-run, not a footnote.
+
 ## c) What the measurement falsified
 
 Four claims in v3 §3/§5 are wrong at 37 fixtures. They are corrected in v4 with
 a dated note rather than restated, on the ADR-019/ADR-020 precedent.
 
 Figures below are from the run of record
-`evals/report/20260820-024620-bench.json`. **All rates and sizes here are
+`evals/report/20260820-031540-bench.json` — measured on a **clean tree** at
+`13761cc`, the middle of three committed runs on every headline, and quoted to
+the two significant figures the instrument's ±3% run-to-run spread supports
+(§b11). **All rates and sizes here are
 binary (MiB = 1,048,576 B); v3's were decimal MB against binary MiB/s, which
 was itself one of PR #12's findings (R8) and is part of why its throughput
 never reconciled with its own size table.**
 
 | v3 said | measured now |
 |---|---|
-| aggregate throughput **18.9 MB/s** (37.8 MB in 2.00 s, 21 fixtures) | **14.61 MiB/s** (58.37 MiB in 3.995 s, 37 dev fixtures) |
-| latency **p95 0.249 s** | **p95 0.508 s** (`bac-2006`); max 0.551 s (`jpm-2024`) |
-| "throughput is roughly flat across two orders of magnitude (8–37 MB/s)" | **6.62–33.68 MiB/s** over the 34 processed fixtures — a 5.09× spread — and size explains only **R²=0.779** of the variance in elapsed time |
-| "peak RSS scales with the single largest document … 12.8 MB of raw input produced a 110 MB process peak" | the largest filing alone reaches **94.6 MiB**; the corpus peak is **122.8 MiB** |
+| aggregate throughput **18.9 MB/s** (37.8 MB in 2.00 s, 21 fixtures) | **14.8 MiB/s** (58.37 MiB in 3.942 s, 37 dev fixtures) |
+| latency **p95 0.249 s** | **p95 0.51 s** (`bac-2006`); max 0.55 s (`jpm-2024`) |
+| "throughput is roughly flat across two orders of magnitude (8–37 MB/s)" | **6.6–33.8 MiB/s** over the 34 processed fixtures — a 5.1× spread — and size explains only **R²=0.78** of the variance in elapsed time |
+| "peak RSS scales with the single largest document … 12.8 MB of raw input produced a 110 MB process peak" | the largest filing alone reaches **94.6 MiB**; the corpus plateaus at **119–124 MiB** |
 
 The third and fourth deserve more than a row.
 
-**Throughput is not flat.** `bac-2006` (4.31 MiB) takes 0.508 s while
-`xom-2021` (5.87 MiB) takes 0.242 s — 2.1× longer on 27% *less* input. Bytes
+**Throughput is not flat.** `bac-2006` (4.31 MiB) takes 0.505 s while
+`xom-2021` (5.87 MiB) takes 0.239 s — 2.1× longer on 27% *less* input, a gap
+that holds on all three clean runs and is an order of magnitude larger than the
+±3% noise. Bytes
 are the first-order term and nothing else comes close, but v3's stronger
 reading — "cost tracks bytes, not item count or document complexity" — is not
 what the data says. The low-throughput end is normalization-heavy markup
@@ -216,45 +305,56 @@ its "text-like input" high end. `ksb-2007` is a Form 10-KSB: the pipeline
 segmentation, boundaries or validation ever run. The corpus's fastest number
 was therefore measuring a document that was never parsed, and it was being
 explained as though it had been. Per choice 8 the three refusals are now out of
-the rate statistics, which is where the 5.09× spread and the narrower range
+the rate statistics, which is where the 5.1× spread and the narrower range
 come from — the correction moved the number in the direction that makes this
 section's own argument **weaker**, and it stands anyway.)*
 
 **Peak RSS does not track the largest document alone.** Processing in
 descending size order, `jpm-2024` (12.25 MiB, the largest) brings the process
-high-water to 94.6 MiB from a 26.3 MiB baseline. A further ~28 MiB accrues over
-the next few fixtures, reaching the 122.8 MiB corpus peak at index 4
-(`bac-2006`) and holding within 0.5 MiB of it for the remaining 32 — a plateau,
-not a leak. A per-worker budget still sits comfortably at 256 MiB, so the v3
-sizing advice survives; the reason given for it did not.
+high-water to **94.6 MiB** from a ~26 MiB baseline — a value stable to 0.1 MiB
+across all three clean runs. A further ~28 MiB accrues over the next several
+fixtures and the process settles at a **119–124 MiB** plateau it holds for the
+remainder — a plateau, not a leak. A per-worker budget still sits comfortably
+at 256 MiB, so the v3 sizing advice survives; the reason given for it did not.
 
 *(The first draft said "reaching 122.1 MB by roughly the tenth", which PR #12
 R11 showed did not match its own artifact — the tenth fixture read 121.7 and
 122.1 first appeared at the thirty-sixth. The plateau index is now a computed
 field, `derived.rss_plateau_first_index`, defined as the first index from which
-every later reading is within 0.5 MiB of the corpus peak. It is **run-variable**
-— 4 on this run, 9 on the previous one — and v4 says so rather than quoting it
-as a property.)*
+every later reading is within 0.5 MiB of the corpus peak. Across three clean
+runs it reads 4, 9, 9, so it is **not published at all** — only that a plateau
+exists and roughly where it sits, both of which are stable.)*
 
 ## d) What the measurement confirmed
 
 Recorded because a benchmark that only ever falsifies is as suspect as one that
 only ever confirms.
 
-1. **No warm-up effect worth the name.** Over the 36 fixtures above the 1 ms
-   ratio floor (choice 9), the first-repeat vs fastest-repeat ratio has median
-   **1.022**; the maximum, **1.40**, is `ksb-2007` at 3.5 ms first versus
-   2.5 ms fastest — a 1.0 ms absolute difference. v3 asserted this from one
-   filing; it holds corpus-wide, and `first_s` is in the artifact so it can be
-   re-checked rather than believed.
+1. **No warm-up effect.** Over the 36 fixtures above the 1 ms ratio floor
+   (choice 9), the first-repeat vs fastest-repeat ratio has median **1.004**
+   and maximum **1.02** on the run of record. Across the three clean runs the
+   maximum is 1.021 / 1.031 / 1.042 and lands on a different fixture each time
+   — it is the noise floor, which is what "no warm-up" should look like. v3
+   asserted this from one filing; it holds corpus-wide, and `first_s` is in the
+   artifact so it can be re-checked rather than believed.
 
-   Two claims from the first draft of this item are **withdrawn as
-   run-unstable**, not corrected: "worst case 1.04" (this run reads 1.40, both
-   on sub-3 ms fixtures) and "11 fixtures were fastest on their first run"
-   (11 → 3 → 3 across three runs of identical code — a near-tie count, not a
-   property). `n_first_repeat_was_fastest` stays an artifact field and is no
-   longer quoted in the report. Nothing about the conclusion changes; the
-   precision claimed for it does.
+   **Correction, PR #12 R16 — and this is the worst single error in this
+   milestone.** The round-1 draft of this item published a maximum of **1.40**,
+   attributed to `ksb-2007` at "3.5 ms first versus 2.5 ms fastest", in the same
+   paragraph where it withdrew "worst case 1.04" as run-unstable. It is the
+   other way round. On all three clean runs `ksb-2007` reads
+   `first_s == min_s == 0.0025` — the 3.5 ms observation **does not reproduce at
+   all** — and the corpus maximum never exceeds 1.042. So round 1 retracted the
+   reproducible figure and published an artefact of the dirty-tree run §b11 is
+   about, while citing run-instability as the reason. The same applies to that
+   draft's repeat-spread maximum of 40%, also `ksb-2007`, also from that run:
+   clean runs read 2.4% / 3.1% / 7.5%. Both are withdrawn.
+
+   The genuinely run-unstable claim withdrawn in round 1 — "11 fixtures were
+   fastest on their first run" (11 → 3 → 3) — stays withdrawn, and the field
+   behind it, `n_first_repeat_was_fastest`, is now **deleted** rather than
+   emitted unquoted, per choice 10's rule that the artifact carries only what
+   backs a published claim.
 
 2. **ADR-020 §d's character counts reproduce exactly.** Independently measured
    here: whole corpus **8,450,478** normalized chars, median fixture
@@ -289,24 +389,40 @@ four sentences in a descriptive document, and there is no case shape for "the
 report quoted 18.9 MB/s". Inventing one would be theatre.
 
 The runnable check the new logic leaves behind is
-`python3 -m evals.bench --self-check` (choice 6 above), which now fails under
-each of these seven mutations. Every one was applied to a copy of the module
-and run — all seven exit non-zero, none was reasoned about in prose:
+`python3 -m evals.bench --self-check` (choices 6 and 10 above), which now fails
+under each of these **nineteen** mutations. Every one was applied to a copy of
+the module and run — all nineteen exit non-zero, none was reasoned about in
+prose:
 
-| mutation | assertion that catches it |
-|---|---|
-| `med = statistics.median(times)` → `max(times)` | `make_record` median over five distinct times |
-| `pct` → `vals[0]` | `latency_p50_s == 0.10` on a 20-row synthetic set |
-| `pct` → `vals[-1]` | same |
-| drop the 1 ms ratio floor | a sub-ms row must not set the warm-up or spread maximum |
-| drop the descending-order guard (`if records[0] is largest else None`) | `peak_rss_mib_after_largest_only` must be `None` when the largest row is last |
-| count synthetic fixtures into the sweep multiplier (`real_dev = list(records)`) | `real_edgar_dev.mean_mib == 4.0` |
-| add `import socket` | the AST import scan |
+| # | mutation | what catches it |
+|---|---|---|
+| 1 | `med = statistics.median(times)` → `max(times)` | `make_record`, five distinct times |
+| 2 | `pct` → `vals[0]` | golden `latency_p50_s` |
+| 3 | `pct` → `vals[-1]` | golden `latency_p50_s` |
+| 4 | `math.ceil` → `math.floor` in `pct` | golden p50 **and** p95 (indices fractional by design) |
+| 5 | drop the 1 ms ratio floor | golden warm-up/spread maxima |
+| 6 | drop the descending-order guard | largest-row-last block |
+| 7 | plateau scan `range(len)` → `range(1, len)` | already-at-peak block |
+| 8 | `processed` → `list(records)` (reverts round 1's R5 fix) | golden `processed_mib_per_s_max` / `_spread` |
+| 9 | `_r2` → `return 1.0` | golden R² 0.8929 (the perfect-fit block pins the other side) |
+| 10 | `processed_mib_per_s_spread` → `1.0` | golden spread 2.0 |
+| 11 | `n_1000_seconds` ×1000 → ×100 | golden populations |
+| 12 | `n_1000_gib_read` drops its ×1000 | golden populations |
+| 13 | `real_dev = list(records)` | golden `real_edgar_dev` |
+| 14 | batch rate ↔ real-dev rate swapped | golden `all_dev_fixtures.mib_per_s` |
+| 15 | `latency_max_s` → `min(meds)` | golden |
+| 16 | `sum_of_medians_s` → mean | golden |
+| 17 | `median_raw_bytes` → mean | golden |
+| 18 | **add a new published field** | golden diff reports `<UNASSERTED FIELD>` |
+| 19 | `import socket` | AST import scan |
 
-Two of those (`max(times)`, `vals[0]`) are **PR #12's R2 repro, run verbatim**:
-against the first draft they both printed `[bench self-check] ok`. That is the
-same defect class as an eval case that has never been seen red, in the one
-place this milestone had executable logic at all.
+Mutations 1 and 2 are **PR #12's R2 repro, run verbatim**; 4, 8, 9, 10, 11, 12
+are **R18's**, and 14 is **R19's**. Against the drafts they were raised on, all
+of them printed `[bench self-check] ok`. That is the same defect class as an
+eval case that has never been seen red — twice in a row, in the one place this
+milestone had executable logic at all. Mutation 18 is the one that makes the
+list finite rather than a list: it is the assertion that a *future* statistic
+cannot be published unasserted.
 
 **This is still not an `evals/adversarial/` case, and the distinction is not a
 convenience.** `evals/run.py` dispatches a case to `src/<task>/eval_adapter.py`
@@ -316,21 +432,28 @@ assertions through the extraction adapter. ADR-016's precedent is exactly this:
 properties that no fixture can exercise are proved at the layer, in an
 assert-based `_demo`, and watched red there. That is what happened.
 
-An earlier version of this paragraph said the check "fails if the median …
-breaks". It did not, and R2 proved it. The sentence is left corrected rather
-than deleted, because the shape of the error — asserting a property of an
-executable thing without running it — is the one ADR-020 §h3 says this project
-keeps repeating.
+Two earlier versions of this paragraph overclaimed. The first said the check
+"fails if the median … breaks"; it did not, and R2 proved it. The second said it
+"proves the arithmetic between the timer and the report, nothing more"; that was
+also false, and R18 proved it with five surviving mutations. Both sentences are
+left corrected rather than deleted, because the shape of the error — asserting a
+property of an executable thing without running it — is the one ADR-020 §h3 says
+this project keeps repeating, and it has now repeated inside the correction for
+it. Choice 10 is the structural answer: the check no longer depends on anyone
+remembering to assert a new field.
 
 ## f) Consequences
 
 - `docs/analysis-report.md` goes to **v4**: §3, §4 and §5 rewritten against
-  `evals/report/20260820-024620-bench.json` and
+  `evals/report/20260820-031540-bench.json` and
   `evals/report/20260820-020944-all.json`, each citing its input by filename.
-  (The round-1 repair regenerated the bench artifact, because choices 8 and 9
-  added fields; `20260820-020815-bench.json` is the superseded first run and is
-  left committed rather than deleted — it is what §c's withdrawn figures were
-  measured from.)
+  Four bench artifacts are committed and none is deleted: `20260820-020815`
+  (first draft, sha `20f8be0`), `20260820-024620` (round 1, sha
+  `30b001a-dirty`), and the three clean-tree runs at `13761cc`
+  (`20260820-031501`, `-031540`, `-031620`) of which the middle one is of
+  record. The two superseded artifacts stay because they are what this ADR's
+  withdrawn figures were measured from — a retraction that deletes its own
+  evidence is not checkable.
 - Statistics the report quotes but that were previously computed in prose — R²,
   the throughput range and spread, the warm-up ratio, the repeat spread, the
   RSS plateau index, the sum of medians, and all three sweep populations — are
@@ -359,7 +482,7 @@ keeps repeating.
 ## Verification
 
 ```
-python3 -m evals.bench --self-check      # ok (red first under all 7 mutations in §e)
+python3 -m evals.bench --self-check      # ok (red first under all 19 mutations in §e)
 python3 -m evals.run --suite invariant   # 12/12 (+4 enumerated debt)
 python3 -m evals.run --suite fast        # 45/45 (+4 enumerated debt)
 python3 -m evals.metrics --self-check    # ok
@@ -367,10 +490,27 @@ python3 -m evals.metrics --self-check    # ok
 
 Repair round 1 (PR #12): **11 findings raised, 11 confirmed by running their
 repros, 0 rejected.** Four moved a published number — the sweep population
-(R3/R4, ~12.6 → ~16.9 min), the throughput range (R5, 6.7× → 5.09×), the
+(R3/R4, ~12.6 → ~17 min), the throughput range (R5, 6.7× → 5.1×), the
 large-filing latency copy left in `README.md` (R1), and the units (R8). Two
 more, R2 and R11, showed a claim about an executable thing that had never been
-executed — the fourth and fifth instance of that shape across PR #11 and #12.
+executed.
+
+Repair round 2 (PR #12): **8 findings raised, 8 confirmed by running their
+repros, 0 rejected.** Round 2's finding about round 1 is the one worth
+recording: **round 1 corrected the report and left this ADR behind** (R12, R13
+— §b2 and §b4 still quoted the superseded artifact while naming the new one as
+their source, including a figure round 1's own report text had retracted), and
+**round 1's fix for R2 relocated the gap rather than closing it** (R18 — five
+more unasserted published statistics). Worse, R16 showed that round 1 withdrew
+a *reproducible* statistic as run-unstable and published an irreproducible one
+in its place, sourced from the dirty-tree run R15 identified. Choices 10 and 11
+exist so that neither failure mode depends on anyone noticing next time: the
+self-check is inverted so unasserted fields cannot exist, and the instrument's
+precision is measured from three committed clean runs rather than asserted.
+
+Counting the whole loop, this is the **sixth and seventh** occurrence across
+PR #11 and PR #12 of asserting a property of an executable thing without
+running it. That count is kept deliberately.
 
 `.eval-baseline.json` untouched at 1.000. No paid API call was made and no code
 path capable of making one was added.
