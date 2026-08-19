@@ -1,4 +1,9 @@
-# Analysis report v2 — sec-10k-extract at B-freeze
+# Analysis report v3 — sec-10k-extract, A-track
+
+v3 (2026-08-19): T11 silent-failure update. Adds the "Silent-failure rate —
+measured (T11)" section (ADR-019) and reconciles metric 6's discussion, which
+previously reported 0.0 without saying it is gate-bounded; everything else
+below is unchanged from v2.
 
 v2 (2026-08-18): T10 calibration update. Adds the confidence-calibration
 before/after section (metric 8 v2, ADR-018) and reconciles the sections it
@@ -61,13 +66,18 @@ suite=all  score=1.0  cases=27  git=31b07c3
 This section matters more than the table, and it is deliberately placed
 immediately after it.
 
-- **Metric 6 is the headline honesty number and its denominator is small.**
-  0.0 silent failures is measured over **109 audited items out of 490 confident
-  ones — 22% coverage**. 280 are targeted by no check at all, and a further
-  **101 sit in non-success documents and fall outside the metric's definition**,
+- **Metric 6 is the headline honesty number, and it reads 0.0 by construction,
+  not by correctness.** Its denominator is items a *declared eval check*
+  targets, and the pre-commit gate requires every declared check to pass
+  before a commit lands — so metric 6 measures whether the gate is green, not
+  whether the pipeline is right. 109 audited items out of 490 confident ones
+  — 22% coverage. 280 are targeted by no check at all, and a further **101
+  sit in non-success documents and fall outside the metric's definition**,
   among them the JPM item 15 that §6 of this report names as wrongly bounded.
   An earlier version of this section quoted 27% by counting only the first
   exclusion; the pre-B audit caught it, and `metrics.py` now publishes both.
+  **T11 measured the real rate by sampling the untargeted population this
+  metric excludes** — see "Silent-failure rate — measured (T11)" below.
 - **Metric 8 v2 is a real measurement channel, not the placeholder v1 was.**
   It now reports per distinct confidence value, with debt columns alongside
   the scored ones, and states plainly that the scored side is an upper bound.
@@ -163,12 +173,72 @@ enumerated, is T11's charter.
 ### Provisional targets, reset
 
 `docs/evals/evaluation-strategy.md` set aspirational targets before any data
-existed: presence recall ≥ 0.95 and silent-failure rate < 5%. Both are met on
-the measured sample (1.0 and 0.0). **They are hereby recorded as met but
-uninformative**: a target is only as strong as the coverage behind it, and with
-73% of confident items unaudited, the silent-failure target in particular is
-not yet a meaningful bar. The A-level priority is to grow the denominator, not
-to improve the numerator.
+existed: presence recall ≥ 0.95 and silent-failure rate < 5%. Presence recall
+is met on the measured sample (1.0). Silent-failure rate was, at B-freeze,
+read directly off metric 6 (0.0) — which the section above now states plainly
+is gate-bounded, not a measurement. **The real number was measured at T11 by
+sampling; see "Silent-failure rate — measured (T11)" below.** The A-level
+priority that grew out of this — grow the audited denominator, not the pass
+rate — was correct at B-freeze and remains the standing lesson: a target is
+only as strong as the coverage behind it.
+
+### Silent-failure rate — measured (T11, ADR-019)
+
+Metric 6 cannot measure this rate: its denominator is items a declared check
+targets, and the pre-commit gate forces every declared check green, so it
+reads 0.0 by construction regardless of pipeline correctness. T11 measured
+the rate directly by sampling the population metric 6 excludes — confident
+items (≥0.8) in `success`/`success_with_warning` docs, targeted by **no**
+check — 447 of 781 confident items at the time of sampling.
+
+**Method.** `random.Random(11).sample(population, 30)` — seed recorded so the
+draw is reproducible and cannot have been cherry-picked. Each of the 30
+sampled `(fixture, item)` pairs was adjudicated blind by the
+extraction-auditor, reading the span against the fixture text with no access
+to implementation reasoning (`docs/evals/audits/2026-08-19-t11-silent-failure-sample.md`).
+
+**Result.** 1 WRONG / 30 = **3.3%**, 95% Clopper-Pearson CI **[0.1%, 17.2%]**.
+Applied to the population: ~15 items, CI [0, 77]. The < 5% target from
+`docs/evals/evaluation-strategy.md`: **the point estimate meets it, the CI
+upper bound does not — the target is not demonstrated, only not
+contradicted.** n=30 is small; the interval is the honest statement, not the
+point.
+
+**Sensitivity.** 1/30 under the extraction-auditor's independent read; 2/30
+(6.7%) under the implementer's. The one item of disagreement is `cvx-2015`
+item 6, an internal pointer to a paginated section — the auditor called it
+CORRECT (the pointer sentence is honestly the whole labeled answer); the
+implementer reads it as the same silent-failure shape as the same filing's
+items 7/8 (never independently adjudicated). Recorded as a standing
+disagreement in ADR-019 §e, not resolved by fiat.
+
+**Three-instrument table:**
+
+| instrument | what it found | coverage |
+|---|---|---|
+| extraction-auditor sample (blind, n=30) | 1 confirmed WRONG (`textron-2001` item 4, Executive-Officers bleed — fixed); 1 standing disagreement (`cvx-2015` item 6) | 30 of 447 unaudited confident items, 6.7% |
+| stdlib screen (`evals/oracle.py`, 4 signals) | 107/521 flagged (pre-fix); net **zero** new confirmed defects, 1 known defect re-confirmed (`ba-2003`) | all 36 fixtures, every confident item |
+| OSS cross-check (`evals/oracle_oss.py`, edgartools 5.50.0, dev-only) | 25/574 disagreements (4.4%); 2 are the `jpm-2024` items 7/8 internal-pointer finding this ADR adopts as debt, rest traced to edgartools' own defects or expected-by-design | 28 of 30 HTML/iXBRL fixtures; **zero plain-text coverage** (6 fixtures) |
+
+**Correction (2026-08-19, post-commit review):** the stdlib-screen row's
+107/521 was measured before this same milestone's `EXEC_OFFICERS_RE` fix
+landed. At head, post-fix, the committed `evals/report/20260819-014559-
+oracle.json` and a fresh run both read **224/521 = 0.4299** (the artifact's
+own `screened_rate` field). Every one of the 117 new flags traces to the
+fix itself — the now self-induced `large_interior_gap` check firing on its
+own deliberate clip (7 fixtures, by design not defect), plus a small
+`short_span` ripple from the shortened spans (3 items, all legitimate
+"Reserved"-shaped Item 4 bodies). Net **zero** new confirmed defects still
+holds. Full method, and the reconciliation between this confident-population
+count and the CLI's own differently-scoped per-check tallies: ADR-019 §b
+correction.
+
+The screen with the widest coverage found nothing new; the judge with the
+narrowest scope found the one real defect and the one open disagreement. Read
+together: audit depth mattered more than audit breadth on this evidence, and
+the plain-text stratum — this project's hardest era — still has no
+independent second read at all. Full ruling, including the Executive-Officers
+fix and the new internal-pointer debt class: `specs/decisions/ADR-019-silent-failure-rate.md`.
 
 ---
 

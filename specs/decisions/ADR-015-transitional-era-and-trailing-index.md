@@ -267,6 +267,41 @@ to stop this exact threshold from being loosened.
   validator is a capability and the T8 freeze forbids one. It is the strongest
   candidate for the first post-freeze exception and is recorded as such in
   `tasks/TODO.md`.
+
+  **Correction (T11, 2026-08-19, ADR-019 §d) — both halves of the paragraph
+  above are wrong, and the row built on them is retired.** Coverage is
+  already measured, exactly: `coverage ≡ 1 − unattributed_content`'s own
+  "outside" fraction, identity holds to float equality on 33 of 33 span-
+  bearing fixtures, verified by direct computation. The largest inter-span
+  gap is structurally always 0.0 on every fixture with no exception —
+  `assign_boundaries` sets each accepted span's end to the next accepted
+  span's start, so two accepted spans can never have daylight between them;
+  a gap validator built on this architecture could never fire on real
+  pipeline output. And "invisible to eight validators" overstates §0 itself:
+  `unattributed_content` fired on Intel (0.47% coverage,
+  `success_with_warning`) — detected and non-escalating, a severity gap not
+  a detection gap. Target's failure was a different shape again (item 4 at
+  81%, not the last span; `last_item_dominates` only inspects the last one).
+  The planned capability would have caught neither filing cited above. See
+  ADR-019 §d for the full evidence and the correctly-specified successor —
+  a non-last span dominating the document, plus the escalation-policy
+  question — that replaces this row in `tasks/TODO.md`.
+
+  **Second correction (2026-08-19, post-commit review, ADR-019 §d) — the
+  "33 of 33" and "structurally 0.0 ... with no exception" claims in the
+  correction directly above were themselves verified pre-fix and are false
+  post-fix.** This same T11 milestone's own `EXEC_OFFICERS_RE` fix (ADR-019
+  §f) is the one exception: it clips a non-last span's `end` below the next
+  accepted span's `start` on exactly 7 fixtures (`ibm-1997`, `textron-2001`,
+  `wmt-2010`, `wfc-2008`, `msft-2013`, `jnj-2016`, `nike-2006`), so the
+  coverage identity now holds on 29 of 36, not 33 of 33, and the largest
+  interior gap is nonzero on those same 7 (0.0019–0.0971 of the document).
+  The retirement of the debt row still stands — every one of those 7 gaps
+  is the EO clip's own deliberate exclusion of orphaned officer-bio content,
+  not a defect, so a gap validator today would fire 7/7 on intentional
+  behaviour rather than catching anything. Full table and the condition
+  that would make the retirement worth revisiting (a second, non-deliberate
+  gap source appearing): ADR-019 §d's 2026-08-19 correction.
 - **Cross-item footnote conventions.** Boeing marks five items IBR with a bare
   asterisk resolved once, inside item 14's body; items 11 and 13 therefore
   report `extracted` at confidence 0.95 over empty spans. Carried as the
