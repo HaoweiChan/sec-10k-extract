@@ -69,6 +69,7 @@ import ast
 import json
 import math
 import platform
+import re
 import resource
 import statistics
 import sys
@@ -321,7 +322,14 @@ def summarize(records, batch_s, rss_start, repeats, heldout=None):
     plateau_i = next((i for i in range(len(records))
                       if all(abs(corpus_peak - r["peak_rss_mib_after"]) <= 0.5
                              for r in records[i:])), None)
-    ratio_pop = [r for r in records if r["median_s"] >= RATIO_FLOOR_S and r["min_s"] > 0]
+    def _in_ratio_pop(r):
+        # ONE predicate, used for both the population and the published
+        # exclusion list, so `ratio_population_n + len(excluded) == n_fixtures`
+        # holds by construction rather than by coincidence (PR #12 R24).
+        return r["median_s"] >= RATIO_FLOOR_S and r["min_s"] > 0
+
+    ratio_pop = [r for r in records if _in_ratio_pop(r)]
+    ratio_excluded = [r["fixture"] for r in records if not _in_ratio_pop(r)]
     ratios = [r["first_s"] / r["min_s"] for r in ratio_pop]
     spreads = [(r["max_s"] - r["min_s"]) / r["median_s"] for r in ratio_pop]
     tp = sorted(r["mib_per_s"] for r in processed if r["mib_per_s"] is not None)
@@ -338,8 +346,7 @@ def summarize(records, batch_s, rss_start, repeats, heldout=None):
         "processed_size_vs_time_r2": _round_r2(processed),
         "ratio_floor_s": RATIO_FLOOR_S,
         "ratio_population_n": len(ratio_pop),
-        "ratio_excluded_fixtures": [r["fixture"] for r in records
-                                    if r["median_s"] < RATIO_FLOOR_S],
+        "ratio_excluded_fixtures": ratio_excluded,
         "warmup_first_over_min_median": round(statistics.median(ratios), 4) if ratios else None,
         "warmup_first_over_min_max": round(max(ratios), 4) if ratios else None,
         "repeat_spread_median": round(statistics.median(spreads), 4) if spreads else None,
@@ -394,6 +401,17 @@ def summarize(records, batch_s, rss_start, repeats, heldout=None):
     cost["counterfactual"]["largest_filing"]["fixture"] = largest["fixture"]
     return perf, cost
 
+
+def build_payload(records, perf, cost):
+    """Everything the artifact publishes. One place, so `_demo` can assert the
+    top-level key set and a new published block cannot appear unnoticed."""
+    return {"kind": "bench", "git_sha": git_sha(),
+            "python": platform.python_version(), "platform": platform.platform(),
+            "units": UNITS, "perf": perf, "cost": cost, "records": records}
+
+
+# every top-level key of the artifact; `_demo` pins this list
+PAYLOAD_KEYS = ["cost", "git_sha", "kind", "perf", "platform", "python", "records", "units"]
 
 UNITS = {
     "mib": "1 MiB = 1048576 bytes (binary, not 1e6)",
@@ -461,74 +479,223 @@ def render(records, perf, cost):
     return "\n".join(out)
 
 
+
+# ------------------------------------------------------- doc cross-check
+#
+# Why this exists (PR #12 R20). Three rounds running, prose kept quoting
+# per-fixture numbers read out of a SUPERSEDED artifact while the surrounding
+# text named the current one; twice the fix was "sweep the docs", and twice
+# the sweep was asserted rather than performed. A claim that needs a human to
+# re-read six files is not a claim, so this makes the narrow, recurring case
+# mechanical: **every decimal number the docs print next to a backticked
+# fixture name must be that fixture's number in the artifact of record.**
+#
+# Scope, stated honestly because overclaiming a check is this milestone's
+# signature error: it covers FIXTURE-ATTRIBUTED decimals only. Aggregate
+# figures (p95, batch throughput, the sweep projections) are not attributed to
+# a fixture name and are NOT covered — they are pinned by `--self-check` in the
+# artifact and swept by hand in the prose. Integers are skipped: item codes,
+# years and counts share their shape.
+DOC_FILES = ["specs/decisions/ADR-021-benchmark-instrument.md",
+             "docs/analysis-report.md", "README.md", "tasks/TODO.md",
+             "prompts/009-t13-perf-cost-scalability.md"]
+
+# Numbers that are deliberately NOT the artifact of record's: historical values
+# quoted inside a correction, a withdrawal or a v3-vs-now table. Every entry is
+# a conscious citation of a superseded measurement — adding one is the point at
+# which someone has to decide "this is history", not a way to silence a stale
+# number. (fixture, literal) pairs.
+DOC_ALLOW = {
+    # (file, fixture, literal): a decimal that sits next to a fixture name but
+    # is NOT that fixture's measurement in the artifact of record. Every entry
+    # is a deliberate decision, which is the point — adding one is where
+    # someone has to say "this is history / this is a different quantity",
+    # rather than a way to quiet a stale number.
+    #
+    # -- historical values, quoted inside their own correction note
+    ("ADR-021-benchmark-instrument.md", "ksb-2007", "42.8"),   # §c, R5's withdrawn first-draft maximum
+    ("ADR-021-benchmark-instrument.md", "ksb-2007", "3.5"),    # §d1, R16's irreproducible observation
+    ("ADR-021-benchmark-instrument.md", "ksb-2007", "2.5"),    # §d1, same
+    ("ADR-021-benchmark-instrument.md", "ksb-2007", "44.1"),   # Verification, the stale figure choice 12 found
+    ("analysis-report.md", "msft-2013", "6.6"),                # §3 v3-vs-now row; 6.6 is tgt-2002's
+    ("analysis-report.md", "msft-2013", "33.8"),               # §3 v3-vs-now row; 33.8 is ibm-1997's
+    # -- a number belonging to the NEXT fixture named on the same line
+    ("ADR-021-benchmark-instrument.md", "bac-2006", "0.55"),   # §c table: max 0.55 s is jpm-2024's
+    # -- cross-run ranges (§3.1): min-max over the three committed clean runs,
+    #    so by construction not the single run of record's value
+    ("analysis-report.md", "bac-2006", "0.500"),
+    ("analysis-report.md", "bac-2006", "0.521"),
+    ("analysis-report.md", "jpm-2024", "0.541"),
+    ("analysis-report.md", "jpm-2024", "0.557"),
+    # -- a different quantity that happens to sit beside a fixture name
+    ("analysis-report.md", "truncated-download", "0.1"),       # 0.1 ms, i.e. median_s 0.0001 s
+    ("TODO.md", "truncated-download", "0.1"),                  # same, in the ledger
+    ("TODO.md", "axp-2008", "0.1264"),                         # ADR-019 oracle gap fraction, not a bench value
+    ("TODO.md", "cvx-2015", "0.95"),                           # a confidence value, not a bench value
+}
+
+DOC_WINDOW = 60  # chars after the closing backtick, same line only
+
+
+def _fixture_values(art):
+    """Every number a doc could legitimately print for a given fixture."""
+    out = {}
+    for r in art["records"]:
+        vals = [r["raw_bytes"], r["raw_bytes"] / MIB, r["normalized_chars"],
+                r["median_s"], r["min_s"], r["max_s"], r["first_s"], r["mean_s"],
+                r["peak_rss_mib_after"]]
+        if r["mib_per_s"] is not None:
+            vals.append(r["mib_per_s"])
+        out[r["fixture"]] = vals
+    return out
+
+
+def check_docs(artifact_path):
+    art = json.loads(Path(artifact_path).read_text())
+    vals = _fixture_values(art)
+    names = sorted(vals, key=len, reverse=True)
+    name_re = re.compile("`(" + "|".join(re.escape(n) for n in names) + ")`")
+    num_re = re.compile(r"(?<![\w.])(\d+\.\d+)(?![\d])")
+
+    bad, checked = [], 0
+    for rel in DOC_FILES:
+        path = ROOT / rel
+        if not path.is_file():
+            continue
+        text = path.read_text()
+        hits = list(name_re.finditer(text))
+        for i, m in enumerate(hits):
+            fixture = m.group(1)
+            # "attributed" = same line, within WINDOW chars, and before the next
+            # backticked fixture name. Wider than that and every aggregate in
+            # the paragraph gets swept in; narrower and table rows are missed.
+            eol = text.find("\n", m.end())
+            stop = min(m.end() + DOC_WINDOW,
+                       eol if eol != -1 else len(text),
+                       hits[i + 1].start() if i + 1 < len(hits) else len(text))
+            for nm in num_re.finditer(text, m.end(), stop):
+                lit = nm.group(1)
+                after = text[nm.end():nm.end() + 2]
+                if text[nm.start() - 1:nm.start()] == "$" or after[:1] in ("%", "\u00d7") \
+                        or after[:2] in ("x ", "\u00d7 "):
+                    continue      # a ratio, a percentage or a price, not a measurement
+                if (Path(rel).name, fixture, lit) in DOC_ALLOW:
+                    continue
+                checked += 1
+                places = len(lit.split(".")[1])
+                target = float(lit)
+                if not any(round(v, places) == target for v in vals[fixture]):
+                    line = text.count("\n", 0, nm.start()) + 1
+                    bad.append(f"  {rel}:{line}  `{fixture}` {lit} "
+                               f"is not a value of that fixture in {Path(artifact_path).name}")
+    print(f"[bench] doc cross-check against {Path(artifact_path).name}: "
+          f"{checked} fixture-attributed decimals checked, {len(bad)} unmatched")
+    for b in bad:
+        print(b)
+    return 1 if bad else 0
+
+
 # -------------------------------------------------------------- self-check
 #
-# THE RULE THIS SECTION ENFORCES (PR #12 R18, round 2): **no field this module
-# publishes may be without an assertion pinning its value.** R2 caught two
-# unpinned statistics in round 1; the round-1 fix pinned those two and left
-# five more free, which is a correction that relocates the gap instead of
-# closing it (ADR-020 §h3's shape). Pinning statistics one at a time cannot
-# terminate, so the check is inverted: `summarize` is run over ONE golden
-# corpus and its ENTIRE `perf` block is compared against a hand-derived
-# expected dict. A new published field therefore fails `--self-check` until
-# someone computes its expected value by hand and adds it here. See ADR-021
-# §b10.
+# THE RULE THIS SECTION ENFORCES: **no field this module publishes may be
+# without an assertion pinning its value.** The rule has now been re-stated
+# three times because the first two implementations of it were too narrow:
 #
-# The corpus is built so that no statistic lands on a degenerate value that
-# would hide a mutation: the percentile indices are fractional before `ceil`,
-# the throughput spread is not 1.0, R² is not 1.0, a refused row carries the
-# extreme rate, a sub-millisecond row would poison the ratio statistics, the
-# largest row is first, and one row is synthetic.
+#   R2  (round 1) — two statistics were unasserted. Fixed by asserting them.
+#   R18 (round 2) — five more were. Fixed by inverting the check: compare the
+#                   whole `perf` block against a hand-derived expected dict,
+#                   so a *new* field fails until someone computes its value.
+#   R21/R22 (round 3) — `perf` was inverted but `cost` and `records` were not,
+#                   and the golden corpus was degenerate on p95 (three fields
+#                   all 0.6, slowest row == largest row), so `pct(meds, 95)`
+#                   -> `max(meds)` passed while moving the published p95.
+#
+# So the comparison now covers the ENTIRE published payload — `perf`, `cost`,
+# one full `records` row, and the artifact's top-level key set — and the
+# corpus is built so that no statistic shares a value with another statistic
+# that a plausible mutation could substitute for it. See ADR-021 §b10, which
+# also states what this still does NOT reach.
+#
+# Corpus design, and what each property exists to separate:
+#   * medians 0.4 / 0.6 / 0.2 / 0.01 / 0.0001 -> p50 0.2, max 0.6, and the
+#     LARGEST row's median 0.4: three different numbers, so p50->largest,
+#     max->largest and largest->max all go red (R21).
+#   * the slowest row (nvda-2024, 0.6) is NOT the largest row (cat-2023,
+#     3 MiB), so `slowest_fixture` -> `largest["fixture"]` goes red (R21).
+#   * p95 == max is *structural* for any n < 20 under nearest-rank
+#     (ceil(0.95n) == n), so p95 is separated in its own n=20 block below
+#     rather than pretended away here.
+#   * three processed rows with an exact hand-derived R² of 0.25, throughput
+#     3.33 / 5.0 / 7.5 (min, median, max and spread all different values), a
+#     refused row at 100 MiB/s that must not enter the range, a sub-ms row
+#     that must not enter the ratio statistics, one synthetic row that must
+#     not enter the sweep multiplier.
+#   * chars 900,000 / 200,000 / 100,000 / 10,000 / 100 -> the median filing
+#     (100,000) differs from the mean (242,020) and from the largest
+#     (900,000), and the largest exceeds the cheap tier's context while the
+#     median does not — so `fits_haiku_context` has both values present (R22).
 
 def _rec(name, mib, times, chars=1000, status="success", rss=100.0):
     return make_record(name, "f", int(mib * MIB), times, chars, status, rss)
 
 
-# Five fixtures, descending raw size, exactly as `run_all` emits them.
-# Names are real corpus names because `refused`/`synthetic` are derived from
-# status and from membership of SYNTHETIC, not passed in.
 def _golden_corpus():
+    """Five fixtures, descending raw size, exactly as `run_all` emits them.
+    Names are real corpus names because `refused`/`synthetic` are derived from
+    status and from membership of SYNTHETIC, not passed in."""
     return [
-        #      name                 MiB      times                     chars   status
-        _rec("cat-2023",            3,     [0.6],                     300000, rss=50.0),
-        _rec("nvda-2024",           2,     [0.24, 0.20, 0.20],        200000, rss=99.6),
-        _rec("ko-1997",             1,     [0.11, 0.10, 0.10],        100000, rss=100.0),
-        _rec("aapl-2026-10q",       1,     [0.01],                     10000, "unsupported", 100.0),
+        _rec("cat-2023", 3, [0.4], 900000, rss=50.0),
+        _rec("nvda-2024", 2, [0.72, 0.60, 0.60], 200000, rss=99.6),
+        _rec("ko-1997", 1, [0.22, 0.20, 0.20], 100000, rss=100.0),
+        _rec("aapl-2026-10q", 1, [0.01], 10000, "unsupported", 100.0),
         make_record("truncated-download", "f", 1048, [0.0004, 0.0001, 0.0001],
                     100, "failed", 100.0),
     ]
 
 
+# One record, every field. Pins `make_record` itself and fails on a new key.
+# times [0.30, 0.11, 0.12, 0.90, 0.13] -> median 0.13, min 0.11, first 0.30,
+# max 0.90, mean 1.56/5 = 0.312; 2 MiB / 0.13 s = 15.38 MiB/s.
+_GOLDEN_RECORD = {
+    "fixture": "x", "file": "f", "raw_bytes": 2097152, "normalized_chars": 1000,
+    "doc_status": "success", "refused": False, "synthetic": False, "repeats": 5,
+    "median_s": 0.13, "min_s": 0.11, "first_s": 0.3, "mean_s": 0.312,
+    "max_s": 0.9, "mib_per_s": 15.38, "peak_rss_mib_after": 100.0,
+}
+
 # Hand-derived, not blessed from a run. The load-bearing derivations, so a
 # reviewer can re-check them without executing anything:
-#   percentiles  n=5, sorted medians [0.0001, 0.01, 0.1, 0.2, 0.6];
-#                p50 index ceil(2.5)-1 = 2 -> 0.1  (floor would give 0.01)
-#                p95 index ceil(4.75)-1 = 4 -> 0.6 (floor would give 0.2)
-#   processed    rows 0-2 only; rates 3/0.6=5, 2/0.2=10, 1/0.1=10
-#                -> min 5, max 10, median 10, spread 2.0
-#                (with the two refusals in: max 100, spread 20 — R18b)
-#   R²           x = 1,2,3 MiB against y = 0.1,0.2,0.6: mx=2, my=0.3,
-#                Sxx=2, Sxy=0.5, a=0.25, b=-0.2; residuals 0.05,-0.1,0.05
-#                -> SSR 0.015, SST 0.14, R² = 1 - 0.015/0.14 = 0.892857
+#   percentiles  sorted medians [0.0001, 0.01, 0.2, 0.4, 0.6], n=5;
+#                p50 index ceil(2.5)-1 = 2 -> 0.2 (floor would give 0.01)
+#   processed    rows 0-2; rates 3/0.4=7.5, 2/0.6=3.33, 1/0.2=5.0
+#                -> min 3.33, median 5.0, max 7.5, spread 7.5/3.33 = 2.25
+#                (with the two refusals in: max 100.0, median 7.5 — R18b/R22)
+#   R²           x = 3,2,1 MiB against y = 0.4,0.6,0.2: mx=2, my=0.4, Sxx=2,
+#                Sxy=0.2, a=0.1, b=0.2; residuals -0.1, 0.2, -0.1
+#                -> SSR 0.06, SST 0.08, R² = 1 - 0.06/0.08 = 0.25
 #   ratios       floor excludes only the 0.0001 s row; first/min per row
 #                1.0, 1.2, 1.1, 1.0 -> median 1.05, max 1.2
 #                spreads 0.0, 0.2, 0.1, 0.0 -> median 0.05, max 0.2
 #   plateau      peak 100.0; first index whose tail stays within 0.5 is 1
-#                (99.6), which is deliberately NOT the peak value
+#                (99.6), deliberately NOT the peak value
 #   populations  total 7,341,080 B = 7.000999 MiB over batch_s 1.0 -> 7.0 MiB/s
 #                real (non-synthetic) rows 0-3: 7,340,032 B = 7.0 MiB over
-#                sum-of-medians 0.91 s -> 7.6923 MiB/s, mean 1.75 MiB
+#                sum-of-medians 1.21 s -> 5.7851 MiB/s, mean 1.75 MiB
 #                committed adds the 4 MiB held-out size: mean 11/5 = 2.2 MiB,
-#                2.2 / 7.6923 = 0.286 s per filing -> 286 s / 2002 s
+#                2.2 / 5.7851 = 0.3803 s per filing -> 380.3 s / 2662.0 s
+#   cost         median chars 100,000 -> 25,000 tok -> $0.125 opus / $0.025
+#                haiku, fits; largest 900,000 -> 225,000 tok, does NOT fit;
+#                corpus 1,210,100 -> 302,525 tok -> $1.5126, does NOT fit
 _GOLDEN_HELDOUT = {"spg-2019": 4 * MIB}
-_GOLDEN_PERF = {
+_GOLDEN_PAYLOAD = {
+  "perf": {
     "n_fixtures": 5, "repeats": 3,
     "raw_bytes_total": 7341080, "raw_mib_total": 7.0,
-    "normalized_chars_total": 610100,
-    "latency_p50_s": 0.1, "latency_p95_s": 0.6, "latency_max_s": 0.6,
-    "slowest_fixture": "cat-2023",
+    "normalized_chars_total": 1210100,
+    "latency_p50_s": 0.2, "latency_p95_s": 0.6, "latency_max_s": 0.6,
+    "slowest_fixture": "nvda-2024",
     "largest_fixture": "cat-2023", "largest_raw_bytes": 3145728,
-    "largest_mib": 3.0, "largest_median_s": 0.6,
+    "largest_mib": 3.0, "largest_median_s": 0.4,
     "batch_seconds": 1.0, "batch_mib_per_s": 7.0,
     "median_raw_bytes": 1048576, "mean_raw_bytes": 1468216,
     "rss_mib_before_any_extraction": 20.0,
@@ -536,14 +703,14 @@ _GOLDEN_PERF = {
     "peak_rss_mib_after_largest_only": 50.0,
     "derived": {
         "note": DERIVED_NOTE,
-        "sum_of_medians_s": 0.91,
+        "sum_of_medians_s": 1.21,
         "processed_n": 3, "refused_n": 2,
         "refused_fixtures": ["aapl-2026-10q", "truncated-download"],
-        "processed_mib_per_s_min": 5.0,
-        "processed_mib_per_s_max": 10.0,
-        "processed_mib_per_s_median": 10.0,
-        "processed_mib_per_s_spread": 2.0,
-        "processed_size_vs_time_r2": 0.8929,
+        "processed_mib_per_s_min": 3.33,
+        "processed_mib_per_s_max": 7.5,
+        "processed_mib_per_s_median": 5.0,
+        "processed_mib_per_s_spread": 2.25,
+        "processed_size_vs_time_r2": 0.25,
         "ratio_floor_s": 0.001,
         "ratio_population_n": 4,
         "ratio_excluded_fixtures": ["truncated-download"],
@@ -565,22 +732,42 @@ _GOLDEN_PERF = {
         },
         "real_edgar_dev": {
             "n": 4, "mean_raw_bytes": 1835008, "mean_mib": 1.75,
-            "mib_per_s": 7.69,
+            "mib_per_s": 5.79,
             "rate_source": "measured: sum(bytes)/sum(medians) over these fixtures",
-            "seconds_per_filing": 0.2275, "n_1000_seconds": 227.5,
-            "n_1000_gib_read": 1.71, "edgar_year_7000_seconds": 1592.5,
+            "seconds_per_filing": 0.3025, "n_1000_seconds": 302.5,
+            "n_1000_gib_read": 1.71, "edgar_year_7000_seconds": 2117.5,
         },
         "real_edgar_committed": {
             "n": 5, "mean_raw_bytes": 2306867, "mean_mib": 2.2,
-            "mib_per_s": 7.69,
+            "mib_per_s": 5.79,
             "rate_source": "sizes include held-out filings (stat only, never timed); "
                            "rate borrowed from real_edgar_dev",
-            "seconds_per_filing": 0.286, "n_1000_seconds": 286.0,
-            "n_1000_gib_read": 2.15, "edgar_year_7000_seconds": 2002.0,
+            "seconds_per_filing": 0.3803, "n_1000_seconds": 380.3,
+            "n_1000_gib_read": 2.15, "edgar_year_7000_seconds": 2662.0,
         },
     },
     "projection_of_record": "real_edgar_committed",
     "heldout_sizes_bytes": _GOLDEN_HELDOUT,
+  },
+  "cost": {
+    "reported_usd_per_filing": 0.0,
+    "estimate_method": "chars/4 — NOT a tokenizer count",
+    "price_basis_date": "2026-06-24",
+    "price_basis_source": PRICE_BASIS_SOURCE,
+    "models": {"claude-opus-5": {"usd_per_mtok_input": 5.00, "context_tokens": 1_000_000},
+               "claude-haiku-4-5": {"usd_per_mtok_input": 1.00, "context_tokens": 200_000}},
+    "counterfactual": {
+        "median_filing": {"chars": 100000, "est_tokens": 25000,
+                          "usd_opus_5": 0.125, "usd_haiku_4_5": 0.025,
+                          "fits_haiku_context": True},
+        "largest_filing": {"chars": 900000, "est_tokens": 225000,
+                           "usd_opus_5": 1.125, "usd_haiku_4_5": 0.225,
+                           "fits_haiku_context": False, "fixture": "cat-2023"},
+        "whole_corpus": {"chars": 1210100, "est_tokens": 302525,
+                         "usd_opus_5": 1.5126, "usd_haiku_4_5": 0.3025,
+                         "fits_haiku_context": False},
+    },
+  },
 }
 
 
@@ -597,74 +784,97 @@ def _diff(got, want, path=""):
 
 
 def _demo():
-    # 1. THE ESTIMATOR, through the code path `run_all` uses. Asserting
-    # `statistics.median([...]) == x` tests the stdlib; this drives
-    # `make_record`, where `med` is actually computed. Five distinct times so
-    # median, first, min and max are four different values.
+    # 1. ONE RECORD, EVERY FIELD, through the code path `run_all` uses.
+    # Asserting `statistics.median([...]) == x` would test the stdlib; this
+    # drives `make_record`, where `med` is actually computed. Five distinct
+    # times so median, first, min and max are four different values — and the
+    # whole dict is diffed, so a new key in a record fails here (R22).
     r = _rec("x", 2.0, [0.30, 0.11, 0.12, 0.90, 0.13])
-    assert r["median_s"] == 0.13, r          # not first (0.30), not min, not max
-    assert r["first_s"] == 0.30, r           # cold repeat, NOT the fastest
-    assert r["min_s"] == 0.11 and r["max_s"] == 0.90, r
-    assert r["mib_per_s"] == round(2.0 / 0.13, 2), r   # throughput uses the MEDIAN
-    assert r["repeats"] == 5 and r["refused"] is False and r["synthetic"] is False
-    # refusal + synthetic classification must come off the data, not a guess
+    d = _diff(r, _GOLDEN_RECORD)
+    assert not d, "make_record() drifted from the hand-derived record:\n" + "\n".join(d)
+    # classification comes off the data, not off a caller's say-so
     assert _rec("toc-titled", 1.0, [0.1])["synthetic"] is True
     assert _rec("q", 1.0, [0.1], status="unsupported")["refused"] is True
     assert _rec("q", 1.0, [0.1], status="failed")["refused"] is True
     assert _rec("q", 1.0, [0.1], status="ambiguous")["refused"] is False
 
-    # 2. THE WHOLE PUBLISHED SURFACE, against hand-derived values. This is the
+    # 2. THE WHOLE PUBLISHED PAYLOAD, against hand-derived values. This is the
     # assertion that makes the rule at the top of this section enforceable
     # rather than aspirational: it fails on a wrong value AND on a new field
-    # nobody has computed an expected value for.
-    perf, _ = summarize(_golden_corpus(), batch_s=1.0, rss_start=20.0, repeats=3,
-                        heldout=dict(_GOLDEN_HELDOUT))
-    d = _diff(perf, _GOLDEN_PERF)
+    # nobody has computed an expected value for, in `perf` OR in `cost`.
+    corpus = _golden_corpus()
+    perf, cost = summarize(corpus, batch_s=1.0, rss_start=20.0, repeats=3,
+                           heldout=dict(_GOLDEN_HELDOUT))
+    d = _diff({"perf": perf, "cost": cost}, _GOLDEN_PAYLOAD)
     assert not d, "summarize() drifted from the hand-derived golden values:\n" + "\n".join(d)
+    # every corpus row carries exactly the fields the golden record pins
+    for row in corpus:
+        assert set(row) == set(_GOLDEN_RECORD), sorted(set(row) ^ set(_GOLDEN_RECORD))
+    # ...and the artifact grows no new top-level block unnoticed
+    assert sorted(build_payload(corpus, perf, cost)) == PAYLOAD_KEYS, \
+        sorted(build_payload(corpus, perf, cost))
 
-    # 2b. The same corpus with the largest row NOT first. `run_all` always
+    # 2b. PERCENTILE SEPARATION. p95 == max is structural for n < 20 under
+    # nearest-rank (ceil(0.95n) == n), so the golden corpus cannot separate
+    # them and this block does it instead: 20 fixtures, sizes DESCENDING while
+    # medians ASCEND, so the largest row is also the fastest.
+    # sorted medians 0.01..0.20 -> p50 = ceil(10)-1 = idx 9 = 0.10,
+    # p95 = ceil(19)-1 = idx 18 = 0.19, max = 0.20, largest's median = 0.01.
+    wide = [_rec(f"f{i}", float(20 - i), [(i + 1) / 100]) for i in range(20)]
+    wperf, _ = summarize(wide, batch_s=1.0, rss_start=1.0, repeats=1)
+    assert wperf["latency_p50_s"] == 0.1, wperf["latency_p50_s"]
+    assert wperf["latency_p95_s"] == 0.19, wperf["latency_p95_s"]   # not max
+    assert wperf["latency_max_s"] == 0.2, wperf["latency_max_s"]
+    assert wperf["largest_median_s"] == 0.01, wperf["largest_median_s"]
+    assert wperf["largest_fixture"] == "f0", wperf["largest_fixture"]
+    assert wperf["slowest_fixture"] == "f19", wperf["slowest_fixture"]
+    # four distinct values, so no one of them can stand in for another
+    assert len({0.1, 0.19, 0.2, 0.01}) == 4
+
+    # 2c. RATIO POPULATION IDENTITY. The published exclusion list is the
+    # complement of the population predicate, so these always sum (R24).
+    for pf in (perf, wperf):
+        assert (pf["derived"]["ratio_population_n"]
+                + len(pf["derived"]["ratio_excluded_fixtures"])) == pf["n_fixtures"], pf["derived"]
+    # ...and specifically for the predicate the old code left out: a row whose
+    # min_s rounds to 0.0 on a coarse clock is dropped from the ratio
+    # statistics and MUST be named as dropped. Without this row both
+    # predicates agree and the defect is unobservable, which is why R24 was
+    # real but unfirable.
+    coarse = [_rec("cat-2023", 2.0, [0.5, 0.0, 0.5]), _rec("ko-1997", 1.0, [0.2])]
+    cperf, _ = summarize(coarse, batch_s=1.0, rss_start=1.0, repeats=3)
+    cd = cperf["derived"]
+    assert coarse[0]["min_s"] == 0.0 and coarse[0]["median_s"] == 0.5, coarse[0]
+    assert cd["ratio_population_n"] == 1, cd
+    assert cd["ratio_excluded_fixtures"] == ["cat-2023"], cd
+    assert cd["ratio_population_n"] + len(cd["ratio_excluded_fixtures"]) == 2, cd
+
+    # 2d. The same corpus with the largest row NOT first. `run_all` always
     # emits descending size, so `peak_rss_mib_after_largest_only` is only
     # meaningful under that order; out of order it must be None rather than
-    # silently reporting some other fixture's high-water mark. (The golden
-    # corpus alone cannot catch a dropped guard — its largest row is first.)
+    # silently reporting some other fixture's high-water mark.
     shuffled = _golden_corpus()
     shuffled.append(shuffled.pop(0))
     sperf, _ = summarize(shuffled, batch_s=1.0, rss_start=20.0, repeats=3)
     assert sperf["peak_rss_mib_after_largest_only"] is None, sperf
-    # everything order-independent must be untouched by the reorder
-    assert sperf["latency_p50_s"] == _GOLDEN_PERF["latency_p50_s"]
-    assert sperf["peak_rss_mib_corpus"] == _GOLDEN_PERF["peak_rss_mib_corpus"]
+    assert sperf["latency_p50_s"] == _GOLDEN_PAYLOAD["perf"]["latency_p50_s"]
+    assert sperf["peak_rss_mib_corpus"] == _GOLDEN_PAYLOAD["perf"]["peak_rss_mib_corpus"]
 
-    # 2c. Plateau index, other boundary. The golden corpus's plateau is at
+    # 2e. Plateau index, other boundary. The golden corpus's plateau is at
     # index 1, so it pins a scan that always answers 0; this pins the reverse —
     # a corpus already at its peak on the first fixture must report 0, not 1.
-    flat = [_rec(f"f{i}", float(4 - i), [0.1 * (4 - i)], rss=100.0) for i in range(4)]
+    flat = [_rec(f"g{i}", float(4 - i), [0.1 * (4 - i)], rss=100.0) for i in range(4)]
     assert summarize(flat, 1.0, 1.0, 1)[0]["derived"]["rss_plateau_first_index"] == 0
 
-    # 3. R² must also read 1.0 when the relationship really is perfect —
-    # the golden corpus pins the 0.8929 side, this pins the other, so a
-    # constant-returning `_r2` cannot satisfy both.
+    # 3. R² must also read 1.0 when the relationship really is perfect — the
+    # golden corpus pins the 0.25 side, this pins the other, so a constant
+    # `_r2` cannot satisfy both.
     perfect = [_rec(f"p{i}", float(i), [i / 10]) for i in (1, 2, 3, 4)]
     pperf, _ = summarize(perfect, batch_s=1.0, rss_start=1.0, repeats=1)
     assert pperf["derived"]["processed_size_vs_time_r2"] == 1.0, pperf["derived"]
     assert pperf["derived"]["processed_mib_per_s_spread"] == 1.0, pperf["derived"]
 
-    # 4. THE COST MODEL must price the corpus, not one filing, and must FLAG a
-    # filing that does not fit the cheap tier's context — that flag is the
-    # whole of ADR-020 §d consequence 1 and must not be a prose claim.
-    _, cost = summarize([_rec("a", 1.0, [0.1], chars=500_000)],
-                        batch_s=1.0, rss_start=1.0, repeats=1)
-    assert cost["reported_usd_per_filing"] == 0.0
-    corpus = cost["counterfactual"]["whole_corpus"]
-    assert corpus["est_tokens"] == 125_000, corpus          # 500,000 chars / 4
-    assert abs(corpus["usd_opus_5"] - 0.625) < 1e-9         # 0.125 MTok x $5.00
-    assert abs(corpus["usd_haiku_4_5"] - 0.125) < 1e-9
-    assert corpus["fits_haiku_context"] is True
-    _, big = summarize([_rec("b", 1.0, [0.1], chars=1_600_000)],
-                       batch_s=1.0, rss_start=1.0, repeats=1)
-    assert big["counterfactual"]["whole_corpus"]["fits_haiku_context"] is False
-
-    # 5. No network/API surface exists in this module — the price table is
+    # 4. No network/API surface exists in this module — the price table is
     # data, and nothing here can be talked into spending money.
     # (parsed, not grepped — a string search would match its own banned list)
     imported = set()
@@ -684,21 +894,24 @@ def main(argv):
     ap.add_argument("--json", default=None, help="also dump the machine-readable artifact")
     ap.add_argument("--repeats", type=int, default=3)
     ap.add_argument("--self-check", action="store_true")
+    ap.add_argument("--check-docs", metavar="ARTIFACT", default=None,
+                    help="verify every fixture-attributed decimal in the docs "
+                         "against this artifact (see check_docs)")
     args = ap.parse_args(argv[1:])
 
     if args.self_check:
         _demo()
         return 0
+    if args.check_docs:
+        return check_docs(args.check_docs)
 
     records, batch_s, rss_start = run_all(args.repeats)
     perf, cost = summarize(records, batch_s, rss_start, args.repeats, heldout_sizes())
     print(render(records, perf, cost))
 
     if args.json:
-        payload = {"kind": "bench", "git_sha": git_sha(),
-                   "python": platform.python_version(), "platform": platform.platform(),
-                   "units": UNITS, "perf": perf, "cost": cost, "records": records}
-        Path(args.json).write_text(json.dumps(payload, indent=2, default=str))
+        Path(args.json).write_text(
+            json.dumps(build_payload(records, perf, cost), indent=2, default=str))
         print(f"\n[bench] wrote {args.json}")
     return 0
 
