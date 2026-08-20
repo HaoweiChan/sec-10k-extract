@@ -134,7 +134,35 @@ published figure derived from it stay valid.
   boundary silently restates numbers in `docs/analysis-report.md` §3–§5.
 - Corrected: neither fixture added. The 10-K/A refusal is asserted at the layer
   instead (`normalize.py::_demo`, both detection routes, ADR-016 treatment), and
-  the item-5 boundary is left unmoved, pinned as *current behaviour* by
-  `era-label-bac-2006` and logged as open debt naming the fixture that would
-  settle it. A corpus that is load-bearing for two different measurements is not
-  free to grow for one of them.
+  the item-5 boundary is left unmoved and logged as open debt naming the fixture
+  that would settle it. A corpus that is load-bearing for two different
+  measurements is not free to grow for one of them.
+
+- Assumed: `era-label-bac-2006`'s item-5 check pins `ALIAS_FROM["5"]` — written
+  in four places, including this file's chain entry above, in the same breath as
+  a debt row about moving that constant to 2004-03-15.
+- Eval said: nothing, which was the finding (PR #17 R1). The check asserts the
+  modern caption at period end 2006-12-31, so it bounds the constant from
+  **above** and is blind to every earlier value: the debt row's own candidate
+  move leaves fast 51/51, invariant 13/13 and the module self-check green. A
+  claim about what a check catches is an executable claim, and this one was
+  written from the intent of the check rather than from running the mutation —
+  the exact failure mode `prompts/009` named ("do not assert a property of an
+  executable contract in prose without running it"), one milestone later.
+- Corrected: a two-sided assert on `ALIAS_FROM["5"]` in `segment._demo` (red
+  under the reviewer's own repro), and all four claims restated to say the case
+  gives an upper bound and nothing else.
+
+- Assumed: a wrong era label is invisible to every check type except
+  `item_field` — "no status, offset, confidence, warning or `doc_status` moves".
+- Eval said: `confidence` moves on **10 spans across 5 fixtures**, 0.75 → 0.95,
+  because `validate.score` picks `BASE_STRICT` on `title_similarity >= 0.8` and
+  that similarity is computed against the aliases this diff edits (PR #17 R2).
+  For those ten items the envelope had been publishing a real signal of the
+  defect — a *lower* confidence — and no case in the suite read the field, which
+  is how a claim that "nothing else moves" survived a full green gate.
+- Corrected: ten `confidence` checks added (three in `era-label-ba-2003`, the
+  rest into the existing `gs-2002`, `ibm-1997`, `intc-2002`, `tgt-2002` cases),
+  all ten watched red at 0.75 against the pre-fix taxonomy, and the ADR sentence
+  narrowed to what is actually true — no status, offset, warning or
+  `doc_status`.

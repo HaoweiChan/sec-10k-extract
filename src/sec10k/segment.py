@@ -639,6 +639,18 @@ def _demo():
     # ...and the one that has no boundary to move: item 5's legacy caption is a
     # wording fix, not a date fix (Reg S-K Item 201 says "common equity").
     assert "Common Equity" in item_label("5", date(1993, 12, 31))[1]
+    # Item 5's DATE, however, does move, and until PR #17 R1 nothing could see
+    # it: era-label-bac-2006 asserts the modern caption at period end
+    # 2006-12-31, which bounds ALIAS_FROM["5"] from ABOVE and is blind to every
+    # earlier value — including 2004-03-15, the one ADR-023 §f argues is
+    # probably right. Two-sided here, so §f's own candidate move goes red.
+    # This deliberately pins a value §f doubts: while there is no fixture in
+    # the 2004-03-15 → 2005-12-01 band to decide it, moving the constant has to
+    # be a decision someone makes in the open, not a silent edit.
+    assert item_label("5", date(2005, 11, 30))[1].startswith(
+        "Market for the Registrant's Common Equity")            # day before
+    assert item_label("5", date(2005, 12, 1))[1].endswith(
+        "Issuer Purchases of Equity Securities")                # ...and the day of
 
     # a trailing cross-reference index must not make the real body headings
     # look like a table of contents (intc-2002 / tgt-2002: every code resolved

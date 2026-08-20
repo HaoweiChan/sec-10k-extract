@@ -139,9 +139,17 @@ by name. Fixing it needs one real EDGAR filing with a fiscal year ending in
 that window, and adding a fixture moves the T13 benchmark corpus and every
 published figure derived from it (`docs/analysis-report.md` §3–§5, ADR-021).
 That trade belongs to whoever re-runs the benchmark, so it is logged as open
-debt in `tasks/TODO.md` and pinned as *current behaviour* by
-`era-label-bac-2006.json`'s item-5 check, which goes red the day someone moves
-the constant without the fixture that justifies it.
+debt in `tasks/TODO.md`.
+
+**What pins the constant, precisely** (corrected in PR #17 round 1 — the first
+version of this paragraph claimed more than it had): `era-label-bac-2006.json`'s
+item-5 check asserts the modern caption at period end 2006-12-31, which bounds
+`ALIAS_FROM["5"]` from **above** and nothing else. It is blind to every earlier
+value, including 2004-03-15 — that move left the whole gate green (fast 51/51,
+invariant 13/13, `[segment self-check] ok`). The two-sided assert now in
+`segment._demo` is what catches it, and it deliberately pins a value this
+section doubts: with no fixture in the band to decide the question, moving the
+constant has to be a decision made in the open, not a silent edit.
 
 ### §g — Two more investigated, both left alone, both for the same reason.
 
@@ -169,11 +177,26 @@ the constant without the fixture that justifies it.
 - **The gate**: fast 51/51, invariant 13/13 after the fix; 47/51 at the
   red commit that precedes it (four cases red, eleven assertions).
 - **`item_field` is now the load-bearing check type it was built to be.** Before
-  this milestone it appeared in six cases, five of them about item 14. Every one
-  of these five defects was invisible to every other check type in the adapter —
-  no status, offset, confidence, warning or `doc_status` moves when a label is
-  wrong — which is the same structural blindness the pre-B audit found and the
-  reason `item_field` exists.
+  this milestone it appeared in six cases, five of them about item 14, and no
+  case asserted a title for items 5, 10, 12, 13 or 15 in any era — the same
+  structural blindness the pre-B audit found, and the reason `item_field` exists.
+- **Confidence was NOT untouched, and the first version of this ADR said it was**
+  (corrected in PR #17 round 1). `validate.score` takes `BASE_STRICT` (0.95) over
+  `BASE_WEAK` (0.75) on `title_similarity >= 0.8`, and `title_similarity` is
+  computed against the very `TITLES` aliases this ADR edits. Measured across all
+  37 fixtures, `main` vs this branch: **10 spans move 0.75 → 0.95** — ba-2003
+  items 12/13/15, gs-2002 item 15, ibm-1997 item 12, intc-2002 items 5/15,
+  tgt-2002 items 12/13/15 — and 30 titles change across 11 fixtures. The
+  direction is right (a heading that now matches a caption the form actually had
+  is better evidence, not worse), which is precisely why it needed saying: for
+  those ten items the envelope had been publishing a 0.75 that was **a real
+  signal of the defect**, and no case in the suite read the field. All ten are
+  pinned now — three in `era-label-ba-2003`, the rest added to the existing
+  `gs-2002-transitional-numbering`, `ibm-1997-shallow`, `intc-2002-shallow` and
+  `tgt-2002-shallow` cases, each red at 0.75 against the pre-fix taxonomy.
+  What survives of the original claim is narrower and still true: **no status,
+  offset, warning or `doc_status` moves**, so nothing escalated and nothing in
+  the envelope's headline said a label was from the wrong decade.
 - **Filer wording is evidence, never ground truth**, and this milestone is where
   that got demonstrated rather than asserted: tgt-2002 writes the pre-2002
   Item 12 caption 11 months after the rule bound it, ba-2003 writes the pre-2006

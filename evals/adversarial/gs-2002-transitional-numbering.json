@@ -66,6 +66,9 @@
         "item": "15",
         "status": "extracted"
       },
+      {"type": "item_field", "item": "15", "field": "title",
+       "value": "Exhibits, Financial Statement Schedules, and Reports on Form 8-K"},
+      {"type": "confidence", "item": "15", "value": 0.95},
       {
         "type": "only_items",
         "items": [
