@@ -23,6 +23,22 @@ description: 10-K filing anatomy — item taxonomy by era, format variants, and 
   may omit 7A. **2021+**: Item 6 becomes "[Reserved]". **2023+**: 1C exists.
 - An extractor emitting "1A" for a 1994 filing has hallucinated (INV-S3).
 
+**Captions move on their own dates, not on the renumbering dates** (ADR-023 —
+the item *set* and the item *title* are two different tables, and four entries
+once shared 2003-08-14 because SOX was the boundary the code grew around):
+
+| Item | Caption change | Binds FY ends on/after | Release |
+|---|---|---|---|
+| 12 | + "and Related Stockholder Matters" | 2002-03-15 | 33-8048 |
+| 15 | − "and Reports on Form 8-K" | 2004-05-23 (eff. 2004-08-23) | 33-8400 |
+| 10 | "…of the Registrant" → "Directors, Executive Officers and Corporate Governance" | 2006-12-15 | 33-8732A |
+| 13 | + ", and Director Independence" | 2006-12-15 | 33-8732A |
+
+Item 5 reads "Common **Equity**" in every era (it tracks Reg S-K Item 201);
+"Common Stock" is not a caption the form has ever had. Filer wording lags the
+rules by years and is evidence, never ground truth — tgt-2002, ba-2003 and
+bac-2006 each write a caption their own period end has already outlived.
+
 ## Format eras
 
 - **1993–2001**: plain-text full submissions (`.txt`), ALL documents in one

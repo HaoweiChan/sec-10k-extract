@@ -1,0 +1,25 @@
+{
+  "pr": 17,
+  "round": 3,
+  "scope": "round-2 repair diff 6785980..HEAD plus standing findings R5, R6, R7",
+  "result": "REQUEST_CHANGES",
+  "loop_state": "CIRCUIT BREAKER — 3 review rounds without approval; loop halted, escalated to human",
+  "gate": "invariant 13/13 = 1.000; fast 51/51 = 1.000 (baseline 1.000, unchanged), at 32915d4/73af155",
+  "standing_findings_closed": {
+    "R5": "closed — two-sided item-6 assert at segment.py:664-665; its comment truthfully separates 2021-02-10 from the open 2021-08-09 question; 26 committed + 3 heldout blast radius reproduces exactly",
+    "R6": "closed — era-label-bac-2006 provenance now internally consistent; with ALIAS_FROM[\"5\"]=date(2004,3,15) the self-check raises AssertionError while fast 51/51 and invariant 13/13 stay green, exactly as the text now says",
+    "R7": "closed — 30 titles / 10 committed fixtures, 33 / 11 with heldout mrk-1995, reproduced exactly and corrected in both places it appeared; pr17-r1-resolution.json changed only in the two flagged fields plus a marked round_2_corrections key"
+  },
+  "orchestrator_note": "R8 is the third regeneration of this PR's single defect class: a claim about what the checks prove, outrunning what they prove (R1 -> R5 -> R8). It also falsifies the orchestrator's own round-3 verification: I re-ran the mutation sweep and reported 'all eight keys pinned in both directions', but that sweep used only the extremes 1990-01-01 and 2099-01-01, which trip a different guard than a plausible in-band move. The extremes sweep proved less than I stated. R8's counterexample is independently confirmed: ALIAS_FROM[\"4\"] = date(2016,1,1) -> _demo ok, fast 51/51, invariant 13/13, and item_label('4', date(2013,6,30)) returns ('I','Reserved') instead of ('I','Mine Safety Disclosures').",
+  "findings": [
+    {
+      "id": "R8",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The round-2 repair replaced R5's overstatement with a narrower one of the same species: the new source comment asserts unqualified that \"Item 6 was the LAST unpinned entry in this table\", but ALIAS_FROM[\"4\"] can still be moved by years, relabel four committed fixtures, and leave _demo, the fast suite and the invariant suite all green — the 1990/2099 sweep the claim rests on only proves the extremes are caught, not the band in between.",
+      "evidence": "src/sec10k/segment.py:654 (`# Item 6 was the LAST unpinned entry in this table (PR #17 R5)`), added by 32915d4; same generalization at tasks/TODO.md:73 (\"all eight are now pinned\") and prompts/010-t14-taxonomy-completeness-and-10ka.md:184 (\"none uncaught\") — those two at least carry the sweep's parenthetical, the source comment carries none. Counterexample: ALIAS_FROM[\"4\"] = date(2016,1,1) (or date(2013,12,31), or date(2010,1,31)) is not an extreme value and is caught by nothing. Because segment.py:177 makes item 4's Reserved window run `date(2010,1,1) <= period_end < ALIAS_FROM[\"4\"]`, moving the constant to 2016-01-01 renders item 4 as \"Reserved\" instead of \"Mine Safety Disclosures\" on msft-2013, spatz-2014, cvx-2015 and reac-2015; moving it to 2010-01-31 renders wmt-2010's item 4 as \"Mine Safety Disclosures\" instead of \"Reserved\". Measured: _demo GREEN, fast 51/51 = 1.000, invariant 13/13 = 1.000 for all three values. A programmatic scan of every ALIAS_FROM key against every fixture period end (and +/-1 day) shows \"5\",\"6\",\"10\",\"12\",\"13\",\"15\" have zero output-changing mutations that survive _demo, while \"4\" has many — so \"4\", not \"6\", is the entry the coverage claim should be hedged around.",
+      "repro": "sed -i '' 's/\"4\": date(2011, 12, 15)/\"4\": date(2016, 1, 1)/' src/sec10k/segment.py; python3 -m src.sec10k.segment -> ok; python3 -m evals.run --suite fast --no-report -> 51/51; --suite invariant --no-report -> 13/13; python3 -c \"...item_label('4',date(2013,6,30))\" -> ('I','Reserved'). VERIFIED INDEPENDENTLY BY THE ORCHESTRATOR at 73af155.",
+      "acceptance": "Either (a) the comment at segment.py:654 and the TODO/prompts restatements are scoped to what was executed — e.g. \"every key is pinned against a move to 1990-01-01/2099-01-01; \\\"4\\\" is caught only by the fast suite and only for moves outside roughly 2010-01-01..2016, because its Reserved window reads the same constant\" — or (b) _demo gains a two-sided item-4 assert (`item_label(\"4\", date(2011,12,14))[1] == \"Reserved\"` and `item_label(\"4\", date(2011,12,15))[1] == \"Mine Safety Disclosures\"`), watched red under the mutation above, after which the unqualified \"all eight pinned\" sentence becomes true under the natural reading. Either way, no committed document should carry an unscoped universal claim about the table that a one-line mutation falsifies."
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "pr": 17,
+  "round": 4,
+  "scope": "round-4 repair diff 2feac9b..HEAD; closure check on R8 only",
+  "result": "REQUEST_CHANGES",
+  "loop_state": "CIRCUIT BREAKER #2 — human-authorized bounded round closed R8 but introduced R9; halted, escalated to human",
+  "gate": "invariant 13/13 = 1.000; fast 51/51 = 1.000 (baseline 1.000, unchanged)",
+  "standing_findings_closed": {
+    "R8": "CLOSED — two-sided item-4 assert at segment.py:673-674. Orchestrator independently confirmed all three in-band mutations now raise AssertionError: date(2016,1,1) and date(2013,12,31) on the later-side assert, date(2010,1,31) on the earlier-side. The three universal coverage claims were deleted, not rewritten; the universals grep returns only quotations. The reviewer states the asserts themselves need no change."
+  },
+  "findings": [
+    {
+      "id": "R9",
+      "severity": "MEDIUM",
+      "route": "human decision",
+      "claim": "The new item-4 comment attributes the 2011-12-15 boundary to \"Release 33-9286\", a citation that appears nowhere else in the repo and that the repo's own sourced ADR contradicts.",
+      "evidence": "src/sec10k/segment.py:672 (`# 2011-12-15 boundary (Release 33-9286) from each side.`) is the only occurrence of \"9286\" anywhere in src/, specs/, docs/, tasks/ or .claude/skills/ — ORCHESTRATOR-CONFIRMED by grep. Every other place sourcing this constant attributes it to the statute: specs/decisions/ADR-014-t9-tranche1-rulings.md:17 \"Mine Safety Disclosures arrived 2011-12-15 (Dodd-Frank §1503)\", and src/sec10k/segment.py:28 / :136 name no release — which is exactly what the still-live R3 debt row says of entry 4. Release 33-9286 (Mine Safety Disclosure, final rule) was adopted 2011-12-21, effective 2012-01-27; neither is 2011-12-15, so the boundary is either the statute's (wrong instrument cited) or the release's (wrong date). The round whose purpose was to delete claims the checks did not support introduced a new provenance claim with nothing in-repo backing it.",
+      "repro": "grep -rn \"9286\" src specs docs .claude/skills tasks -> single hit at src/sec10k/segment.py:672; grep -rn \"2011-12-15\" specs/decisions/ADR-014-t9-tranche1-rulings.md -> \"(Dodd-Frank §1503)\". No eval case pins the citation either way.",
+      "acceptance": "The parenthetical either names the instrument ADR-014 actually cites (Dodd-Frank §1503), or is dropped, or ADR-014/ADR-023 gains the sourced derivation showing how 33-9286 yields a 2011-12-15 period-end boundary. The two asserts themselves need no change — they are correct and R8 is closed by them."
+    },
+    {
+      "id": "R10",
+      "severity": "LOW",
+      "route": "human decision",
+      "claim": "The round-4 amendment to the committed round-2 artifact marks one edited field as a dated correction but rewrites a second field silently, and that second field now describes a narrowing tasks/TODO.md never received.",
+      "evidence": "tasks/reviews/pr17-r2-resolution.json:18 changed in 1562dbf from \"invisible to every check\" to \"invisible to the gate and the self-check\" with no correction marker, while the sibling edit at line 15 (executed_sweep) carries an explicit \"CORRECTED AT R8:\". The field asserts what another file records — \"tasks/TODO.md — the §g debt row now records that item 6's constant was invisible to the gate and the self-check\" — but tasks/TODO.md:72 still reads \"(b)'s constant was also invisible to every check until this round\", untouched by this diff. ORCHESTRATOR-CONFIRMED by grep. Substance is entailed, so this is record integrity, not a false-in-substance claim; dispositions and findings elsewhere in the artifact are unchanged, as claimed.",
+      "repro": "grep -n \"invisible to\" tasks/TODO.md tasks/reviews/pr17-r2-resolution.json",
+      "acceptance": "Either the claims_restated line carries the same dated \"CORRECTED AT R8\" marker its sibling field got, or it is restored and the narrowing applied where the sentence actually lives (tasks/TODO.md:72) — no unmarked edit to a committed round-2 record."
+    }
+  ]
+}

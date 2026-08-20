@@ -1,0 +1,19 @@
+{
+  "id": "era-label-textron-2001",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {"path": "evals/fixtures/textron-2001/filing.txt"},
+  "expect": {
+    "checks": [
+      {"type": "item_field", "item": "5", "field": "title", "value": "Market for the Registrant's Common Equity and Related Stockholder Matters"},
+      {"type": "item_field", "item": "12", "field": "title", "value": "Security Ownership of Certain Beneficial Owners and Management"},
+      {"type": "item_field", "item": "13", "field": "title", "value": "Certain Relationships and Related Transactions"},
+      {"type": "item_field", "item": "14", "field": "part", "value": "IV"}
+    ]
+  },
+  "triage": {
+    "class": "era-boundary",
+    "note": "The near side of the Item 12 boundary, and the reason that boundary needs a date rather than a single alias. Release 33-8048's equity-compensation-plan suffix binds annual reports for fiscal years ending on or after 2002-03-15; this filing's period ends 2001-12-29, ten weeks before it, so its canonical Item 12 caption is the unsuffixed one. MEASURED PRE-FIX (2026-08-20): item 5 title 'Market for the Registrant's Common Stock and Related Stockholder Matters', item 12 title 'Security Ownership of Certain Beneficial Owners and Management and Related Stockholder Matters', item 13 title 'Certain Relationships and Related Transactions, and Director Independence' -- the same three defects as ge-1994, eight years later, which is what makes them table defects rather than a 1993-only artifact. This fixture is the LOWER bracket of the Item 12 boundary; gs-2002 (period end 2002-11-29) and intc-2002 (2002-12-28) are the upper bracket and both write the suffixed caption in their own headings, so the corpus constrains the boundary to the interval (2001-12-29, 2002-11-29] and 2002-03-15 is the only rule date inside it."
+  },
+  "provenance": "AUTHORED FROM THE COMMITTED FIXTURE, no new fixture: Textron FY2001 10-K (full public-source provenance in evals/fixtures/README.md and in textron-2001-content.json / -structure.json). Authorities are the same three named in era-label-ge-1994.json: Reg S-K Item 201 for the Item 5 wording; Release Nos. 33-8048 / 34-45189 (compliance for fiscal years ending on or after 2002-03-15) for the Item 12 suffix; Release 33-8732A (fiscal years ending on or after 2006-12-15) for the Item 13 suffix. CORPUS CORROBORATION from this fixture's own headings: 'ITEM 5.   MARKETS FOR THE REGISTRANT'S COMMON EQUITY AND RELATED STOCKHOLDER MATTERS' (the filer pluralized 'MARKETS'; the canon does not, which is exactly why the rendered title is canonical rather than copied), 'ITEM 12.  SECURITY OWNERSHIP OF CERTAIN BENEFICIAL OWNERS AND MANAGEMENT' with no suffix, 'ITEM 13.  CERTAIN RELATIONSHIPS AND RELATED TRANSACTIONS' with no suffix. The item 14 part check is green before and after: it pins ADR-015's pre-SOX ruling (Exhibits at 14, Part IV, this filing being the fixture that ruling was measured on) so that moving the 12 and 13 boundaries cannot silently disturb the one part-changing code in the table. WATCHED RED before any code change -- see the commit that adds this file. NOT yet dual-passed by extraction-auditor: pending, per case-authoring step 8."
+}

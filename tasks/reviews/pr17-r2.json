@@ -1,0 +1,43 @@
+{
+  "pr": 17,
+  "round": 2,
+  "scope": "repair diff 62e24a2..task/T14 plus the four standing round-1 findings",
+  "result": "REQUEST_CHANGES",
+  "gate": "invariant 13/13 = 1.000; fast 51/51 = 1.000 (baseline 1.000, unchanged), at 2083ab8",
+  "standing_findings_closed": {
+    "R1": "closed — two-sided assert goes red on ALIAS_FROM[\"5\"]=date(2004,3,15); era-label-bac-2006 goes red at date(2007,1,1) (fast 50/51). Orchestrator re-verified the AssertionError independently.",
+    "R2": "closed — all ten confidence rows reproduce red at 0.75 against 921be5f's taxonomy, fast exactly 43/51 = 0.843 with 8 cases red; reviewer independently measured the same ten moves; no status/offset/warning/doc_status/method value moves, so the narrowed ADR sentence is true.",
+    "R3": "logged as debt, tasks/TODO.md:73, Origin: PR #17 R3, text verbatim",
+    "R4": "logged as debt, tasks/TODO.md:74, Origin: PR #17 R4, text verbatim"
+  },
+  "orchestrator_note": "The reviewer returned 'APPROVED with the caveat that R5 should be repaired'. That is not an approval: R5 is MEDIUM and makes a published claim dishonest, which is a blocking condition under the loop's scope boundary. Result recorded as REQUEST_CHANGES. R6 and R7 are LOW and would default to debt; the orchestrator instead routes them to repair-in-place, because both are factual errors in text THIS PR introduces (not adjacent discoveries that exceed the spec), and committing a document of record containing a sentence already known to be false is the failure mode this repo names explicitly. The debt rule governs out-of-scope work; it is not a licence to ship a known-false new sentence.",
+  "findings": [
+    {
+      "id": "R5",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The repair traded R1's overstatement for a new one: the debt row it added (and the resolution artifact) claims every ALIAS_FROM constant is \"correct and pinned by a case or a `_demo` assert\", but ALIAS_FROM[\"6\"] is pinned by nothing in either direction, and the repo's own adjacent debt row says its value mislabels every filer in a six-month window.",
+      "evidence": "tasks/TODO.md:73 (new row, Origin: PR #17 R3): \"every constant the comment describes is correct and pinned by a case or a `_demo` assert\"; same sentence in tasks/reviews/pr17-r1-resolution.json:35. Falsifier: src/sec10k/segment.py:138 `\"6\": date(2021, 2, 10)`. Setting it to date(1990,1,1) relabels item 6 \"Selected Financial Data\" -> \"[Reserved]\" on 26 committed fixtures spanning ge-1994 through sgrp-2019 (plus 3 heldout) and the gate stays fully green; date(2099,1,1) likewise. A mutation sweep over all eight ALIAS_FROM keys shows \"6\" is the only one nothing catches (4: fast 50/51; 5,10,12,13,14,15: _demo red). Second half: TODO.md:71 (pre-existing row) states 2021-02-10 is 33-10890's early-compliance date and \"one of the two labels is wrong for every filer in that six-month window\" — so \"correct\" is also overstated, for the same entry the R3 row is about.",
+      "repro": "sed -i '' 's/\"6\": date(2021, 2, 10)/\"6\": date(1990, 1, 1)/' src/sec10k/segment.py; python3 -m evals.run --suite fast --no-report -> 51/51 = 1.000; --suite invariant --no-report -> 13/13; python3 -m src.sec10k.segment -> \"[segment self-check] ok\". VERIFIED INDEPENDENTLY BY THE ORCHESTRATOR at 2083ab8: self-check ok, fast 51/51.",
+      "acceptance": "Either a two-sided `item_label(\"6\", ...)` assert in segment._demo (or a case check) that goes red on the mutation above, or the TODO row and the resolution artifact restate the sentence to name \"6\" as the one entry no check can see and to drop \"correct\" for a date §g says mislabels a six-month window."
+    },
+    {
+      "id": "R6",
+      "severity": "LOW",
+      "route": "repair-in-place",
+      "claim": "The corrected provenance in era-label-bac-2006.json states in the present tense that the 2004-03-15 move leaves \"the module self-check green\", which is false as of this commit and is contradicted by the next sentence of the same paragraph.",
+      "evidence": "evals/adversarial/era-label-bac-2006.json:19 (provenance): \"setting the constant to 2004-03-15 leaves this case, the whole fast suite (51/51), the invariant suite (13/13) and the module self-check green. What catches an earlier move is the two-sided assert added to segment.py::_demo in the same round\". With that assert present (src/sec10k/segment.py:649-654) the mutation raises AssertionError at segment.py:650, exit 1. The suite figures (51/51, 13/13) are correct; only the self-check clause is stale.",
+      "repro": "Set ALIAS_FROM[\"5\"] = date(2004, 3, 15); python3 -m src.sec10k.segment -> AssertionError at segment.py:650, exit 1 (fast 51/51 and invariant 13/13 as stated).",
+      "acceptance": "The clause is scoped to the pre-repair tree (\"left ... green before this round's assert\") so the provenance no longer contains two mutually exclusive statements about the same mutation."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "route": "repair-in-place",
+      "claim": "ADR-023's new Consequences paragraph reports \"30 titles change across 11 fixtures\"; the measurement is 30 titles across 10 committed fixtures, or 33 across 11 if the heldout fixture is counted.",
+      "evidence": "specs/decisions/ADR-023-era-label-corrections.md:189, in a sentence prefixed \"Measured across all 37 fixtures, `main` vs this branch\". Measured f10bb6d vs 2083ab8 over every fixture referenced by a case: ba-2003 4, ge-1994 3, gs-2002 3, ibm-1997 3, ibr-pointer-first 3, intc-2002 3, ko-1997 3, nike-2006 2, textron-2001 3, tgt-2002 3 = 30 across 10 fixtures under evals/fixtures/; the 11th file is evals/heldout/fixtures/mrk-1995/filing.txt (3 more, total 33). The 10-span confidence figure in the same sentence is exact and all ten are pinned; only the title fixture count is off by one, and no document claims the title moves are pinned.",
+      "repro": "Snapshot items[*].title for every case-referenced fixture under f10bb6d's segment.py and under the branch, diff: 30 changes / 10 dirs excluding evals/heldout, 33 / 11 including it.",
+      "acceptance": "The sentence reads \"30 titles across 10 committed fixtures (33 across 11 counting the heldout mrk-1995)\", consistent with the \"all 37 fixtures\" scope it declares."
+    }
+  ]
+}

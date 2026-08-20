@@ -166,7 +166,8 @@ speculative.
 
 **Explicitly unsupported** — refused, never item-extracted: non-10-K forms
 (10-Q, 8-K, 20-F), scanned/image/PDF filings, inputs with no detectable 10-K
-document. 10-K/A amendments and 10-KSB are out of scope. The refusal names the
+document. 10-K/A amendments and 10-KSB are out of scope — the 10-K/A half is ruled,
+measured and dated in [ADR-024](specs/decisions/ADR-024-10ka-out-of-scope.md). The refusal names the
 form and returns the normalized text; it does not return items, and it does not
 claim the file was unreadable (ADR-016 §6).
 

@@ -1,0 +1,48 @@
+{
+  "pr": 17,
+  "round": 1,
+  "role": "implementer",
+  "gate_after_repair": "invariant 13/13 = 1.000; fast 51/51 = 1.000 (baseline 1.000, unchanged)",
+  "resolutions": [
+    {
+      "id": "R1",
+      "disposition": "fixed",
+      "confirmed": true,
+      "what_changed": "Both halves of the acceptance, not one: (a) a two-sided assert on ALIAS_FROM[\"5\"] added to src/sec10k/segment.py::_demo \u2014 item_label(\"5\", date(2005,11,30)) must still read the legacy caption and item_label(\"5\", date(2005,12,1)) must read the modern one; (b) all four overstated claims restated to say the era-label-bac-2006 check bounds the constant from ABOVE only.",
+      "covered_by": "src/sec10k/segment.py::_demo (the two new item_label(\"5\", ...) asserts); era-label-bac-2006.json keeps the upper bound it actually enforces",
+      "watched_red": "The reviewer's own repro, run with the new assert in place: ALIAS_FROM[\"5\"] = date(2004, 3, 15) -> `python3 -m src.sec10k.segment` AssertionError at segment.py:650 (`item_label(\"5\", date(2005,11,30)).startswith(\"Market for the Registrant's Common Equity\")`), exit 1. Mutation reverted; self-check ok.",
+      "claims_restated": [
+        "specs/decisions/ADR-023-era-label-corrections.md \u00a7f \u2014 new paragraph 'What pins the constant, precisely', naming the upper bound and the green-gate result of the 2004-03-15 move",
+        "tasks/TODO.md debt row \u2014 'corrected PR #17 R1', names the blind direction and the assert that closes it",
+        "evals/adversarial/era-label-bac-2006.json provenance \u2014 'this check does NOT catch that move', with the measured green result and the date(2007,1,1) case it does catch",
+        "prompts/010-t14-taxonomy-completeness-and-10ka.md \u2014 the stale sentence removed from the fourth chain entry and a new chain entry added for the finding itself"
+      ]
+    },
+    {
+      "id": "R2",
+      "disposition": "fixed",
+      "confirmed": true,
+      "what_changed": "Ten confidence checks added \u2014 every one of the 10 spans the reviewer measured, not just the one the acceptance required \u2014 plus the item_field rows for the same items on the four fixtures that had no case for them. The ADR sentence and the era-label-ge-1994 triage sentence are narrowed to what is true (no status, offset, warning or doc_status moves) and now state the confidence movement with its root cause (validate.score reads title_similarity, computed against the edited TITLES aliases).",
+      "covered_by": "evals/adversarial/era-label-ba-2003.json (items 12, 13, 15 = 0.95); evals/adversarial/gs-2002-transitional-numbering.json (item 15); evals/golden/ibm-1997-shallow.json (item 12); evals/golden/intc-2002-shallow.json (items 5, 15); evals/golden/tgt-2002-shallow.json (items 12, 13, 15)",
+      "watched_red": "Pre-fix taxonomy swapped in (git show 921be5f:src/sec10k/segment.py) with the new checks present: fast 43/51 = 0.843, 8 cases red, and all ten confidence rows reported 'confidence 0.75 != 0.95' individually. Branch code restored; fast 51/51 = 1.000.",
+      "independent_measurement": "main (f10bb6d) vs task/T14 across all 37 fixtures: 10 confidence moves 0.75 -> 0.95 (ba-2003 12/13/15, gs-2002 15, ibm-1997 12, intc-2002 5/15, tgt-2002 12/13/15) and 30 title moves across 10 committed fixtures. CORRECTED in round 2 (R7): this line first said '11 fixtures', which is the count only if the heldout mrk-1995 is included, and then the title total is 33, not 30. The confidence figure is exact and reproduces the reviewer's."
+    },
+    {
+      "id": "R3",
+      "disposition": "debt",
+      "confirmed": true,
+      "logged_at": "tasks/TODO.md, section 'Open debt, carried deliberately', row 1 of the two added this round, tagged 'Origin: PR #17 R3' with the finding text carried verbatim",
+      "note": "Not fixed in this PR, per the orchestrator's routing. Both defects are in the comment above ALIAS_FROM, not in any date it describes. CORRECTED in round 2 (R5): this note originally continued 'every constant is correct and each is pinned by a case or a _demo assert', which was false twice over. ALIAS_FROM['6'] was pinned by nothing in either direction until round 2 added a two-sided _demo assert for it, and 'correct' is not a claim this repo can make about either ['6'] (early-compliance date; ADR-023 \u00a7g holds the question open) or ['5'] (ADR-023 \u00a7f argues it is 20 months late). Executed mutation sweep, all eight keys, both directions, 2026-08-20: seven caught by _demo, ['4'] caught by the fast suite at 50/51."
+    },
+    {
+      "id": "R4",
+      "disposition": "debt",
+      "confirmed": true,
+      "logged_at": "tasks/TODO.md, section 'Open debt, carried deliberately', row 2 of the two added this round, tagged 'Origin: PR #17 R4' with the finding text carried verbatim",
+      "note": "Not fixed in this PR, per the orchestrator's routing. The overstatement is in ADR-023's Pass-1 summary sentence; \u00a7g and the ADDED comments already carry the exceptions in full."
+    }
+  ],
+  "rejected": [],
+  "notes": "No finding was rejected and no check was weakened or removed. The 10 confidence rows and the two ALIAS_FROM[\"5\"] asserts are the only executable additions; the rest of the round is prose brought back in line with what the executables actually enforce.",
+  "round_2_corrections": "R5 and R7 of PR #17 round 2 correct two sentences in this round-1 artifact: R2's title-fixture count (10 committed, not 11) and R3's 'correct and pinned' claim. The dispositions themselves are unchanged and were independently confirmed closed by the round-2 reviewer."
+}

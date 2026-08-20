@@ -31,7 +31,11 @@ TITLES = {
                  "Reserved"]),
     "5":  ("II", ["Market for Registrant's Common Equity, Related Stockholder "
                   "Matters and Issuer Purchases of Equity Securities",
-                  "Market for the Registrant's Common Stock and Related "
+                  # "Common EQUITY", not "Common Stock" (ADR-023 §a): the item
+                  # tracks Reg S-K Item 201, "Market price of and dividends on
+                  # the registrant's common equity...", and all 8 pre-2005
+                  # fixtures write Equity. Stock was never any era's caption.
+                  "Market for the Registrant's Common Equity and Related "
                   "Stockholder Matters"]),
     "6":  ("II", ["[Reserved]", "Selected Financial Data"]),
     "7":  ("II", ["Management's Discussion and Analysis of Financial Condition "
@@ -48,9 +52,17 @@ TITLES = {
                    "Directors and Executive Officers of the Registrant"]),
     "11": ("III", ["Executive Compensation"]),
     "12": ("III", ["Security Ownership of Certain Beneficial Owners and "
-                   "Management and Related Stockholder Matters"]),
+                   "Management and Related Stockholder Matters",
+                   # the suffix is the equity-compensation-plan table's
+                   # (Release 33-8048); before it the item stopped at
+                   # "Management" — ADR-023 §b.
+                   "Security Ownership of Certain Beneficial Owners and "
+                   "Management"]),
     "13": ("III", ["Certain Relationships and Related Transactions, and "
-                   "Director Independence"]),
+                   "Director Independence",
+                   # ...and this suffix is Release 33-8732A's, four years
+                   # later again. ADR-023 §c.
+                   "Certain Relationships and Related Transactions"]),
     "14": ("III", ["Principal Accountant Fees and Services",
                    "Exhibits, Financial Statement Schedules, and Reports on "
                    "Form 8-K",
@@ -60,7 +72,14 @@ TITLES = {
                    # has the same shape of history — see SOX_INTERIM.
                    "Controls and Procedures"]),
     "15": ("IV", ["Exhibits, Financial Statement Schedules",
-                  "Exhibits and Financial Statement Schedules"]),
+                  # Item 15 inherited item 14's full caption when Controls and
+                  # Procedures took 14 in 2002; the "Reports on Form 8-K"
+                  # clause outlived that by two years and died with Release
+                  # 33-8400. The alias that used to sit here ("Exhibits and
+                  # Financial Statement Schedules") is a filer variant of the
+                  # modern caption, not an era of it — ADR-023 §e.
+                  "Exhibits, Financial Statement Schedules, and Reports on "
+                  "Form 8-K"]),
     "16": ("IV", ["Form 10-K Summary"]),
 }
 
@@ -108,13 +127,29 @@ ORDER = ["1", "1A", "1B", "1C", "2", "3", "4", "5", "6", "7", "7A", "8", "9",
 # the label contradicted the content and the part contradicted the filing
 # (pre-B audit finding 3). TITLES[code][1][0] applies from this date; the
 # second alias applies before it.
+# Four of these dates were 2003-08-14 because the SOX renumbering was the era
+# boundary this table was built around; only two of them belong to it (ADR-023).
+# A retitle is its own rule with its own date, and each one below now names the
+# release it comes from. Every date here keys on period end AND is written by a
+# rule that keys on fiscal-period end too, except "5" — see ADR-023 §f.
 ALIAS_FROM = {
     "4": date(2011, 12, 15),   # Mine Safety replaced Submission of Matters
     "5": date(2005, 12, 1),    # retitled to add Issuer Purchases
     "6": date(2021, 2, 10),    # S-K amendment: Selected Financial Data -> [Reserved]
-    "10": date(2003, 8, 14),
+    # Release 33-8048 put the equity-compensation-plan table in item 12 and
+    # lengthened its caption: FY ends on/after 2002-03-15 (ADR-023 §b).
+    "12": date(2002, 3, 15),
+    # Release 33-8732A gave item 10 "and Corporate Governance" and item 13
+    # "and Director Independence" in one stroke: FY ends on/after 2006-12-15.
+    # NOT the SOX date — ba-2003 and nike-2006 rendered a 2006 caption over a
+    # heading that reads the older one for three years (ADR-023 §c, §d).
+    "10": date(2006, 12, 15),
+    "13": date(2006, 12, 15),
     "14": date(2003, 8, 14),   # 14 became Fees when Exhibits moved to 15
-    "15": date(2003, 8, 14),
+    # Item 15 kept "and Reports on Form 8-K" until Release 33-8400 killed the
+    # 8-K listing requirement — the SAME release that created 9B, so this reuses
+    # 9B's period-end boundary above rather than inventing a second one.
+    "15": date(2004, 5, 23),
 }
 # ...and one code changes PART, not just title, at the same boundary.
 LEGACY_PART = {"14": "IV"}
@@ -585,16 +620,69 @@ def _demo():
     assert "9B" not in expected_items(date(2003, 12, 31))
     assert "9B" in expected_items(date(2004, 12, 31))
 
+    # ADR-023: a retitle is its own rule with its own date. The eval cases pin
+    # these on real filings (era-label-*.json); the boundaries themselves are
+    # asserted here, on both sides, because a date is cheaper to check than a
+    # fixture and the corpus has no filing at some of these edges.
+    assert item_label("12", date(2001, 12, 29))[1].endswith("Management")   # 33-8048,
+    assert item_label("12", date(2002, 3, 15))[1].endswith("Matters")       # both sides
+    assert item_label("10", date(2006, 5, 31))[1] == "Directors and Executive " \
+        "Officers of the Registrant"                                       # nike-2006
+    assert item_label("10", date(2006, 12, 15))[1] == "Directors, Executive " \
+        "Officers and Corporate Governance"                                # 33-8732A
+    assert item_label("13", date(2006, 5, 31))[1] == "Certain Relationships and " \
+        "Related Transactions"
+    assert item_label("13", date(2006, 12, 15))[1].endswith("Director Independence")
+    assert item_label("15", date(2003, 12, 31))[1].endswith("Reports on Form 8-K")
+    assert item_label("15", date(2004, 5, 23)) == ("IV", "Exhibits, Financial "
+                                                   "Statement Schedules")
+    # ...and the one that has no boundary to move: item 5's legacy caption is a
+    # wording fix, not a date fix (Reg S-K Item 201 says "common equity").
+    assert "Common Equity" in item_label("5", date(1993, 12, 31))[1]
+    # Item 5's DATE, however, does move, and until PR #17 R1 nothing could see
+    # it: era-label-bac-2006 asserts the modern caption at period end
+    # 2006-12-31, which bounds ALIAS_FROM["5"] from ABOVE and is blind to every
+    # earlier value — including 2004-03-15, the one ADR-023 §f argues is
+    # probably right. Two-sided here, so §f's own candidate move goes red.
+    # This deliberately pins a value §f doubts: while there is no fixture in
+    # the 2004-03-15 → 2005-12-01 band to decide it, moving the constant has to
+    # be a decision someone makes in the open, not a silent edit.
+    assert item_label("5", date(2005, 11, 30))[1].startswith(
+        "Market for the Registrant's Common Equity")            # day before
+    assert item_label("5", date(2005, 12, 1))[1].endswith(
+        "Issuer Purchases of Equity Securities")                # ...and the day of
+    # Item 6 (PR #17 R5): setting it to date(1990, 1, 1) relabels "Selected
+    # Financial Data" as "[Reserved]" on 26 committed fixtures and the gate
+    # stayed green. WHICH DATE THIS
+    # PINS, plainly: 2021-02-10, the constant in force — Release 33-10890's
+    # effective date, from which a filer MAY write "[Reserved]". The mandatory
+    # date is 2021-08-09 (FY ends on/after), and ADR-023 §g leaves the choice
+    # between them open because either one mislabels somebody in the six-month
+    # window and no fixture sits inside it to decide. So this assert is not a
+    # claim that 2021-02-10 is right; it is the claim that changing it is a
+    # decision, which is exactly what §g says is still owed.
+    assert item_label("6", date(2021, 2, 9))[1] == "Selected Financial Data"
+    assert item_label("6", date(2021, 2, 10))[1] == "[Reserved]"
+    # Item 4 carries the same shape and was not asserted until PR #17 R8:
+    # item_label's Reserved-window guard reads `< ALIAS_FROM["4"]`, so the
+    # guard and the constant move together and an in-band move goes unseen —
+    # date(2016, 1, 1) renders "Reserved" over msft-2013, spatz-2014, cvx-2015
+    # and reac-2015, date(2010, 1, 31) renders "Mine Safety Disclosures" over
+    # wmt-2010, and the gate stayed green for both. These two lines assert the
+    # 2011-12-15 boundary from each side.
+    assert item_label("4", date(2011, 12, 14))[1] == "Reserved"
+    assert item_label("4", date(2011, 12, 15))[1] == "Mine Safety Disclosures"
+
     # a trailing cross-reference index must not make the real body headings
     # look like a table of contents (intc-2002 / tgt-2002: every code resolved
     # to the echo and the filing reported success on 0.47% of its own text)
     body = "".join(f"Item {c}. {t}\n" + "z" * 3000 + "\n" for c, t in
                    [("1", "Business"), ("2", "Properties"), ("3", "Legal Proceedings"),
-                    ("5", "Market for the Registrant's Common Stock and Related "
+                    ("5", "Market for the Registrant's Common Equity and Related "
                           "Stockholder Matters"), ("6", "Selected Financial Data")])
     echo = "".join(f"Item {c}. {t}\n" for c, t in
                    [("1", "Business"), ("2", "Properties"), ("3", "Legal Proceedings"),
-                    ("5", "Market for the Registrant's Common Stock and Related "
+                    ("5", "Market for the Registrant's Common Equity and Related "
                           "Stockholder Matters"), ("6", "Selected Financial Data")])
     exp3 = ["1", "2", "3", "5", "6"]
     got3 = assign_boundaries(filter_candidates(find_candidates(echo + body + echo, exp3))[0],
@@ -628,7 +716,7 @@ def _demo():
     # fixture: no filing in either set reaches it, and §0a records the search.
     shell_codes = [("1", "Business"), ("1A", "Risk Factors"), ("2", "Properties"),
                    ("3", "Legal Proceedings"),
-                   ("5", "Market for the Registrant's Common Stock and Related "
+                   ("5", "Market for the Registrant's Common Equity and Related "
                          "Stockholder Matters")]
     shell_toc = "".join(f"Item {c}. {t} .... {i + 3}\n"
                         for i, (c, t) in enumerate(shell_codes))

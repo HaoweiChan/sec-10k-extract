@@ -1,0 +1,56 @@
+{
+  "pr": 17,
+  "round": 3,
+  "role": "implementer",
+  "scope": "bounded round, acceptance branch (b) — R8 alone; R5, R6, R7 confirmed closed and untouched",
+  "gate_after_repair": "invariant 13/13 = 1.000; fast 51/51 = 1.000 (baseline 1.000, unchanged)",
+  "resolutions": [
+    {
+      "id": "R8",
+      "disposition": "fixed",
+      "confirmed": true,
+      "covering_assert": "src/sec10k/segment.py::_demo — assert item_label(\"4\", date(2011, 12, 14))[1] == \"Reserved\" and assert item_label(\"4\", date(2011, 12, 15))[1] == \"Mine Safety Disclosures\"",
+      "why_it_was_invisible": "item_label's Reserved-window guard reads `date(2010,1,1) <= period_end < ALIAS_FROM[\"4\"]`, so the guard and the constant move together: the window grows or shrinks with the date and no label is ever left unassigned, which is what let an in-band move pass the suites.",
+      "red_runs": [
+        {
+          "mutation": "ALIAS_FROM[\"4\"] = date(2016, 1, 1)",
+          "command": "python3 -m src.sec10k.segment",
+          "result": "AssertionError at src/sec10k/segment.py:674 — assert item_label(\"4\", date(2011, 12, 15))[1] == \"Mine Safety Disclosures\"; exit 1"
+        },
+        {
+          "mutation": "ALIAS_FROM[\"4\"] = date(2013, 12, 31)",
+          "command": "python3 -m src.sec10k.segment",
+          "result": "AssertionError at src/sec10k/segment.py:674 — assert item_label(\"4\", date(2011, 12, 15))[1] == \"Mine Safety Disclosures\"; exit 1"
+        },
+        {
+          "mutation": "ALIAS_FROM[\"4\"] = date(2010, 1, 31)",
+          "command": "python3 -m src.sec10k.segment",
+          "result": "AssertionError at src/sec10k/segment.py:673 — assert item_label(\"4\", date(2011, 12, 14))[1] == \"Reserved\"; exit 1 (this one fails on the earlier side, which is the two-sided shape doing its job)"
+        }
+      ],
+      "verification_note": "Verified at the in-band dates R8 names, not at extremes. The round-2 sweep used date(1990,1,1)/date(2099,1,1) and was read as evidence of coverage it had not tested; that artifact line is now scoped to say so.",
+      "claims_deleted": [
+        {
+          "where": "src/sec10k/segment.py, item-6 comment",
+          "before": "# Item 6 was the LAST unpinned entry in this table (PR #17 R5): setting it to date(1990, 1, 1) relabels ...",
+          "after": "# Item 6 (PR #17 R5): setting it to date(1990, 1, 1) relabels ... — clause removed, nothing put in its place"
+        },
+        {
+          "where": "tasks/TODO.md, Origin: PR #17 R3 row",
+          "before": "What is true, from a mutation sweep over all eight keys run 2026-08-20 (each key set to 1990-01-01 and to 2099-01-01, both directions executed): all eight are now pinned — seven go red in `segment._demo`, and `\"4\"` goes red in the fast suite at 50/51 = 0.980 — but **pinned is not correct**: ...",
+          "after": "two earlier versions of this cell claimed table-wide coverage the checks did not have, the second on the strength of a sweep run at extreme dates (1990/2099), which trip a different guard than an in-band move. No coverage claim replaces them. What stands on its own: a boundary assert in `segment._demo` makes a move visible, and visible is not correct — the §f / §g caveats about \"5\" and \"6\" are kept, the coverage sentence is gone"
+        },
+        {
+          "where": "prompts/010-t14-taxonomy-completeness-and-10ka.md, fourth chain entry",
+          "before": "an **executed mutation sweep over all eight `ALIAS_FROM` keys, both directions**, before rewriting the sentence: seven caught by `_demo`, `\"4\"` caught by the fast suite at 50/51, none uncaught. ... pinned (executed, now true of all eight) and correct ...",
+          "after": "the sweep is described by the dates it actually used, R8's hole is recorded as the thing it missed, and the entry ends on what stopped the regeneration: deleting the claim rather than tightening it"
+        }
+      ],
+      "beyond_the_three_named_locations": "One further edit, flagged rather than silent: tasks/reviews/pr17-r2-resolution.json repeated the same sentence ('eight of eight pinned in both directions ... none uncaught') and would otherwise stay in the PR as a document of record known to be false. Its executed_sweep field is now scoped to the dates the sweep used, with a dated R8 correction, and one phrase in the same file ('invisible to every check') is narrowed to 'invisible to the gate and the self-check'. No disposition in that artifact changed.",
+      "no_debt_row": "None added, per the instruction — R8 is fixed here, not deferred.",
+      "universals_grep": "git diff -U0 | grep '^+' | grep -inE '\\b(every|all eight|all [0-9]+|none|last|only|fully|exhaustive)\\b' returns exactly one line: the tasks/TODO.md debt row whose identity is the reviewer's own R3 finding quoted verbatim ('says every date in the table is written by a rule keying on fiscal-period end'). That is a quotation of a finding, not a claim about what the checks cover, and editing it would corrupt the debt record."
+    }
+  ],
+  "rejected": [],
+  "notes": "No check was weakened or removed this round; the diff adds two asserts and removes three sentences."
+}

@@ -1,0 +1,25 @@
+{
+  "id": "era-label-ba-2003",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {"path": "evals/fixtures/ba-2003/filing.htm"},
+  "expect": {
+    "checks": [
+      {"type": "item_field", "item": "10", "field": "title", "value": "Directors and Executive Officers of the Registrant"},
+      {"type": "item_field", "item": "13", "field": "title", "value": "Certain Relationships and Related Transactions"},
+      {"type": "item_field", "item": "15", "field": "title", "value": "Exhibits, Financial Statement Schedules, and Reports on Form 8-K"},
+      {"type": "item_field", "item": "15", "field": "part", "value": "IV"},
+      {"type": "item_field", "item": "12", "field": "title", "value": "Security Ownership of Certain Beneficial Owners and Management and Related Stockholder Matters"},
+      {"type": "confidence", "item": "12", "value": 0.95},
+      {"type": "confidence", "item": "13", "value": 0.95},
+      {"type": "confidence", "item": "15", "value": 0.95},
+      {"type": "item_field", "item": "14", "field": "title", "value": "Principal Accountant Fees and Services"},
+      {"type": "item_field", "item": "14", "field": "part", "value": "III"}
+    ]
+  },
+  "triage": {
+    "class": "era-boundary",
+    "note": "Two wrong ALIAS_FROM boundaries, on one filing, in opposite directions from the same 2003-08-14 date the table reused for four codes at once. (a) ALIAS_FROM['10'] = 2003-08-14 assumes Item 10 became 'Directors, Executive Officers and Corporate Governance' with the SOX controls renumbering. It did not: that caption arrived three years later with Release 33-8732A, for fiscal years ending on or after 2006-12-15. This filing's period ends 2003-12-31, so it rendered the 2006 caption over a section whose own heading reads 'Item 10. Directors and Executive Officers of the Registrant*'. (b) ALIAS_FROM['15'] = 2003-08-14 assumes Item 15 dropped 'and Reports on Form 8-K' at the same moment. It did not: that clause survived until Release 33-8400 eliminated the Form 8-K listing requirement effective 2004-08-23 -- the SAME release that created Item 9B, whose period-end boundary this table already carries as ADDED['9B'] = 2004-05-23. Item 15's legacy alias is also wrong on its own terms: 'Exhibits and Financial Statement Schedules' is a wording no era of Item 15 ever had (it is a filer variant, seen on nike-2006 and cat-2023), so before the fix a filing in the 2002-2004 window could render neither the caption it should nor any caption the form ever used. MEASURED PRE-FIX (2026-08-20): item 10 title 'Directors, Executive Officers and Corporate Governance', item 13 title 'Certain Relationships and Related Transactions, and Director Independence', item 15 title 'Exhibits, Financial Statement Schedules'."
+  },
+  "provenance": "AUTHORED FROM THE COMMITTED FIXTURE, no new fixture: Boeing FY2003 10-K (full public-source provenance in evals/fixtures/README.md; see also ba-2003-shallow.json and the ba-2003-asterisk-ibr debt case). AUTHORITY: Item 10 and Item 13 -- Release 33-8732A, 'Executive Compensation and Related Person Disclosure', which registrants comply with in Forms 10-K for FISCAL YEARS ENDING ON OR AFTER 2006-12-15 (a period-end-keyed date, so the table's key and the rule's key agree exactly). Item 15 -- created at that number by Release 33-8124 (2002-08-29), which moved the old Item 14 and its caption down when Controls and Procedures took Item 14, and stripped of its 'and Reports on Form 8-K' clause by Release 33-8400, 'Additional Form 8-K Disclosure Requirements and Acceleration of Filing Date' (adopted 2004-03-16, effective 2004-08-23). CORPUS CORROBORATION from headings the filers wrote: the 8-K clause is present on all four fixtures inside the window -- gs-2002 (period end 2002-11-29), intc-2002 (2002-12-28), tgt-2002 (2003-02-01) and this one (2003-12-31, 'Item 15. Exhibits, Financial Statement Schedules, and Reports on Form 8-K') -- and absent from every fixture after it (bac-2006, wfc-2008, sgrp-2019). No fixture has a period end between 2004-05-23 and 2006-05-31, so the asserted boundary sits inside an empty band, the same one-sided position ADR-010 ruling 2 and SOX_INTERIM already occupy. The last three checks are green before and after and are the anti-overshoot guards: item 12 must KEEP the suffixed caption here (this filing is 21 months past the 2002-03-15 boundary even though its own heading, 'Item 12. Security Ownership of Certain Beneficial Owners and Management', lags the rule -- the label is canonical, not copied), and item 14 must stay 'Principal Accountant Fees and Services' in Part III, i.e. widening the 10/13/15 windows must not drag item 14's own 2003-08-14 boundary or SOX_INTERIM's upper edge with it. WATCHED RED before any code change -- see the commit that adds this file. NOT yet dual-passed by extraction-auditor: pending, per case-authoring step 8."
+}

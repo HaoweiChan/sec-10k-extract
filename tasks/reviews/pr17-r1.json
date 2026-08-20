@@ -1,0 +1,44 @@
+{
+  "pr": 17,
+  "round": 1,
+  "result": "REQUEST_CHANGES",
+  "gate": "invariant 13/13 = 1.000; fast 51/51 = 1.000 (baseline 1.000, unchanged)",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-023 §f, the new TODO debt row, era-label-bac-2006.json and prompts/010 all claim the item-5 check pins ALIAS_FROM[\"5\"] and \"goes red the day someone moves the constant without the fixture that justifies it\" — it does not: the exact move the debt row contemplates (2005-12-01 -> 2004-03-15) leaves the entire gate and the self-check green.",
+      "evidence": "specs/decisions/ADR-023-era-label-corrections.md:143 (\"pinned as current behaviour by era-label-bac-2006.json's item-5 check, which goes red the day someone moves the constant\"), repeated in tasks/TODO.md:70, evals/adversarial/era-label-bac-2006.json provenance, prompts/010-t14-taxonomy-completeness-and-10ka.md:137. The check is {\"item\":\"5\",\"field\":\"title\",\"value\":\"Market for Registrant's Common Equity, Related Stockholder Matters and Issuer Purchases of Equity Securities\"} on a fixture whose period end is 2006-12-31, so it only constrains ALIAS_FROM[\"5\"] <= 2006-12-31 — it is blind to every earlier value, including the one §f argues is correct. segment.py's new _demo adds no date assert for item 5 either (only `\"Common Equity\" in item_label(\"5\", date(1993,12,31))[1]`).",
+      "repro": "In the T14 worktree: set ALIAS_FROM[\"5\"] = date(2004, 3, 15) in src/sec10k/segment.py, then `python3 -m evals.run --suite fast --no-report` -> 51/51 = 1.000, `python3 -m evals.run --suite invariant --no-report` -> 13/13 = 1.000, `python3 -m src.sec10k.segment` -> \"[segment self-check] ok\". (Only a move later than 2006-12-31 is caught: date(2007,1,1) -> fast 50/51.)",
+      "acceptance": "Either add a two-sided assert in segment._demo that pins ALIAS_FROM[\"5\"] on both edges (as was done for 12/10/13/15), so the mutation above goes red, or restate the four claims to say what is actually pinned — an upper bound of 2006-12-31 and nothing else — and say plainly that no check can see a move in the 2004-03-15 -> 2005-12-01 direction."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-023's Consequences assert that a wrong era label was invisible to every other check type — \"no status, offset, confidence, warning or doc_status moves\" — but the fix moves `confidence` from 0.75 to 0.95 on 10 item spans across 5 committed fixtures, and no eval case pins either the old or the new value.",
+      "evidence": "specs/decisions/ADR-023-era-label-corrections.md:174 and the same claim in evals/adversarial/era-label-ge-1994.json triage (\"No status, offset, confidence or warning moves — item_field is still the only check type that can see any of it\"). Root cause: src/sec10k/validate.py:199 `base = BASE_STRICT if ev.get(\"title_similarity\",0) >= 0.8 else BASE_WEAK`, and title_similarity is computed against TITLES aliases, which this diff edits. Measured main (f10bb6d) vs task/T14 over all 37 fixtures: ba-2003 items 12/13/15, gs-2002 item 15, ibm-1997 item 12, intc-2002 items 5/15, tgt-2002 items 12/13/15 all go 0.75 -> 0.95. Four of those five fixtures (gs-2002, ibm-1997, intc-2002, tgt-2002) have no new case at all, and their item titles change too.",
+      "repro": "For each fixture dir, run `src.sec10k.extract.extract_items(<primary file>)` on main and on task/T14 and diff items[*].confidence — e.g. ba-2003 item 15: 0.75 on main, 0.95 on the branch; fast stays 51/51 on both, proving no case reads the field.",
+      "acceptance": "Add at least one `confidence` check on an affected item (e.g. ba-2003 item 15 = 0.95, which would have been red pre-fix) and correct the ADR/case sentence so it no longer claims confidence is untouched by an era-label defect."
+    },
+    {
+      "id": "R3",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The new header comment on ALIAS_FROM states that every date in the table is written by a rule that keys on fiscal-period end \"except '5'\", which the same diff contradicts for \"15\" and ADR-023 §g contradicts for \"6\".",
+      "evidence": "src/sec10k/segment.py:133 (\"Every date here keys on period end AND is written by a rule that keys on fiscal-period end too, except \\\"5\\\"\"). Three lines below, the \"15\" entry is 2004-05-23 because Release 33-8400 is an *effective-date* rule (ADR-023 §e: \"adopted 2004-03-16, effective 2004-08-23\") converted through the ADR-010 ruling-2 period-end compromise that ADDED[\"9B\"] already carries; .claude/skills/sec10k-domain/SKILL.md writes it as \"2004-05-23 (eff. 2004-08-23)\". ALIAS_FROM[\"6\"] = 2021-02-10 is likewise 33-10890's early-compliance/effective date, not a period-end key — ADR-023 §g says the period-end-keyed date is 2021-08-09. The adjacent claim \"each one below now names the release it comes from\" is also false for entries 4, 5, 6 and 14, which name no release.",
+      "repro": "Read src/sec10k/segment.py:127-152 against ADR-023 §e and §g; no code change needed.",
+      "acceptance": "The comment names the two entries that are period-end compromises rather than period-end rules (15 via 9B's convention, 6 via the early-compliance date), so a future maintainer does not read 2004-05-23 or 2021-02-10 as a rule date."
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "ADR-023's Pass-1 finding \"every ADDED date is the right rule's\" is qualified out of existence by §g and by the pre-existing 9B/9C entries, which are admittedly one-sided approximations rather than the rule's date.",
+      "evidence": "specs/decisions/ADR-023-era-label-corrections.md, Context (\"Pass 1 came back clean … every ADDED date is the right rule's\") vs §g (\"ADDED[\\\"7A\\\"] carries only the first date, so a small FY1997 registrant is expected to have an item it was exempt from\") and src/sec10k/segment.py:75-95, where ADDED[\"9B\"]=2004-05-23 and ADDED[\"9C\"]=2021-10-01 are explicitly derived boundaries, not rule dates.",
+      "repro": "Read the two sections of ADR-023 side by side.",
+      "acceptance": "Pass-1's summary sentence is scoped (\"every ADDED date derives from the right release; two are period-end approximations of filing-date rules and 7A carries one of two phase-in dates — see §g\")."
+    }
+  ]
+}

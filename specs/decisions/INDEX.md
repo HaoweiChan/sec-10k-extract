@@ -27,6 +27,8 @@ its ruling and what enforces it. Full context — Context/Decision/Consequences
 - ADR-020 — no LLM fallback ships; the one real recall gap is closed by a $0 deterministic fix instead — enforced by `specs/001-sec10k-contract.md` method enum
 - ADR-021 — `evals/bench.py` is the committed source of every perf/cost number, replacing v3's uncited §3/§4/§5 figures — enforced by `evals/bench.py --self-check`, `evals/bench.py --check-docs`
 - ADR-022 — `tasks/DONE.md` is the second sanctioned ledger; a row leaves TODO.md only with no `UNRUN` gate — enforced by `tasks/DONE.md` line format · amends ADR-009
+- ADR-023 — a retitle is its own rule with its own date: five era-label corrections (items 5, 10, 12, 13, 15), item set unchanged — enforced by `evals/adversarial/era-label-*.json`, `src/sec10k/segment.py::_demo` · amends ADR-010, ADR-015
+- ADR-024 — 10-K/A stays out of scope; the refusal is asserted on both detection routes, not left to `ACCEPTED_FORMS` — enforced by `src/sec10k/normalize.py::_demo`
 
 Amended-by is also recorded on each amended ADR's own Status line — this
 index only cross-references it for scanning.

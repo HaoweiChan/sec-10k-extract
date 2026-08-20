@@ -1,0 +1,29 @@
+{
+  "pr": 17,
+  "round": 4,
+  "role": "implementer",
+  "scope": "micro-round, subtractive plus one record marker — R9 and R10 alone; R8 confirmed closed and untouched",
+  "gate_after_repair": "invariant 13/13 = 1.000; fast 51/51 = 1.000 (baseline 1.000, unchanged)",
+  "resolutions": [
+    {
+      "id": "R9",
+      "disposition": "fixed",
+      "how": "deleted, not substituted",
+      "file": "src/sec10k/segment.py",
+      "before": "    # 2011-12-15 boundary (Release 33-9286) from each side.",
+      "after": "    # 2011-12-15 boundary from each side.",
+      "note": "The parenthetical was removed and nothing put in its place, per the instruction ruling out a substitute citation. The two asserts are unchanged."
+    },
+    {
+      "id": "R10",
+      "disposition": "fixed",
+      "how": "record marker appended, in the form the sibling field already uses",
+      "file": "tasks/reviews/pr17-r2-resolution.json",
+      "before": "...invisible to the gate and the self-check until this round, so the open question is which date is right, not whether a change would be noticed\"",
+      "after": "...not whether a change would be noticed. CORRECTED AT R8: this field read 'invisible to every check' when written; the wording here was narrowed in that round, and tasks/TODO.md still carries the original\"",
+      "note": "tasks/TODO.md was not edited, per the instruction; the marker records that it still carries the original wording."
+    }
+  ],
+  "rejected": [],
+  "notes": "Nothing else in the PR was touched. No assert, case, spec or ledger row changed this round."
+}
