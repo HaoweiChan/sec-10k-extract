@@ -669,7 +669,7 @@ def _demo():
     # date(2016, 1, 1) renders "Reserved" over msft-2013, spatz-2014, cvx-2015
     # and reac-2015, date(2010, 1, 31) renders "Mine Safety Disclosures" over
     # wmt-2010, and the gate stayed green for both. These two lines assert the
-    # 2011-12-15 boundary (Release 33-9286) from each side.
+    # 2011-12-15 boundary from each side.
     assert item_label("4", date(2011, 12, 14))[1] == "Reserved"
     assert item_label("4", date(2011, 12, 15))[1] == "Mine Safety Disclosures"
 
