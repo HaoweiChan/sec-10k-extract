@@ -1,0 +1,14 @@
+{
+  "pr": 17,
+  "round": 5,
+  "scope": "round-5 subtractive repair diff 7a69478..HEAD; closure check on R9 and R10",
+  "result": "APPROVED",
+  "gate": "invariant 13/13 = 1.000; fast 51/51 = 1.000 (baseline 1.000, unchanged)",
+  "findings": [],
+  "standing_findings_closed": {
+    "R9": "CLOSED — the '(Release 33-9286)' parenthetical is deleted, with no citation substituted. Orchestrator-confirmed: grep for 9286 over src/ specs/ docs/ .claude/ tasks/ prompts/, excluding tasks/reviews/, returns nothing.",
+    "R10": "CLOSED — pr17-r2-resolution.json:18 now carries the same dated 'CORRECTED AT R8:' marker its sibling executed_sweep field uses, and states that tasks/TODO.md still carries the original wording. tasks/TODO.md was deliberately not edited."
+  },
+  "orchestrator_note": "The reviewer's round-4 acceptance for R9 offered three options, one of which was substituting 'Dodd-Frank §1503'. The orchestrator ruled that option out before the repair and told the round-5 reviewer that a substituted citation counts as non-compliance rather than an improvement: substituting a citation asserts the substitute is correct, which is a new claim, which is the defect class this PR fought from R1 onward. The repair was constrained to be subtractive, and the whole round's diff outside reports and review artifacts is one added line — the survivor of the deletion.",
+  "defect_class_summary": "Five review rounds, one recurring class: a claim written faster than it was checked (R1 -> R5 -> R8 -> R9), each fix correct but each carrying a new unverified sentence in its explanation. It closed only when the round's instruction forbade writing prose rather than asking for care. Note the class also caught the orchestrator's own round-3 verification, which swept extreme dates (1990/2099) and reported coverage it had not established."
+}
