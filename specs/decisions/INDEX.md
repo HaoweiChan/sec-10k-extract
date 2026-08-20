@@ -13,7 +13,7 @@ its ruling and what enforces it. Full context — Context/Decision/Consequences
 - ADR-006 — iXBRL metadata skipped, HTML newlines collapse, txt newlines pass through, txt entities undecoded — enforced by `evals/adversarial/ixbrl-hidden-metadata.json`
 - ADR-007 — same-line heading rule + per-candidate TOC-cluster filter, thresholds measured not guessed — enforced by `evals/adversarial/toc-titled.json` · amended by ADR-010, ADR-013, ADR-015
 - ADR-008 — six label-free validators kept, four rejected as measured false-positive generators — enforced by `src/sec10k/validate.py` · amended by ADR-013
-- ADR-009 — exactly one milestone ledger (`tasks/TODO.md`), UNRUN gates written explicitly, never omitted — enforced by `tasks/TODO.md` convention · amended by ADR-021
+- ADR-009 — exactly one milestone ledger (`tasks/TODO.md`), UNRUN gates written explicitly, never omitted — enforced by `tasks/TODO.md` convention · amended by ADR-022
 - ADR-010 — fixes 4 silent-success bugs: date parsing, 9C boundary, IBR pointer-sentence scope, collapse-before-form-identity — enforced by `evals/adversarial/fy2021-item-9c.json` · amended by ADR-015, ADR-017
 - ADR-011 — IBR items carry real offsets, checked by every span-level check like any other status — enforced by `specs/000-invariants.md` INV-S1
 - ADR-012 — `.eval-baseline.json["fast"]` armed at 1.000, invariant suite stays unbaselined — enforced by `evals/run.py`, `.github/workflows/ci.yml`
@@ -25,7 +25,8 @@ its ruling and what enforces it. Full context — Context/Decision/Consequences
 - ADR-018 — `BASE_MISSING` phantom collapsed (0.55→0.40), shadow scale deleted, no remap-to-empirical — enforced by `src/sec10k/validate.py::_demo`
 - ADR-019 — silent-failure rate measured at 1/30 sampled (3.3%); `EXEC_OFFICERS_RE` boundary fix ships — enforced by `evals/oracle.py`, `src/sec10k/segment.py`
 - ADR-020 — no LLM fallback ships; the one real recall gap is closed by a $0 deterministic fix instead — enforced by `specs/001-sec10k-contract.md` method enum
-- ADR-021 — `tasks/DONE.md` is the second sanctioned ledger; a row leaves TODO.md only with no `UNRUN` gate — enforced by `tasks/DONE.md` line format · amends ADR-009
+- ADR-021 — `evals/bench.py` is the committed source of every perf/cost number, replacing v3's uncited §3/§4/§5 figures — enforced by `evals/bench.py --self-check`, `evals/bench.py --check-docs`
+- ADR-022 — `tasks/DONE.md` is the second sanctioned ledger; a row leaves TODO.md only with no `UNRUN` gate — enforced by `tasks/DONE.md` line format · amends ADR-009
 
 Amended-by is also recorded on each amended ADR's own Status line — this
 index only cross-references it for scanning.

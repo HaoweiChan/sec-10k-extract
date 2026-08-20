@@ -1,4 +1,4 @@
-# ADR-021 — The DONE split: a second sanctioned ledger file, and the rule that keeps its gates observable
+# ADR-022 — The DONE split: a second sanctioned ledger file, and the rule that keeps its gates observable
 
 Date: 2026-08-20. Status: accepted. Amends: ADR-009.
 

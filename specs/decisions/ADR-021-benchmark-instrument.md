@@ -5,6 +5,12 @@ instrument, `evals/bench.py`. Changes no pipeline code, no eval case, no
 baseline. Supersedes the measurements — not the structure — of
 `docs/analysis-report.md` v3 §3, §4 and §5, which v4 replaces.
 
+**Ruling**: add `evals/bench.py` (stdlib-only, dev instrument, `evals/oracle.py` precedent) as the committed, re-runnable source of every perf/cost number in `docs/analysis-report.md`; throw away v3's §3/§4/§5 figures, which cited nothing and were measured over a stale 21-fixture corpus.
+**Because**: T13's own Validation gate ("every number measured from committed `evals/report/` runs, none guessed") was not met by ad-hoc prose timing that left nothing reproducible behind.
+**Enforced by**: `evals/bench.py --self-check`, `evals/bench.py --check-docs`, `docs/analysis-report.md` v4
+
+---
+
 ## a) The problem T13 actually had
 
 T13's Validation gate reads: *every number measured from committed

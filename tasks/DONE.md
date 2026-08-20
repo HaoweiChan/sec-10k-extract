@@ -1,12 +1,14 @@
 # Milestone ledger — DONE (cold storage)
 
-Append-only, one line per milestone, per [ADR-021](../specs/decisions/ADR-021-done-split.md)
+Append-only, one line per milestone, per [ADR-022](../specs/decisions/ADR-022-done-split.md)
 (amends [ADR-009](../specs/decisions/ADR-009-milestone-ledger.md)). A row
 lands here only once its Status carried no `UNRUN` gate — the full row text
 (Contents, Reviewer evidence, complete Validation prose) stays in git history
 at the pre-split commit, **cc6de9f6cbc5746ddf417dfa0649d9701afa9ce1**
-(`git show cc6de9f:tasks/TODO.md`). Live milestones stay in
-[`tasks/TODO.md`](TODO.md).
+(`git show cc6de9f:tasks/TODO.md`), except **T13**, added to `TODO.md` after
+that split point by `c802e90` (`git show c802e90:tasks/TODO.md`) and archived
+here in the same commit that reconciled the two branches. Live milestones
+stay in [`tasks/TODO.md`](TODO.md).
 
 - T1 — Planning package (2026-08-15) — validation: methodology audit ran, disposed in `docs/evals/audits/2026-08-15-methodology.md`
 - T2 — Eval expansion r1 + deploy spike (2026-08-15) — validation: dual-pass audit ran, disposed in `docs/evals/audits/2026-08-15-t2-dualpass.md`
@@ -22,3 +24,4 @@ at the pre-split commit, **cc6de9f6cbc5746ddf417dfa0649d9701afa9ce1**
 - T10 — A2 — confidence calibration (2026-08-18) — validation: measured table landed before any remap, both audits disposed, in `specs/decisions/ADR-018-confidence-calibration.md`
 - T11 — A3 — silent-failure rate (2026-08-19) — validation: rate sampled and adjudicated by the extraction-auditor, OSS cross-check disposed in `specs/decisions/ADR-019-silent-failure-rate.md`
 - S1 — Make the repo public (2026-08-17) — validation: `gh repo view` confirms PUBLIC, pre-flight secret scan disposed in `tasks/TODO.md` row history (see pre-split commit)
+- T13 — A5 — perf/cost/scalability numbers (2026-08-20) — validation: `evals/bench.py` instrument watched red first (self-check + 30 mutations), disposed in `specs/decisions/ADR-021-benchmark-instrument.md`; four review rounds (PR #12) resolved 24/31 findings, R25–R31 carried as debt rows in `tasks/TODO.md`
