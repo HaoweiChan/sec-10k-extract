@@ -651,9 +651,9 @@ def _demo():
         "Market for the Registrant's Common Equity")            # day before
     assert item_label("5", date(2005, 12, 1))[1].endswith(
         "Issuer Purchases of Equity Securities")                # ...and the day of
-    # Item 6 was the LAST unpinned entry in this table (PR #17 R5): setting it
-    # to date(1990, 1, 1) relabels "Selected Financial Data" as "[Reserved]" on
-    # 26 committed fixtures and the whole gate stayed green. WHICH DATE THIS
+    # Item 6 (PR #17 R5): setting it to date(1990, 1, 1) relabels "Selected
+    # Financial Data" as "[Reserved]" on 26 committed fixtures and the gate
+    # stayed green. WHICH DATE THIS
     # PINS, plainly: 2021-02-10, the constant in force — Release 33-10890's
     # effective date, from which a filer MAY write "[Reserved]". The mandatory
     # date is 2021-08-09 (FY ends on/after), and ADR-023 §g leaves the choice
@@ -663,6 +663,15 @@ def _demo():
     # decision, which is exactly what §g says is still owed.
     assert item_label("6", date(2021, 2, 9))[1] == "Selected Financial Data"
     assert item_label("6", date(2021, 2, 10))[1] == "[Reserved]"
+    # Item 4 carries the same shape and was not asserted until PR #17 R8:
+    # item_label's Reserved-window guard reads `< ALIAS_FROM["4"]`, so the
+    # guard and the constant move together and an in-band move goes unseen —
+    # date(2016, 1, 1) renders "Reserved" over msft-2013, spatz-2014, cvx-2015
+    # and reac-2015, date(2010, 1, 31) renders "Mine Safety Disclosures" over
+    # wmt-2010, and the gate stayed green for both. These two lines assert the
+    # 2011-12-15 boundary (Release 33-9286) from each side.
+    assert item_label("4", date(2011, 12, 14))[1] == "Reserved"
+    assert item_label("4", date(2011, 12, 15))[1] == "Mine Safety Disclosures"
 
     # a trailing cross-reference index must not make the real body headings
     # look like a table of contents (intc-2002 / tgt-2002: every code resolved

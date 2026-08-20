@@ -178,13 +178,16 @@ published figure derived from it stay valid.
   holds an early-compliance date the repo's own §g says mislabels one side of a
   six-month window.
 - Corrected: a two-sided assert for item 6 (red under the reviewer's repro,
-  `AssertionError` at `segment.py:664`), and then — the part that matters — an
-  **executed mutation sweep over all eight `ALIAS_FROM` keys, both directions**,
-  before rewriting the sentence: seven caught by `_demo`, `"4"` caught by the
-  fast suite at 50/51, none uncaught. The lesson is not "check your claims"; it
-  is that a universal quantifier about a table is a script that takes a minute
-  to run, and three rounds went by asserting one from memory instead. The
-  restated sentence also separates the two words that had been fused: pinned
-  (executed, now true of all eight) and correct (still open for `"5"` and `"6"`,
-  by ADR-023 §f and §g).
+  `AssertionError` at `segment.py:664`), and a mutation sweep run before the
+  sentence that replaced it. The sweep set each key to 1990-01-01 and
+  2099-01-01 — extreme dates, which trip a different guard than a plausible
+  in-band move, so it read as coverage it had not tested. R8 found the hole it
+  left: `ALIAS_FROM["4"]` moved to date(2016,1,1) relabels four fixtures with
+  the gate still green, because `item_label`'s Reserved-window guard reads
+  `< ALIAS_FROM["4"]` and moves with the constant. Fixed by a two-sided item-4
+  assert, watched red at three in-band dates. The durable lesson is not "check
+  your claims" and not "run the sweep": a coverage claim about this table
+  regenerated one level narrower in each of three rounds, and what stopped it
+  was deleting the claim rather than tightening it — the assert is the
+  evidence, and it needs no sentence speaking for it.
 
