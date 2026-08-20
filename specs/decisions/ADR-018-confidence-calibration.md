@@ -5,6 +5,12 @@ Date: 2026-08-18. Status: accepted. Implements T10/A2 (layer 9,
 `d3a28df` (metric 8 v2 + report `20260818-123114-all.json`), per T10's gate:
 the table exists in history before any remap does.
 
+**Ruling**: collapse the phantom `BASE_MISSING` (0.55→0.40, exclude `expected_item_missing` from its own penalty), delete `extract.py`'s dead shadow confidence scale, and publish the confidence scale as measured-with-stated-bias rather than uncalibrated; do not remap to the empirical table.
+**Because**: scored pass rates are upper bounds forced green by the gate, so mapping through them would be fake precision — the only real finding was an algebraic double-count, not a magnitude error.
+**Enforced by**: `src/sec10k/validate.py::_demo`, `specs/001-sec10k-contract.md` (confidence bullet), `evals/report/20260818-123114-all.json`
+
+---
+
 ## The measurement
 
 Per distinct confidence value, over the T9-expanded set (44 scored cases over

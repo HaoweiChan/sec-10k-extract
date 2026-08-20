@@ -6,6 +6,12 @@ question that `README.md`, `docs/evals/evaluation-strategy.md` metric 11 and
 `docs/analysis-report.md` §4 currently point at. Enumerates one new debt class
 (`combined-multi-item-heading`) and burns one held-out case (`axp-2008`).
 
+**Ruling**: no LLM fallback ships; `method: llm_fallback` stays in the contract enum, unemitted, and the pipeline stays stdlib-only at $0.00 cost.
+**Because**: six of the seven residual-failure classes are precision failures a recall-only fallback can't reach, and the one real recall gap (`axp-2008`'s combined Part III heading, 4 of 768 items) is closed identically and deterministically by a heading-shape fix at $0.
+**Enforced by**: `specs/001-sec10k-contract.md` (method enum), `evals/adversarial/axp-2008-combined-part-iii.json` (`debt` suite), `evals/adversarial/axp-2008-combined-heading-burned.json`
+
+---
+
 **Corrected three times under review (PR #11, findings R1, R8 and R15) — see
 §h, §h2 and §h3.** The headline moved four times — **0 of 989 → 4 of 989 → 1 of
 768 → 4 of 768** — and three of those four figures were wrong. The final number

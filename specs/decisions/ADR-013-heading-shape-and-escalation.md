@@ -1,8 +1,15 @@
 # ADR-013 — A heading's title may live on the next line; missing items escalate by proportion
 
 Date: 2026-08-16. Status: accepted. Amends ADR-007 (the same-line heading rule)
-and ADR-008 (`AMBIGUOUS_CODES`). Both findings come from H1, the first held-out
-run — `docs/evals/audits/2026-08-16-h1-heldout-triage.md`.
+and ADR-008 (`AMBIGUOUS_CODES`). Amended by: ADR-015. Both findings come from
+H1, the first held-out run —
+`docs/evals/audits/2026-08-16-h1-heldout-triage.md`.
+
+**Ruling**: promote a bare heading's title from the next line when it clears `SIM_FLOOR`, gated by the existing TOC-cluster density filter; escalate `doc_status` to `ambiguous` when missing items exceed 25% of the expected set.
+**Because**: JNJ 2016's real body headings carry the same same-line-absent shape as every TOC entry in the dev set, and losing 18 of 21 items had been reported as a qualified success with nothing able to escalate it.
+**Enforced by**: `evals/adversarial/jnj-bare-headings.json`, `evals/adversarial/items-stripped-escalation.json`
+
+---
 
 ## Ruling 1 — the same-line rule is a default, not a law
 

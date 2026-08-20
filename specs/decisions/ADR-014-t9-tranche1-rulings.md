@@ -1,9 +1,15 @@
 # ADR-014: T9 tranche-1 rulings — the Item 4 Reserved window, and one more abbreviation
 
-Status: accepted, 2026-08-17
+Status: accepted, 2026-08-17. Amended by: ADR-015.
 Driven by: `item4-reserved-window`, `ibr-pointer-window` (both watched red
 before any code moved — hard rule 2), found by `wmt-2010-shallow` on the first
 T9 expansion filing that was chosen to stress IBR density, not these defects.
+
+**Ruling**: model Item 4's 2010-02-28→2011-12-15 "Reserved" era as its own label window, and rejoin the sentence splitter at "No. \<digit\>" so a pointer sentence isn't cut mid-reference.
+**Because**: WMT FY2010's Item 4 heading was in plain sight and still classified `missing`, and its Item 14 IBR pointer was cut by the ordinal in "Proposal No. 2" before the external-document phrase could be seen.
+**Enforced by**: `evals/adversarial/item4-reserved-window.json`, `evals/adversarial/ibr-pointer-window.json`
+
+---
 
 ## 1. Item 4 carries a third era: "Reserved" (2010-02-28 → 2011-12-15)
 

@@ -5,6 +5,12 @@ ruling 3 (the pointer-sentence requirement). Driven by `wfc-2008-shallow`,
 authored from the document and watched red with twelve failing checks before any
 code moved.
 
+**Ruling**: `IBR_RE` tolerates one interposed phrase within a sentence ("incorporated into this report by reference"), and the pointer/external-document signals must both appear within the leading run of pointer sentences, not anywhere in the body.
+**Because**: Wells Fargo FY2008 phrased ten items' pointers across two sentences with non-matching wording, and every one came back `extracted` at 0.95 over a 250–360 char stub.
+**Enforced by**: `evals/golden/wfc-2008-shallow.json`
+
+---
+
 ## The failure
 
 Wells Fargo's FY2008 10-K reports **ten items** — 1A, 3, 6, 7, 7A, 8, 9A, 11,

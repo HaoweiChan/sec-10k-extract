@@ -2,7 +2,14 @@
 
 Date: 2026-08-17. Status: accepted. Amends ADR-007 (the TOC-cluster rule),
 ADR-010 ruling 3 (the IBR remainder), ADR-013 (which declined the era-model
-fix), and ADR-014 §2 (the sentence splitter). Closes the `gs-2002` debt row.
+fix), and ADR-014 §2 (the sentence splitter). Amended by: ADR-019. Closes the
+`gs-2002` debt row.
+
+**Ruling**: a trailing cross-reference index is not evidence a code recurs unless it is that dense run's own last member, and a dense run is only an echo when most of its codes already appeared as a heading outside any dense run; add the 2002-08-29→2003-08-14 interim Item 14/15 numbering and the 2004-05-23 Item 9B boundary; drop the semicolon as a sentence terminator; an internal pointer to another item of the same report doesn't count toward the IBR remainder.
+**Because**: Intel FY2002 and Target FY2002 both collapsed to stub spans — 0.47% and 81%-of-document, respectively — while every existing invariant and validator stayed silent or non-escalating.
+**Enforced by**: `evals/golden/intc-2002-shallow.json`, `evals/golden/tgt-2002-shallow.json`, `evals/golden/ba-2003-shallow.json`, `evals/adversarial/gs-2002-transitional-numbering.json`
+
+---
 
 Driven by three real, unmutated EDGAR filings fetched for T9 tranche 2 and
 authored as goldens **from the documents, before any code moved** (hard rule 2):

@@ -2,6 +2,12 @@
 
 Date: 2026-08-15. Status: accepted.
 
+**Ruling**: extend the output contract additively with document-level fields (`doc_status`, `warnings`, `meta`, `trace`, `timings`, `cost`) and item-level fields (`heading_text`, `method`, `evidence`); v1 fields and rules stay unchanged.
+**Because**: honest failure reporting, confidence inspectability, and a measured analysis report all need fields v1 has no room for.
+**Enforced by**: `specs/001-sec10k-contract.md`; `doc_status` check type in `src/sec10k/eval_adapter.py`
+
+---
+
 ## Context
 
 Contract v1 describes items well but has no document-level semantics: no way

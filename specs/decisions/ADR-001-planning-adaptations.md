@@ -2,6 +2,12 @@
 
 Date: 2026-08-15. Status: accepted.
 
+**Ruling**: Durable docs live in `docs/`; `specs/` stays invariants+contracts+ADRs only; no plan files or task tracker beyond the session; keep cold-reviewer/eval-adversary/spec-drift, add only `extraction-auditor` and `case-authoring`.
+**Because**: the Task 2 planning prompt's proposed shape (`docs/plans/`, 9 feature-spec files, extra subagents/skills) re-implements machinery ADR-000's conventions already provide.
+**Enforced by**: advisory — binds CLAUDE.md `Layout`, `.claude/agents/`, `.claude/skills/`
+
+---
+
 ## Context
 
 The planning prompt (`prompts/001-task2-planning-and-evaluation-design.md`)

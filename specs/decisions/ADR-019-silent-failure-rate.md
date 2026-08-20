@@ -5,6 +5,12 @@ mis-specified span-coverage debt row) and ADR-004 (records, does not resolve,
 a standing disagreement over `cvx-2015` item 6). Ships the Executive-Officers
 boundary fix (`src/sec10k/segment.py`, `EXEC_OFFICERS_RE`).
 
+**Ruling**: measure the silent-failure rate at 1/30 sampled (3.3%, CI [0.1%, 17.2%]) over the 447 confident-but-unchecked items; fix the Executive-Officers boundary bleed across 7 fixtures; retire the mis-specified span-coverage debt row; leave the internal-pointer-to-paginated-section class as recorded, unresolved debt.
+**Because**: metric 6 reads 0.0 by construction (the gate forces every declared check green), so the only way to see the real rate was to sample outside the checked population with an instrument the gate doesn't control.
+**Enforced by**: `docs/evals/audits/2026-08-19-t11-silent-failure-sample.md`, `evals/oracle.py`, `evals/oracle_oss.py`, `src/sec10k/segment.py` (`EXEC_OFFICERS_RE`), `evals/adversarial/cvx-2015-internal-pointer.json`
+
+---
+
 ## a) The definition, and why metric 6 could not measure it
 
 A **silent failure** is an item reported at confidence ≥ 0.8, inside a

@@ -2,6 +2,12 @@
 
 Date: 2026-08-15. Status: accepted.
 
+**Ruling**: B-level HTML→text normalization uses stdlib `html.parser` only — no third-party parsing dependency — unless a real adversarial case defeats it.
+**Because**: determinism is a contract requirement (offsets into `normalized_text`), and ponytail discipline says stdlib first before adding install weight to the most correctness-critical stage.
+**Enforced by**: `evals/adversarial/malformed-html.json`, `evals/adversarial/ixbrl-hidden-metadata.json`; `requirements.txt` (no HTML-parsing deps)
+
+---
+
 ## Context
 
 The pipeline needs HTML → deterministic plain text across three format eras,

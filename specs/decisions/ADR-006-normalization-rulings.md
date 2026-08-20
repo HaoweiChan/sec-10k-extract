@@ -4,6 +4,12 @@ Date: 2026-08-15. Status: accepted. Extends ADR-003 (stdlib-only parsing),
 whose revisit clause required exactly this spike before the pipeline was built
 on the stdlib normalizer.
 
+**Ruling**: skip `ix:header`/`ix:hidden` by element like `script`/`style`; collapse mid-sentence newlines in the HTML/iXBRL era but pass them through verbatim in the pre-2001 txt era; the txt path does not decode entities; the form cross-check compares form families, not raw strings.
+**Because**: the T3 spike (determinism + word-joining across all 13 fixtures) found each of these as a real, measured defect against the ADR-003 canon, not a hypothetical one.
+**Enforced by**: `evals/adversarial/ixbrl-hidden-metadata.json`, `evals/adversarial/html-source-wrap.json`, `evals/golden/ibm-1997-shallow.json`, `evals/golden/textron-2001-structure.json` (`warning_absent` check)
+
+---
+
 ## Context
 
 ADR-003 committed to `html.parser` and named a T3 spike — determinism plus

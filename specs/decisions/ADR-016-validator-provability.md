@@ -6,6 +6,12 @@ validators still have no case proving they fire, and four adapter checks are
 structurally incapable of going red. 25/25 green means less than it appears,
 and saying so is the point of writing it down."*
 
+**Ruling**: dispose every warning code and every previously-unprovable adapter check as fixture, unit, or explicitly ruled; give `verbatim` a real text comparison instead of only bounds.
+**Because**: a check no case can turn red is a claim, not a check — ADR-010 left four validators and four adapter checks in that state.
+**Enforced by**: `src/sec10k/validate.py::_demo`, `evals/adversarial/spans-transposed.json`, `evals/adversarial/ksb-unsupported.json`, `src/sec10k/test_eval_adapter.py::test_checks_that_had_never_gone_red`
+
+---
+
 The rule this ADR applies: **a check that no case can turn red is a claim, not
 a check.** Its thresholds are free to move, its predicate is free to be
 inverted, and the suite stays green either way. That is the same defect ADR-010
