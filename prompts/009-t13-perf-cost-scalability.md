@@ -236,6 +236,11 @@ Round 2's eight findings are, in substance, three statements about round 1.
   correction, it is a place corrections have to land too.** Round 1's own
   finding was "a number is not retracted while a copy of it is still published
   one file over" — and the copy was in the ADR that recorded the retraction.
+  *(And this "swept" was **also false** — round 3's R20 found five per-fixture
+  throughputs still read out of the superseded artifact. Left standing here,
+  corrected, because a prompt record that quietly fixes its own false claim is
+  worth less than one that shows the claim failing twice. What finally worked
+  was not a third sweep; see the round-3 entry below.)*
 
 - Assumed: I could tell which of my statistics were run-unstable by looking at
   two runs.
@@ -261,4 +266,74 @@ Round 2's eight findings are, in substance, three statements about round 1.
 The count worth keeping: across PR #11 and PR #12 this is the **seventh**
 occurrence of asserting a property of an executable thing without running it,
 and two of those seven happened inside the correction for an earlier one.
+
+### Round 3 of PR #12 review — the round where a claim became a mechanism
+
+Authorized by Willy after the delivery loop's three-round circuit breaker
+fired. Five findings, all confirmed, none rejected.
+
+- Assumed: telling the reviewer "swept every number in ADR-021" made it so. I
+  had written that sentence twice, in two documents, after two different
+  sweeps.
+- Eval said: R20. ADR-021 §c still printed `intc-2002` 6.8, `gs-2002` 7.1,
+  `msft-2013` 7.5, `ibm-1997` 33.7, `ko-1997` 26.8 — the **superseded
+  dirty-tree run, digit for digit** — under a header naming the run of record.
+  Third round, same defect, and by now two documents recorded a sweep that had
+  demonstrably not happened.
+- Corrected: not by sweeping again. `--check-docs` extracts every decimal
+  printed within 60 characters of a backticked fixture name, on the same line,
+  and fails unless it is a correct rounding of that fixture's value in the
+  named artifact. **52 checked, 0 unmatched** against the run of record; **22
+  unmatched** against the superseded one — the second number is the evidence,
+  because a check that passes against both artifacts would prove nothing. It
+  found a seventh stale figure the review had not cited. Then, five minutes
+  later, it went red on **prose I had just written for this very fix** —
+  a historical citation of the number it had found — which is the most useful
+  thing it could have done.
+  The lesson generalises past this repo: **a claim that requires a human to
+  re-read six files is not a claim, it is an intention.** The three
+  intentions cost three review rounds; the check cost forty lines.
+
+- Assumed: round 2's inverted `--self-check` closed the unasserted-field class
+  for good, because it compared a whole block instead of listing fields.
+- Eval said: R21 and R22. The golden corpus was **degenerate on exactly the
+  statistic R18 had been raised about** — `latency_p95_s == latency_max_s ==
+  largest_median_s == 0.6`, slowest row == largest row — so `pct(meds, 95)` →
+  `max(meds)` passed while moving the published headline p95. And "the entire
+  published output" meant `perf`: `cost` and `records` sat outside it, and
+  four mutations lived there, one moving §4.1's median filing from **$0.14 to
+  $0.29**.
+- Corrected: widened to the whole payload and de-degenerated the corpus. The
+  part worth keeping is what could *not* be fixed by choosing better numbers:
+  **p95 == max is structural for any n < 20** under nearest-rank, because
+  `ceil(0.95n) == n`. The honest response to "your corpus is degenerate here"
+  was a second corpus, not a better-sounding sentence — and saying so in
+  ADR-021 §b10 is the difference between narrowing a claim and defending it.
+  30 mutations now go red, each applied to a copy and run.
+
+- Assumed: the withdrawn statistics were withdrawn.
+- Eval said: R23. ADR-021 §b2 quoted a repeat-spread **maximum** — a statistic
+  §b11 and report §3.1 both declare unpublishable — three lines above its own
+  correction note saying exactly that, and the value quoted was the most
+  favourable of the three runs.
+- Corrected: not quoted at all. One ADR contradicting itself inside one
+  paragraph is the same defect as an ADR contradicting its artifact, and only
+  one of those two now has a machine behind it.
+
+- Assumed: a finding with no way to fire is a finding you can fix and move on
+  from.
+- Eval said: R24's predicate mismatch was real but **unobservable** — on every
+  committed corpus both predicates agree, so the fix was green before and
+  after and proved nothing.
+- Corrected: built the corpus that separates them (a row whose `min_s` rounds
+  to 0.0 on a coarse clock), watched the mutation red, then kept it. It was
+  the last of the thirty to fall, and it is the clearest small example of this
+  project's whole lesson: **fixed and demonstrated are different words.**
+
+Final count across PR #11 and PR #12: the **sixth through tenth** occurrence of
+asserting a property of an executable thing without running it, three of them
+inside the correction for an earlier one. What ended it was not more care. It
+was two checks that do not depend on anyone being careful — the payload
+inversion and the doc cross-check — and both of them found something the
+reviewers had not.
 

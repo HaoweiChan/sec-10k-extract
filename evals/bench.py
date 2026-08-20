@@ -519,6 +519,13 @@ DOC_ALLOW = {
     ("ADR-021-benchmark-instrument.md", "ksb-2007", "44.1"),   # Verification, the stale figure choice 12 found
     ("analysis-report.md", "msft-2013", "6.6"),                # §3 v3-vs-now row; 6.6 is tgt-2002's
     ("analysis-report.md", "msft-2013", "33.8"),               # §3 v3-vs-now row; 33.8 is ibm-1997's
+    # prompts/009 round-3 entry quotes the five stale values R20 found, as the
+    # evidence for the finding. They are the superseded run's, deliberately.
+    ("009-t13-perf-cost-scalability.md", "intc-2002", "6.8"),
+    ("009-t13-perf-cost-scalability.md", "gs-2002", "7.1"),
+    ("009-t13-perf-cost-scalability.md", "msft-2013", "7.5"),
+    ("009-t13-perf-cost-scalability.md", "ibm-1997", "33.7"),
+    ("009-t13-perf-cost-scalability.md", "ko-1997", "26.8"),
     # -- a number belonging to the NEXT fixture named on the same line
     ("ADR-021-benchmark-instrument.md", "bac-2006", "0.55"),   # §c table: max 0.55 s is jpm-2024's
     # -- cross-run ranges (§3.1): min-max over the three committed clean runs,

@@ -32,7 +32,7 @@ first draft of v4 is superseded rather than merely tidied:
   because of synthetic composition, and v3's 1.8 MB was *closer* to the real
   mean than v4's measurement.
 - **The throughput range's maximum was a document the pipeline refuses.**
-  `ksb-2007` (44.1 MiB/s) returns `unsupported` before segmentation, as do
+  `ksb-2007` (44.55 MiB/s) returns `unsupported` before segmentation, as do
   `aapl-2026-10q` and `truncated-download`. The range and spread are now over
   the **34 processed** fixtures — 6.62–33.68 MiB/s, spread 5.09× rather than
   6.7×, at that round's measurement; re-measured again in round 2 below.
@@ -72,13 +72,54 @@ the "correction that relocates the gap" shape ADR-020 §h3 names. What changed:
 - **Five more published statistics had no assertion behind them**, including
   one whose mutation moves p95 from 0.51 s to 0.37 s and one that silently
   reverts round 1's own refusal-exclusion fix. `evals/bench.py --self-check`
-  now compares its **entire** published output against a hand-derived golden
-  dict, so an unasserted field fails the check by construction; 19 mutations
-  were watched red (ADR-021 §e).
+  was inverted to compare its published output against a hand-derived golden
+  dict, so an unasserted field fails by construction; 19 mutations were watched
+  red. *(This bullet originally said "its **entire** published output". It
+  covered `perf` only — round 3's R22 found `cost` and `records` outside the
+  comparison, and the sentence is corrected here rather than left as the third
+  overclaim of the same check. It is entire now.)*
 - **ADR-021 §b still quoted the superseded run's numbers** while naming the new
   artifact as their source, and §b4's design claim about which rate the
   projection divides into stopped being true when round 1 changed the
   population. Both fixed against the artifact.
+
+**v4 repair round 3 (PR #12 review, 2026-08-20).** Five findings, all
+confirmed, none rejected. This round was authorized by Willy after the
+delivery loop's three-round circuit breaker fired. All five say the same thing
+about the previous two rounds — the fixes were right in shape and short in
+reach:
+
+- **The stale-figure defect survived a third round.** ADR-021 §c still printed
+  five per-fixture throughputs from the superseded dirty-tree artifact, digit
+  for digit, under a header naming the run of record — while the ledger and
+  `prompts/009` both recorded that sweep as complete. It is not asserted a
+  fourth time: `python3 -m evals.bench --check-docs <artifact>` now checks
+  every decimal printed beside a backticked fixture name against that
+  artifact, reading **52 checked / 0 unmatched** here and 22 unmatched against
+  the superseded run. It found a **seventh** stale figure the review had not
+  cited. The documents' claim is narrowed to what the check reaches:
+  fixture-attributed numbers are mechanical, aggregates are swept by hand.
+- **The self-check's golden corpus was degenerate on p95** — it set
+  `latency_p95_s == latency_max_s == largest_median_s` and made the slowest
+  row the largest, so replacing the p95 computation with `max()` passed while
+  moving the published headline. Fixed, with the structural part stated
+  plainly: p95 == max is unavoidable for any n < 20 under nearest-rank, so it
+  gets its own 20-row block rather than a claim that the corpus isn't
+  degenerate.
+- **The inversion covered `perf` but not `cost` or `records`**, both of which
+  this report publishes — §4.1's dollar table and §3.2's selected-points table
+  respectively. Four mutations survived there, one moving §4.1's median-filing
+  cost from **$0.14 to $0.29** with the check green. The comparison now spans
+  the whole published payload; **30 mutations** go red, each applied to a copy
+  and run.
+- Two smaller ones: ADR-021 §b2 quoted a repeat-spread maximum that §b11 and
+  §3.1 both declare unpublishable (and quoted the most favourable of three
+  runs); and the ratio-exclusion list was built from one predicate while the
+  population used two.
+
+Nothing in §3–§5 was renumbered for this round. The round-3 instrument was
+re-run on a clean tree and is identical to the run of record on every value
+that does not come from a clock — see §3's provenance note.
 
 v3 (2026-08-19): T11 silent-failure update. Adds the "Silent-failure rate —
 measured (T11)" section (ADR-019) and reconciles metric 6's discussion, which
@@ -389,6 +430,16 @@ its inputs" names a field rather than an argument.
 introduced this revision of the instrument; `src/` is byte-identical to
 `20f8be0` and has not changed anywhere in this milestone. The artifact stamps
 that sha itself, with no `-dirty` suffix.
+
+The instrument was revised again in review round 3 (a wider `--self-check`, a
+new `--check-docs` mode, one exclusion-list predicate). **The artifact of
+record still stands, and that is checked rather than asserted**: a clean-tree
+run at the round-3 code, `evals/report/20260820-115810-bench.json` (git
+`9753c58`), is **identical to the run of record on every clock-independent
+value** — every `records` field except timings, every size and count in `perf`
+and `populations`, the whole `cost` block, and the top-level key set. Only the
+timings moved, by less than the ±3% §3.1 measures. So the numbers below were
+not renumbered a third time, because nothing that produces them changed.
 
 *(Correction, PR #12 R15. v4's first two artifacts did not have this property.
 `20260820-024620-bench.json` stamps `30b001a…-dirty` — it was run while

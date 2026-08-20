@@ -179,7 +179,9 @@ Measured, not estimated. Every figure below is a field of one committed file —
 quoted rate. **The instrument is good to about ±3%** — three full runs on a
 clean tree are committed and the spread between them is measured in
 `docs/analysis-report.md` §3.1 — so everything here is two significant figures
-and no more. Method, the full per-fixture table, the population boundaries and
+and no more. Numbers printed beside a fixture name anywhere in this repo are
+checked against that artifact mechanically by
+`python3 -m evals.bench --check-docs`. Method, the full per-fixture table, the population boundaries and
 the cost counterfactual: `docs/analysis-report.md` v4 §3–§5 and
 [ADR-021](specs/decisions/ADR-021-benchmark-instrument.md).
 

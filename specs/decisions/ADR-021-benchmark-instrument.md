@@ -33,13 +33,14 @@ instrument that runs the real pipeline through its existing public entry point
 (`extract_items`) read-only, is never imported by `src/`, is not part of any
 scored suite, and writes `evals/report/<stamp>-bench.json`.
 
-**Eleven** measurement choices, each of which could reasonably have gone the
+**Twelve** measurement choices, each of which could reasonably have gone the
 other way, so each is recorded rather than left in the code. (Seven at first
 draft; 8 and 9 added in PR #12 repair round 1, where the reviewer showed that
 the population boundary and the sub-millisecond ratio noise were decisions the
-code was making silently; 10 and 11 in round 2, where it turned out that *which
-statistics are asserted* and *how many digits of any of them mean anything*
-were also being decided by accident.)
+code was making silently; 10 and 11 in round 2, where *which statistics are
+asserted* and *how many digits of any of them mean anything* turned out to be
+decided by accident too; 12 in round 3, when the same stale-number defect
+survived two sweeps that had both been claimed as complete.)
 
 1. **The unit is the fixture, not the eval case.** Several cases run the same
    fixture (`aapl-2025` appears in more than one) and some carry no fixture at
@@ -52,18 +53,22 @@ were also being decided by accident.)
    laptop is noisy; the median of a small odd N discards one scheduler hiccup
    at minimal cost. `min`, `mean`, `max` and the **first** (cold) repeat are
    all recorded per fixture, so a reader can see the spread instead of trusting
-   the median. Measured spread on the run of record
-   (`derived.repeat_spread_*`): median **0.8%**, maximum **2.4%**.
+   the median. Measured spread across the three clean runs
+   (`derived.repeat_spread_median`): **0.8% – 1.0%**. The per-run *maximum* of
+   that spread is **not quoted here or anywhere else** — it ranges 2.4% / 3.1%
+   / 7.5% across the three runs and always lands on whichever sub-10 ms
+   fixture the scheduler happened to interrupt (§b11).
 
-   *(Corrected, PR #12 R12. This choice previously read "median 1.4%, worst
-   8%" and attributed it to the run of record; those were the **superseded**
-   first artifact's values, left standing when round 1 regenerated the
-   artifact — and the 8% was a figure round 1's own report text had already
-   retracted. The wider lesson is §b10's: a number in a spec attributed to an
-   artifact must be read out of that artifact. The stability conclusion also
-   no longer rests on this statistic — the per-run maximum ranges 2.4–7.5%
-   across three clean runs and is not published; §3.1 of the report states the
-   instrument's precision from the cross-run spread instead.)*
+   *(Corrected twice. PR #12 R12: this choice read "median 1.4%, worst 8%" and
+   attributed it to the run of record; those were the **superseded** first
+   artifact's values, and the 8% was a figure round 1's own report text had
+   already retracted. PR #12 R23: the round-2 repair then quoted "maximum
+   2.4%" — a value §b11 and report §3.1 both declare unpublishable, and the
+   **most favourable of the three runs** — three lines above its own
+   correction note saying so. One ADR contradicting itself within one
+   paragraph is the same defect as an ADR contradicting its artifact; both are
+   now covered by §b12's mechanical check for the fixture-attributed case, and
+   by not quoting the statistic at all for this one.)*
 
 3. **The throughput denominator is raw bytes on disk, not normalized chars.**
    The pipeline reads and normalizes the whole file, so bytes-in is the
@@ -208,18 +213,42 @@ were also being decided by accident.)
     shape ADR-020 §h3 names, and it had now happened twice.
 
     So `_demo` no longer asserts selected values. It runs `summarize` over one
-    **golden corpus** and compares the **entire** `perf` block against a
-    hand-derived expected dict. A newly published field fails the check until
+    **golden corpus** and compares the **entire published payload** — `perf`,
+    `cost`, one full `records` row, and the artifact's top-level key set —
+    against hand-derived expected values.
+
+    *(Round 2 shipped this covering `perf` only, while §b10's headline said
+    "no published field". PR #12 R22 was right that this was a third
+    overclaim: `cost` and `records` are published too — report §4.1's dollar
+    table comes straight out of `cost`, and §3.2's selected-points table
+    straight out of `records` — and four mutations survived there, one of
+    which moves the published median-filing cost from $0.14 to $0.29. The
+    comparison now spans all of it, and `build_payload` exists so the
+    top-level key set has one definition to pin.)* A newly published field fails the check until
     someone computes its expected value by hand; the failure names it
     (`derived.brand_new_unasserted_stat: got 42, expected <UNASSERTED FIELD>`).
     The corpus is built so no statistic sits on a degenerate value that could
     hide a mutation: percentile indices are fractional before `ceil`, the
-    throughput spread is 2.0 rather than 1.0, R² is exactly 0.892857 from a
+    throughput spread is 2.25 rather than 1.0, R² is exactly 0.25 from a
     hand-derived three-point fit, a refused row carries the extreme rate, a
-    sub-millisecond row would poison the ratio statistics, and one row is
-    synthetic. Three boundary cases a single corpus cannot reach keep their own
-    two-line blocks: largest-row-last, already-at-peak, and a perfectly
-    proportional set.
+    sub-millisecond row would poison the ratio statistics, one row is
+    synthetic, the largest row's median differs from both the maximum and the
+    p50, and **the slowest row is not the largest row**.
+
+    *(Those last two are round 3's, from R21. The round-2 corpus set
+    `latency_p95_s == latency_max_s == largest_median_s == 0.6` and made the
+    slowest row the largest, so `pct(meds, 95)` → `max(meds)` passed the check
+    while moving the published p95 — degeneracy on precisely the statistic
+    R18 had been raised about. Note the structural part: **p95 == max is
+    unavoidable for any n < 20** under nearest-rank, since `ceil(0.95n) == n`.
+    That cannot be fixed by choosing better numbers, so it is separated in its
+    own 20-row block instead of being papered over — the honest response to
+    "the corpus is degenerate here" is a second corpus, not a claim that it
+    isn't.)*
+
+    Five boundary cases a single corpus cannot reach keep their own short
+    blocks: percentile separation at n=20, largest-row-last, already-at-peak,
+    a perfectly proportional set, and a row whose `min_s` rounds to 0.0.
 
     The corollary, adopted at the same time: **the artifact emits only fields
     that are published or that back a published claim.** Two fields were
@@ -227,10 +256,12 @@ were also being decided by accident.)
     and `n_first_repeat_was_fastest`. An unpublished field is not free; it is
     an unasserted number waiting to be quoted.
 
-    What this does **not** claim: that no bug can survive. It claims that no
-    *field* is unasserted, and that the 19 mutations in §e are red. Those are
-    different statements, and the difference is written down here because
-    overclaiming this check is precisely what R2 and R18 caught.
+    What this does **not** claim: that no bug can survive. It claims that
+    every field of the published payload has a hand-derived expected value,
+    and that the 30 mutations in §e are red. Those are different statements,
+    and the difference is written down here because overclaiming this check is
+    precisely what R2, R18 and R21/R22 caught — three times, each time in the
+    sentence describing the fix for the previous time.
 
 11. **The instrument is good to ±3%, and figures are rounded to say so.**
     Round 1 withdrew two statistics as "run-unstable" while publishing a third
@@ -260,6 +291,43 @@ were also being decided by accident.)
     false as a stamp. ADR-018 added the `-dirty` suffix precisely so this would
     be visible, and it was visible, and nothing read it. The remedy is a
     clean-tree re-run, not a footnote.
+
+12. **The docs' fixture-attributed numbers are checked mechanically, and the
+    claim is narrowed to what the check actually covers.**
+
+    Round 1 left withdrawn figures standing in the ADR that recorded the
+    withdrawal. Round 2 swept the ADR "in full" — and §c still printed five
+    per-fixture throughputs read out of the **superseded dirty-tree run**,
+    digit for digit, under a header naming the run of record (R20). Two
+    documents, the ledger row and `prompts/009`, recorded that sweep as done.
+    A claim whose only enforcement is a human re-reading six files is not a
+    claim, and asserting it a third time would be the eighth instance of this
+    project's signature error.
+
+    So: `python3 -m evals.bench --check-docs <artifact>` extracts every decimal
+    printed within 60 characters of a backticked fixture name, on the same
+    line, and fails unless it is a correct rounding of one of that fixture's
+    values in the named artifact. On the docs as shipped it reads **52
+    checked, 0 unmatched** against `20260820-031540-bench.json` and **22
+    unmatched** against the superseded `20260820-024620` — which is the
+    evidence that the attribution is now right, rather than another assertion
+    that it is.
+
+    **What it does not cover, stated rather than implied:** aggregate figures.
+    p95, batch throughput, the sweep projections and the RSS plateau are not
+    attributed to a fixture name and are invisible to this check; they are
+    pinned inside the artifact by choice 10 and swept by hand in the prose.
+    Integers are skipped (item codes, years and counts share their shape), and
+    ratios, percentages and prices are skipped by their adjacent symbol. The
+    14 remaining legitimate non-measurements are listed in `DOC_ALLOW` with a
+    reason each — historical values inside their own correction notes,
+    cross-run ranges, and quantities that merely sit beside a fixture name.
+    Adding an entry there is where someone has to decide "this is history";
+    it is not a way to quiet a stale number.
+
+    **The documents' claim is narrowed to match.** They no longer say the docs
+    were swept in full; they say the fixture-attributed numbers are checked
+    mechanically and the aggregates were checked by hand.
 
 ## c) What the measurement falsified
 
@@ -291,9 +359,9 @@ that holds on all three clean runs and is an order of magnitude larger than the
 are the first-order term and nothing else comes close, but v3's stronger
 reading — "cost tracks bytes, not item count or document complexity" — is not
 what the data says. The low-throughput end is normalization-heavy markup
-(`tgt-2002` 6.6, `intc-2002` 6.8, `gs-2002` 7.1, `msft-2013` 7.5, `ba-2003`
-7.6 MiB/s) and the high end is real plain-text submissions (`ibm-1997` 33.7,
-`ko-1997` 26.8 MiB/s). v3 named `msft-2013`'s source wraps as the one outlier;
+(`tgt-2002` 6.6, `intc-2002` 6.9, `gs-2002` 7.2, `msft-2013` 7.6, `ba-2003`
+7.6 MiB/s) and the high end is real plain-text submissions (`ibm-1997` 33.8,
+`ko-1997` 27.6 MiB/s). v3 named `msft-2013`'s source wraps as the one outlier;
 there are five, and they share a cause. The operational consequence is
 unchanged — everything is fast — so this corrects the *explanation*, not the
 capacity planning.
@@ -390,38 +458,53 @@ report quoted 18.9 MB/s". Inventing one would be theatre.
 
 The runnable check the new logic leaves behind is
 `python3 -m evals.bench --self-check` (choices 6 and 10 above), which now fails
-under each of these **nineteen** mutations. Every one was applied to a copy of
-the module and run — all nineteen exit non-zero, none was reasoned about in
+under each of these **thirty** mutations. Every one was applied to a copy of
+the module and run — all thirty exit non-zero, none was reasoned about in
 prose:
 
-| # | mutation | what catches it |
-|---|---|---|
-| 1 | `med = statistics.median(times)` → `max(times)` | `make_record`, five distinct times |
-| 2 | `pct` → `vals[0]` | golden `latency_p50_s` |
-| 3 | `pct` → `vals[-1]` | golden `latency_p50_s` |
-| 4 | `math.ceil` → `math.floor` in `pct` | golden p50 **and** p95 (indices fractional by design) |
-| 5 | drop the 1 ms ratio floor | golden warm-up/spread maxima |
-| 6 | drop the descending-order guard | largest-row-last block |
-| 7 | plateau scan `range(len)` → `range(1, len)` | already-at-peak block |
-| 8 | `processed` → `list(records)` (reverts round 1's R5 fix) | golden `processed_mib_per_s_max` / `_spread` |
-| 9 | `_r2` → `return 1.0` | golden R² 0.8929 (the perfect-fit block pins the other side) |
-| 10 | `processed_mib_per_s_spread` → `1.0` | golden spread 2.0 |
-| 11 | `n_1000_seconds` ×1000 → ×100 | golden populations |
-| 12 | `n_1000_gib_read` drops its ×1000 | golden populations |
-| 13 | `real_dev = list(records)` | golden `real_edgar_dev` |
-| 14 | batch rate ↔ real-dev rate swapped | golden `all_dev_fixtures.mib_per_s` |
-| 15 | `latency_max_s` → `min(meds)` | golden |
-| 16 | `sum_of_medians_s` → mean | golden |
-| 17 | `median_raw_bytes` → mean | golden |
-| 18 | **add a new published field** | golden diff reports `<UNASSERTED FIELD>` |
-| 19 | `import socket` | AST import scan |
+| # | mutation | what catches it | raised in |
+|---|---|---|---|
+| 1 | `med = statistics.median(times)` → `max(times)` | golden record | — |
+| 2 | `pct` → `vals[0]` | golden `latency_p50_s` | — |
+| 3 | `pct` → `vals[-1]` | golden `latency_p50_s` | — |
+| 4 | `math.ceil` → `math.floor` in `pct` | golden p50 and p95 | R18 |
+| 5 | drop the 1 ms ratio floor | golden warm-up/spread maxima | — |
+| 6 | drop the descending-order guard | largest-row-last block | — |
+| 7 | plateau scan `range(len)` → `range(1, len)` | already-at-peak block | — |
+| 8 | `processed` → `list(records)` (reverts round 1's R5 fix) | golden `processed_mib_per_s_max`/`_spread` | R18 |
+| 9 | `_r2` → `return 1.0` | golden R² 0.25 vs the perfect-fit block's 1.0 | R18 |
+| 10 | `processed_mib_per_s_spread` → `1.0` | golden spread 2.25 | R18 |
+| 11 | `n_1000_seconds` ×1000 → ×100 | golden populations | R18 |
+| 12 | `n_1000_gib_read` drops its ×1000 | golden populations | R18 |
+| 13 | `real_dev = list(records)` | golden `real_edgar_dev` | — |
+| 14 | batch rate ↔ real-dev rate swapped | golden `all_dev_fixtures.mib_per_s` | R19 |
+| 15 | `latency_max_s` → `min(meds)` | golden | — |
+| 16 | `sum_of_medians_s` → mean | golden | — |
+| 17 | `median_raw_bytes` → mean | golden | — |
+| 18 | add a new `perf` field | golden diff → `<UNASSERTED FIELD>` | — |
+| 19 | `import socket` | AST import scan | — |
+| 20 | `pct(meds, 95)` → `max(meds)` | n=20 percentile-separation block | **R21** |
+| 21 | `largest_median_s` → `max(meds)` | golden `largest_median_s` 0.4 ≠ max 0.6 | **R21** |
+| 22 | `slowest_fixture` → `largest["fixture"]` | golden: slowest is `nvda-2024`, largest is `cat-2023` | **R21** |
+| 23 | cost median chars → mean | golden `cost.counterfactual.median_filing` | **R22** |
+| 24 | Haiku context 200K → 350K | golden `fits_haiku_context` (both values present) | **R22** |
+| 25 | `PRICE_BASIS_DATE` changed | golden `cost.price_basis_date` | **R22** |
+| 26 | Opus price $5 → $7 | golden `cost.models` | **R22** |
+| 27 | add a new `cost` key | golden diff → `<UNASSERTED FIELD>` | **R22** |
+| 28 | add a new `records` key | golden record diff | **R22** |
+| 29 | add a new top-level payload block | `PAYLOAD_KEYS` | **R22** |
+| 30 | exclusion list ≠ population complement | coarse-clock block (`min_s` rounds to 0.0) | **R24** |
 
-Mutations 1 and 2 are **PR #12's R2 repro, run verbatim**; 4, 8, 9, 10, 11, 12
-are **R18's**, and 14 is **R19's**. Against the drafts they were raised on, all
-of them printed `[bench self-check] ok`. That is the same defect class as an
-eval case that has never been seen red — twice in a row, in the one place this
-milestone had executable logic at all. Mutation 18 is the one that makes the
-list finite rather than a list: it is the assertion that a *future* statistic
+Mutations 1 and 2 are **PR #12's R2 repro**; 4 and 8–12 are **R18's**; 20–29
+are **R21/R22's**. Against the drafts they were raised on, every one of them
+printed `[bench self-check] ok`. Mutation 30 was the last to be caught: the
+predicate mismatch R24 names is real but *unobservable* on any corpus where
+both predicates agree, so a row whose `min_s` rounds to 0.0 had to be built
+before the check could fail. That is the difference between a finding being
+fixed and a finding being demonstrated.
+
+Mutations 18, 27, 28 and 29 are the ones that make this list finite rather than
+a list: they assert that a *future* field, in any of the four published blocks,
 cannot be published unasserted.
 
 **This is still not an `evals/adversarial/` case, and the distinction is not a
@@ -432,15 +515,21 @@ assertions through the extraction adapter. ADR-016's precedent is exactly this:
 properties that no fixture can exercise are proved at the layer, in an
 assert-based `_demo`, and watched red there. That is what happened.
 
-Two earlier versions of this paragraph overclaimed. The first said the check
-"fails if the median … breaks"; it did not, and R2 proved it. The second said it
-"proves the arithmetic between the timer and the report, nothing more"; that was
-also false, and R18 proved it with five surviving mutations. Both sentences are
-left corrected rather than deleted, because the shape of the error — asserting a
-property of an executable thing without running it — is the one ADR-020 §h3 says
-this project keeps repeating, and it has now repeated inside the correction for
-it. Choice 10 is the structural answer: the check no longer depends on anyone
-remembering to assert a new field.
+**Three** earlier versions of this paragraph overclaimed, each one describing
+the fix for the previous one. The first said the check "fails if the median …
+breaks"; it did not, and R2 proved it. The second said it "proves the
+arithmetic between the timer and the report, nothing more"; also false, and R18
+proved it with five surviving mutations. The third said "no published field may
+be without an assertion" while covering only `perf`; R21/R22 proved it with
+eight more, including one that moves the published median-filing cost from
+$0.14 to $0.29. All three sentences are left corrected rather than deleted,
+because the shape of the error — asserting a property of an executable thing
+without running it — is the one ADR-020 §h3 says this project keeps repeating,
+and it has now repeated three times *inside the correction for itself*.
+
+Choice 10 is the structural answer for the payload and choice 12 for the
+fixture-attributed prose. Neither depends on anyone remembering anything, which
+is the only property that distinguishes them from the three sentences above.
 
 ## f) Consequences
 
@@ -482,7 +571,9 @@ remembering to assert a new field.
 ## Verification
 
 ```
-python3 -m evals.bench --self-check      # ok (red first under all 19 mutations in §e)
+python3 -m evals.bench --self-check      # ok (red first under all 30 mutations in §e)
+python3 -m evals.bench --check-docs evals/report/20260820-031540-bench.json
+                                         # 52 checked, 0 unmatched (22 vs the superseded run)
 python3 -m evals.run --suite invariant   # 12/12 (+4 enumerated debt)
 python3 -m evals.run --suite fast        # 45/45 (+4 enumerated debt)
 python3 -m evals.metrics --self-check    # ok
@@ -508,9 +599,24 @@ exist so that neither failure mode depends on anyone noticing next time: the
 self-check is inverted so unasserted fields cannot exist, and the instrument's
 precision is measured from three committed clean runs rather than asserted.
 
-Counting the whole loop, this is the **sixth and seventh** occurrence across
+Repair round 3 (PR #12, an extension authorized by Willy after the loop's
+three-round circuit breaker fired): **5 findings raised, 5 confirmed by running
+their repros, 0 rejected.** R20 is the stale-figure defect surviving a *third*
+round, this time with two documents recording a sweep that had not happened —
+answered with choice 12's mechanical check rather than a fourth assertion, and
+the check immediately found a seventh stale figure the review had not cited
+(`ksb-2007` 44.1 in report §-header, from the dirty run). R21 and R22 are
+round 2's own inversion, under-reached: a corpus degenerate on p95 and a
+guarantee that covered `perf` but not `cost` or `records`. R23 is one paragraph
+of this ADR contradicting another. R24 is a real predicate mismatch that no
+committed corpus could fire, so a corpus was built for it.
+
+Counting the whole loop, this is the **sixth through tenth** occurrence across
 PR #11 and PR #12 of asserting a property of an executable thing without
-running it. That count is kept deliberately.
+running it, and three of those occurrences are inside the correction for an
+earlier one. The count is kept deliberately: it is the strongest single piece
+of evidence about how this project fails, and it is the reason both remaining
+guarantees are mechanical rather than editorial.
 
 `.eval-baseline.json` untouched at 1.000. No paid API call was made and no code
 path capable of making one was added.
