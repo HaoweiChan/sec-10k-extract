@@ -315,6 +315,20 @@ def _demo():
     assert "form_type_disagreement" not in codes, codes   # spelling, not news
     assert codes == ["whole_submission_fallback"], codes   # ...but the scope IS news
 
+    # ADR-024 rules 10-K/A OUT, so the refusal is the behaviour that has to
+    # hold — on BOTH routes, because an amendment reaches us either way and the
+    # /A is one character wide. No fixture is committed for it (adding one moves
+    # the T13 benchmark corpus and every published figure derived from it), so
+    # the ruling is enforced here, at the layer, the ADR-016 treatment.
+    amd_sgml = "<DOCUMENT>\n<TYPE>10-K/A\n<TEXT>\nFORM 10-K/A\nbody\n</TEXT>\n</DOCUMENT>"
+    assert select_and_normalize(amd_sgml)[1]["form_type"] == "10-K/A"
+    # ...and the one that matters more: a primary .htm carries no SGML header at
+    # all, so only the cover-page sniff stands between an amendment and a parse.
+    amd_htm = "<html><body><p>FORM 10-K/A</p><p>Amendment No. 1</p></body></html>"
+    m3 = select_and_normalize(amd_htm)[1]
+    assert m3["form_type_declared"] is None and m3["form_type"] == "10-K/A", m3
+    assert "10-K/A" not in ACCEPTED_FORMS   # extract.py returns `unsupported`
+
     print("[normalize self-check] ok")
 
 

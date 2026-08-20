@@ -43,7 +43,8 @@ submissions — so both paths are load-bearing. `<TYPE>` (EDGAR-validated) wins
 when present and the cover sniff becomes a second opinion that warns on
 disagreement rather than refusing; the sniff is confined to the first 3,000
 chars because a 10-Q always cites its own prior 10-K further down. 10-K/A and
-10-KSB are refused, not best-effort parsed. **Amended (T9, ADR-016 §6)**:
+10-KSB are refused, not best-effort parsed (10-K/A ruled out for good in
+ADR-024, with the refusal asserted on both detection routes). **Amended (T9, ADR-016 §6)**:
 refusing a form is not the same as reading nothing. When `<DOCUMENT>` blocks
 exist but none declares an accepted form, the whole submission is normalized
 and the first block's `<TYPE>` names it, so a readable 10-KSB is refused on

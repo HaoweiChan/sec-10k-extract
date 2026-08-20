@@ -65,7 +65,10 @@ accept it.
 
 **Stretch**: 10-K/A amendments (often contain only amended items, which breaks
 the era-expected-set assumption behind INV-S4 — needs a relaxed expected-set
-mode); 10-KSB.
+mode); 10-KSB. **Closed 2026-08-20 (T14): 10-K/A is ruled OUT** — the relaxed
+expected-set mode is the capability the T8 freeze forbids, and a Part III-only
+amendment would come back `ambiguous` on a correct document if the form were
+merely accepted. Measurement, cost and revisit condition: ADR-024.
 
 **Explicitly unsupported** → `doc_status: unsupported`, never best-effort
 output: non-10-K forms (10-Q, 8-K, 20-F), scanned/image/PDF filings, inputs
