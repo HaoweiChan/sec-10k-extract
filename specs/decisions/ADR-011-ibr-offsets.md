@@ -4,6 +4,12 @@ Date: 2026-08-16. Status: accepted. Amends `specs/001-sec10k-contract.md`
 (offset rules) and **INV-S1** (scope). Closes the open question left by
 ADR-010.
 
+**Ruling**: `incorporated_by_reference` items carry real `start`/`end` offsets over their pointer text, and every span-level check (overlap, boundary hygiene, `verbatim`, content checks) now covers IBR spans exactly like `extracted` ones.
+**Because**: the pointer sentence is the evidence a human needs to confirm the claim, and unvalidated IBR offsets were the worst of both worlds — nothing checked them at all.
+**Enforced by**: `specs/000-invariants.md` INV-S1, `evals/golden/textron-2001-content.json`, `src/sec10k/test_eval_adapter.py::test_ibr_spans_are_checked`
+
+---
+
 ## Context
 
 The contract said: *"For any other status: `start`/`end` are null."* The

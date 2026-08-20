@@ -2,6 +2,12 @@
 
 Date: 2026-08-15. Status: accepted.
 
+**Ruling**: a present heading is always `extracted` regardless of how trivial its body is; an absent heading is `omitted` when era/filer rules permit the absence and `missing` when the era expects it.
+**Because**: triviality belongs in span length and validator evidence, not in status — a contract status with no eval representation is decorative.
+**Enforced by**: `evals/golden/aapl-2025-content.json` (Item 6), `evals/golden/jpm-2024-content.json` (Item 16 `omitted`)
+
+---
+
 ## Context
 
 T2 case authoring pinned "[Reserved]" / "Not applicable" / "None." bodies as

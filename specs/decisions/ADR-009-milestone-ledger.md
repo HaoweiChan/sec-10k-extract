@@ -1,6 +1,12 @@
 # ADR-009 — A milestone ledger, and why hard rule 3 had to bend
 
-Date: 2026-08-16. Status: accepted. Amends CLAUDE.md hard rule 3.
+Date: 2026-08-16. Status: accepted. Amends CLAUDE.md hard rule 3. Amended by: ADR-021.
+
+**Ruling**: exactly one milestone ledger file, `tasks/TODO.md`, holding milestone-level rows only; every row names its own Validation gate, and a gate that has not run is written `UNRUN`, never omitted.
+**Because**: a gate stated only in prose (T5's cold-reviewer clause) went missing for three milestones with nothing to show it had — a gate nobody can observe is indistinguishable from one that passed.
+**Enforced by**: `tasks/TODO.md` (Status column convention); advisory — no hook parses it
+
+---
 
 ## Context
 

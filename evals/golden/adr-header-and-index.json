@@ -1,0 +1,7 @@
+{
+  "id": "adr-header-and-index",
+  "task": "repo_hygiene",
+  "suites": ["invariant", "fast"],
+  "input": {},
+  "expect": {}
+}

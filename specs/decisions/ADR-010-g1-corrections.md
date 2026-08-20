@@ -1,7 +1,14 @@
 # ADR-010 — Four corrections the G1 audits forced
 
 Date: 2026-08-16. Status: accepted. Amends ADR-007 (the 9C boundary and the
-IBR shape rule). Findings from the G1 gate recorded in `tasks/TODO.md`.
+IBR shape rule). Amended by: ADR-015, ADR-017. Findings from the G1 gate
+recorded in `tasks/TODO.md`.
+
+**Ruling**: fix four silent wrong-output bugs — case-insensitive date parsing, the 9C era boundary keyed to the earliest late-fileable period end, IBR requiring pointer evidence inside the pointer sentence itself (not anywhere in the body), and `doc_status` collapse diagnosed before form identity.
+**Because**: every one of the four reported success — none crashed — which is exactly the silent-failure class this pipeline exists to catch.
+**Enforced by**: `evals/adversarial/caps-cover-taxonomy.json`, `evals/adversarial/fy2021-item-9c.json`, `evals/golden/textron-2001-content.json`, `evals/adversarial/truncated-download.json`
+
+---
 
 ## Context
 

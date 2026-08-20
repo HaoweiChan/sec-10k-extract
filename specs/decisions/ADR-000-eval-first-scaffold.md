@@ -2,6 +2,12 @@
 
 Date: 2026-08-15 · Status: accepted
 
+**Ruling**: `specs/` holds only invariants, output contracts, and ADRs — the eval set IS the spec, and enforcement runs through hooks, not prose.
+**Because**: requirements here are explicit but correctness has no public ground truth, so a prose spec is unfalsifiable and only a blocking layer can hold the line.
+**Enforced by**: `.githooks/pre-commit`, `.claude/hooks/post-edit-invariant.sh`, `evals/run.py`
+
+---
+
 ## Context
 
 Standard SDD (OpenSpec / Spec Kit style) assumes requirements are ambiguous and

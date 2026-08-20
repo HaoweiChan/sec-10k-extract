@@ -1,6 +1,12 @@
 # ADR-004 — Status semantics for pointer-shaped items
 
-Date: 2026-08-15. Status: accepted.
+Date: 2026-08-15. Status: accepted. Amended by: ADR-017.
+
+**Ruling**: `incorporated_by_reference` is reserved for bodies that are solely a pointer to a *different* document; an internal same-document pointer, or a mixed body with substantive prose, stays `extracted`.
+**Because**: the extractor reports what the filing labels, verbatim — resolving internal pointers or judging mixed content is not v1's job.
+**Enforced by**: `evals/golden/ibm-1997-shallow.json`, `evals/golden/textron-2001-content.json`, `evals/golden/jpm-2024-content.json`
+
+---
 
 ## Context
 

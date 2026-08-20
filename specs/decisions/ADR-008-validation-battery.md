@@ -1,7 +1,13 @@
 # ADR-008 — T5: the validator battery that survived measurement
 
-Date: 2026-08-16. Status: accepted. Implements layers 8-9
+Date: 2026-08-16. Status: accepted. Amended by: ADR-013. Implements layers 8-9
 (`src/sec10k/validate.py`).
+
+**Ruling**: ship six label-free validators with measured thresholds (TOC manifest, unattributed content, last-item domination, boundary hygiene, relative numeric density, keyword fingerprints); reject the other four proposed ("Item 8 longest", "1A ≫ 1B", "spans end at sentence punctuation", part-region consistency) as false-positive generators.
+**Because**: a validator that cries wolf is a defect, not caution — each rejected check was measured to misfire on real fixtures (AAPL, Premier Pacific, JPM).
+**Enforced by**: `src/sec10k/validate.py`; `evals/golden/*-structure.json` cases; `evals/adversarial/heading-unnumbered.json`
+
+---
 
 The architecture doc proposed eight label-free validators. Measured against
 the eval-set distributions, **four discriminate and four are false-positive

@@ -1,7 +1,14 @@
 # ADR-007 — T4 segmentation: measured thresholds and era rulings
 
-Date: 2026-08-16. Status: accepted. Implements layers 4-7
-(`src/sec10k/segment.py`) under ADR-004/ADR-005's status semantics.
+Date: 2026-08-16. Status: accepted. Amended by: ADR-010, ADR-013, ADR-015.
+Implements layers 4-7 (`src/sec10k/segment.py`) under ADR-004/ADR-005's status
+semantics.
+
+**Ruling**: a real heading carries its title on the same line by default (TOC-cluster filter judged per-candidate by recurrence); status classification runs on a whitespace-flattened body copy; IBR has no length cutoff — shape decides.
+**Because**: every threshold here was measured against the committed fixtures after the mechanism worked; the same-line rule alone kills both TOC entries and running page headers.
+**Enforced by**: `evals/adversarial/toc-titled.json`, `evals/golden/msft-2013-structure.json`, `src/sec10k/segment.py` (`SIM_FLOOR`, `TOC_CLUSTER_MIN`)
+
+---
 
 Willy's standing directive: no pre-data magic numbers. Every constant below
 was measured against the committed fixtures **after** the mechanism worked,

@@ -3,6 +3,12 @@
 Date: 2026-08-16. Status: accepted. Required by hard rule 1 (a baseline move is
 a decision, recorded in an ADR — never a convenience to make a gate pass).
 
+**Ruling**: arm `.eval-baseline.json["fast"] = 1.000`; the invariant suite stays unbaselined since the runner already demands 100% of it unconditionally.
+**Because**: an empty baseline made `evals/run.py`'s regression check unreachable — eight commits of a "green gate" could only ever have caught a crashing runner, never a regression.
+**Enforced by**: `.eval-baseline.json`, `evals/run.py` (baseline gate), `.github/workflows/ci.yml`
+
+---
+
 ## Context
 
 `.eval-baseline.json` has been `{}` since the harness was built at T1.
