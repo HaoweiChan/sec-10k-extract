@@ -170,7 +170,12 @@ constant has to be a decision made in the open, not a silent edit.
   or after 2021-08-09. Either date mislabels somebody in that six-month window
   — early adopters under the late date, everyone else under the early one —
   and no fixture has a period end inside it, so there is no evidence to choose
-  with. Unchanged.
+  with. Unchanged — but no longer unpinned: PR #17 R5 found this was the one
+  entry in `ALIAS_FROM` that nothing could see (moving it to 1990 relabels item
+  6 on 26 committed fixtures with the whole gate still green), and
+  `segment._demo` now asserts it on both sides of 2021-02-10. That assert pins
+  the constant in force; it does not resolve this paragraph, which is still
+  open.
 
 ## Consequences
 
@@ -186,7 +191,9 @@ constant has to be a decision made in the open, not a silent edit.
   computed against the very `TITLES` aliases this ADR edits. Measured across all
   37 fixtures, `main` vs this branch: **10 spans move 0.75 → 0.95** — ba-2003
   items 12/13/15, gs-2002 item 15, ibm-1997 item 12, intc-2002 items 5/15,
-  tgt-2002 items 12/13/15 — and 30 titles change across 11 fixtures. The
+  tgt-2002 items 12/13/15 — and 30 titles change across 10 committed fixtures
+  (33 across 11 counting the heldout `mrk-1995`; corrected in round 2, the
+  first version said 11 committed). The
   direction is right (a heading that now matches a caption the form actually had
   is better evidence, not worse), which is precisely why it needed saying: for
   those ten items the envelope had been publishing a 0.75 that was **a real

@@ -166,3 +166,25 @@ published figure derived from it stay valid.
   all ten watched red at 0.75 against the pre-fix taxonomy, and the ADR sentence
   narrowed to what is actually true — no status, offset, warning or
   `doc_status`.
+
+- Assumed: with R1 closed, the table was covered — "every constant the comment
+  describes is correct and pinned by a case or a `_demo` assert", written into a
+  debt row and a resolution artifact while fixing the *previous* round's
+  overstatement about what a check proves.
+- Eval said: nothing again, and that was the third instance of one species
+  (PR #17 R5). `ALIAS_FROM["6"]` was pinned by neither a case nor an assert:
+  moving it to 1990-01-01 relabels item 6 as "[Reserved]" on 26 committed
+  fixtures and the gate stays 51/51. "Correct" was overstated too — that entry
+  holds an early-compliance date the repo's own §g says mislabels one side of a
+  six-month window.
+- Corrected: a two-sided assert for item 6 (red under the reviewer's repro,
+  `AssertionError` at `segment.py:664`), and then — the part that matters — an
+  **executed mutation sweep over all eight `ALIAS_FROM` keys, both directions**,
+  before rewriting the sentence: seven caught by `_demo`, `"4"` caught by the
+  fast suite at 50/51, none uncaught. The lesson is not "check your claims"; it
+  is that a universal quantifier about a table is a script that takes a minute
+  to run, and three rounds went by asserting one from memory instead. The
+  restated sentence also separates the two words that had been fused: pinned
+  (executed, now true of all eight) and correct (still open for `"5"` and `"6"`,
+  by ADR-023 §f and §g).
+

@@ -651,6 +651,18 @@ def _demo():
         "Market for the Registrant's Common Equity")            # day before
     assert item_label("5", date(2005, 12, 1))[1].endswith(
         "Issuer Purchases of Equity Securities")                # ...and the day of
+    # Item 6 was the LAST unpinned entry in this table (PR #17 R5): setting it
+    # to date(1990, 1, 1) relabels "Selected Financial Data" as "[Reserved]" on
+    # 26 committed fixtures and the whole gate stayed green. WHICH DATE THIS
+    # PINS, plainly: 2021-02-10, the constant in force — Release 33-10890's
+    # effective date, from which a filer MAY write "[Reserved]". The mandatory
+    # date is 2021-08-09 (FY ends on/after), and ADR-023 §g leaves the choice
+    # between them open because either one mislabels somebody in the six-month
+    # window and no fixture sits inside it to decide. So this assert is not a
+    # claim that 2021-02-10 is right; it is the claim that changing it is a
+    # decision, which is exactly what §g says is still owed.
+    assert item_label("6", date(2021, 2, 9))[1] == "Selected Financial Data"
+    assert item_label("6", date(2021, 2, 10))[1] == "[Reserved]"
 
     # a trailing cross-reference index must not make the real body headings
     # look like a table of contents (intc-2002 / tgt-2002: every code resolved
