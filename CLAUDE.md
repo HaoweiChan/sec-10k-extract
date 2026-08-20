@@ -32,6 +32,16 @@ prompts/           AI-collaboration record (auto-dumped raw/ + curated files)
 src/<task>/        implementation + eval_adapter.py per task
 ```
 
+## Gate
+
+The objective pass/fail for this repo. pr-loop, the hooks, and any reviewer
+run exactly these, in order:
+
+```bash
+python3 -m evals.run --suite invariant   # pass: 100%
+python3 -m evals.run --suite fast        # pass: score >= .eval-baseline.json
+```
+
 ## Commands
 
 ```bash
