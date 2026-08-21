@@ -1,0 +1,92 @@
+{
+ "round": 2,
+ "pr": 18,
+ "task": "S3",
+ "result": "REQUEST_CHANGES",
+ "reviewer": "groundwork:pr-reviewer (fresh context; repair diff f4a4251..HEAD + standing round-1 findings)",
+ "gate": "pass -- invariant 14/14 = 1.000, fast 52/52 = 1.000, baseline 1.0 untouched",
+ "counts": {
+  "HIGH": 0,
+  "MEDIUM": 4,
+  "LOW": 2
+ },
+ "standing_round1_resolutions_that_did_not_hold": {
+  "R1": "reopened as R12 -- same failure mode (a floor over a convenient subset of the real ground), one level up",
+  "R6": "reopened as R15 -- half the acceptance met"
+ },
+ "orchestrator_note": "Round 1's verification was insufficient and this is the correction: the orchestrator replayed only the mutations the implementer proposed, which confirms a check catches what its author designed it to catch. Round 2 built adversarial mutations instead and found three classes the guard is blind to (R12 --grid, R13 rule-repointing, R17 descendant-scoped button). All three were re-verified by the orchestrator before routing.",
+ "routed": {
+  "repair": [
+   "R12",
+   "R13",
+   "R14",
+   "R15"
+  ],
+  "debt": [
+   "R16",
+   "R17"
+  ]
+ },
+ "findings": [
+  {
+   "id": "R12",
+   "severity": "MEDIUM",
+   "claim": "The published floor (4.88 dark / 4.57 light) is measured against a flat `var(--bg)` that the page never actually paints — `body` carries four `background-image` layers, including a `--grid` overlay drawn everywhere — so the real floor is lower, and darkening `--grid` makes the page genuinely inaccessible while the case stays green.",
+   "evidence": "src/sec10k/web/static/index.html:54-59 paints `linear-gradient(var(--grid) 1px,transparent 1px)` twice plus a scanline and a radial over `--bg`; evals/adversarial/ui-contrast-and-specificity.json declares every body-grounded ground as [\"var(--bg)\"] only, and no pair references `--grid` at all. light `banner-ok` reports 4.78 but composites to 4.54 on a single grid line and 4.47 on an intersection (below the 4.5 the case enforces); dark `banner-bad` reports 5.71 but 4.63 over grid+scanline. The case's own provenance says 'Ground stacks follow the paint order the page actually produces', and tasks/TODO.md:48 publishes 4.57:1 light as 'Measured contrast floor' -- both are false for every var(--bg) pair. This is R1's failure mode (a floor over a convenient subset of the real ground) surviving in the artifact that was supposed to close it.",
+   "repro": "ORCHESTRATOR-VERIFIED: flat 4.78 vs grid-intersection 4.47 for light banner-ok; and with `--grid` darkened to hsl(213 20% 30% / .9) the case returns passed=True, floor unchanged at 4.57.",
+   "acceptance": "Either the body grounds in the case model the grid/scanline overlay so `--grid` is a live token the check reads and a `--grid` move goes red, or the published figures in tasks/TODO.md:48 and the provenance stop claiming the real paint order and state the flat-`--bg` simplification explicitly. A test that darkens `--grid` must turn the case red.",
+   "route": "repair",
+   "route_reason": "published number dishonest AND the guard fails to guard: a darkened --grid passes green while the page becomes unreadable -- orchestrator-verified"
+  },
+  {
+   "id": "R13",
+   "severity": "MEDIUM",
+   "claim": "The check binds each pair to a *token*, not to the *rule* the pair claims to model, so a rule that switches which token it paints -- or that gains an `opacity` under any selector other than the one hard-named -- passes green at ratios as low as 1.46:1; the documented ceiling ('a color that moves is caught') overstates the guarantee.",
+   "evidence": "src/repo_hygiene/css_contrast.py:9-14 and the tasks/TODO.md debt row 'The contrast check's two ceilings' both say the pair list is the only hole and that 'the token VALUES are read live from the file, so a color that moves is caught'. Falsified two ways: (1) repointing `.it .ttl` from var(--dim) to var(--line) gives a real ratio of 1.46:1 light / 1.23:1 dark while run_case still passes; (2) css_contrast.py:171-179 `rule_opacity` claims 're-introducing a translucent text span cannot slip past', but it reads only the literal selector `#banner .src`, so inserting `#banner span{opacity:.4}` leaves the case green. The pair `note` fields are likewise unverified prose: `sha-dim`'s note names `.mode label`, which sits inside `fieldset{background:var(--panel)}`, not on var(--bg).",
+   "repro": "ORCHESTRATOR-VERIFIED: `.it .ttl` repointed to var(--line) -> run_case passed=True, floor unchanged 4.57.",
+   "acceptance": "Either each pair names the selector it models and the check reads that rule's declared color/opacity out of the file, or the ceiling text in css_contrast.py:9-14, rule_opacity's docstring and the TODO debt row are corrected to say the check guards token VALUES only and is blind to any rule-level change. One of the two mutations must be demonstrated red.",
+   "route": "repair",
+   "route_reason": "published claim dishonest: the documented ceiling says a color that moves is caught; a repointed rule at 1.46:1 passes green -- orchestrator-verified"
+  },
+  {
+   "id": "R14",
+   "severity": "MEDIUM",
+   "claim": "The repair falsified the ledger row's and the PR body's own scope claim and neither was updated: the branch now adds 279 lines of new src/repo_hygiene/css_contrast.py and edits src/repo_hygiene/eval_adapter.py, while both documents still assert nothing outside static/ changes -- and the row's 'Not a freeze violation' argument rests on exactly that sentence.",
+   "evidence": "tasks/TODO.md:48 Contents cell still opens '`src/sec10k/web/static/index.html` is the only file that changes' and still justifies the T8 freeze exemption with '**Not a freeze violation**: presentation only, zero lines outside `static/`'. PR body line 2: 'Done means: ... nothing outside `src/sec10k/web/static/` changes.' ORCHESTRATOR-VERIFIED via git diff --numstat main...task/S3: 279 0 src/repo_hygiene/css_contrast.py, 45 6 src/repo_hygiene/eval_adapter.py, 72 0 evals/adversarial/ui-contrast-and-specificity.json. The Status cell mentions the new files but the Contents cell and the freeze argument above it were not amended -- same class as R2/R6, which were repaired.",
+   "repro": "git diff --numstat main...task/S3 | grep -v evals/report; gh pr view 18 --json body -q .body | head -2",
+   "acceptance": "tasks/TODO.md:48's Contents cell and the PR body's 'Done means' state the real file set, and the freeze justification is restated on a premise that is true rather than on 'zero lines outside static/'.",
+   "route": "repair",
+   "route_reason": "published claim dishonest: 'zero lines outside static/' is false by 279+45 lines, and the T8 freeze justification rests on that sentence"
+  },
+  {
+   "id": "R15",
+   "severity": "MEDIUM",
+   "claim": "R6's resolution met only half its acceptance -- the word 'self-contained' was removed, but the required fallback evidence was never captured and the replacement claim ('degrades to the ui-mono stack offline') is itself unverified and, unlike the sibling browser criterion, is not marked UNRUN.",
+   "evidence": "R6 acceptance in tasks/reviews/pr18-r1.json requires '...stop calling the page self-contained AND the fallback rendering is captured as evidence alongside the R4 screenshots.' tasks/TODO.md:48 now states the offline degradation as settled fact, with no artifact and no UNRUN marker, while the browser criterion two clauses later IS marked UNRUN. index.html:10 is a render-blocking <link> to fonts.googleapis.com with no media/onload trick, so on a network that blackholes rather than refuses the origin the page blocks rather than falling back -- the exact state nothing exercises. tasks/reviews/pr18-r1-resolution.json records only the wording change and does not mention the missing evidence half.",
+   "repro": "Diff R6's acceptance string in tasks/reviews/pr18-r1.json against the Contents cell at tasks/TODO.md:48; git diff --stat main...task/S3 lists no offline-render artifact.",
+   "acceptance": "Either the fallback rendering is captured as a committed artifact, or the offline-degradation sentence in tasks/TODO.md:48 is marked UNRUN the same way the browser criterion is, so the row carries no font claim it cannot back.",
+   "route": "repair",
+   "route_reason": "published claim dishonest: an unverified offline-fallback claim states settled fact where its sibling criterion is marked UNRUN"
+  },
+  {
+   "id": "R16",
+   "severity": "LOW",
+   "claim": "The ledger names run_case(...)['min_ratio_measured'] as the command that reproduces '4.88:1 dark, 4.57:1 light', but that key returns a single number across both schemes (4.57); the per-scheme split it publishes is not obtainable from the command it cites.",
+   "evidence": "src/repo_hygiene/eval_adapter.py:83 -- 'min_ratio_measured': min(measured.values()) over the combined dark+light dict. tasks/TODO.md:48 publishes two numbers and cites that one call. Getting 4.88 requires filtering `measured` on the 'dark/' prefix by hand.",
+   "repro": "run_case(...)['min_ratio_measured'] -> 4.57, not two numbers.",
+   "acceptance": "Either check_contrast reports per-scheme floors so the published pair reproduces from the cited call, or tasks/TODO.md:48 cites the actual one-liner that yields both figures.",
+   "route": "debt",
+   "route_reason": "LOW -- scope rule: only HIGH/MEDIUM can trigger repair"
+  },
+  {
+   "id": "R17",
+   "severity": "LOW",
+   "claim": "check_button_specificity only flags selectors that literally begin with `button`, so a descendant-scoped hover rule such as `#sidebar button:hover` -- specificity (1,2,1), which outranks .it[aria-current=true] (0,2,0) far more decisively than the rule this check was written for -- is not caught.",
+   "evidence": "src/repo_hygiene/css_contrast.py:216-231, re.match(r'^button(?![\\w-])', one) after one.strip(). Appending '#sidebar button:hover{background:var(--amber)}' returns [] from check_button_specificity, i.e. green, while that selector reproduces the exact defect the check exists to prevent.",
+   "repro": "ORCHESTRATOR-VERIFIED: appending '#sidebar button:hover{background:var(--amber)}' -> run_case passed=True.",
+   "acceptance": "The check flags any :hover rule whose compound selector contains a bare `button` type selector not scoped by :not(.it), regardless of ancestor combinators; the '#sidebar button:hover' mutation goes red.",
+   "route": "debt",
+   "route_reason": "LOW -- scope rule: only HIGH/MEDIUM can trigger repair. Orchestrator disagrees with the severity (a check missing the commonest form of the defect it exists to prevent), but severity is the reviewer's call and the routing rule keys on it; the verified mutation is carried into the debt row so it is actionable rather than a claim."
+  }
+ ]
+}
