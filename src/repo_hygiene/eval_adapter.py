@@ -275,6 +275,123 @@ def check_title_legibility(case):
     return bad, {"color": color, "font_weight": weight}
 
 
+def _margin_side(body, side):
+    """The resolved value of one side of a `margin` shorthand, mirroring the
+    CSS 1/2/3/4-value expansion rules (top,right,bottom,left, wrapping)."""
+    m = re.search(r"(?:^|[;\s])margin\s*:\s*([^;]+)", body)
+    if not m:
+        return None
+    parts = m.group(1).split()
+    order = {1: [0, 0, 0, 0], 2: [0, 1, 0, 1], 3: [0, 1, 2, 1], 4: [0, 1, 2, 3]}.get(len(parts))
+    if not order:
+        return None
+    return parts[order[{"top": 0, "right": 1, "bottom": 2, "left": 3}[side]]]
+
+
+def check_pane_meta_amendment(case):
+    """S5 amendment (5)+(7): the parsed pane's heading/offsets/evidence block
+    (`.pane-meta`) must start collapsed on every render, must not sit flush
+    against the pane edge, and must be taken OUT of #pane's flex flow —
+    the round-3 shape left it in-flow after pre.text, which quietly stole
+    ~65px of pre.text's height and broke the content-bottom alignment
+    requirement (3)/(7) beside it. `position:absolute` is the mechanical
+    proof it can no longer do that; a non-zero `left` is the mechanical
+    proof it isn't flush. Separately, pre.text's own bottom margin was the
+    OTHER half of that 65px gap (a 14px visual gutter #source-body's iframe
+    never had) — it must resolve to 0 so the two content regions' bottoms
+    truly coincide, not just get closer.
+    """
+    inp = case.get("input", {})
+    text = (ROOT / inp.get("file", UI_STYLESHEET)).read_text()
+    bad = []
+    if re.search(r'<details[^>]*\bclass="pane-meta"[^>]*\bopen\b'
+                 r'|<details[^>]*\bopen\b[^>]*\bclass="pane-meta"', text):
+        bad.append("pane-meta details renders `open` — must start collapsed")
+    # A bare `.pane-meta{}` rule not existing at all (only `.pane-meta[open]`,
+    # the round-3 shape) is itself the defect this check exists to catch, not
+    # a case for _rule_body's usual "stale pair" exception — report it as a
+    # failure like any other, rather than letting the whole run crash.
+    try:
+        body = css_contrast._rule_body(text, ".pane-meta")
+    except ValueError:
+        bad.append(".pane-meta: no rule found — not position:absolute, "
+                   "not inset from the pane edge")
+    else:
+        if not re.search(r"(?:^|[;\s])position\s*:\s*absolute", body):
+            bad.append(".pane-meta: not position:absolute — back in #pane's "
+                       "flex flow, competing with pre.text for height")
+        left_m = re.search(r"(?:^|[;\s])left\s*:\s*([^;]+)", body)
+        if not left_m or left_m.group(1).strip() in ("0", "0px"):
+            bad.append(".pane-meta: no non-zero left inset — sits flush "
+                       "against the pane edge")
+    try:
+        pre_body = css_contrast._rule_body(text, "pre.text")
+    except ValueError:
+        bad.append("pre.text: no rule found")
+    else:
+        bottom = _margin_side(pre_body, "bottom")
+        if bottom is None or bottom not in ("0", "0px"):
+            bad.append(f"pre.text: margin-bottom is {bottom!r}, want 0 — a "
+                       "non-zero bottom margin is a gutter #source-body's "
+                       "iframe never had, so the content bottoms can't match")
+    return bad
+
+
+def check_bottom_panel_order(case):
+    """S5 amendment (6): `capabilities` must lead the panels below the split
+    — it's the one worth an interviewer reading — with `pipeline trace` and
+    `meta & timings` following, not leading; both mean nothing to the
+    interviewer the human is optimizing this page for.
+    """
+    inp = case.get("input", {})
+    text = (ROOT / inp.get("file", UI_STYLESHEET)).read_text()
+    order = inp.get("order", ["cap-box", "trace-box", "meta-box"])
+    positions = {}
+    bad = []
+    for ident in order:
+        m = re.search(r'id="' + re.escape(ident) + r'"', text)
+        if not m:
+            bad.append(f"#{ident}: not found")
+            continue
+        positions[ident] = m.start()
+    for a, b in zip(order, order[1:]):
+        if a in positions and b in positions and positions[a] > positions[b]:
+            bad.append(f"#{a} appears after #{b} in the file — want order {order}")
+    return bad
+
+
+def check_truncated_notice_in_overlay(case):
+    """S5 round 4 finding, live-caught while re-measuring after amendment
+    (7): the truncated-text notice ('Showing the first N of M characters')
+    used to render as its own in-flow sibling right after pre.text, which
+    steals pre.text's flex share on a large truncated item the exact same
+    way the round-3 `.pane-meta` did — jpm-2024 item 1A (136k chars, shown
+    to 40k) measured a live 24px content-bottom gap from it, even after
+    `.pane-meta` itself was already fixed. Any `it.truncated` reference in
+    #pane's render template must sit INSIDE the `.pane-meta` block (already
+    taken out of flow by amendment (7)), not beside it.
+    """
+    inp = case.get("input", {})
+    text = (ROOT / inp.get("file", UI_STYLESHEET)).read_text()
+    anchor = inp.get("anchor", '$("#pane").innerHTML')
+    start = text.find(anchor)
+    if start < 0:
+        return [f"{anchor!r} not found"]
+    end = text.find(inp.get("end_anchor", 'const pre = $("#pane pre.text")'), start)
+    template = text[start:end if end > 0 else start + 4000]
+    meta_m = re.search(r'<details[^>]*class="pane-meta"', template)
+    if not meta_m:
+        return [".pane-meta block not found in #pane's render template"]
+    meta_start = meta_m.start()
+    bad = []
+    for m in re.finditer(r"it\.truncated", template):
+        if m.start() < meta_start:
+            bad.append(f"it.truncated referenced before .pane-meta (offset "
+                       f"{m.start()} < {meta_start}) — still an in-flow "
+                       "sibling stealing pre.text's flex height")
+    return bad
+
+
 def check_capabilities_parse(case):
     """The committed README must still yield a non-trivial parse through
     capabilities.py — the check that turns a README restructure red instead
@@ -411,6 +528,9 @@ CHECKS = {
     "layout_centering": check_layout_centering,
     "pane_heights": check_pane_heights,
     "title_legibility": check_title_legibility,
+    "pane_meta_amendment": check_pane_meta_amendment,
+    "bottom_panel_order": check_bottom_panel_order,
+    "truncated_notice_in_overlay": check_truncated_notice_in_overlay,
     "capabilities_parse": check_capabilities_parse,
     "anchor_contract": check_anchor_contract,
 }

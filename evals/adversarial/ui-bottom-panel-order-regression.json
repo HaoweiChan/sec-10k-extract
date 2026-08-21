@@ -1,0 +1,28 @@
+{
+  "id": "ui-bottom-panel-order-regression",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "bottom_panel_order"
+    ],
+    "file": "evals/fixtures/repo_hygiene/bottom-panels-old-order.html",
+    "order": [
+      "cap-box",
+      "trace-box",
+      "meta-box"
+    ]
+  },
+  "expect": {
+    "min_failures": 1,
+    "max_failures": 1
+  },
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "Pins the pre-amendment order (trace, meta, capabilities) as a known-bad fixture — 1 failure (cap-box after trace-box), exact count."
+  },
+  "provenance": "S5 round 4, created 2026-08-22 alongside ui-bottom-panel-order.json. Watched RED against src/repo_hygiene/eval_adapter.py's check_bottom_panel_order (1 failure on the fixture)."
+}

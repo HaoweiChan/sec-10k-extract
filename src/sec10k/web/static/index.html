@@ -156,30 +156,46 @@ button:disabled{opacity:.5;cursor:default}
    the source iframe and a head-to-head read never lined up. #pane is now a
    flex column, exactly like #source: a `.src-hdr` band (reused verbatim, not
    a near-duplicate rule, so the two heights cannot drift apart) holding the
-   item code/title/status on one compact line, then pre.text filling the rest
-   — the same first-flex-child position #source-body's iframe already sits
-   at. The old h2/hint/evidence block still exists; it moved into a
-   togglable <details> AFTER pre.text, so it adds height below the fold
-   instead of above it. */
+   item code/title/status on one compact line, then pre.text filling the
+   rest — the same first-flex-child position #source-body's iframe already
+   sits at. The old h2/hint/evidence block still exists, as `.pane-meta`
+   below; round 3 put it in-flow after pre.text, which fixed the TOP
+   alignment but broke the BOTTOM one (it stole ~65px of pre.text's flex
+   share) — round 4 (amendment (7)) takes it out of flow instead. position:
+   relative here is what anchors that overlay. */
 #pane{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);
-  display:flex;flex-direction:column;overflow:hidden}
+  display:flex;flex-direction:column;overflow:hidden;position:relative}
 .ev{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:13px;
   border-top:1px solid var(--line);padding:10px 13px 13px;margin:0}
 .ev dt{color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-size:12px}
 .ev dd{margin:0;font-family:var(--mono);font-size:12px;word-break:break-word}
-/* margin-top:0 is load-bearing, not decoration: pre.text's top edge must sit
-   flush against #pane's own .src-hdr band's bottom border, with no gap, the
-   same way #source-body's iframe sits flush against #source's .src-hdr —
-   that flush placement on both sides is WHY the two scrollable regions land
-   on the same Y. */
+/* margin:0 top AND bottom is load-bearing, not decoration (S5 amendment
+   (7)): pre.text's top edge sits flush against #pane's .src-hdr band, and
+   its BOTTOM edge sits flush against #pane's own bottom, the same way
+   #source-body's iframe fills flush to #source's edges on both sides —
+   that flush placement on all four sides is WHY the two scrollable content
+   regions share both a top AND a bottom Y. Left/right keep their 14px gutter
+   (that axis was never the alignment problem). padding-bottom leaves room
+   so the floating .pane-meta bar below never sits directly over the last
+   line of text at rest. */
 pre.text{white-space:pre-wrap;word-wrap:break-word;font:13px/1.6 var(--mono);
   background:var(--bg);border:1px solid var(--line);border-radius:var(--r);
-  padding:11px;margin:0 14px 14px;flex:1;min-height:0;overflow:auto}
+  padding:11px 11px 42px;margin:0 14px;flex:1;min-height:0;overflow:auto}
 details{margin-top:12px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel)}
-/* #pane clips at a fixed height now (S5 round 3); an opened .pane-meta with a
-   long evidence blob would otherwise get silently cut off by that clip
-   instead of failing loudly or scrolling into view. */
-.pane-meta[open]{max-height:280px;overflow:auto}
+/* S5 amendment (5)+(7): heading/offsets/evidence is real evidence (INV-S2's
+   proof, not jargon to delete) but meaningless to an interviewer at a
+   glance, so it stays collapsed and relabelled in plain language — and it
+   must not compete with pre.text for #pane's fixed height the way an
+   in-flow trailing <details> did (that was the 65px content-bottom gap: the
+   human measured pre.text's bottom sitting 65px above #source's). Taking it
+   out of flow with position:absolute, pinned to #pane's own edges with a
+   14px inset (never flush — the human's other ask), is what makes pre.text
+   get ALL of #pane's remaining height again, same as #source-body. Closed,
+   it is just the summary bar floating over the last line of text; open, it
+   overlays rather than displacing, per the human's own two accepted options. */
+.pane-meta{position:absolute;left:14px;right:14px;bottom:14px;margin:0;
+  box-shadow:0 -6px 16px hsl(0 0% 0% / .35);z-index:1}
+.pane-meta[open]{max-height:260px;overflow:auto}
 summary{padding:9px 13px;cursor:pointer;font-size:12px;font-weight:600;color:var(--dim);
   text-transform:uppercase;letter-spacing:.1em}
 summary:hover{color:var(--accent)}
@@ -267,14 +283,19 @@ footer a{color:var(--accent)}
   </div>
 </div>
 
+<!-- S5 amendment (6): capabilities leads — it's the panel worth an interviewer
+     reading; trace/meta are evidence for someone who goes looking, so they
+     follow rather than lead. Open by default since it now leads: nothing
+     stood between the split and this panel before, and a closed lead panel
+     right under the split reads like nothing is there. -->
+<details id="cap-box" open><summary>Capabilities — what works, what doesn't</summary>
+  <div class="cap" id="cap-content"><div class="none">Loading…</div></div>
+</details>
 <details id="trace-box"><summary>Pipeline trace (JSON)</summary><pre id="trace"></pre></details>
 <details id="meta-box"><summary>meta &amp; timings</summary>
   <div class="meta-chrome"><span class="sha" id="sha">…</span>
     <span class="sha"><a href="/edgar-check" target="_blank">/edgar-check</a></span></div>
   <pre id="meta"></pre>
-</details>
-<details id="cap-box"><summary>Capabilities — what works, what doesn't</summary>
-  <div class="cap" id="cap-content"><div class="none">Loading…</div></div>
 </details>
 </main>
 
@@ -686,21 +707,31 @@ function show(i){
     b.setAttribute("aria-current", String(+b.dataset.i === i)));
   const body = it.status === "extracted" || it.status === "incorporated_by_reference";
   // The header line and the evidence panel are the same item metadata S4
-  // used to stack above pre.text; they still exist, just moved (S5 round 3 —
-  // debt row V4). The header is now a `.src-hdr` band, matching #source's own
-  // so the two panes' scrollable content starts at the same Y; the rest
-  // (heading match, offsets, raw evidence) is a togglable <details> AFTER
-  // pre.text, so it adds height below the fold, not above it.
+  // used to stack above pre.text; they still exist, just moved. The header
+  // is now a `.src-hdr` band, matching #source's own, so the two panes'
+  // scrollable content starts at the same Y (round 3). The evidence
+  // (heading match, offsets, raw evidence) is real proof of INV-S2, not
+  // jargon to delete, but meaningless to an interviewer at a glance — it
+  // stays a collapsed, plainly-labelled <details>, positioned as an overlay
+  // (see .pane-meta's CSS) so it never competes with pre.text for height
+  // (round 4, amendment (5)+(7)).
   const hdrRight = `Part ${esc(it.part || "—")} · ${esc(it.status)} · conf ${it.confidence ?? "—"} · via ${esc(it.method || "—")}`;
+  // The truncation notice used to be its own in-flow sibling after
+  // pre.text, which is exactly the bug .pane-meta's own move to
+  // position:absolute just fixed, reintroduced through a second element: on
+  // a large truncated item (jpm-2024 item 1A, 136k chars shown to 40k) it
+  // stole ~24px of pre.text's flex share the same way. It folds into the
+  // (already out-of-flow) .pane-meta overlay instead, as one more row of
+  // the same "where this text came from" evidence — which is what it is.
   $("#pane").innerHTML = `
     <div class="src-hdr"><span class="lbl">Item ${esc(it.item)} — ${esc(it.title || "")}</span>
       <span class="lbl">${hdrRight}</span></div>
     ${body
-      ? `<pre class="text">${esc(it.text)}</pre>
-         ${it.truncated ? `<div class="hint" style="padding:6px 14px 0">Showing the first ${it.text.length.toLocaleString()} of ${it.chars.toLocaleString()} characters.</div>` : ""}`
+      ? `<pre class="text">${esc(it.text)}</pre>`
       : `<div class="none" style="padding:12px">Status <b>${esc(it.status)}</b> carries no span: the item is reported as absent rather than silently dropped (INV-S4).</div>`}
-    <details class="pane-meta"><summary>item details</summary>
+    <details class="pane-meta"><summary>where this text came from</summary>
       <dl class="ev">
+        ${it.truncated ? `<dt>shown</dt><dd>first ${it.text.length.toLocaleString()} of ${it.chars.toLocaleString()} characters</dd>` : ""}
         <dt>heading matched</dt><dd>${it.heading_text ? esc(it.heading_text) : "— (no heading found)"}</dd>
         <dt>offsets</dt><dd>${it.start != null ? `[${it.start.toLocaleString()}, ${it.end.toLocaleString()})` : "null — no span for this status"}</dd>
         <dt>evidence</dt><dd>${esc(JSON.stringify(it.evidence || {}))}</dd>

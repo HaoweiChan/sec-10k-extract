@@ -1,0 +1,23 @@
+{
+  "id": "ui-pane-meta-amendment-regression",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "pane_meta_amendment"
+    ],
+    "file": "evals/fixtures/repo_hygiene/pane-meta-flush-open.html"
+  },
+  "expect": {
+    "min_failures": 4,
+    "max_failures": 4
+  },
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "Pins a synthetic worst-case regression: `.pane-meta` rendered `open` by default, in normal flex flow (no position:absolute), flush against the pane edge (no left inset), and pre.text carrying a 14px bottom margin instead of 0 \u2014 4 independent failures, exact count so a regressed check that only catches some of the four still goes red."
+  },
+  "provenance": "S5 round 4, created 2026-08-22 alongside ui-pane-meta-amendment.json. Watched RED against src/repo_hygiene/eval_adapter.py's check_pane_meta_amendment (4 failures on the fixture)."
+}

@@ -1,0 +1,24 @@
+{
+  "id": "ui-bottom-panel-order",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "bottom_panel_order"
+    ],
+    "order": [
+      "cap-box",
+      "trace-box",
+      "meta-box"
+    ]
+  },
+  "expect": {},
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "S5 amendment (6), 2026-08-22: 'i want the capabilities window be right below the parsed window, on top of pipeline trace and meta windows cuz they means nothing to the interviewers either.' Order asserted by comparing every adjacent pair's position in the file text (cap-box before trace-box, trace-box before meta-box) — sufficient to pin the full 3-element order: any permutation other than cap<trace<meta violates at least one adjacent pair. Watched red against the pre-amendment file (order was trace-box, meta-box, cap-box), green once cap-box moved first."
+  },
+  "provenance": "S5 round 4, created 2026-08-22 before the reorder, per hard rule 2."
+}

@@ -1,0 +1,23 @@
+{
+  "id": "ui-truncated-notice-in-overlay-regression",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "truncated_notice_in_overlay"
+    ],
+    "file": "evals/fixtures/repo_hygiene/truncated-hint-in-flow.html"
+  },
+  "expect": {
+    "min_failures": 1,
+    "max_failures": 1
+  },
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "Pins the in-flow truncated-notice shape as a known-bad fixture: `it.truncated` referenced before `.pane-meta` in #pane's render template — 1 failure, exact count."
+  },
+  "provenance": "S5 round 4, created 2026-08-22 alongside ui-truncated-notice-in-overlay.json. Watched RED against src/repo_hygiene/eval_adapter.py's check_truncated_notice_in_overlay (1 failure on the fixture)."
+}

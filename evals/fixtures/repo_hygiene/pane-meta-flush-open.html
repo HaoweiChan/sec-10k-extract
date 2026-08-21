@@ -1,0 +1,14 @@
+<!-- S5 amendment (5)+(7) regression fixture: the item-metadata <details>
+     rendered open by default, left in #pane's normal flex flow (no
+     position:absolute), flush against the pane edge (no left inset), and
+     pre.text carrying a non-zero bottom margin — the gutter that kept the
+     content bottoms from ever truly coinciding. Caught by
+     evals/adversarial/ui-pane-meta-amendment-regression.json
+     (expect.min_failures/max_failures). -->
+<div id="pane">
+  <details open class="pane-meta"><summary>where this text came from</summary></details>
+</div>
+<style>
+.pane-meta{background:var(--panel)}
+pre.text{margin:0 14px 14px}
+</style>
