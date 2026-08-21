@@ -15,6 +15,7 @@ import re
 from pathlib import Path
 
 from . import css_contrast
+from src.sec10k.web import capabilities as web_capabilities
 
 UI_STYLESHEET = "src/sec10k/web/static/index.html"
 
@@ -111,11 +112,72 @@ def check_ui_stylesheet(case):
                       "min_ratio_measured": min(measured.values())}
 
 
+def check_typography_floor(case):
+    """No declared px `font-size` in the inspector stylesheet may sit below
+    the floor (S4: 11px) — a human reading the inspector should never hit a
+    10px badge. Catches `font-size:Npx` and the `font:Npx[/...]` shorthand's
+    leading size token, both of which the file uses. `rem`/`em` are
+    explicitly out of scope: nothing in the file declares a font-size in
+    those units today, and resolving one into a pixel floor would need a
+    root font-size baseline this check has no reason to track otherwise —
+    if that ever changes, this check must grow with it rather than staying
+    silently blind.
+    """
+    inp = case.get("input", {})
+    floor = inp.get("min_px", 11)
+    css = (ROOT / inp.get("file", UI_STYLESHEET)).read_text()
+    css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+    sizes = re.findall(r"font(?:-size)?\s*:\s*(\d+)px", css)
+    return [f"{n}px < {floor}px floor" for n in sizes if int(n) < floor]
+
+
+def check_layout_centering(case):
+    """`header`/`main`/`footer` must each declare a `max-width` and an auto
+    inline margin, or the page hugs the left edge on a wide viewport (S4)."""
+    inp = case.get("input", {})
+    css = (ROOT / inp.get("file", UI_STYLESHEET)).read_text()
+    bad = []
+    for sel in inp.get("selectors", ["header", "main", "footer"]):
+        try:
+            body = css_contrast._rule_body(css, sel)
+        except ValueError as e:
+            bad.append(str(e))
+            continue
+        if "max-width" not in body:
+            bad.append(f"{sel}: no max-width declared")
+        if not re.search(r"margin(-inline)?\s*:\s*[^;]*auto", body):
+            bad.append(f"{sel}: no auto inline margin")
+    return bad
+
+
+def check_capabilities_parse(case):
+    """The committed README must still yield a non-trivial parse through
+    capabilities.py — the check that turns a README restructure red instead
+    of silently emptying the `/api/capabilities` panel (S4), the INV-S2
+    argument applied to docs."""
+    inp = case.get("input", {})
+    readme = ROOT / inp.get("file", "README.md")
+    data = web_capabilities.parse_readme(readme)
+    min_works = inp.get("min_works_well", 8)
+    min_diff = inp.get("min_difficult", 3)
+    works = len(data["works_well"])
+    diff = sum(len(g["items"]) for g in data["difficult"])
+    bad = []
+    if works < min_works:
+        bad.append(f"works_well has {works} rows (< {min_works})")
+    if diff < min_diff:
+        bad.append(f"difficult has {diff} entries (< {min_diff})")
+    return bad, {"works_well_rows": works, "difficult_entries": diff}
+
+
 CHECKS = {
     "adr_headers": lambda case: check_adr_headers(),
     "adr_index": lambda case: check_index(),
     "report_citations": lambda case: check_report_citations(),
     "ui_stylesheet": check_ui_stylesheet,
+    "typography_floor": check_typography_floor,
+    "layout_centering": check_layout_centering,
+    "capabilities_parse": check_capabilities_parse,
 }
 
 

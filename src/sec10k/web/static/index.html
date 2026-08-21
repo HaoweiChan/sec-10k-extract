@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>sec10k inspector</title>
+<title>SEC 10-K Extractor</title>
 <meta name="theme-color" content="#0a0d14">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -49,7 +49,7 @@
 *{box-sizing:border-box}
 *{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--accent) 35%,transparent) transparent}
 body{margin:0;background:var(--bg);color:var(--ink);
-  font:13px/1.55 var(--mono);
+  font:14px/1.55 var(--mono);
   font-feature-settings:'tnum' 1,'zero' 1,'calt' 1;letter-spacing:-.01em;
   background-image:
     linear-gradient(var(--grid) 1px,transparent 1px),
@@ -70,36 +70,36 @@ a{color:var(--accent)}
 button,select,input,.it,a{transition:background-color var(--t),border-color var(--t),color var(--t)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
-header{padding:14px 20px;border-bottom:1px solid var(--line);display:flex;
-  align-items:baseline;gap:14px;flex-wrap:wrap}
-h1{font-size:15px;margin:0;font-weight:700;letter-spacing:-.01em}
+header{max-width:1500px;margin-inline:auto;padding:16px 20px;border-bottom:1px solid var(--line)}
+h1{font-size:22px;margin:0;font-weight:800;letter-spacing:-.01em}
 h1::before{content:"> ";color:var(--amber-ink)}
-.sha{font:11px var(--mono);color:var(--dim)}
-main{padding:16px 20px;max-width:1500px}
+.subtitle{margin:4px 0 0;font-size:13px;font-weight:400;color:var(--dim)}
+.sha{font:12px var(--mono);color:var(--dim)}
+main{max-width:1500px;margin-inline:auto;padding:16px 20px}
 fieldset{border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;
   margin:0 0 14px;background:var(--panel)}
-legend{font-size:11px;text-transform:uppercase;letter-spacing:.12em;font-weight:600;
+legend{font-size:12px;text-transform:uppercase;letter-spacing:.12em;font-weight:600;
   color:var(--amber-ink);padding:0 6px}
 .modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px}
 .mode{display:flex;flex-direction:column;gap:7px}
-.mode label{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.12em;font-weight:600}
+.mode label{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.12em;font-weight:600}
 .row{display:flex;gap:7px}
 select,input[type=text],input[type=file]{flex:1;min-width:0;padding:7px 9px;
   border:1px solid var(--line);border-radius:var(--r);background:var(--bg);
-  color:var(--ink);font-size:13px;font-family:inherit}
+  color:var(--ink);font-size:14px;font-family:inherit}
 select:hover,input[type=text]:hover,input[type=file]:hover{border-color:color-mix(in srgb,var(--ink) 20%,transparent)}
 button{padding:7px 14px;border:1px solid var(--amber);border-radius:var(--r);
-  background:var(--amber);color:var(--on-amber);font-size:12px;cursor:pointer;
+  background:var(--amber);color:var(--on-amber);font-size:13px;cursor:pointer;
   font-family:inherit;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
 /* :not(.it) matters — the item rows are buttons too, and this selector would
    otherwise outrank their own hover/selected rules and paint them solid amber */
 button:not(.it):hover:not(:disabled){background:color-mix(in srgb,var(--amber) 88%,var(--bg))}
 button:disabled{opacity:.5;cursor:default}
-.hint{font-size:11px;color:var(--dim)}
+.hint{font-size:12px;color:var(--dim)}
 
 #banner{padding:11px 14px;border-radius:var(--r);margin-bottom:12px;font-weight:600;
   border:1px solid;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-#banner .src{font-weight:400;font-size:12px;font-family:var(--mono)}
+#banner .src{font-weight:400;font-size:13px;font-family:var(--mono)}
 .s-success{color:var(--ok);border-color:var(--ok);background:color-mix(in srgb,var(--ok) 10%,var(--bg))}
 .s-success_with_warning{color:var(--warn);border-color:var(--warn);background:color-mix(in srgb,var(--warn) 10%,var(--bg))}
 .s-ambiguous{color:var(--amb);border-color:var(--amb);background:color-mix(in srgb,var(--amb) 12%,var(--bg))}
@@ -109,26 +109,27 @@ button:disabled{opacity:.5;cursor:default}
 #warnings{margin-bottom:12px}
 .warn{border:1px solid var(--line);border-left:3px solid var(--warn);
   border-radius:var(--r);padding:8px 11px;margin-bottom:6px;background:var(--panel)}
-.warn code{font:11px var(--mono);color:var(--warn);font-weight:700}
-.warn .msg{font-size:13px;margin-top:2px}
-.none{color:var(--dim);font-size:12px}
+.warn code{font:12px var(--mono);color:var(--warn);font-weight:700}
+.warn .msg{font-size:14px;margin-top:2px}
+.none{color:var(--dim);font-size:13px}
 
-.split{display:grid;grid-template-columns:290px 1fr;gap:14px;align-items:start}
+.split{display:grid;grid-template-columns:290px 1fr 1fr;gap:14px;align-items:start}
+@media(max-width:1100px){.split{grid-template-columns:290px 1fr}#source{grid-column:1/-1}}
 @media(max-width:820px){.split{grid-template-columns:1fr}}
 #sidebar{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--panel)}
 .it{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);
   background:var(--panel);color:var(--ink);padding:8px 11px;cursor:pointer;font-weight:400;
-  font-family:inherit;font-size:13px;text-transform:none;letter-spacing:-.01em;border-radius:0}
+  font-family:inherit;font-size:14px;text-transform:none;letter-spacing:-.01em;border-radius:0}
 .it:hover{background:var(--muted)}
 /* opaque both ends on purpose: transitioning background-color from transparent
    to a translucent color-mix leaves it stuck opaque mid-interpolation */
 .it[aria-current=true]{background:color-mix(in srgb,var(--amber) 12%,var(--panel));
   box-shadow:inset 3px 0 0 var(--amber)}
 .it .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
-.it .code{font:12px var(--mono);font-weight:700;color:var(--amber-ink)}
-.it .ttl{font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.it .code{font:13px var(--mono);font-weight:700;color:var(--amber-ink)}
+.it .ttl{font-size:12px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .badges{display:flex;gap:5px;margin-top:4px;flex-wrap:wrap}
-.b{font:10px var(--mono);padding:1px 5px;border-radius:var(--r);border:1px solid var(--line);
+.b{font:11px var(--mono);padding:1px 5px;border-radius:var(--r);border:1px solid var(--line);
   color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
 .b.st-extracted{color:var(--ok);border-color:var(--ok)}
 .b.st-missing{color:var(--bad);border-color:var(--bad)}
@@ -137,29 +138,50 @@ button:disabled{opacity:.5;cursor:default}
 .b.lo{color:var(--warn);border-color:var(--warn)}
 
 #pane{border:1px solid var(--line);border-radius:var(--r);padding:14px;background:var(--panel);min-height:230px}
-#pane h2{margin:0 0 3px;font-size:15px;letter-spacing:-.01em}
+#pane h2{margin:0 0 3px;font-size:16px;letter-spacing:-.01em}
 .ev{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:11px 0;
-  font-size:12px;border-top:1px solid var(--line);padding-top:10px}
-.ev dt{color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-size:11px}
-.ev dd{margin:0;font-family:var(--mono);font-size:11px;word-break:break-word}
-pre.text{white-space:pre-wrap;word-wrap:break-word;font:12px/1.6 var(--mono);
+  font-size:13px;border-top:1px solid var(--line);padding-top:10px}
+.ev dt{color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-size:12px}
+.ev dd{margin:0;font-family:var(--mono);font-size:12px;word-break:break-word}
+pre.text{white-space:pre-wrap;word-wrap:break-word;font:13px/1.6 var(--mono);
   background:var(--bg);border:1px solid var(--line);border-radius:var(--r);
   padding:11px;max-height:520px;overflow:auto;margin:0}
 details{margin-top:12px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel)}
-summary{padding:9px 13px;cursor:pointer;font-size:11px;font-weight:600;color:var(--dim);
+summary{padding:9px 13px;cursor:pointer;font-size:12px;font-weight:600;color:var(--dim);
   text-transform:uppercase;letter-spacing:.1em}
 summary:hover{color:var(--accent)}
-details pre{margin:0;padding:0 13px 13px;font:11px/1.5 var(--mono);
+details pre{margin:0;padding:0 13px 13px;font:12px/1.5 var(--mono);
   white-space:pre-wrap;word-break:break-word;max-height:440px;overflow:auto}
-footer{padding:14px 20px 40px;color:var(--dim);font-size:12px;max-width:1500px}
+.meta-chrome{display:flex;gap:14px;flex-wrap:wrap;align-items:baseline;
+  padding:9px 13px 0}
+#source{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);
+  overflow:hidden;display:flex;flex-direction:column;min-height:230px}
+.src-hdr{padding:9px 13px;border-bottom:1px solid var(--line);font-size:12px;font-weight:600;
+  color:var(--dim);text-transform:uppercase;letter-spacing:.1em;display:flex;
+  justify-content:space-between;align-items:center;gap:10px}
+.src-hdr label{font-size:12px;text-transform:none;letter-spacing:0;font-weight:400;
+  display:flex;gap:5px;align-items:center;cursor:pointer}
+#source-body{flex:1}
+#src-frame{width:100%;height:520px;border:0;display:block;background:var(--bg)}
+.cap{padding:12px 13px}
+.cap h3{margin:14px 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--amber-ink);font-weight:600}
+.cap h3:first-child{margin-top:0}
+table.cap-t{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px}
+table.cap-t th,table.cap-t td{border:1px solid var(--line);padding:6px 8px;
+  text-align:left;vertical-align:top}
+table.cap-t th{background:var(--muted);color:var(--dim);text-transform:uppercase;
+  letter-spacing:.06em;font-size:11px;font-weight:600}
+table.cap-t td.grp{font-weight:700;color:var(--amber-ink);font-size:11px;
+  text-transform:uppercase;letter-spacing:.08em;background:var(--muted)}
+footer{max-width:1500px;margin-inline:auto;padding:14px 20px 40px;color:var(--dim);font-size:13px}
 footer a{color:var(--accent)}
 </style>
 </head>
 <body>
 <header>
-  <h1>sec10k inspector</h1>
-  <span class="sha" id="sha">…</span>
-  <span class="sha"><a href="/edgar-check" target="_blank">/edgar-check</a></span>
+  <h1>SEC 10-K Extractor</h1>
+  <p class="subtitle">Item-level extraction from SEC 10-K filings, with the evidence for every span.</p>
 </header>
 
 <main>
@@ -190,17 +212,28 @@ footer a{color:var(--accent)}
 <div class="split">
   <div id="sidebar"><div style="padding:11px" class="none">Items appear here.</div></div>
   <div id="pane"><span class="none">Select an item to read its extracted text.</span></div>
+  <div id="source">
+    <div class="src-hdr"><span>original filing</span>
+      <label><input type="checkbox" id="sync-scroll" checked> sync scroll</label>
+    </div>
+    <div id="source-body"><div class="none" style="padding:12px">Extract a filing to see its original source.</div></div>
+  </div>
 </div>
 
-<details id="trace-box"><summary>trace — candidates found, rejections and why, boundary decisions</summary><pre id="trace"></pre></details>
-<details id="meta-box"><summary>meta &amp; timings</summary><pre id="meta"></pre></details>
+<details id="trace-box"><summary>Pipeline trace (JSON)</summary><pre id="trace"></pre></details>
+<details id="meta-box"><summary>meta &amp; timings</summary>
+  <div class="meta-chrome"><span class="sha" id="sha">…</span>
+    <span class="sha"><a href="/edgar-check" target="_blank">/edgar-check</a></span></div>
+  <pre id="meta"></pre>
+</details>
+<details id="cap-box"><summary>Capabilities — what works, what doesn't</summary>
+  <div class="cap" id="cap-content"><div class="none">Loading…</div></div>
+</details>
 </main>
 
 <footer>
   Item text is rendered from <code>start</code>/<code>end</code> offsets into the extractor's
   normalized text — there is no second copy to drift (INV-S2).
-  Which filings work well and which are unreliable: see the README's
-  <a href="https://github.com/HaoweiChan/sec-10k-extract#readme" target="_blank">works-well and difficult/unsupported lists</a>.
 </footer>
 
 <script>
@@ -215,6 +248,117 @@ async function boot(){
     $("#sha").textContent = "build " + m.git_sha;
     $("#fx").innerHTML = m.fixtures.map(f => `<option>${esc(f)}</option>`).join("");
   }catch(e){ $("#sha").textContent = "meta unavailable"; }
+  loadCapabilities();
+}
+
+// The two README lists (works-well / difficult) are parsed at request time
+// by src/sec10k/web/capabilities.py — rendering them here means there is no
+// hand-copied second table in this file to drift from the README (INV-S2's
+// argument applied to docs).
+async function loadCapabilities(){
+  const box = $("#cap-content");
+  try{
+    const c = await (await fetch("/api/capabilities")).json();
+    const ww = c.works_well || [], diff = c.difficult || [];
+    let html = "<h3>what works well</h3>";
+    html += ww.length
+      ? `<table class="cap-t"><thead><tr>${Object.keys(ww[0]).map(k => `<th>${esc(k)}</th>`).join("")}</tr></thead><tbody>${
+          ww.map(r => `<tr>${Object.values(r).map(v => `<td>${esc(v)}</td>`).join("")}</tr>`).join("")
+        }</tbody></table>`
+      : `<div class="none">No data — README.md's table did not parse.</div>`;
+    html += "<h3>what is difficult, unreliable, or unsupported</h3>";
+    html += diff.length
+      ? `<table class="cap-t"><tbody>${diff.map(g =>
+          `<tr><td class="grp">${esc(g.heading)}</td></tr>` +
+          g.items.map(it => `<tr><td>${esc(it)}</td></tr>`).join("")
+        ).join("")}</tbody></table>`
+      : `<div class="none">No data — README.md's section did not parse.</div>`;
+    box.innerHTML = html;
+  }catch(e){
+    box.innerHTML = `<div class="none">Capabilities unavailable: ${esc(String(e))}</div>`;
+  }
+}
+
+// Scroll sync between the extracted-text pane and the original-filing
+// iframe: proportional (scrollTop / scrollable range) both ways, behind a
+// re-entrancy guard so the two listeners don't fight each other.
+let SYNC_GUARD = false;
+
+function syncOn(){ const c = $("#sync-scroll"); return c && c.checked; }
+
+function bindSourceScroll(frame){
+  frame.addEventListener("load", () => {
+    let doc; try{ doc = frame.contentDocument; }catch(e){ return; }
+    if(!doc) return;
+    const scroller = doc.scrollingElement || doc.documentElement;
+    scroller.addEventListener("scroll", () => {
+      if(SYNC_GUARD || !syncOn()) return;
+      const pre = document.querySelector("#pane pre.text");
+      if(!pre) return;
+      SYNC_GUARD = true;
+      const range = Math.max(1, scroller.scrollHeight - scroller.clientHeight);
+      pre.scrollTop = (scroller.scrollTop / range) * Math.max(1, pre.scrollHeight - pre.clientHeight);
+      SYNC_GUARD = false;
+    });
+  });
+}
+
+function bindPaneScroll(pre){
+  pre.addEventListener("scroll", () => {
+    if(SYNC_GUARD || !syncOn()) return;
+    const frame = document.getElementById("src-frame");
+    if(!frame) return;
+    let doc; try{ doc = frame.contentDocument; }catch(e){ return; }
+    if(!doc) return;
+    const scroller = doc.scrollingElement || doc.documentElement;
+    SYNC_GUARD = true;
+    const range = Math.max(1, pre.scrollHeight - pre.clientHeight);
+    scroller.scrollTop = (pre.scrollTop / range) * Math.max(1, scroller.scrollHeight - scroller.clientHeight);
+    SYNC_GUARD = false;
+  });
+}
+
+// A token miss (cache evicted — the LRU holds at most 3 documents) renders
+// the honest refusal the endpoint sends back, never a re-fetch or a guess.
+async function loadSource(token){
+  const box = $("#source-body");
+  if(!token){
+    box.innerHTML = `<div class="none" style="padding:12px">No original source for this run.</div>`;
+    return;
+  }
+  try{
+    const r = await fetch("/api/source/" + encodeURIComponent(token));
+    if(!r.ok){
+      box.innerHTML = `<div class="none" style="padding:12px">Original source is no longer cached — re-run the extraction.</div>`;
+      return;
+    }
+    box.innerHTML = `<iframe id="src-frame" sandbox="allow-same-origin" ` +
+      `title="original filing source" src="/api/source/${encodeURIComponent(token)}"></iframe>`;
+    bindSourceScroll(document.getElementById("src-frame"));
+  }catch(e){
+    box.innerHTML = `<div class="none" style="padding:12px">Original source is no longer cached — re-run the extraction.</div>`;
+  }
+}
+
+// Best-effort nicety: scroll the source pane to the selected item's heading.
+// Silently no-ops when the frame isn't ready or the text isn't found.
+function scrollSourceToHeading(headingText){
+  if(!headingText) return;
+  try{
+    const frame = document.getElementById("src-frame");
+    if(!frame) return;
+    const doc = frame.contentDocument;
+    if(!doc) return;
+    const walker = doc.createTreeWalker(doc.body || doc.documentElement, NodeFilter.SHOW_TEXT);
+    let node;
+    while((node = walker.nextNode())){
+      if(node.nodeValue && node.nodeValue.includes(headingText)){
+        const el = node.parentElement;
+        if(el && el.scrollIntoView) el.scrollIntoView({block: "start"});
+        return;
+      }
+    }
+  }catch(e){ /* cross-origin, sandbox-blocked, or not found — no-op */ }
 }
 
 function busy(on, msg){
@@ -271,6 +415,7 @@ function render(v){
   $("#trace").textContent = JSON.stringify(v.trace || [], null, 1);
   $("#meta").textContent = JSON.stringify(
     {meta: v.meta, timings: v.timings, cost: v.cost, normalized_chars: v.norm_chars}, null, 1);
+  loadSource(v.source && v.source.token);
 }
 
 function show(i){
@@ -290,6 +435,9 @@ function show(i){
       ? `${it.truncated ? `<div class="hint" style="margin-bottom:6px">Showing the first ${it.text.length.toLocaleString()} of ${it.chars.toLocaleString()} characters.</div>` : ""}
          <pre class="text">${esc(it.text)}</pre>`
       : `<div class="none">Status <b>${esc(it.status)}</b> carries no span: the item is reported as absent rather than silently dropped (INV-S4).</div>`}`;
+  const pre = $("#pane pre.text");
+  if(pre) bindPaneScroll(pre);
+  scrollSourceToHeading(it.heading_text);
 }
 
 $("#sidebar").addEventListener("click", e => {

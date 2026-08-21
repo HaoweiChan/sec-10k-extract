@@ -1,0 +1,20 @@
+{
+  "id": "ui-typography-floor",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "typography_floor"
+    ],
+    "min_px": 11
+  },
+  "expect": {},
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "S4 asked the human's requested type floor (nothing declared below 11px) become a case before the fix, per hard rule 2. Before the S4 fix the file declared 10px on `.b` badges and 11px on several labels/hints; this check watched red on the unfixed file (floor violation: 10px < 11px) and green after the whole scale moved up by 1px (10->11, 11->12, 12->13, 13->14, h1/h2 up)."
+  },
+  "provenance": "S4, created 2026-08-21 alongside the type-scale fix. Watched RED against the pre-fix stylesheet (`.b{font:10px...}` failing the 11px floor), GREEN after."
+}
