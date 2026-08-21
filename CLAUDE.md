@@ -1,7 +1,7 @@
 # Project working rules
 
-Eval-first repo, built on **groundwork**. Tasks live under `src/<task>/`.
-**The eval set IS the spec.** groundwork targets problems where requirements
+Eval-first repo. Tasks live under `src/<task>/`.
+**The eval set IS the spec.** This repo targets problems where requirements
 are clear but correctness is hard to define up front — so correctness is encoded
 as executable invariants and metrics, not prose. Architecture rationale lives in
 README.md; this file is the working contract.
@@ -18,7 +18,8 @@ README.md; this file is the working contract.
 
 ```
 .claude/skills/    domain + process knowledge, loaded on demand
-.claude/agents/    cold-reviewer / eval-adversary / spec-drift / extraction-auditor
+.claude/agents/    extraction-auditor (cold-review / eval-adversary / spec-drift
+                   passes are run as general subagents, not committed agent files)
 docs/              durable design docs (product, evals, architecture) — descriptive; specs/ binds
 tasks/TODO.md      milestone ledger — status + per-milestone Validation gates (ADR-009)
 .claude/hooks/     enforcement — the only layer that can actually block
@@ -28,14 +29,14 @@ evals/golden/      hand-labeled cases (JSON, one per case)
 evals/adversarial/ cases known or designed to break the pipeline
 evals/fixtures/    committed EDGAR filings, provenance in its README
 evals/report/      history.jsonl line per run; full report on --report/all/--dir/red (ADR-025)
-prompts/           AI-collaboration record (auto-dumped raw/ + curated files)
+prompts/           AI-collaboration record (curated files only)
 src/<task>/        implementation + eval_adapter.py per task
 ```
 
 ## Gate
 
-The objective pass/fail for this repo. pr-loop, the hooks, and any reviewer
-run exactly these, in order:
+The objective pass/fail for this repo. The delivery loop, the hooks, and any
+reviewer run exactly these, in order:
 
 ```bash
 python3 -m evals.run --suite invariant   # pass: 100%
@@ -71,8 +72,7 @@ python3 -m evals.run --suite fast --update-baseline   # deliberate baseline move
    architecture, evaluation methodology, failure handling, an output contract, or
    another major implementation decision, preserve the key prompt and outcome in
    `prompts/`. Do not curate routine coding, formatting, or trivial debugging
-   interactions. Raw transcripts may be auto-dumped; `prompts/` curated records
-   should capture decisions worth reviewing.
+   interactions. `prompts/` holds curated records only — no raw transcript dumps.
 7. **Commits are consolidated milestones.** The assignment evaluators read the
    history. Commit only settled, coherent progress — no micro-commits, and no
    quick fix-commit chasing the commit it patches. Verify the batch first
@@ -88,6 +88,17 @@ python3 -m evals.run --suite fast --update-baseline   # deliberate baseline move
 4. `cold-reviewer` subagent cold-reads → its findings become adversarial cases
 5. New cases into the eval set → back to 3
 6. Eval gate green → commit
+
+For a full tasks/TODO.md task that should end in a PR, drive it as a delivery
+loop instead of a single pass: implement → gate → review → repair, with the
+roles kept apart. The implementer never approves its own work; the reviewer
+reads the diff with fresh context and never edits; the eval gate is the only
+objective pass/fail and is never skipped; the human writes the spec and merges.
+Findings and their resolutions land as structured artifacts in `tasks/reviews/`
+(`pr<N>-r<K>.json` + `-resolution.json`), and the PR body carries a rolling
+evidence pack — never agent chatter. Stop and escalate after three review
+rounds without approval rather than looping; `tasks/reviews/pr18-r1..r3.json`
+is a worked example, breaker included.
 
 ## Adding a task
 

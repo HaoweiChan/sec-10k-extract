@@ -1,4 +1,4 @@
-# ADR-001 — Adapting the Task 2 planning prompt to groundwork conventions
+# ADR-001 — Adapting the Task 2 planning prompt to this repo's conventions
 
 Date: 2026-08-15. Status: accepted.
 

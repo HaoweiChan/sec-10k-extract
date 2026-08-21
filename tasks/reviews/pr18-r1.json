@@ -3,7 +3,7 @@
  "pr": 18,
  "task": "S3",
  "result": "REQUEST_CHANGES",
- "reviewer": "groundwork:pr-reviewer (fresh context, full diff main...task/S3)",
+ "reviewer": "pr-reviewer subagent (fresh context, full diff main...task/S3)",
  "gate": "pass -- invariant 13/13 = 1.000, fast 51/51 = 1.000 >= baseline 1.0",
  "counts": {
   "HIGH": 0,

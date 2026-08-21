@@ -11,7 +11,7 @@ and what got corrected.
 
 Before/at plan review, the human fixed:
 
-1. Planning artifacts adapt to groundwork conventions — `docs/` for durable
+1. Planning artifacts adapt to this repo's conventions — `docs/` for durable
    design docs, no plan files, no task tracker (ADR-001).
 2. Frontend = single FastAPI service + vanilla JS inspector on Zeabur.
 3. B-level fully deterministic; any LLM stage deferred to A-level and gated on

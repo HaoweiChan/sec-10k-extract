@@ -138,7 +138,7 @@ Nodes (12): confidence field (uncalibrated, pinned by cases), A validator that c
 
 ### Community 12 - "Eval-First Scaffold Decisions"
 Cohesion: 0.17
-Nodes (12): ADR-000: Eval-first scaffold instead of spec-driven development, The eval set is the spec, Hooks are law, CLAUDE.md is advice, ADR-001: Adapting the Task 2 planning prompt to groundwork conventions, Normative specs vs executable enforcement vs descriptive architecture, ADR-009: A milestone ledger, and why hard rule 3 had to bend, A gate nobody can observe is indistinguishable from a gate that passed, UNRUN status marker for judgment gates (+4 more)
+Nodes (12): ADR-000: Eval-first scaffold instead of spec-driven development, The eval set is the spec, Hooks are law, CLAUDE.md is advice, ADR-001: Adapting the Task 2 planning prompt to scaffold conventions, Normative specs vs executable enforcement vs descriptive architecture, ADR-009: A milestone ledger, and why hard rule 3 had to bend, A gate nobody can observe is indistinguishable from a gate that passed, UNRUN status marker for judgment gates (+4 more)
 
 ### Community 13 - "Validator Battery Measurement"
 Cohesion: 0.22
@@ -198,7 +198,7 @@ Nodes (7): Shallow-tier case, invariant suite, eval-gate CI workflow, invariant-
 
 ### Community 27 - "Project Working Rules"
 Cohesion: 0.40
-Nodes (6): AGENTS.md working rules, Adding a task recipe, The eval set IS the spec, Project working rules (CLAUDE.md), groundwork eval-first scaffold, sec-10k-extract
+Nodes (6): AGENTS.md working rules, Adding a task recipe, The eval set IS the spec, Project working rules (CLAUDE.md), scaffold eval-first scaffold, sec-10k-extract
 
 ### Community 28 - "Silent-Success Failure Class"
 Cohesion: 0.33

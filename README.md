@@ -7,11 +7,19 @@ offsets, and confidence that does not pretend to be calibrated.
 
 **Live inspector: <https://whaleforce-sec10k.zeabur.app>**
 
-Built on [groundwork](https://github.com/HaoweiChan/groundwork), an eval-first
-scaffold. That choice is the point of the project: 10-K extraction has no
-public ground truth, so correctness is encoded as executable invariants and
-hand-labelled cases rather than prose, and every claim below is traceable to a
-committed report in `evals/report/`.
+![The sec10k inspector: fixture aapl-2025 extracted, item list on the left with
+per-item status, confidence and method, and Item 1's text on the right rendered
+from its character offsets](docs/assets/inspector.png)
+
+The repo is eval-first, and that choice is the point of the project: 10-K
+extraction has no public ground truth, so correctness is encoded as executable
+invariants and hand-labelled cases rather than prose, and every claim below is
+traceable to a committed run in `evals/report/history.jsonl`.
+
+The inspector above is the same pipeline behind a three-mode front end — a
+committed fixture, your own uploaded filing, or an EDGAR URL. Item text is
+sliced from the `start`/`end` offsets at response time, so what you read is
+the offsets, not a second copy that could drift from them (INV-S2).
 
 ---
 

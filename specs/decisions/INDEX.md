@@ -1,6 +1,6 @@
 # Decisions index
 
-Current-rules digest (groundwork GW-006): one line per ADR, in numeric order,
+Current-rules digest: one line per ADR, in numeric order,
 its ruling and what enforces it. Full context — Context/Decision/Consequences
 — lives in the ADR file; this index is the map, not the territory.
 
