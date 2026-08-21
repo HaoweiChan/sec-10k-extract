@@ -1,0 +1,24 @@
+{
+  "id": "ui-capabilities-parse-content",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "capabilities_parse"
+    ],
+    "file": "evals/fixtures/repo_hygiene/capabilities-empty-cells.md",
+    "min_works_well": 8,
+    "min_difficult": 3
+  },
+  "expect": {
+    "min_failures": 1
+  },
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "PR #21 R1 round-1 review: the capabilities_parse check counted rows and entries only, so a README edit that keeps the same row/column/entry counts but empties every cell to a placeholder (e.g. every cell literally 'x') passed as if it were real content — the exact regression the case's own triage claimed to prevent. Watched red against the pre-fix check (evals/fixtures/repo_hygiene/capabilities-empty-cells.md — 9 works-well rows, 3 difficult entries, all placeholders — returned zero failures), green once the check also asserted no row/item has all-identical cells and every cell/term/detail clears a minimum length. Written against the V3 shape change (difficult items are {term, detail} dicts, not one fused string)."
+  },
+  "provenance": "PR #21 round-1 repair (R1), created 2026-08-21. Watched RED against src/repo_hygiene/eval_adapter.py's pre-fix `check_capabilities_parse` (0 failures on the fixture despite every cell/bullet being the placeholder 'x'), GREEN (19 failures: 9 identical-cell rows + 9 short-cell rows + 1 thin-difficult-items entry) after."
+}

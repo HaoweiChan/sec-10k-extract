@@ -1,0 +1,10 @@
+<!-- PR #21 R3 regression fixture: asymmetric margin shorthands that contain
+     the literal token "auto" but do not actually centre the element. The
+     pre-fix substring-search regex accepts both; only `main` here truly
+     centres. Caught by evals/adversarial/ui-layout-centering-asymmetric.json
+     (expect.min_failures: header and footer must both fail, main must not). -->
+<style>
+header{max-width:1500px;margin-inline:auto 0;padding:16px 20px}
+main{max-width:1500px;margin-inline:auto;padding:16px 20px}
+footer{max-width:1500px;margin:0 auto 0 0;padding:14px 20px 40px}
+</style>

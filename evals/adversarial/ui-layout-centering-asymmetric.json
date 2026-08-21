@@ -1,0 +1,27 @@
+{
+  "id": "ui-layout-centering-asymmetric",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "layout_centering"
+    ],
+    "file": "evals/fixtures/repo_hygiene/layout-centering-asymmetric.html",
+    "selectors": [
+      "header",
+      "main",
+      "footer"
+    ]
+  },
+  "expect": {
+    "min_failures": 2
+  },
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "PR #21 R3 round-1 review: the layout_centering check's substring search for the token `auto` also matched asymmetric margin shorthands (`margin-inline:auto 0`, `margin:0 auto 0 0`) that contain the word but do not centre. Watched red against the pre-fix regex (evals/fixtures/repo_hygiene/layout-centering-asymmetric.html's header and footer both use an asymmetric auto and returned zero failures), green once the check parsed the shorthand into components and required both inline sides to resolve to `auto`. The fixture's `main` rule genuinely centres (`margin-inline:auto`, one value) and must NOT be flagged — expect.min_failures:2 covers exactly header+footer, not a false positive on main."
+  },
+  "provenance": "PR #21 round-1 repair (R3), created 2026-08-21. Watched RED against src/repo_hygiene/eval_adapter.py's pre-fix `check_layout_centering` (0 failures on the fixture), GREEN (2 failures: header, footer) after."
+}

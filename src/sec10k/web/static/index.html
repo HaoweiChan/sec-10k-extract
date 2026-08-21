@@ -161,6 +161,8 @@ details pre{margin:0;padding:0 13px 13px;font:12px/1.5 var(--mono);
   justify-content:space-between;align-items:center;gap:10px}
 .src-hdr label{font-size:12px;text-transform:none;letter-spacing:0;font-weight:400;
   display:flex;gap:5px;align-items:center;cursor:pointer}
+#anchor-status{font-size:11px;text-transform:none;letter-spacing:0;font-weight:400;
+  color:var(--warn)}
 #source-body{flex:1}
 #src-frame{width:100%;height:520px;border:0;display:block;background:var(--bg)}
 .cap{padding:12px 13px}
@@ -174,6 +176,7 @@ table.cap-t th{background:var(--muted);color:var(--dim);text-transform:uppercase
   letter-spacing:.06em;font-size:11px;font-weight:600}
 table.cap-t td.grp{font-weight:700;color:var(--amber-ink);font-size:11px;
   text-transform:uppercase;letter-spacing:.08em;background:var(--muted)}
+table.cap-diff td:first-child{width:26%;font-weight:600;color:var(--ink)}
 footer{max-width:1500px;margin-inline:auto;padding:14px 20px 40px;color:var(--dim);font-size:13px}
 footer a{color:var(--accent)}
 </style>
@@ -214,6 +217,7 @@ footer a{color:var(--accent)}
   <div id="pane"><span class="none">Select an item to read its extracted text.</span></div>
   <div id="source">
     <div class="src-hdr"><span>original filing</span>
+      <span id="anchor-status"></span>
       <label><input type="checkbox" id="sync-scroll" checked> sync scroll</label>
     </div>
     <div id="source-body"><div class="none" style="padding:12px">Extract a filing to see its original source.</div></div>
@@ -267,10 +271,12 @@ async function loadCapabilities(){
         }</tbody></table>`
       : `<div class="none">No data — README.md's table did not parse.</div>`;
     html += "<h3>what is difficult, unreliable, or unsupported</h3>";
+    // V3: term and detail are real columns, not one fused paragraph cell —
+    // capabilities.py already returns them as separate {term, detail} fields.
     html += diff.length
-      ? `<table class="cap-t"><tbody>${diff.map(g =>
-          `<tr><td class="grp">${esc(g.heading)}</td></tr>` +
-          g.items.map(it => `<tr><td>${esc(it)}</td></tr>`).join("")
+      ? `<table class="cap-t cap-diff"><thead><tr><th>Issue</th><th>Detail</th></tr></thead><tbody>${diff.map(g =>
+          `<tr><td class="grp" colspan="2">${esc(g.heading)}</td></tr>` +
+          g.items.map(it => `<tr><td>${esc(it.term)}</td><td>${esc(it.detail)}</td></tr>`).join("")
         ).join("")}</tbody></table>`
       : `<div class="none">No data — README.md's section did not parse.</div>`;
     box.innerHTML = html;
@@ -279,9 +285,178 @@ async function loadCapabilities(){
   }
 }
 
+// --- item <-> source anchor machinery (V1 heading jump, V2 scoped scroll
+// sync share this: both need to know WHERE in the source document each
+// item starts, not just the whole document's scroll range). ---
+//
+// A heading is frequently split across tags (iXBRL wraps near-every token
+// in its own <span>), so no single text node need contain the literal
+// heading string. buildSourceIndex concatenates every text node's
+// normalized value in document order and records, per NODE (not per
+// character — a per-character map would be O(document size) objects on a
+// multi-MB filing), the cumulative offset into that concatenation. A match
+// is found with one indexOf over the concatenated string, then translated
+// back to a (node, raw offset) by re-walking only the one node it landed
+// in.
+// ITEM_START_ANCHORS[i] caches WHERE (a DOM node/offset) each item's
+// heading lives — never a pixel value: iXBRL filings keep reflowing after
+// the iframe's `load` event fires (webfonts, deferred images), so a pixel
+// position cached at load time measurably drifts by the time the user
+// scrolls (confirmed live on aapl-2025: a position cached at load read back
+// ~62,000px off soon after). Pixel Y is always recomputed fresh, from the
+// cached DOM position, against whatever the CURRENT layout says.
+let SOURCE_INDEX = null, ITEM_START_ANCHORS = [];
+
+function normalizeChunk(raw){
+  return raw.replace(/\s+/g, " ").toLowerCase();
+}
+
+// Heading text may carry literal HTML entities if it ever came from a
+// scraped source; decode via a scratch element rather than hand-rolling an
+// entity table, then apply the same whitespace/case normalization the
+// source side uses.
+function normalizeHeading(s){
+  const ta = document.createElement("textarea");
+  ta.innerHTML = String(s ?? "");
+  return ta.value.replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function buildSourceIndex(doc){
+  const walker = doc.createTreeWalker(doc.body || doc.documentElement, NodeFilter.SHOW_TEXT);
+  const nodes = [], chunks = [];
+  let node, cursor = 0;
+  while((node = walker.nextNode())){
+    const norm = normalizeChunk(node.nodeValue);
+    if(!norm) continue;
+    nodes.push({node, start: cursor, normLen: norm.length});
+    chunks.push(norm, " ");           // a boundary space so words from
+    cursor += norm.length + 1;        // adjacent tags don't fuse together
+  }
+  return {text: chunks.join(""), nodes};
+}
+
+// normalized global offset -> {node, offset-in-RAW-node-text}. Binary
+// search picks the node (nodes[] is built in ascending start order); the
+// normalized->raw offset conversion only re-walks that ONE node.
+function rawOffset(nodes, globalOffset){
+  let lo = 0, hi = nodes.length - 1, hit = null;
+  while(lo <= hi){
+    const mid = (lo + hi) >> 1, n = nodes[mid];
+    if(globalOffset < n.start) hi = mid - 1;
+    else if(globalOffset >= n.start + n.normLen) lo = mid + 1;
+    else { hit = n; break; }
+  }
+  if(!hit) return null;
+  const target = globalOffset - hit.start, raw = hit.node.nodeValue;
+  let normI = 0, prevSpace = false;
+  for(let rawI = 0; rawI < raw.length; rawI++){
+    const isSpace = /\s/.test(raw[rawI]);
+    if(isSpace && prevSpace) continue;
+    if(normI === target) return {node: hit.node, offset: rawI};
+    normI++;
+    prevSpace = isSpace;
+  }
+  return {node: hit.node, offset: Math.max(0, raw.length - 1)};
+}
+
+// A 10-K's table of contents lists every item heading near the front,
+// verbatim, before the body ever reaches it — so a plain first-match
+// indexOf finds the TOC link, not the section (confirmed live on aapl-2025:
+// "Item 7. Management's..." appears at source offset 19,461 inside a TOC
+// `<a>`, and again — the real body heading — at 118,018). Disambiguating
+// among matches uses a hint we already have for free: the extractor's own
+// `start` offset for this item, as a fraction of the total normalized text,
+// is roughly where the item lives in the DOCUMENT too. Among every match,
+// the one whose fractional position is closest to that hint wins.
+function findAnchor(index, headingText, expectedFrac){
+  const needle = normalizeHeading(headingText);
+  if(!needle) return null;
+  let best = null, bestDist = Infinity, from = 0;
+  while(true){
+    const i = index.text.indexOf(needle, from);
+    if(i < 0) break;
+    if(expectedFrac == null){ best = i; break; }
+    const dist = Math.abs(i / Math.max(1, index.text.length) - expectedFrac);
+    if(dist < bestDist){ bestDist = dist; best = i; }
+    from = i + 1;
+  }
+  return best == null ? null : rawOffset(index.nodes, best);
+}
+
+// A cached (node, offset) -> a FRESH document-relative Y, computed against
+// whatever the current layout says right now. getBoundingClientRect() is
+// viewport-relative, so adding the current scrollTop back in gives a
+// scrollTop-comparable coordinate — recomputed on every call rather than
+// cached, which is the fix for the reflow-drift above.
+function anchorY(doc, anchor){
+  if(!anchor) return null;
+  const scroller = doc.scrollingElement || doc.documentElement;
+  const r = doc.createRange();
+  const len = anchor.node.length || 1;
+  r.setStart(anchor.node, anchor.offset);
+  r.setEnd(anchor.node, Math.max(anchor.offset, Math.min(anchor.offset + 1, len)));
+  return scroller.scrollTop + r.getBoundingClientRect().top;
+}
+
+// Resolves every item's heading position (as a DOM anchor, not a pixel
+// value — see above) once per source load.
+function buildItemAnchors(doc){
+  SOURCE_INDEX = buildSourceIndex(doc);
+  const items = (VIEW && VIEW.items) || [];
+  const normChars = (VIEW && VIEW.norm_chars) || 0;
+  ITEM_START_ANCHORS = items.map(it => {
+    const frac = (it.start != null && normChars) ? it.start / normChars : null;
+    return findAnchor(SOURCE_INDEX, it.heading_text, frac);
+  });
+}
+
+// Item i's [start, end) region in CURRENT pixel space (V2 — mapping across
+// the whole document, rather than just this item's span, was the defect):
+// end is the next item WITH a resolvable heading, or the document end if
+// none follow. Computed fresh on every call, cheap (one or two rect reads).
+function itemRegion(doc, i){
+  const start = anchorY(doc, ITEM_START_ANCHORS[i]);
+  if(start == null) return null;
+  const scroller = doc.scrollingElement || doc.documentElement;
+  let end = null;
+  for(let j = i + 1; j < ITEM_START_ANCHORS.length; j++){
+    end = anchorY(doc, ITEM_START_ANCHORS[j]);
+    if(end != null) break;
+  }
+  if(end == null) end = scroller.scrollHeight;
+  return {start, end: Math.max(end, start + 1)};
+}
+
+function anchorStatus(msg){
+  const el = document.getElementById("anchor-status");
+  if(el) el.textContent = msg || "";
+}
+
+// V1: scrolls the source pane to the selected item's heading. When the
+// heading wasn't found in the source, the pane says so (via #anchor-status)
+// rather than silently staying put and looking anchored.
+function scrollSourceToItem(i){
+  const frame = document.getElementById("src-frame");
+  if(!frame) return;
+  let doc; try{ doc = frame.contentDocument; }catch(e){ return; }
+  if(!doc) return;
+  const region = itemRegion(doc, i);
+  if(!region){
+    anchorStatus("unanchored — heading not found in source");
+    return;
+  }
+  anchorStatus("");
+  const scroller = doc.scrollingElement || doc.documentElement;
+  SYNC_GUARD = true;
+  scroller.scrollTop = Math.max(0, region.start - 20);
+  SYNC_GUARD = false;
+}
+
 // Scroll sync between the extracted-text pane and the original-filing
-// iframe: proportional (scrollTop / scrollable range) both ways, behind a
-// re-entrancy guard so the two listeners don't fight each other.
+// iframe: proportional within the SELECTED ITEM's own [start, end) region
+// (V2 — mapping across the whole document showed unrelated content), behind
+// a re-entrancy guard so the two listeners don't fight each other. Falls
+// back to whole-document proportional only when the item has no anchor.
 let SYNC_GUARD = false;
 
 function syncOn(){ const c = $("#sync-scroll"); return c && c.checked; }
@@ -290,14 +465,19 @@ function bindSourceScroll(frame){
   frame.addEventListener("load", () => {
     let doc; try{ doc = frame.contentDocument; }catch(e){ return; }
     if(!doc) return;
+    buildItemAnchors(doc);
+    if(SEL != null) scrollSourceToItem(SEL);
     const scroller = doc.scrollingElement || doc.documentElement;
     scroller.addEventListener("scroll", () => {
       if(SYNC_GUARD || !syncOn()) return;
       const pre = document.querySelector("#pane pre.text");
       if(!pre) return;
+      const region = SEL != null ? itemRegion(doc, SEL) : null;
+      const frac = region
+        ? (scroller.scrollTop - region.start) / Math.max(1, region.end - region.start)
+        : scroller.scrollTop / Math.max(1, scroller.scrollHeight - scroller.clientHeight);
       SYNC_GUARD = true;
-      const range = Math.max(1, scroller.scrollHeight - scroller.clientHeight);
-      pre.scrollTop = (scroller.scrollTop / range) * Math.max(1, pre.scrollHeight - pre.clientHeight);
+      pre.scrollTop = Math.min(1, Math.max(0, frac)) * Math.max(1, pre.scrollHeight - pre.clientHeight);
       SYNC_GUARD = false;
     });
   });
@@ -311,9 +491,12 @@ function bindPaneScroll(pre){
     let doc; try{ doc = frame.contentDocument; }catch(e){ return; }
     if(!doc) return;
     const scroller = doc.scrollingElement || doc.documentElement;
+    const frac = pre.scrollTop / Math.max(1, pre.scrollHeight - pre.clientHeight);
+    const region = SEL != null ? itemRegion(doc, SEL) : null;
     SYNC_GUARD = true;
-    const range = Math.max(1, pre.scrollHeight - pre.clientHeight);
-    scroller.scrollTop = (pre.scrollTop / range) * Math.max(1, scroller.scrollHeight - scroller.clientHeight);
+    scroller.scrollTop = region
+      ? region.start + frac * Math.max(1, region.end - region.start)
+      : frac * Math.max(1, scroller.scrollHeight - scroller.clientHeight);
     SYNC_GUARD = false;
   });
 }
@@ -322,6 +505,7 @@ function bindPaneScroll(pre){
 // the honest refusal the endpoint sends back, never a re-fetch or a guess.
 async function loadSource(token){
   const box = $("#source-body");
+  ITEM_START_ANCHORS = []; SOURCE_INDEX = null; anchorStatus("");
   if(!token){
     box.innerHTML = `<div class="none" style="padding:12px">No original source for this run.</div>`;
     return;
@@ -338,27 +522,6 @@ async function loadSource(token){
   }catch(e){
     box.innerHTML = `<div class="none" style="padding:12px">Original source is no longer cached — re-run the extraction.</div>`;
   }
-}
-
-// Best-effort nicety: scroll the source pane to the selected item's heading.
-// Silently no-ops when the frame isn't ready or the text isn't found.
-function scrollSourceToHeading(headingText){
-  if(!headingText) return;
-  try{
-    const frame = document.getElementById("src-frame");
-    if(!frame) return;
-    const doc = frame.contentDocument;
-    if(!doc) return;
-    const walker = doc.createTreeWalker(doc.body || doc.documentElement, NodeFilter.SHOW_TEXT);
-    let node;
-    while((node = walker.nextNode())){
-      if(node.nodeValue && node.nodeValue.includes(headingText)){
-        const el = node.parentElement;
-        if(el && el.scrollIntoView) el.scrollIntoView({block: "start"});
-        return;
-      }
-    }
-  }catch(e){ /* cross-origin, sandbox-blocked, or not found — no-op */ }
 }
 
 function busy(on, msg){
@@ -437,7 +600,7 @@ function show(i){
       : `<div class="none">Status <b>${esc(it.status)}</b> carries no span: the item is reported as absent rather than silently dropped (INV-S4).</div>`}`;
   const pre = $("#pane pre.text");
   if(pre) bindPaneScroll(pre);
-  scrollSourceToHeading(it.heading_text);
+  scrollSourceToItem(i);
 }
 
 $("#sidebar").addEventListener("click", e => {

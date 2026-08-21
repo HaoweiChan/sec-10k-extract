@@ -1,0 +1,23 @@
+{
+  "id": "ui-typography-floor-decimal",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "typography_floor"
+    ],
+    "file": "evals/fixtures/repo_hygiene/typography-floor-decimal.html",
+    "min_px": 11
+  },
+  "expect": {
+    "min_failures": 1
+  },
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "PR #21 R2 round-1 review: the typography_floor check's `\\d+px` regex cannot see a decimal size (`font-size:10.5px`) at all, so a sub-floor decimal shipped invisible. Watched red against the pre-fix regex (evals/fixtures/repo_hygiene/typography-floor-decimal.html returned zero failures despite its 10.5px < 11px declaration), green once the regex became `[\\d.]+px` with a float comparison. This case inverts the usual scoring (expect.min_failures) — it asserts the check DOES catch this known-bad fixture, not that the fixture is clean."
+  },
+  "provenance": "PR #21 round-1 repair (R2), created 2026-08-21. Watched RED against src/repo_hygiene/eval_adapter.py's pre-fix `check_typography_floor` (0 failures on the fixture), GREEN after."
+}

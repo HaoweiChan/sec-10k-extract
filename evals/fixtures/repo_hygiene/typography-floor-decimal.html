@@ -1,0 +1,7 @@
+<!-- PR #21 R2 regression fixture: a decimal sub-floor font-size. The pre-fix
+     `\d+px` regex cannot see `10.5px` at all, so this file must be caught by
+     evals/adversarial/ui-typography-floor-decimal.json (expect.min_failures). -->
+<style>
+body{font-size:10.5px}
+.ok{font-size:14px}
+</style>

@@ -127,13 +127,48 @@ def check_typography_floor(case):
     floor = inp.get("min_px", 11)
     css = (ROOT / inp.get("file", UI_STYLESHEET)).read_text()
     css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
-    sizes = re.findall(r"font(?:-size)?\s*:\s*(\d+)px", css)
-    return [f"{n}px < {floor}px floor" for n in sizes if int(n) < floor]
+    # R2: `\d+` cannot see a decimal size (`font-size:10.5px`) at all — a
+    # sub-floor decimal shipped invisible to this check. `[\d.]+` catches it;
+    # evals/adversarial/ui-typography-floor-decimal.json pins the regression.
+    sizes = re.findall(r"font(?:-size)?\s*:\s*([\d.]+)px", css)
+    return [f"{n}px < {floor}px floor" for n in sizes if float(n) < floor]
+
+
+def _margin_centers(body):
+    """True iff the rule's `margin`/`margin-inline` shorthand sets BOTH the
+    inline-start and inline-end side to `auto` (R3: a substring search for
+    "auto" also matched asymmetric forms like `margin-inline:auto 0` or
+    `margin:0 auto 0 0`, neither of which centres — only the shared value
+    in the 1- or 2-value `margin-inline` forms, or the symmetric left/right
+    slots of the 2/3/4-value `margin` shorthand, actually do).
+    `margin-inline` wins if both are declared, matching the cascade (it is
+    the more specific property and, in this file, always comes second).
+    """
+    m = re.search(r"margin-inline\s*:\s*([^;]+)", body)
+    if m:
+        parts = m.group(1).split()
+        if len(parts) == 1:
+            return parts[0] == "auto"
+        if len(parts) == 2:
+            return parts[0] == "auto" and parts[1] == "auto"
+        return False
+    m = re.search(r"(?:^|[;\s])margin\s*:\s*([^;]+)", body)
+    if not m:
+        return False
+    parts = m.group(1).split()
+    if len(parts) == 1:
+        return parts[0] == "auto"
+    if len(parts) in (2, 3):
+        return parts[1] == "auto"          # left = right = parts[1]
+    if len(parts) == 4:
+        return parts[1] == "auto" and parts[3] == "auto"
+    return False
 
 
 def check_layout_centering(case):
-    """`header`/`main`/`footer` must each declare a `max-width` and an auto
-    inline margin, or the page hugs the left edge on a wide viewport (S4)."""
+    """`header`/`main`/`footer` must each declare a `max-width` and a margin
+    shorthand that actually centres (both inline sides `auto`), or the page
+    hugs the left edge on a wide viewport (S4)."""
     inp = case.get("input", {})
     css = (ROOT / inp.get("file", UI_STYLESHEET)).read_text()
     bad = []
@@ -145,8 +180,8 @@ def check_layout_centering(case):
             continue
         if "max-width" not in body:
             bad.append(f"{sel}: no max-width declared")
-        if not re.search(r"margin(-inline)?\s*:\s*[^;]*auto", body):
-            bad.append(f"{sel}: no auto inline margin")
+        if not _margin_centers(body):
+            bad.append(f"{sel}: margin does not centre (both inline sides must be auto)")
     return bad
 
 
@@ -154,20 +189,54 @@ def check_capabilities_parse(case):
     """The committed README must still yield a non-trivial parse through
     capabilities.py — the check that turns a README restructure red instead
     of silently emptying the `/api/capabilities` panel (S4), the INV-S2
-    argument applied to docs."""
+    argument applied to docs.
+
+    R1: counting rows/entries alone is blind to a mutation that keeps every
+    row and column but empties the CONTENT (every cell replaced with a
+    same-length placeholder like "x") — same shape, garbage panel, and the
+    old check stayed green. Content is checked two ways: no row/item may be
+    all-identical-cells (a placeholder table has one distinct value; a real
+    one does not), and every cell/term/detail must clear a minimum length —
+    both cheap, neither requires pinning the README's literal text, and both
+    are exactly what R1's acceptance offered as options, so a legitimate
+    future README edit (not a hollowing-out) does not need this case rewired.
+    Written against the V3 shape: `difficult` items are `{term, detail}`
+    dicts, not one fused string.
+    """
     inp = case.get("input", {})
     readme = ROOT / inp.get("file", "README.md")
     data = web_capabilities.parse_readme(readme)
     min_works = inp.get("min_works_well", 8)
     min_diff = inp.get("min_difficult", 3)
-    works = len(data["works_well"])
-    diff = sum(len(g["items"]) for g in data["difficult"])
+    min_cell_chars = inp.get("min_cell_chars", 8)
+    min_term_chars = inp.get("min_term_chars", 6)
+    min_detail_chars = inp.get("min_detail_chars", 20)
+
+    works = data["works_well"]
+    diff_items = [it for g in data["difficult"] for it in g["items"]]
     bad = []
-    if works < min_works:
-        bad.append(f"works_well has {works} rows (< {min_works})")
-    if diff < min_diff:
-        bad.append(f"difficult has {diff} entries (< {min_diff})")
-    return bad, {"works_well_rows": works, "difficult_entries": diff}
+    if len(works) < min_works:
+        bad.append(f"works_well has {len(works)} rows (< {min_works})")
+    if len(diff_items) < min_diff:
+        bad.append(f"difficult has {len(diff_items)} entries (< {min_diff})")
+
+    for i, row in enumerate(works):
+        vals = list(row.values())
+        if len(set(vals)) < 2:
+            bad.append(f"works_well row {i}: every cell is the identical "
+                       f"placeholder {vals[0]!r}")
+        short = [v for v in vals if len(v) < min_cell_chars]
+        if short:
+            bad.append(f"works_well row {i}: cell(s) under {min_cell_chars} "
+                       f"chars (placeholder-shaped): {short}")
+    thin = [it for it in diff_items
+            if len(it["term"]) < min_term_chars or len(it["detail"]) < min_detail_chars]
+    if thin:
+        bad.append(f"{len(thin)} difficult item(s) with a term under "
+                   f"{min_term_chars} chars or detail under {min_detail_chars} "
+                   f"chars (placeholder-shaped): {thin}")
+
+    return bad, {"works_well_rows": len(works), "difficult_entries": len(diff_items)}
 
 
 CHECKS = {
@@ -190,4 +259,13 @@ def run_case(case):
             got, extra = got
             info.update(extra)
         failures += got
-    return {"passed": not failures, "failures": failures, **info}
+    # A case normally asserts the file is CLEAN (passed = no failures). A
+    # regression case asserts the opposite: that a known-bad mutation fixture
+    # is actually CAUGHT (PR #21 R1/R2/R3 — a check that once missed a
+    # decimal font-size / an asymmetric margin / an emptied table needs a
+    # fixture proving the miss is fixed, not just a fixture proving the real
+    # file is clean, which a regressed check would also pass vacuously).
+    # `expect.min_failures` inverts scoring for that one case only.
+    min_failures = case.get("expect", {}).get("min_failures")
+    passed = len(failures) >= min_failures if min_failures is not None else not failures
+    return {"passed": passed, "failures": failures, **info}
