@@ -1,0 +1,108 @@
+{
+ "artifact": "T3/T4/T5 cold-reviewer + T5 spec-drift + S3 browser-evidence — the four UNRUN gates, run",
+ "date": "2026-08-22",
+ "why_this_exists": "Five gates had stood UNRUN across T3, T4, T5 and S3, blocking those rows from archiving to DONE.md under ADR-022 rule 2. They were run here. This file is the disposition record; it does NOT claim the findings are fixed.",
+ "how_run": "Three groundwork:cold-reviewer subagents (one per milestone scope) and one groundwork:spec-drift subagent, each given the milestone's own stated Validation gate and denied access to tasks/ and commit messages. S3's browser gate was run by the orchestrator via tasks/reviews/s3_browser_walk.py.",
+ "verification_note": "Findings marked ORCHESTRATOR-VERIFIED were re-run independently against the committed fixtures, not taken on the subagent's word. The rest are reported as the reviewer stated them and are NOT yet independently confirmed.",
+
+ "T3": {
+  "gate": "cold-reviewer",
+  "scope": "layers 2-3, src/sec10k/normalize.py + document selection half of extract.py",
+  "status": "RAN — findings undisposed",
+  "findings": [
+   {"id": "T3-1", "severity": "HIGH", "verified": "ORCHESTRATOR-VERIFIED",
+    "claim": "The HTML <title> is emitted into normalized_text as its first characters, violating INV-S5 ('normalized_text is the readable filing, not machine metadata') on committed goldens.",
+    "evidence": "normalize.py:36-45 puts neither head nor title in BLOCK_TAGS/CELL_TAGS/SKIP_TAGS, so handle_data (:72-76) appends title character data. Re-run at HEAD: aapl-2025 normalized_text starts 'aapl-20250927\\n\\nUNITED STATES...', jpm-2024 starts 'jpm-20241231\\n\\n...'. A source filename is machine metadata no human reading the filing sees. Every offset after it is displaced.",
+    "second_half": "period_end and sniff_form read text[:6000]/text[:3000], windows that open on the title. bac-2006 has zero 'CONFORMED PERIOD OF REPORT' hits (verified) and no dei fact, so its period_end 2006-12-31 is derived from <TITLE>Form 10-K for Fiscal Year ended December 31, 2006</TITLE>, not from the cover page. It agrees with the cover by luck.",
+    "eval_gap": "ixbrl-hidden-metadata runs on aapl-2025 and passes: it forbids us-gaap:/OperatingSegmentsMember/fasb.org strings, not titles. Nothing asserts what normalized_text starts with."},
+   {"id": "T3-2", "severity": "MEDIUM", "verified": "reviewer-stated",
+    "claim": "A 10-K/A whose cover typesets the amendment marker away from the form token ('FORM 10-K' newline '(Amendment No. 1)') sniffs as 10-K and is fully parsed instead of refused.",
+    "evidence": "FORM_SNIFF_RE (normalize.py:31) only matches /A when byte-adjacent. ADR-024 states no committed fixture is an amendment ('Zero /A'), so the refusal rests on one untested regex alternative."},
+   {"id": "T3-3", "severity": "MEDIUM", "verified": "reviewer-stated",
+    "claim": "COVER_DATE_RE rejects a floating or space-less comma ('December 31 , 2016', 'December 31,2016'), yielding period_end=None, which silently demotes a modern filing to the 14-code 1993 item set with taxonomy_era 'legacy' and doc_status success_with_warning.",
+    "evidence": "normalize.py:139-140 keeps a rigid ',?\\s+' while the adjacent DATE_RE (:131-138) already documents and fixes exactly this hazard with '\\s*,?\\s*'."}
+  ],
+  "vacuous_coverage": ["txt-era CRLF/strip branch unasserted by any case", "<pre> unhandled and untested; an ASCII 10-K wrapped in <pre> normalizes to one line and yields all-missing", "meta.format_era / document_selected unreadable by any check type"]
+ },
+
+ "T4": {
+  "gate": "cold-reviewer",
+  "scope": "layers 4-7, src/sec10k/segment.py",
+  "status": "RAN — findings undisposed",
+  "findings": [
+   {"id": "T4-1", "severity": "HIGH", "verified": "ORCHESTRATOR-VERIFIED",
+    "claim": "EXTERNAL_DOC_RE is a closed four-name enumeration that misses the SEC's own statutory term, so a whole-item pointer returns extracted at 0.95 instead of incorporated_by_reference at 0.85 — the status flips UPWARD in confidence.",
+    "evidence": "segment.py:465-467, consumed at :589. Re-run at HEAD: 'Annual Report to Share Owners' MATCHES; 'Annual Report to Security Holders' MISSES; 'Exhibit 13 to this Form 10-K' MISSES. The missed term is Form 10-K General Instruction G / Rule 14a-3 wording and appears in a committed fixture (evals/fixtures/ibm-1997/filing.txt, 1 hit).",
+    "eval_gap": "Every IBR case in the set uses proxy statement or annual report to share/stock holders. Removing an alternative goes red; ADDING a real-world name is untested in both directions."},
+   {"id": "T4-2", "severity": "MEDIUM", "verified": "reviewer-stated",
+    "claim": "The Item 4 era window starts at 2010-01-01 on the premise that 'Dec-2009 enders mostly filed before 2010-02-28'. That premise is backwards — calendar-FY2009 10-Ks are due 2010-03-01/03-16/03-31, so the largest cohort of that season filed AFTER the effective date and wrote 'Item 4. [Removed and Reserved]'. They are labelled 'Submission of Matters to a Vote of Security Holders'.",
+    "evidence": "segment.py:177, justification at :174-176. No committed fixture has a period end anywhere in 2009, so the window's lower edge is pinned by nothing."},
+   {"id": "T4-3", "severity": "MEDIUM", "verified": "reviewer-stated",
+    "claim": "TOC_CLUSTER_MIN=5 is a hard floor, so a table of contents leaking FOUR or fewer titled rows is never examined and never dropped; the fourth row's span then annexes the cover page, the remaining TOC and all of real Items 1/1A/1B/2.",
+    "evidence": "segment.py:348 and :365-366. boundary_hygiene, verbatim, no_overlap_ordered all pass (the span does open with its heading); last_item_dominates cannot fire because the item is not last; toc_manifest_mismatch checks presence, never position. Raising TOC_CLUSTER_MIN to 6/7/8 leaves the whole suite green."}
+  ]
+ },
+
+ "T5_cold_reviewer": {
+  "gate": "cold-reviewer",
+  "scope": "layers 8-9, src/sec10k/validate.py + envelope half of extract.py",
+  "status": "RAN — findings undisposed",
+  "headline": "The milestone's own stated gate was 'thresholds derived from measured distributions, never chosen ahead of data'. Of 12 numeric constants in validate.py, ONE fully meets it (UNATTRIBUTED_MAX=0.17, band midpoint). Two are anchored to a measured band then set by judgment. Nine confidence-layer constants have no measurement at all. validate.py:10 asserts 'Thresholds are measured, never assumed' — the docstring is the drift.",
+  "findings": [
+   {"id": "T5-1", "severity": "HIGH", "verified": "ORCHESTRATOR-VERIFIED",
+    "claim": "No document-level warning ever moves any item's confidence, so a document can say 'we could not resolve this' while every item in it says 95% sure.",
+    "evidence": "validate.py:213 filters w['item']==item['item'], and all three AMBIGUOUS_CODES are emitted with item=None. Re-run at HEAD on evals/fixtures/items-stripped: doc_status='ambiguous' while the set of extracted-item confidences is exactly {0.95}."},
+   {"id": "T5-2", "severity": "HIGH", "verified": "reviewer-stated",
+    "claim": "The 0.8 title-similarity cut at validate.py:203 decides 0.95 vs 0.75 for every extracted item in the corpus and has no derivation in any ADR. Its only written trace is a consequences paragraph in unrelated ADR-023 — recorded by accident.",
+    "eval_gap": "Mutating 0.8 -> 0.4 is green."},
+   {"id": "T5-3", "severity": "MEDIUM", "verified": "reviewer-stated",
+    "claim": "boundary_hygiene is structurally dead — it re-applies a copy of the regex that produced the offset, over offsets produced by that regex. Its only live path is a false positive on 'Item 9 A.'.",
+    "evidence": "validate.py:137-142, author-acknowledged at :232-238."},
+   {"id": "T5-4", "severity": "MEDIUM", "verified": "reviewer-stated",
+    "claim": "FLOOR=0.20 is unreachable and CEIL=0.95 is a no-op; both clamps are decorative.",
+    "evidence": "validate.py:196,215. Max base is 0.95 so min(CEIL,...) never binds; reaching FLOOR needs five item-targeted warnings and only four codes are ever item-targeted."},
+   {"id": "T5-5", "severity": "MEDIUM", "verified": "reviewer-stated",
+    "claim": "Three whole input classes disable most of the battery: a 4-5-of-21 missing filing sits under MISSING_MAX with an interior span swallowing the rest; an EXEC_OFFICERS_RE clip on a comma-terminated wrap truncates item 1 into an interior gap no validator measures; a pre-2005 txt filing with no dense contents page disables toc_manifest_mismatch, numeric_density_inversion and boundary_hygiene at once."}
+  ],
+  "vacuous_coverage": ["UNATTRIBUTED_MAX any value in (0.076,0.4337) green", "LAST_ITEM_MAX any value in (0.189,0.833) green", "MISSING_MAX any value in (0.048,0.381) green — can nearly double", "SUBSTANTIVE_MIN any value in (209,20000) green", "BASE_WEAK any value green — no case pins 0.75"]
+ },
+
+ "T5_spec_drift": {
+  "gate": "spec-drift",
+  "status": "RAN — findings undisposed",
+  "findings": [
+   {"id": "SD-1", "severity": "HIGH", "verified": "reviewer-stated",
+    "claim": "`method` is a normative contract enum (specs/001-sec10k-contract.md:90-92, ADR-002:26) that is a hard-coded constant. extract.py:29,34 assign the literal 'heading_strict' to every item with a candidate and 'status_keyword' to every item without one. heading_lenient and llm_fallback are unreachable; an item accepted at similarity 0.37 still publishes 'heading_strict' while validate.score simultaneously pays it BASE_WEAK. No eval check reads method, and the metric it is declared to feed is self-declared vacuous."},
+   {"id": "SD-2", "severity": "MEDIUM", "verified": "reviewer-stated",
+    "claim": "Contract-mandated envelope fields meta, trace, timings, cost, evidence have NO enforcement in the eval vocabulary — the adapter reads only normalized_text, items, doc_status, warnings. The code emits them today, so this is a gap, not a contradiction, but it is the 'a claim, not a check' class ADR-016 exists to eliminate."},
+   {"id": "SD-3", "severity": "MEDIUM", "verified": "reviewer-stated",
+    "claim": "ADR-018:116-117 still names the span-coverage validator as 'the named post-freeze candidate'. ADR-019 §d retired it the next day and ADR-019's header does not list ADR-018 as amended, so the sweep missed it. This is the only place still describing it as live; no code references it."},
+   {"id": "SD-4", "severity": "LOW", "verified": "reviewer-stated",
+    "claim": "ADR-008 is stale in four places (BASE_MISSING 0.55 vs shipped 0.40, 'uncalibrated', validator count 'six' vs seven, escalation set 'only two codes' vs three) and its header omits ADR-018 from Amended-by."},
+   {"id": "SD-5", "severity": "LOW", "verified": "reviewer-stated",
+    "claim": "unattributed_content's comment (validate.py:111-113) and ADR-008:23 both say 'outside every item'; the code computes preamble+tail only and since the EO clip there ARE interior gaps on 7 fixtures, diverging from true coverage by up to 9.7 points."},
+   {"id": "SD-6", "severity": "LOW", "verified": "reviewer-stated",
+    "claim": "meta.taxonomy_era and meta.toc_manifest are absent from refusal envelopes (set at extract.py:99,103, after both refusal returns); the contract's shape block declares them. Contract text should say 'on the non-refusal path'."},
+   {"id": "SD-7", "severity": "LOW", "verified": "reviewer-stated",
+    "claim": "The contract's own example emits warning code 'lenient_match', which no path produces and ADR-007 rules out."}
+  ],
+  "envelope_field_audit": "Exhaustive, document and item level. No undeclared top-level field. All contract fields present on all five doc_status paths EXCEPT the two meta keys in SD-6. The single hard contradiction is `method` (SD-1)."
+ },
+
+ "S3_browser_evidence": {
+  "gate": "browser-evidence + font-fallback",
+  "status": "RAN — browser-evidence SATISFIED; font-fallback ANSWERED, and the answer is a defect",
+  "artifacts": ["tasks/reviews/s3_browser_walk.py", "tasks/reviews/s3-browser-walk.json", "tasks/reviews/s3-browser-walk/*.png", "tasks/reviews/s3-upload-4item.htm"],
+  "modes": "All three drove green and agree with what the S3 row claims: fixture aapl-2025 -> success, 18 extracted / 5 IBR, 23 items; upload -> ambiguous, 4 extracted / 17 missing / 2 omitted, 18 warnings; URL 404 -> failed + edgar_fetch_failed. The walk script exits non-zero if the rendered banner disagrees, so this is a check, not a screenshotter.",
+  "upload_fixture_placement": "tasks/reviews/, NOT evals/fixtures/. A new fixture directory joins the benchmark corpus and moves the n=33 figures ADR-021 and docs/analysis-report.md publish, and shows up in the inspector's own dropdown as a fake filing. That is the same reasoning tasks/reviews/pr18-browser-walk.json used to decline committing one; it still holds. Byte identity is pinned by sha256 a57534e9e2a6ea114d7b434c875848e1e004a9369d6f0e486c316ae6549cebd8 in the walk record.",
+  "font_fallback_finding": {
+   "id": "S3-FONT", "severity": "MEDIUM", "verified": "ORCHESTRATOR-VERIFIED, measured not asserted",
+   "claim": "index.html:10 is a render-blocking stylesheet <link> to fonts.googleapis.com. On an origin that REFUSES the connection the page falls back correctly; on an origin that BLACKHOLES it the page does not paint at all.",
+   "measurement": "First-contentful-paint, 8s budget, Chromium 1920x1080: control 88ms, refused 28ms, blackholed NEVER PAINTED. The blackholed screenshot could not even be captured — Playwright waits for webfonts to settle before it will shoot, so the capture timed out at 6s. That failure is itself the evidence.",
+   "consequence": "The claim deleted from the S3 row in an earlier round ('degrades to the ui-mono stack offline') was half right: true for a refusal, false for a blackhole. The row was correct to refuse to assert it without running it.",
+   "lazy_fix_not_applied": "media=\"print\" onload=\"this.media='all'\" on the link makes it non-render-blocking. NOT applied here: hard rule 2 says the failure becomes a committed case before it is fixed, and that is a separate change from running the gate."
+  }
+ },
+
+ "archival_verdict": "NONE of T3, T4, T5 or S3 may move to tasks/DONE.md yet. ADR-022 rule 2 lets a row leave TODO.md when its gate has run OR its skip is explicitly disposed. All five gates have now RUN, which clears the first half — but each returned undisposed findings, including two confirmed defects on committed goldens (T3-1, T4-1) and one confirmed confidence-honesty defect (T5-1). Archiving a row whose gate just found a live defect would be exactly the quiet disappearance ADR-009 and ADR-022 exist to prevent. The rows stay until the findings are dispositioned as fixes-with-cases or as debt rows."
+}
