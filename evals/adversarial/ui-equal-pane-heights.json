@@ -1,0 +1,25 @@
+{
+  "id": "ui-equal-pane-heights",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "pane_heights"
+    ],
+    "panes": [
+      "#sidebar",
+      "#pane",
+      "#source"
+    ],
+    "scroll_list": "#sidebar"
+  },
+  "expect": {},
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "S5 requirement 3: `#sidebar` grew with the item count while `#pane`/`#source` were capped internally at 520px, so the three columns were ragged even though the grid's `align-items:start` already lined up their tops. Watched red against the pre-fix file (none of the three declared a `height`, and `#sidebar` declared no scrolling overflow of its own), green once `#sidebar,#pane,#source{height:...}` gave all three the same resolved height and `#sidebar` took `overflow-y:auto` so the item list scrolls inside a fixed-height column instead of growing it."
+  },
+  "provenance": "S5, created 2026-08-22 before the pane-height fix, per hard rule 2."
+}

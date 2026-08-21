@@ -1,0 +1,29 @@
+{
+  "id": "ui-equal-pane-heights-regression",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "pane_heights"
+    ],
+    "file": "evals/fixtures/repo_hygiene/pane-heights-ragged.html",
+    "panes": [
+      "#sidebar",
+      "#pane",
+      "#source"
+    ],
+    "scroll_list": "#sidebar"
+  },
+  "expect": {
+    "min_failures": 4,
+    "max_failures": 4
+  },
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "Pins the pre-S5 shape of the three panes as a known-bad fixture: none of `#sidebar`/`#pane`/`#source` declares a `height` (3 failures) and `#sidebar` declares no scrolling overflow of its own (1 failure) — 4 total, exact count so a regressed check that only catches the missing-height half (or only the missing-overflow half) still goes red instead of clearing a bare min_failures floor."
+  },
+  "provenance": "S5, created 2026-08-22 alongside ui-equal-pane-heights.json. Watched RED against src/repo_hygiene/eval_adapter.py's check_pane_heights (4 failures on the fixture)."
+}

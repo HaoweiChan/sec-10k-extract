@@ -189,6 +189,92 @@ def check_layout_centering(case):
     return bad
 
 
+def _flat_rules(css):
+    """Yield (selector_list, body) for every rule in css, comments stripped.
+
+    Does not track @media nesting — a rule inside `@media(...){...}` is
+    yielded the same as a top-level one, losing the condition it's scoped
+    under. That is a real hole (see css_contrast's own module docstring for
+    the same trade elsewhere in this file), but nothing this scans (pane
+    `height`, `#sidebar` `overflow`, `.it .ttl` `color`/`font-weight`) is
+    declared inside a media query in this stylesheet today.
+    """
+    css = css_contrast._strip_comments(css)
+    for m in re.finditer(r"([^{}]+)\{([^{}]*)\}", css):
+        yield [s.strip() for s in m.group(1).split(",")], m.group(2)
+
+
+def _declared_for(css, selector, prop):
+    """Last-declared `prop:` value across every rule whose selector list
+    contains `selector` verbatim, or None. `last` approximates the cascade
+    for same-specificity id/class selectors within one file — not a real
+    resolver, same limitation css_contrast documents for its own helpers."""
+    val = None
+    # (?<![\w-]) stops `height` from matching inside `min-height` — a plain
+    # substring search did exactly that and silently read #pane's 230px
+    # min-height as if it were the shared height this check exists to pin.
+    pat = r"(?<![\w-])" + re.escape(prop) + r"\s*:\s*([^;]+)"
+    for sels, body in _flat_rules(css):
+        if selector in sels:
+            m = re.search(pat, body)
+            if m:
+                val = m.group(1).strip()
+    return val
+
+
+def check_pane_heights(case):
+    """`#sidebar`, `#pane` and `#source` must resolve to the SAME declared
+    `height` (S5: `#sidebar` grew with the item count while `#pane`/
+    `#source` were capped at 520px inside, leaving the three columns
+    ragged — tops shared via the grid's `align-items:start`, but nothing
+    made the bottoms match), and the item list must declare its own
+    scrolling overflow rather than letting the column grow without bound.
+    """
+    inp = case.get("input", {})
+    css = (ROOT / inp.get("file", UI_STYLESHEET)).read_text()
+    panes = inp.get("panes", ["#sidebar", "#pane", "#source"])
+    list_sel = inp.get("scroll_list", "#sidebar")
+    bad = []
+    heights = {p: _declared_for(css, p, "height") for p in panes}
+    for p, h in heights.items():
+        if not h:
+            bad.append(f"{p}: no height declared")
+    distinct = {h for h in heights.values() if h}
+    if len(distinct) > 1:
+        bad.append(f"panes do not share one height declaration: {heights}")
+    overflow = (_declared_for(css, list_sel, "overflow-y")
+                or _declared_for(css, list_sel, "overflow"))
+    if not overflow or overflow in ("hidden", "visible"):
+        bad.append(f"{list_sel}: no scrolling overflow declared for the item list "
+                   f"(got {overflow!r})")
+    return bad, {"heights": heights, "list_overflow": overflow}
+
+
+def check_title_legibility(case):
+    """`.it .ttl` must resolve to the page's ink token at font-weight >= 600,
+    not `--dim` (S5: item titles read as grey noise beside the amber item
+    code). Reads the rule's OWN declared `color:`/`font-weight:` — the same
+    not-a-cascade-resolver limitation css_contrast documents; the rendered
+    ratio itself stays covered by ui-contrast-and-specificity's row-title*
+    pairs, which this check does not duplicate.
+    """
+    inp = case.get("input", {})
+    css = (ROOT / inp.get("file", UI_STYLESHEET)).read_text()
+    sel = inp.get("selector", ".it .ttl")
+    want_color = inp.get("ink_token", "var(--ink)")
+    min_weight = inp.get("min_weight", 600)
+    body = css_contrast._rule_body(css, sel)
+    color = css_contrast.rule_color(css, sel)
+    weight_m = re.search(r"font-weight\s*:\s*(\d+)", body)
+    weight = int(weight_m.group(1)) if weight_m else None
+    bad = []
+    if color != want_color:
+        bad.append(f"{sel}: color is {color!r}, want {want_color!r}")
+    if weight is None or weight < min_weight:
+        bad.append(f"{sel}: font-weight is {weight!r}, want >= {min_weight}")
+    return bad, {"color": color, "font_weight": weight}
+
+
 def check_capabilities_parse(case):
     """The committed README must still yield a non-trivial parse through
     capabilities.py — the check that turns a README restructure red instead
@@ -323,6 +409,8 @@ CHECKS = {
     "ui_stylesheet": check_ui_stylesheet,
     "typography_floor": check_typography_floor,
     "layout_centering": check_layout_centering,
+    "pane_heights": check_pane_heights,
+    "title_legibility": check_title_legibility,
     "capabilities_parse": check_capabilities_parse,
     "anchor_contract": check_anchor_contract,
 }

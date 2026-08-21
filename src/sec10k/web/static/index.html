@@ -70,12 +70,15 @@ a{color:var(--accent)}
 button,select,input,.it,a{transition:background-color var(--t),border-color var(--t),color var(--t)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
-header{max-width:1500px;margin-inline:auto;padding:16px 20px;border-bottom:1px solid var(--line)}
+/* min() over a bare px value so the shell still shrinks to fit a viewport
+   narrower than the cap (round 1's 1500px read cramped at 1920+; 94vw keeps
+   a margin on anything skinnier than that rather than hard-clipping). */
+header{max-width:min(1800px,94vw);margin-inline:auto;padding:16px 20px;border-bottom:1px solid var(--line)}
 h1{font-size:22px;margin:0;font-weight:800;letter-spacing:-.01em}
 h1::before{content:"> ";color:var(--amber-ink)}
 .subtitle{margin:4px 0 0;font-size:13px;font-weight:400;color:var(--dim)}
 .sha{font:12px var(--mono);color:var(--dim)}
-main{max-width:1500px;margin-inline:auto;padding:16px 20px}
+main{max-width:min(1800px,94vw);margin-inline:auto;padding:16px 20px}
 fieldset{border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;
   margin:0 0 14px;background:var(--panel)}
 legend{font-size:12px;text-transform:uppercase;letter-spacing:.12em;font-weight:600;
@@ -116,7 +119,14 @@ button:disabled{opacity:.5;cursor:default}
 .split{display:grid;grid-template-columns:290px 1fr 1fr;gap:14px;align-items:start}
 @media(max-width:1100px){.split{grid-template-columns:290px 1fr}#source{grid-column:1/-1}}
 @media(max-width:820px){.split{grid-template-columns:1fr}}
-#sidebar{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--panel)}
+/* One shared height so the three columns' tops (already equal via the grid's
+   own align-items:start) AND bottoms line up (S5 round 3) — #sidebar used to
+   grow with the item count while #pane/#source were capped internally at
+   520px, leaving the row ragged. vh over a px figure so it scales with the
+   viewport instead of wasting half a tall screen or clipping a short one. */
+#sidebar,#pane,#source{height:74vh}
+#sidebar{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);
+  overflow-y:auto;overflow-x:hidden}
 .it{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);
   background:var(--panel);color:var(--ink);padding:8px 11px;cursor:pointer;font-weight:400;
   font-family:inherit;font-size:14px;text-transform:none;letter-spacing:-.01em;border-radius:0}
@@ -127,7 +137,11 @@ button:disabled{opacity:.5;cursor:default}
   box-shadow:inset 3px 0 0 var(--amber)}
 .it .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
 .it .code{font:13px var(--mono);font-weight:700;color:var(--amber-ink)}
-.it .ttl{font-size:12px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* S5 round 3: was --dim at the smallest declared size, so "Business" /
+   "Risk Factors" read as grey noise beside the amber item code. --ink is the
+   page's body-text token in BOTH schemes (light's is a dark navy — this is
+   deliberately "the page's ink colour", not literally the word white). */
+.it .ttl{font-size:12px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .badges{display:flex;gap:5px;margin-top:4px;flex-wrap:wrap}
 .b{font:11px var(--mono);padding:1px 5px;border-radius:var(--r);border:1px solid var(--line);
   color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
@@ -137,16 +151,35 @@ button:disabled{opacity:.5;cursor:default}
 .b.st-omitted{color:var(--dim)}
 .b.lo{color:var(--warn);border-color:var(--warn)}
 
-#pane{border:1px solid var(--line);border-radius:var(--r);padding:14px;background:var(--panel);min-height:230px}
-#pane h2{margin:0 0 3px;font-size:16px;letter-spacing:-.01em}
-.ev{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:11px 0;
-  font-size:13px;border-top:1px solid var(--line);padding-top:10px}
+/* S5 round 3 (debt row V4): #pane used to stack an <h2>, a hint line and the
+   evidence <dl> ABOVE pre.text, so the extracted text started ~136px below
+   the source iframe and a head-to-head read never lined up. #pane is now a
+   flex column, exactly like #source: a `.src-hdr` band (reused verbatim, not
+   a near-duplicate rule, so the two heights cannot drift apart) holding the
+   item code/title/status on one compact line, then pre.text filling the rest
+   — the same first-flex-child position #source-body's iframe already sits
+   at. The old h2/hint/evidence block still exists; it moved into a
+   togglable <details> AFTER pre.text, so it adds height below the fold
+   instead of above it. */
+#pane{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);
+  display:flex;flex-direction:column;overflow:hidden}
+.ev{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:13px;
+  border-top:1px solid var(--line);padding:10px 13px 13px;margin:0}
 .ev dt{color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-size:12px}
 .ev dd{margin:0;font-family:var(--mono);font-size:12px;word-break:break-word}
+/* margin-top:0 is load-bearing, not decoration: pre.text's top edge must sit
+   flush against #pane's own .src-hdr band's bottom border, with no gap, the
+   same way #source-body's iframe sits flush against #source's .src-hdr —
+   that flush placement on both sides is WHY the two scrollable regions land
+   on the same Y. */
 pre.text{white-space:pre-wrap;word-wrap:break-word;font:13px/1.6 var(--mono);
   background:var(--bg);border:1px solid var(--line);border-radius:var(--r);
-  padding:11px;max-height:520px;overflow:auto;margin:0}
+  padding:11px;margin:0 14px 14px;flex:1;min-height:0;overflow:auto}
 details{margin-top:12px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel)}
+/* #pane clips at a fixed height now (S5 round 3); an opened .pane-meta with a
+   long evidence blob would otherwise get silently cut off by that clip
+   instead of failing loudly or scrolling into view. */
+.pane-meta[open]{max-height:280px;overflow:auto}
 summary{padding:9px 13px;cursor:pointer;font-size:12px;font-weight:600;color:var(--dim);
   text-transform:uppercase;letter-spacing:.1em}
 summary:hover{color:var(--accent)}
@@ -155,16 +188,23 @@ details pre{margin:0;padding:0 13px 13px;font:12px/1.5 var(--mono);
 .meta-chrome{display:flex;gap:14px;flex-wrap:wrap;align-items:baseline;
   padding:9px 13px 0}
 #source{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);
-  overflow:hidden;display:flex;flex-direction:column;min-height:230px}
+  overflow:hidden;display:flex;flex-direction:column}
+/* shared by #source's own header AND #pane's (S5 round 3) — one rule, so the
+   two bands cannot drift a pixel apart the way a second near-duplicate rule
+   eventually would. */
 .src-hdr{padding:9px 13px;border-bottom:1px solid var(--line);font-size:12px;font-weight:600;
   color:var(--dim);text-transform:uppercase;letter-spacing:.1em;display:flex;
   justify-content:space-between;align-items:center;gap:10px}
 .src-hdr label{font-size:12px;text-transform:none;letter-spacing:0;font-weight:400;
   display:flex;gap:5px;align-items:center;cursor:pointer}
+.src-hdr .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 #anchor-status{font-size:11px;text-transform:none;letter-spacing:0;font-weight:400;
   color:var(--warn)}
-#source-body{flex:1}
-#src-frame{width:100%;height:520px;border:0;display:block;background:var(--bg)}
+/* min-height:0 overrides flexbox's default min-height:auto, which would
+   otherwise refuse to shrink #source-body below its content's natural size
+   and silently defeat height:100% on #src-frame. */
+#source-body{flex:1;min-height:0}
+#src-frame{width:100%;height:100%;border:0;display:block;background:var(--bg)}
 .cap{padding:12px 13px}
 .cap h3{margin:14px 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.1em;
   color:var(--amber-ink);font-weight:600}
@@ -177,7 +217,7 @@ table.cap-t th{background:var(--muted);color:var(--dim);text-transform:uppercase
 table.cap-t td.grp{font-weight:700;color:var(--amber-ink);font-size:11px;
   text-transform:uppercase;letter-spacing:.08em;background:var(--muted)}
 table.cap-diff td:first-child{width:26%;font-weight:600;color:var(--ink)}
-footer{max-width:1500px;margin-inline:auto;padding:14px 20px 40px;color:var(--dim);font-size:13px}
+footer{max-width:min(1800px,94vw);margin-inline:auto;padding:14px 20px 40px;color:var(--dim);font-size:13px}
 footer a{color:var(--accent)}
 </style>
 </head>
@@ -214,7 +254,10 @@ footer a{color:var(--accent)}
 
 <div class="split">
   <div id="sidebar"><div style="padding:11px" class="none">Items appear here.</div></div>
-  <div id="pane"><span class="none">Select an item to read its extracted text.</span></div>
+  <div id="pane">
+    <div class="src-hdr"><span class="lbl">extracted text</span></div>
+    <div class="none" style="padding:12px">Select an item to read its extracted text.</div>
+  </div>
   <div id="source">
     <div class="src-hdr"><span>original filing</span>
       <span id="anchor-status"></span>
@@ -629,7 +672,8 @@ function render(v){
       </div></button>`;
   }).join("") : `<div style="padding:11px" class="none">No items — the pipeline refused this input rather than guessing.</div>`;
 
-  $("#pane").innerHTML = `<span class="none">Select an item to read its extracted text.</span>`;
+  $("#pane").innerHTML = `<div class="src-hdr"><span class="lbl">extracted text</span></div>
+    <div class="none" style="padding:12px">Select an item to read its extracted text.</div>`;
   $("#trace").textContent = JSON.stringify(v.trace || [], null, 1);
   $("#meta").textContent = JSON.stringify(
     {meta: v.meta, timings: v.timings, cost: v.cost, normalized_chars: v.norm_chars}, null, 1);
@@ -641,18 +685,27 @@ function show(i){
   document.querySelectorAll(".it").forEach(b =>
     b.setAttribute("aria-current", String(+b.dataset.i === i)));
   const body = it.status === "extracted" || it.status === "incorporated_by_reference";
+  // The header line and the evidence panel are the same item metadata S4
+  // used to stack above pre.text; they still exist, just moved (S5 round 3 —
+  // debt row V4). The header is now a `.src-hdr` band, matching #source's own
+  // so the two panes' scrollable content starts at the same Y; the rest
+  // (heading match, offsets, raw evidence) is a togglable <details> AFTER
+  // pre.text, so it adds height below the fold, not above it.
+  const hdrRight = `Part ${esc(it.part || "—")} · ${esc(it.status)} · conf ${it.confidence ?? "—"} · via ${esc(it.method || "—")}`;
   $("#pane").innerHTML = `
-    <h2>Item ${esc(it.item)} — ${esc(it.title || "")}</h2>
-    <div class="hint">Part ${esc(it.part || "—")} · ${esc(it.status)} · confidence ${it.confidence ?? "—"} · via ${esc(it.method || "—")}</div>
-    <dl class="ev">
-      <dt>heading matched</dt><dd>${it.heading_text ? esc(it.heading_text) : "— (no heading found)"}</dd>
-      <dt>offsets</dt><dd>${it.start != null ? `[${it.start.toLocaleString()}, ${it.end.toLocaleString()})` : "null — no span for this status"}</dd>
-      <dt>evidence</dt><dd>${esc(JSON.stringify(it.evidence || {}))}</dd>
-    </dl>
+    <div class="src-hdr"><span class="lbl">Item ${esc(it.item)} — ${esc(it.title || "")}</span>
+      <span class="lbl">${hdrRight}</span></div>
     ${body
-      ? `${it.truncated ? `<div class="hint" style="margin-bottom:6px">Showing the first ${it.text.length.toLocaleString()} of ${it.chars.toLocaleString()} characters.</div>` : ""}
-         <pre class="text">${esc(it.text)}</pre>`
-      : `<div class="none">Status <b>${esc(it.status)}</b> carries no span: the item is reported as absent rather than silently dropped (INV-S4).</div>`}`;
+      ? `<pre class="text">${esc(it.text)}</pre>
+         ${it.truncated ? `<div class="hint" style="padding:6px 14px 0">Showing the first ${it.text.length.toLocaleString()} of ${it.chars.toLocaleString()} characters.</div>` : ""}`
+      : `<div class="none" style="padding:12px">Status <b>${esc(it.status)}</b> carries no span: the item is reported as absent rather than silently dropped (INV-S4).</div>`}
+    <details class="pane-meta"><summary>item details</summary>
+      <dl class="ev">
+        <dt>heading matched</dt><dd>${it.heading_text ? esc(it.heading_text) : "— (no heading found)"}</dd>
+        <dt>offsets</dt><dd>${it.start != null ? `[${it.start.toLocaleString()}, ${it.end.toLocaleString()})` : "null — no span for this status"}</dd>
+        <dt>evidence</dt><dd>${esc(JSON.stringify(it.evidence || {}))}</dd>
+      </dl>
+    </details>`;
   const pre = $("#pane pre.text");
   if(pre) bindPaneScroll(pre);
   scrollSourceToItem(i);
