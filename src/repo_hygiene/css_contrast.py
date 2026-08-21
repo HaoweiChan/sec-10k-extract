@@ -254,10 +254,15 @@ def _demo():
     pre = {"--dim": "hsl(215 14% 40%)", "--muted": "hsl(214 13% 86%)"}
     assert measure({"id": "x", "fg": "var(--dim)", "on": ["var(--muted)"]}, pre)[0] == 4.33
 
-    css = (":root{--ink:hsl(0 0% 0%);--bg:hsl(0 0% 100%)}"
-           "@media (prefers-color-scheme:light){:root{--ink:hsl(0 0% 60%)}}"
+    # `color-scheme` is a real property living in the same two blocks the token
+    # scan reads. It must not be picked up as if it were a custom property —
+    # a decoy declaration cannot be allowed to break the thing guarding the numbers.
+    css = (":root{color-scheme:dark;--ink:hsl(0 0% 0%);--bg:hsl(0 0% 100%)}"
+           "@media (prefers-color-scheme:light){:root{color-scheme:light;"
+           "--ink:hsl(0 0% 60%)}}"
            "button:not(.it):hover{color:red}#banner .src{opacity:.85}")
     dark, light = parse_tokens(css)
+    assert set(dark) == set(light) == {"--ink", "--bg"}, "non-token declaration leaked"
     assert dark["--ink"] == "hsl(0 0% 0%)" and light["--ink"] == "hsl(0 0% 60%)"
     assert light["--bg"] == "hsl(0 0% 100%)", "light inherits what it does not override"
     assert rule_opacity(css, "#banner .src") == 0.85

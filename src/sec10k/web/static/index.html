@@ -29,6 +29,10 @@
   --r:.2rem;                                 /* squared terminal corners */
   --mono:'JetBrains Mono','Noto Sans TC',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   --t:150ms cubic-bezier(.4,0,.2,1);
+  /* this diff made dark the DEFAULT, so UA-drawn control internals must be
+     told: without it the file input's ::file-selector-button and the
+     scrollbars stay light-painted on a near-black canvas. */
+  color-scheme:dark;
 }
 @media (prefers-color-scheme:light){:root{
   --bg:hsl(214 16% 89%); --panel:hsl(210 16% 95%); --ink:hsl(216 38% 14%);
@@ -40,6 +44,7 @@
   --ok:hsl(152 72% 23%); --bad:hsl(0 74% 38%);  /* darkened from the palette's
      fill values: these carry status as TEXT here, and 32%/50% land under 4.5:1 */
   --grid:hsl(213 20% 86% / .7);
+  color-scheme:light;
 }}
 *{box-sizing:border-box}
 *{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--accent) 35%,transparent) transparent}
