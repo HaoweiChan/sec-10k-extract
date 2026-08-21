@@ -1,0 +1,97 @@
+{
+ "round": 3,
+ "pr": 18,
+ "task": "S3",
+ "result": "REQUEST_CHANGES -- CIRCUIT BREAKER TRIPPED",
+ "reviewer": "groundwork:pr-reviewer (fresh context; round-2 repair diff 817b449..HEAD + standing findings; directed adversarial-mutation pass over css_contrast by someone who did not write it)",
+ "gate": "pass -- invariant 15/15 = 1.000, fast 53/53 = 1.000, baseline 1.0 untouched",
+ "counts": {
+  "HIGH": 0,
+  "MEDIUM": 5,
+  "LOW": 3
+ },
+ "breaker": "Three review rounds without approval. Loop STOPPED and escalated to the human. No further rounds run automatically.",
+ "structural_observation": "The same defect class has now returned on a new axis in every round: the declared pair list (R1/R3), the foreground binding (R13), the ground binding (O1), and now an opacity on an already-bound rule (R18) plus a sixth painter the ground audit missed (R19). Each fix was correct and each left an adjacent surface unbound. The shipped UI is NOT implicated -- the verified floors 4.88 dark / 4.57 light hold, and those pairs' grounds are correct. What keeps regenerating is the completeness of the instrument that certifies them, and the prose describing its coverage.",
+ "routed": {
+  "repair-bar": [
+   "R18",
+   "R19",
+   "R20",
+   "R21",
+   "R22"
+  ],
+  "debt": [
+   "R23",
+   "R24",
+   "R25"
+  ]
+ },
+ "findings": [
+  {
+   "id": "R18",
+   "severity": "MEDIUM",
+   "route": "repair-bar",
+   "claim": "An `opacity` added to a rule the case already binds with `fg_from` is never read, so round-1 R1's exact defect (translucent text under AA) can be re-introduced on 39 of the 46 pairs with the case green -- and this hole is in none of the four holes the docstring, the TODO debt row and the case triage note enumerate.",
+   "orchestrator_verified": "`.it .ttl{opacity:.35}` -> run_case passed=True, 0 red, floor unchanged 4.57. Renders 1.80:1 dark / 1.66:1 light.",
+   "acceptance": "check_contrast reads rule_opacity for every pair naming a rule; the mutation goes red and a _demo assertion pins it -- or the hole is named as a fifth."
+  },
+  {
+   "id": "R19",
+   "severity": "MEDIUM",
+   "route": "repair-bar",
+   "reopens": "O1",
+   "claim": "The 12 resting item-row pairs are grounded on `#sidebar`, but `.it` paints its own opaque background on top of it, so repainting `.it` makes the sidebar unreadable while the case reports 6.42:1/5.82:1 and stays green.",
+   "orchestrator_verified": "`.it{background:var(--dim)}` -> run_case passed=True, 0 red, floor unchanged 4.57, while row titles render at 1.00:1 (var(--dim) on var(--dim)).",
+   "acceptance": "panel-sidebar (or a new row-resting ground) stacks {\"from\":\".it\"} over {\"from\":\"#sidebar\"}; the mutation goes red."
+  },
+  {
+   "id": "R20",
+   "severity": "MEDIUM",
+   "route": "repair-bar",
+   "claim": "The S3 ledger row publishes 'Gate green: invariant 14/14, fast 52/52', which no longer reproduces at HEAD -- both suites are 15/15 and 53/53 after this branch merged origin/main.",
+   "orchestrator_verified": "grep of tasks/TODO.md returns 'invariant 14/14, fast 52/52'; running both suites at HEAD returns 15/15 and 53/53.",
+   "acceptance": "The row states what a reviewer running the two commands at HEAD gets, or drops the counts and cites the commands."
+  },
+  {
+   "id": "R21",
+   "severity": "MEDIUM",
+   "route": "repair-bar",
+   "reopens": "R14",
+   "claim": "R14's resolution does not hold: the PR body still says 'nothing outside src/sec10k/web/static/ changes', while pr18-r2-resolution.json records R14 fixed and covered by 'tasks/TODO.md Contents cell + PR body'.",
+   "orchestrator_verified": "PR body line 2 unchanged; git diff --numstat main...task/S3 shows 279/0 css_contrast.py and 45/6 eval_adapter.py. THIS IS THE ORCHESTRATOR'S OWN FAILURE -- the body is the orchestrator's artifact and was never updated; the resolution overclaim was also the orchestrator's. Both corrected at the breaker.",
+   "acceptance": "The body names the real file set and the resolution record stops claiming coverage it does not have."
+  },
+  {
+   "id": "R22",
+   "severity": "MEDIUM",
+   "route": "repair-bar",
+   "claim": "The case's provenance asserts 'All figures below were re-measured against THIS pair table on 2026-08-21', but its round-1 figure (A) is the pre-round-2b number and does not reproduce; figure (B) names a mutation not reconstructible from committed state.",
+   "orchestrator_verified": "Reviewer reports 15 red / floor 3.11 against the shipped case where provenance says 13 red / 3.33. Not independently re-run by the orchestrator at the breaker.",
+   "acceptance": "Figure (A) reads the value that reproduces, and (B) names a mutation a reviewer can apply from committed state."
+  },
+  {
+   "id": "R23",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "The bg_from block in _demo is pasted twice verbatim, so the self-check runs 16 lines of identical assertions a second time.",
+   "orchestrator_verified": "not re-run at the breaker",
+   "acceptance": "One copy remains; the self-check still prints ok."
+  },
+  {
+   "id": "R24",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "The body ground stacks list the four background-image layers in declaration order, which is the reverse of CSS paint order, so the provenance's 'ground stacks follow the paint order the page produces' is still not literally true. The error is conservative in both schemes and no pair flips.",
+   "orchestrator_verified": "not re-run at the breaker",
+   "acceptance": "Layers listed bottom-to-top, or the provenance says declaration-ordered and conservative."
+  },
+  {
+   "id": "R25",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "check_button_specificity only inspects selectors containing :hover, so `button:focus{background:var(--amber)}` -- same specificity rank as the rule the check exists to stop -- is not flagged, and R17's proposed fix would not catch it either.",
+   "orchestrator_verified": "`button:focus{background:var(--amber)}` appended -> run_case passed=True.",
+   "acceptance": "The check flags any bare-button state rule (:hover/:focus/:focus-visible/:active) not scoped by :not(.it), or the R17 debt row names the state-pseudo-class axis too."
+  }
+ ]
+}

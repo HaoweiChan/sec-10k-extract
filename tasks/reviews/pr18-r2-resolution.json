@@ -1,0 +1,57 @@
+{
+ "round": 2,
+ "pr": 18,
+ "task": "S3",
+ "gate": "pass -- invariant 14/14 = 1.000, fast 52/52 = 1.000, baseline 1.0 untouched",
+ "orchestrator_verification": "Round 1's verification replayed only implementer-proposed mutations, which is confirmation not falsification. Round 2 used orchestrator-designed mutations throughout. Verified red: --grid darkened (7 red, floor 1.15); .it .ttl repointed (3 rule-binding failures); --panel wrecked (22 red); four chips -> transparent (4 red, floor 4.30); #sidebar/fieldset/details/#pane grounds -> mid-grey (16/6/4/4 red). Verified loud-fail: #pane background stripped -> ValueError; .warn -> transparent -> ValueError (no opaque ground). Verified live: --grid alpha .7->1 moves the light floor 4.57->4.55. Verified arithmetic: the translucent-selected-row composite is bit-identical to the opaque one in both schemes, so leaving it green is correct, not a hole.",
+ "resolutions": [
+  {
+   "id": "R12",
+   "disposition": "fixed",
+   "covered_by": "per-scheme `body` ground stacks in evals/adversarial/ui-contrast-and-specificity.json; --grid is a live token",
+   "note": "Modelling the grid immediately turned four pairs red, including light banner-ok at 4.47 -- the reviewer's figure reproduced exactly. So the model fix forced a real UI fix: the four banner status chips were translucent and let the page grid run through them, costing up to 0.4 of a contrast point. They now mix against var(--bg): identical rendered color, opaque chip."
+  },
+  {
+   "id": "R13",
+   "disposition": "fixed by narrowing + one mutation caught",
+   "covered_by": "`fg_from` on 39/46 pairs; the .it .ttl repoint now fails on the binding, not the ratio",
+   "note": "Deliberately did NOT build toward a cascade -- that is a browser, the dependency the check exists to avoid. Ceiling text corrected in three places to enumerate the real holes. sha-dim's note corrected (.mode label sits on --panel, not --bg). _rule_body anchored at a rule boundary so a one-character selector cannot match the tail of a longer one."
+  },
+  {
+   "id": "R14",
+   "disposition": "partially fixed",
+   "covered_by": "tasks/TODO.md Contents cell ONLY",
+   "note": "Freeze premise restated on a verified basis rather than asserted: repo_hygiene imports only re/pathlib plus its own sibling, and is reached only through evals/run.py -- it adds no pipeline capability. CORRECTION (round 3, R21): this record previously claimed the PR body half was also done. It was not -- the orchestrator never updated the body, which still said 'nothing outside src/sec10k/web/static/ changes'. The overclaim was the orchestrator's, not the implementer's, and is corrected here rather than silently amended."
+  },
+  {
+   "id": "R15",
+   "disposition": "fixed",
+   "covered_by": "tasks/TODO.md Contents cell",
+   "note": "Offline font-fallback claim marked UNRUN alongside the browser criterion, rather than stated as settled fact."
+  },
+  {
+   "id": "R16",
+   "disposition": "resolved incidentally",
+   "note": "The row now cites the one-liner that yields both per-scheme floors and states that min_ratio_measured alone returns 4.57 across both schemes. No debt row filed -- nothing left to carry."
+  },
+  {
+   "id": "R17",
+   "disposition": "debt",
+   "became": "tasks/TODO.md open-debt row 'check_button_specificity misses descendant-scoped hover rules'",
+   "note": "Confirmed still green by the implementer rather than assumed, and recorded in the case's triage note."
+  }
+ ],
+ "orchestrator_found_during_verification": {
+  "id": "O1",
+  "claim": "R12's own fix was unguarded: the case's `grounds` hardcoded the banner chip colors as literal strings duplicating the CSS, so reverting the chips to transparent left the case green while light banner-ok fell to 4.47.",
+  "disposition": "fixed",
+  "covered_by": "`bg_from` rule-binding on every colour-carrying ground layer",
+  "note": "R13's failure mode on the ground axis -- the third occurrence of the same class. The implementer audited ALL grounds rather than only the four named: row-selected and button-hover carried the same duplication, and bg-flat/panel/row-hover/button shadowed a rule while merely happening to be token-live. The single `panel` ground was split into the five rules that actually paint it (fieldset/#sidebar/#pane/details/.warn) so a change to one cannot be masked by a sibling. Unresolvable layers now raise rather than falling back to the literal."
+ },
+ "counts": {
+  "fixed": 5,
+  "resolved_incidentally": 1,
+  "rejected": 0,
+  "debt": 1
+ }
+}

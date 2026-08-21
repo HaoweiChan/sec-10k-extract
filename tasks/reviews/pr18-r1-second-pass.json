@@ -1,0 +1,53 @@
+{
+  "pr": 18,
+  "task": "S3",
+  "round": 1,
+  "pass": "second (concurrent duplicate)",
+  "note": "A second round-1 review ran concurrently with the one recorded in pr18-r1.json, because two pr-loop orchestrators were driving PR #18 at the same time. Most of its findings duplicate pr18-r1.json. Only the additive ones are kept here so nothing is lost. The full 8-finding second pass is preserved in git at commit 6310e2c.",
+  "duplicates_of_pr18_r1": {
+    "screenshot-criterion": "R4",
+    "no-eval-case": "R3",
+    "diff-size": "R2",
+    "ibr-badge-cyan": "R8",
+    "color-scheme": "R5",
+    "dark-minima-false": "R1"
+  },
+  "routing_conflict": {
+    "finding": "R5 (color-scheme)",
+    "first_pass": "MEDIUM / repair",
+    "second_pass": "LOW / debt",
+    "resolution": "defer to the more conservative routing \u2014 repair"
+  },
+  "additive_findings": [
+    {
+      "id": "S-A1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "In light mode, hovering an item row drops title and badge text to 4.33:1 \u2014 below AA, and a regression from 4.77:1 in the palette this diff replaced.",
+      "evidence": "index.html `.it:hover{background:var(--muted)}` with --muted:hsl(214 13% 86%) against .it .ttl / .b colored --dim:hsl(215 14% 40%).",
+      "repro": "orchestrator reproduced independently: dim-on-muted = 4.33",
+      "acceptance": "--dim on --muted and on the aria-current amber wash is >= 4.5:1 in both schemes.",
+      "relation": "pr18-r1 R11 covers dark-mode hover VISIBILITY (1.09:1 change); this is the light-mode AA FAILURE, a different defect on the same selector."
+    },
+    {
+      "id": "S-A2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "Beyond the two categories pr18-r1 R1 names, three further text/ground pairs fail the published minima, one of them only because of an opacity the measurement excluded.",
+      "evidence": "`.s-unsupported,.s-failed` dark = 4.99:1; `.b.st-missing` on --panel dark = 5.13:1; `#banner .src{opacity:.85}` = 3.92:1 dark on the failed banner and 3.69:1 light on the success banner.",
+      "repro": "orchestrator reproduced independently: 4.99 / 5.13 / 3.92 / 3.69",
+      "acceptance": "Any check backing the contrast claim composites opacity and color-mix grounds, not just flat token pairs.",
+      "relation": "extends pr18-r1 R1 with three concrete pairs and the opacity blind spot."
+    },
+    {
+      "id": "S-A3",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "While a fetch is in flight all three Extract buttons are disabled and their labels drop to 2.20:1 light / 3.20:1 dark.",
+      "evidence": "index.html `button:disabled{opacity:.5}` composited over --bg; busy(true) disables every button for the fetch duration.",
+      "repro": "orchestrator reproduced independently: 2.20",
+      "acceptance": "Disabled buttons keep a legible label, or the busy state is acknowledged as intentionally illegible.",
+      "relation": "not present in pr18-r1. WCAG 1.4.3 exempts disabled controls, so legibility not conformance."
+    }
+  ]
+}

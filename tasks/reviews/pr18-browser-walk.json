@@ -1,0 +1,42 @@
+{
+ "artifact": "S3 three-mode browser walk",
+ "pr": 18,
+ "task": "S3",
+ "date": "2026-08-21",
+ "build_sha_reported_by_page": "0f22e0a",
+ "why_this_exists": "The S3 row's Validation gate required the three input modes driven in a real browser. It stood UNRUN through three review rounds because the implementer subagent cannot drive one. The orchestrator ran it here; this file is the machine-checkable half of that evidence, recorded because a screenshot cannot be diffed or re-run.",
+ "how_run": "preview_start on .claude/launch.json's `inspector`, then each mode driven in the page and the rendered result read back out of the DOM. Values below are what the page actually displayed, not what the API returned.",
+ "modes": {
+  "fixture": {
+   "input": "aapl-2025 (committed fixture)",
+   "banner": "doc_status: success — 18 extracted · 5 incorporated_by_reference fixture: aapl-2025",
+   "banner_class": "s-success",
+   "items_rendered": 23,
+   "warnings_rendered": 0,
+   "item_pane_rendered_text": true,
+   "note": "Item 1 selected; pane rendered heading, offsets [8,669, 24,712), evidence block and body text sliced from those offsets."
+  },
+  "upload": {
+   "input": "s3-upload-smoke.htm, generated in-page by the f-string below",
+   "banner": "doc_status: ambiguous — 4 extracted · 17 missing · 2 omitted upload: s3-upload-smoke.htm",
+   "banner_class": "s-ambiguous",
+   "items_rendered": 23,
+   "warnings_rendered": 18,
+   "item_pane_rendered_text": false,
+   "first_warning_code": "expected_item_missing",
+   "note": "This replaces the unreproducible 4/17/2 claim deleted in round 1. The generator is recorded here rather than committed under evals/fixtures/ ON PURPOSE: a new fixture directory joins the benchmark corpus (moving the n=33 figures ADR-021 and docs/analysis-report.md publish) and appears in the inspector's own fixture dropdown as a fake filing. Recording the generator makes the claim reproducible at zero cost to either.",
+   "generator_python_fstring": "<html><body><p>FORM 10-K</p><p>For the fiscal year ended December 31, 2023</p><p><b>Item 1. Business</b></p><p>{'The registrant designs and sells widgets across several markets. '*60}</p><p><b>Item 1A. Risk Factors</b></p><p>{'Our business faces competitive, regulatory and supply-chain risks. '*60}</p><p><b>Item 7. Management&rsquo;s Discussion and Analysis of Financial Condition and Results of Operations</b></p><p>{'Revenue increased year over year driven by unit volume. '*60}</p><p><b>Item 8. Financial Statements and Supplementary Data</b></p><p>{'See the consolidated financial statements and notes thereto. '*60}</p></body></html>"
+  },
+  "url": {
+   "input": "https://www.sec.gov/Archives/edgar/data/000/does-not-exist.htm",
+   "banner": "doc_status: failed",
+   "banner_class": "s-failed",
+   "items_rendered": 0,
+   "warnings_rendered": 1,
+   "first_warning_code": "edgar_fetch_failed",
+   "note": "Fails loudly rather than degrading silently, which is the criterion. This is also the state round-1 R1's contrast audit never visited, and the one whose .src span measured 3.92:1 before repair."
+  }
+ },
+ "screenshots": "Viewed in-session at 1280x720 for the fixture-extract, item-selected and failed-URL states; not committed as images. The DOM values above are the diffable substitute.",
+ "reproduce": "Start the inspector, then drive each mode; compare against the banner/class/count fields above."
+}
