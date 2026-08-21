@@ -17,16 +17,19 @@ Run: uvicorn src.sec10k.web.app:app --reload
 """
 import hashlib
 import os
+import secrets
 import subprocess
 import tempfile
 import urllib.error
 import urllib.request
+from collections import OrderedDict
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 
 from src.sec10k.extract import extract_items
+from src.sec10k.web import capabilities as capabilities_mod
 from src.sec10k.web.view import build_view
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -37,6 +40,16 @@ MAX_BYTES = 25 * 1024 * 1024                  # provisional cap, both upload and
 ALLOWED_SUFFIX = (".htm", ".html", ".txt")
 
 app = FastAPI(title="sec10k-extract inspector")
+
+# Original-filing bytes for the S4 compare pane, keyed by an opaque token
+# handed to the browser. Bounded at 3 documents: this is a browse aid for
+# the run just performed, not a document store, so an LRU cap is enough and
+# needs no eviction policy fancier than OrderedDict gives for free.
+# ponytail: process-local and in-memory, so a restart or a second worker
+# process empties it — fine for a single-instance inspector, revisit if this
+# ever runs behind more than one uvicorn worker.
+SOURCE_CACHE: "OrderedDict[str, tuple[str, bytes]]" = OrderedDict()
+SOURCE_CACHE_MAX = 3
 
 
 def _git_sha() -> str:
@@ -76,14 +89,41 @@ def _err(status: int, code: str, message: str, doc_status: str = "failed", **ext
         "warnings": [{"code": code, "item": None, "message": message}], **extra})
 
 
-def _run(path: str, source: dict):
-    """Extract and shape for the UI. Never leaks a traceback to the browser."""
+def _cache_source(raw: bytes, suffix: str) -> str:
+    """Store the original filing bytes under a fresh opaque token, evicting
+    the oldest entry once the LRU is over its 3-document cap."""
+    content_type = ("text/plain; charset=utf-8" if suffix == ".txt"
+                     else "text/html; charset=utf-8")
+    token = secrets.token_urlsafe(16)
+    SOURCE_CACHE[token] = (content_type, raw)
+    SOURCE_CACHE.move_to_end(token)
+    while len(SOURCE_CACHE) > SOURCE_CACHE_MAX:
+        SOURCE_CACHE.popitem(last=False)
+    return token
+
+
+def _run(path: str, source: dict, raw: bytes = None):
+    """Extract and shape for the UI. Never leaks a traceback to the browser.
+
+    `raw` is the original bytes already in hand for upload/URL; the fixture
+    path has none yet, so it is read from disk here instead. Caching is
+    best-effort: a read failure loses the compare pane, never the extraction
+    itself, so `source.token` is simply absent and the UI says so honestly.
+    """
     try:
         result = extract_items(path)
     except Exception as e:                       # refuse loudly, hard rule 4
         return _err(500, "extractor_exception", f"{type(e).__name__}: {e}",
                     source=source)
     view = build_view(result)
+    body = raw
+    if body is None:
+        try:
+            body = Path(path).read_bytes()
+        except OSError:
+            body = None
+    if body is not None:
+        source = dict(source, token=_cache_source(body, Path(path).suffix.lower()))
     view["source"] = source
     return JSONResponse(view)
 
@@ -129,7 +169,7 @@ async def extract_upload(request: Request):
         p = Path(td) / f"upload{suffix}"
         p.write_bytes(raw)
         return _run(str(p), {"mode": "upload", "name": name, "bytes": len(raw),
-                             "sha256": hashlib.sha256(raw).hexdigest()[:16]})
+                             "sha256": hashlib.sha256(raw).hexdigest()[:16]}, raw=raw)
 
 
 @app.post("/api/extract/url")
@@ -159,7 +199,38 @@ def extract_url(body: dict):
         p = Path(td) / f"edgar{suffix}"
         p.write_bytes(raw)
         return _run(str(p), {"mode": "url", "name": url, "bytes": len(raw),
-                             "sha256": hashlib.sha256(raw).hexdigest()[:16]})
+                             "sha256": hashlib.sha256(raw).hexdigest()[:16]}, raw=raw)
+
+
+@app.get("/api/source/{token}")
+def api_source(token: str):
+    """Original filing bytes for the compare pane. A miss — bad token, or
+    evicted from the 3-document LRU — is a plain refusal, never a 500 and
+    never a re-fetch (hard rule 4: no guessing a replacement document).
+
+    The response headers are the actual security boundary for the untrusted
+    markup this serves: `sandbox` forbids script execution and most other
+    active content regardless of what the frame attribute says, and nosniff
+    stops the browser from re-interpreting a .txt filing as HTML.
+    """
+    hit = SOURCE_CACHE.get(token)
+    if hit is None:
+        return JSONResponse(status_code=404, content={
+            "error": "source_not_cached",
+            "message": "original source is no longer cached — re-run the extraction"})
+    content_type, raw = hit
+    return Response(content=raw, media_type=content_type, headers={
+        "Content-Security-Policy": "sandbox allow-same-origin",
+        "X-Content-Type-Options": "nosniff",
+    })
+
+
+@app.get("/api/capabilities")
+def api_capabilities():
+    """README.md's works-well table and difficult-section entries, parsed at
+    request time so the UI never carries a hand-copied second list (INV-S2's
+    argument applied to docs — see src/sec10k/web/capabilities.py)."""
+    return capabilities_mod.parse_readme()
 
 
 @app.get("/edgar-check")

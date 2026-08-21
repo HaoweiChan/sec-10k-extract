@@ -1,0 +1,100 @@
+{
+  "pr": 21,
+  "task": "S4",
+  "round": 1,
+  "result": "REQUEST_CHANGES",
+  "gate": "invariant 18/18, fast 56/56, baseline 1.0 untouched",
+  "findings": [
+    {
+      "id": "R1",
+      "source": "pr-reviewer",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "The `capabilities_parse` eval case only checks row/entry counts, not content, so a README edit that empties every table cell (keeps the same number of rows and columns) leaves the check green while the `/api/capabilities` panel would render garbage — the exact regression the TODO row and the case's own triage claim it prevents.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:151-167 (check_capabilities_parse only computes `works = len(data['works_well'])` and `diff = sum(len(g['items'])...)` and compares to floors); confirmed by mutating README.md's works-well table to `| x | x | x |` for every cell (9 rows, 3 cols preserved) and calling `eval_adapter.CHECKS['capabilities_parse'](case)` — returns `([], {'works_well_rows': 9, 'difficult_entries': 7})`, i.e. passes.",
+      "repro": "python3 -c \"from src.repo_hygiene import eval_adapter; case={'input':{'checks':['capabilities_parse'],'file':'/tmp/README_mutated.md','min_works_well':8,'min_difficult':3}}; print(eval_adapter.CHECKS['capabilities_parse'](case))\" (mutated file: every works-well table cell replaced with the literal string 'x', same row/column count as the real README)",
+      "acceptance": "The check must assert something about cell content (e.g. non-empty/non-placeholder values, a minimum distinct-value count, or a hash/sample-content comparison against the committed README) so that emptying the table's content — not just its row count — turns the case red."
+    },
+    {
+      "id": "R2",
+      "source": "pr-reviewer",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The `typography_floor` check's regex only matches integer-pixel sizes (`\\d+px`), so a declared font-size below the 11px floor using a decimal (e.g. `font-size:10.5px`) is invisible to the check and would ship green.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:127 `re.findall(r\"font(?:-size)?\\s*:\\s*(\\d+)px\", css)` — `\\d+` does not match a decimal point, confirmed: `re.findall(r'font(?:-size)?\\s*:\\s*(\\d+)px', 'body{font-size:10.5px}')` returns `[]`.",
+      "repro": "python3 -c \"import re; print(re.findall(r'font(?:-size)?\\\\s*:\\\\s*(\\\\d+)px', 'body{font-size:10.5px}'))\" -> []",
+      "acceptance": "Regex (or a proper CSS tokenizer) matches decimal px values too, e.g. `[\\d.]+`, and a mutation fixture with a sub-floor decimal size is added to evals/adversarial/ui-typography-floor.json (or a sibling case) that is watched red before the fix."
+    },
+    {
+      "id": "R3",
+      "source": "pr-reviewer",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The `layout_centering` check accepts any `margin` or `margin-inline` declaration containing the token `auto` anywhere, including asymmetric forms like `margin-inline:auto 0` (start=auto, end=0) or `margin:0 auto 0 0`, which do NOT actually centre the element.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:145 `re.search(r\"margin(-inline)?\\s*:\\s*[^;]*auto\", body)`; confirmed for a synthetic header body `max-width:1500px;margin-inline:auto 0;...` — `'max-width' in body` is True and the margin regex matches True, so `check_layout_centering` would report no failure for that rule even though `margin-inline:auto 0` does not centre.",
+      "repro": "python3 -c \"import re; body='max-width:1500px;margin-inline:auto 0;padding:16px 20px'; print('max-width' in body, bool(re.search(r'margin(-inline)?\\\\s*:\\\\s*[^;]*auto', body)))\" -> True True",
+      "acceptance": "Check parses the margin-inline/margin value into its shorthand components and requires both inline-start and inline-end (or all relevant sides) to resolve to `auto`, and an adversarial mutation using an asymmetric `auto` value is added and watched red."
+    },
+    {
+      "id": "R4",
+      "source": "pr-reviewer",
+      "severity": "LOW",
+      "route": "repair",
+      "route_note": "LOW would normally be debt; routed to repair because it is a visible defect in the human's requested deliverable (#7, 'show in a good-looking table') and the orchestrator's own visual pass raised it independently as V4.",
+      "claim": "`capabilities.py`'s `_strip_md` strips bold, code spans, and links but not single-asterisk/underscore italic emphasis, so real README content renders with literal asterisks in the shipped inspector panel.",
+      "evidence": "src/sec10k/web/capabilities.py:40-45 `_strip_md` has no rule for `*text*`/`_text_`; README.md's 'What is difficult' section contains `*ahead*`, and `capabilities.parse_readme()` against the committed README yields `... Item 15 = Exhibits) *ahead* of the 2003-08-14 effective date ...` verbatim.",
+      "repro": "python3 -c \"from src.sec10k.web import capabilities; d=capabilities.parse_readme(); print([i for g in d['difficult'] for i in g['items'] if '*' in i])\"",
+      "acceptance": "`_strip_md` also strips single-asterisk/underscore emphasis, and a case/assertion covers a README bullet containing italic emphasis."
+    },
+    {
+      "id": "V1",
+      "source": "orchestrator-visual",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "Selecting an item never moves the source pane: the heading locator misses on HTML filings and, on plain-text filings, matches but scrolls to the top of the document — so the compare pane's primary affordance silently no-ops on both format families.",
+      "evidence": "src/sec10k/web/static/index.html:345-362 `scrollSourceToHeading` walks text nodes doing an exact `node.nodeValue.includes(headingText)` of the NORMALIZED `heading_text` against RAW source text, then scrolls `node.parentElement`. (a) HTML: aapl-2025 item 7 heading is not a literal substring of the raw file at all — even the fragment `Management’s Discussion` returns False, because the source is entity-encoded and fragmented across tags; measured in-browser, source scrollTop stayed 0 after selecting item 7. (b) plain text: ibm-1997 item 7 heading IS an exact substring, but the browser renders text/plain as one text node inside one <pre> spanning the whole 344 KB file, so `parentElement.scrollIntoView()` targets that <pre> and lands at the top — measured scrollTop 13 of scrollHeight 149,261.",
+      "repro": "Serve the app, extract fixture `ibm-1997`, select item 7, read `document.querySelector('#src-frame').contentDocument.scrollingElement.scrollTop` -> 13. Repeat with `aapl-2025` item 7 -> 0. Static check: python3 -c \"import pathlib; raw=list(pathlib.Path('evals/fixtures/aapl-2025').iterdir())[0].read_bytes().decode('utf-8','replace'); print('Management\\u2019s Discussion' in raw)\" -> False",
+      "acceptance": "Selecting an item scrolls the source pane to that item's heading in the original document, verified on at least one HTML fixture and one .txt fixture (assert the resulting scrollTop is within the item's region, not 0). Matching must normalize BOTH sides (collapse whitespace, resolve entities, case-fold) and locate a position across text nodes rather than requiring one node to contain the whole heading; for text/plain it must scroll to the matched character offset, not to the enclosing <pre>. When no anchor is found the pane must say so rather than appear anchored."
+    },
+    {
+      "id": "V2",
+      "source": "orchestrator-visual",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "Scroll sync maps the item pane's scroll fraction onto the WHOLE filing, so the two panes show unrelated content — the panes move together while comparing nothing, which is the point of the human's request.",
+      "evidence": "src/sec10k/web/static/index.html scroll-sync handler uses `scrollTop / (scrollHeight - clientHeight)` on the full source document. Measured on aapl-2025 Item 1 (a ~24k-char item near the front of a 23-item filing): driving `pre.text` to fraction 0.500 drove the source iframe to scrollTop 31,321 of scrollHeight 63,161 — the middle of the entire filing, while the left pane showed the middle of Item 1.",
+      "repro": "Extract aapl-2025, select item 1, then in the console set `pre.scrollTop=(pre.scrollHeight-pre.clientHeight)*0.5` and dispatch a scroll event; read the iframe's scrollingElement.scrollTop (31,321 of 63,161).",
+      "acceptance": "The item pane's scroll fraction maps across the SELECTED ITEM's region of the source (from this item's anchor to the next item's anchor), not across the whole document; with the item's own anchor found, fraction 0 shows the item's heading and fraction 1 shows its end. Falls back to whole-document proportional ONLY when no anchor is available, and the pane header states that it is unanchored when it does."
+    },
+    {
+      "id": "V3",
+      "source": "orchestrator-visual",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The difficult/unsupported panel is a single-column table: each row is one <td> holding the group's bolded term and its full paragraph fused together, up to ~800 characters — a README dump wearing a <table>, not the 'good-looking table' the request asked for.",
+      "evidence": "Rendered DOM of #cap-box: `<table class=\"cap-t\"><tr><td class=\"grp\">Closed since B-freeze</td></tr><tr><td>2002–2003 transitional numbering — listed here as unfixed until T9. Goldman Sachs FY2002 used ... (continues ~800 chars)</td></tr>`. The works-well table by contrast renders three real columns.",
+      "repro": "Serve the app, open the CAPABILITIES panel, run `document.querySelector('#cap-box').querySelectorAll('table')[1].rows[1].cells.length` -> 1",
+      "acceptance": "The difficult/unsupported list renders with real columns — at minimum the bolded term in its own column and the detail in another — so a reader can scan issues without reading paragraphs. The group label stays a visually distinct band. `capabilities.py` must return term and detail as separate fields rather than one fused string."
+    },
+    {
+      "id": "V4",
+      "source": "orchestrator-visual",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The extracted-text pane and the source pane are not top-aligned: the item metadata block (h2, hint line, evidence dl) sits above `pre.text`, so the two scrollable regions start ~136px apart and side-by-side rows never line up.",
+      "evidence": "Measured at 1920x1080 on aapl-2025 item 1: `pre.text` boundingClientRect.top = 533, source iframe top = 397, both 520px tall.",
+      "repro": "Extract any fixture, select an item, compare `document.querySelector('pre.text').getBoundingClientRect().top` with `document.querySelector('#src-frame').getBoundingClientRect().top`.",
+      "acceptance": "The two scrollable regions share a top edge, or the source pane carries the same header height so the comparison rows align."
+    },
+    {
+      "id": "V5",
+      "source": "orchestrator-visual",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "Below the 1100px breakpoint the source pane drops full-width BELOW the item pane, so the two panes cannot be seen at once and simultaneous scrolling is unobservable at that width.",
+      "evidence": "Measured at 1000x800: `.split` grid-template-columns computes to `290px 656px`, #pane top = 424, #source top = 1625 — 1200px apart on an 800px-tall viewport.",
+      "repro": "Resize to 1000px wide, extract a fixture, compare the two panes' offsetTop.",
+      "acceptance": "Either the panes stay side by side at that width (narrower columns), or the sync-scroll control is hidden/labelled inactive when they are stacked, so the UI does not advertise a comparison the layout cannot show."
+    }
+  ]
+}

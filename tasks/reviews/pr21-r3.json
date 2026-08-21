@@ -1,0 +1,24 @@
+{
+  "pr": 21,
+  "task": "S4",
+  "round": 3,
+  "result": "APPROVED",
+  "gate": "invariant 22/22, fast 60/60, baseline 1.0 untouched",
+  "findings": [],
+  "verification_performed": {
+    "mirror_fidelity": "anchor.py read side by side against the JS in index.html (coreOf/core_of, buildSourceIndex/build_source_index, findAnchor/find_anchor, targetCore/_target_core, AGREEMENT_WINDOW=400, AGREEMENT_MIN=15) — logic matches line for line. One asymmetry found: the JS decodes HTML entities through a scratch <textarea>, Python does not. It cannot manifest on any committed fixture because heading_text originates in normalized_text, which src/sec10k/normalize.py already passes through html.unescape before segmentation. Logged as debt (drift risk), not a defect.",
+    "scoring_robustness": "Searched every multi-occurrence item across every fixture for a scoring tie, which would resolve to the earlier (TOC) candidate under the >-not->= update rule. Zero ties found. Tightest observed margin: spatz-2014 item 9, best 80 vs second 74 — the higher score lands on the real body because the TOC occurrence is interrupted by a page number and the next heading, not because of a fragile threshold.",
+    "anchor_contract_case": "Reproduced green: 38 fixtures / 641 items / 0 failures. Independently recomputed the disagreement set between find_anchor and find_anchor_frac: 36 total, 21 on jpm-2024 (resolution claimed 35/12 — same order of magnitude and same dominant fixture; the methodologies differ on what counts as a disagreement).",
+    "R5": "Counts 1/2/19 reproduced. expect.max_failures catches a simulated over-firing _margin_centers (3 > 2 -> fail).",
+    "R8": "Confirmed via parse_readme() and a live /api/capabilities fetch that the 'Explicitly unsupported' item carries no `term` key; the renderer's `\"term\" in it` branch emits a colspan=2 spanning row with no KeyError path.",
+    "regression_sweep": "Diffed the whole index.html anchor-machinery churn: no V1/V2 fix dropped, no existing case loosened."
+  },
+  "orchestrator_browser_verification": {
+    "nike-2006": "items 1-6 anchored, ordered 2213 -> 18267 (was: all unanchored)",
+    "gs-2002": "items 1-6 anchored, ordered 2414 -> 31505 (was: all unanchored)",
+    "jpm-2024": "items 1B/1C/2/3/4 anchored at distinct ordered positions 48690 -> 49074 in the body (was: all collapsed at frac 0.004 in the front cross-reference table, each showing the NEXT item's title); item 1A lands on 'Item 1A. Risk Factors' with real prose; item 6 'Reserved' honestly reports unanchored",
+    "source_endpoint": "LRU evicts at 3 documents, evicted and bogus tokens both return an honest 404 source_not_cached (not a 500); headers on a live token: content-security-policy sandbox allow-same-origin, x-content-type-options nosniff, .txt served as text/plain; charset=utf-8",
+    "upload_path": "synthetic 4-item filing uploaded, token issued, item 7 anchored in the uploaded source",
+    "unanchored_honesty": "items-stripped item 1 reports 'unanchored — heading not found in source' rather than sitting at an arbitrary position"
+  }
+}

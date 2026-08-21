@@ -250,8 +250,9 @@
       {
         "id": "sha-dim",
         "fg": "var(--dim)",
-        "on": "body",
-        "fg_from": ".sha"
+        "on": "panel-details",
+        "fg_from": ".sha",
+        "note": "S4 moved build sha + /edgar-check into the meta-box details panel, so the true ground is the panel background, not body"
       },
       {
         "id": "footer-dim",
@@ -287,8 +288,9 @@
       {
         "id": "link-accent",
         "fg": "var(--accent)",
-        "on": "body",
-        "fg_from": "a"
+        "on": "panel-details",
+        "fg_from": "a",
+        "note": "the /edgar-check link, S4-moved into the meta-box details panel — the only remaining bare `a` on the page"
       },
       {
         "id": "link-accent-panel",

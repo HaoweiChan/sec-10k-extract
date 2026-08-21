@@ -1,0 +1,62 @@
+{
+  "pr": 21,
+  "task": "S4",
+  "round": 2,
+  "result": "REQUEST_CHANGES",
+  "gate": "invariant 21/21, fast 59/59, baseline 1.0 untouched",
+  "note": "Round-1 findings R1-R4, V2, V3 verified fixed by the orchestrator in a real browser and by re-running the cases. V1 does NOT hold and is re-opened under its original id with browser evidence stronger than the reviewer's Python port.",
+  "findings": [
+    {
+      "id": "V1",
+      "source": "pr-reviewer + orchestrator-browser",
+      "severity": "HIGH",
+      "route": "repair",
+      "status": "REOPENED — round-1 fix does not hold",
+      "claim": "The anchor machinery still fails on most committed fixtures, in two distinct ways: (a) whole filings anchor NOTHING because the concatenated source index is never re-collapsed after per-node normalization, so a heading spanning a node boundary never literal-matches; (b) on jpm-2024 the `expectedFrac` TOC-disambiguation heuristic locks onto the front cross-reference table and reports ANCHORED while showing the wrong item's text — a confidently wrong alignment, which is worse than an honest miss.",
+      "evidence": "src/sec10k/web/static/index.html:310-336 — `normalizeChunk` collapses whitespace only WITHIN one text node, then `buildSourceIndex` (line 332) pushes `norm, \" \"` unconditionally, so a node already ending in whitespace yields a double space in the index and the needle never matches. index.html:371-384 — `findAnchor`'s `expectedFrac` picks the occurrence whose source fraction is closest to the extractor's `item.start` fraction, but normalized-text fractions and source-byte fractions are not comparable, so a cross-reference table near the front wins. ORCHESTRATOR BROWSER MEASUREMENTS at 1920x1080, not a port: nike-2006 — items 1, 1A, 1B, 2, 3, 4 ALL report `unanchored — heading not found in source`, source frac 0.000, pane stuck on the cover page. gs-2002 — items 1,2,3,4,5,6 all `unanchored`, frac 0.000. jpm-2024 — item 1A reports ANCHORED (empty status) at frac 0.004 showing 'Unresolved Staff Comments.' (item 1B's title); item 1B anchored at 0.004 showing 'Properties.' (item 2's title); item 2 anchored at 0.004 showing 'Legal Proceedings.' (item 3's title); item 3 anchored at 0.004 showing 'Mine Safety Disclosures.' (item 4's title) — systematically off by one and parked in the front index table, with no warning shown.",
+      "repro": "Serve the app, extract fixture `nike-2006`, select items 1/1A/1B/2/3/4 and read `#anchor-status` -> 'unanchored — heading not found in source' for all, iframe scrollTop 0. Extract `jpm-2024`, select item 1A, read `#anchor-status` (empty, i.e. claims anchored) and the text at the top of the source pane via `contentDocument.elementFromPoint(w/2, 40)` -> 'Unresolved Staff Comments.' at source fraction 0.004.",
+      "acceptance": "Two things, both measured: (1) re-collapse the FULL concatenated index before searching so boundary-spanning headings match; (2) replace the fraction heuristic with a body-agreement test — for each candidate occurrence, compare the normalized source text FOLLOWING the heading against the normalized opening of that item's own extracted `text` (already on the client) and pick the best-agreeing occurrence; if the best score is below a threshold, report `unanchored` rather than guessing. A TOC or cross-reference entry is followed by other entries and page numbers, never by the item's body, so this is decisive where the fraction is not. Report a per-fixture anchored/unanchored/wrong table across ALL committed fixtures, not two. No item may ever display as anchored while the source pane sits on a different item's text."
+    },
+    {
+      "id": "R5",
+      "source": "pr-reviewer",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "`expect.min_failures` is a floor, not an exact-count assertion, so it cannot detect a regression that ALSO over-fires alongside catching the real defect — the layout-centering-asymmetric case's own triage claims 'main must not be flagged' but `expect.min_failures: 2` would still pass if a broken `_margin_centers` wrongly flagged `main` too (3 >= 2).",
+      "evidence": "evals/adversarial/ui-layout-centering-asymmetric.json `\"expect\": {\"min_failures\": 2}` against src/repo_hygiene/eval_adapter.py:262 `passed = len(failures) >= min_failures if min_failures is not None else not failures` — a strict `>=`, so extra false-positive failures are invisible.",
+      "repro": "python3 -c \"from src.repo_hygiene import eval_adapter as ea; print(len(ea.run_case({'input':{'checks':['layout_centering'],'file':'evals/fixtures/repo_hygiene/layout-centering-asymmetric.html','selectors':['header','main','footer']}})['failures']))\" -> 2 today; a future over-firing edit would report 3 and still pass.",
+      "acceptance": "Regression cases using expect.min_failures also assert the failure SET (or an exact count / max_failures) so a false positive introduced alongside the real fix is caught rather than masked by the floor."
+    },
+    {
+      "id": "R8",
+      "source": "pr-reviewer",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "V3's 'real columns' promise is not met for the README's 'Explicitly unsupported' group: its single parsed item has a Term that is a verbatim duplicate of the group's own heading band, and a Detail that is one 383-character fused paragraph — the same README-dump-in-a-table pattern V3 was raised to fix, now confined to one row.",
+      "evidence": "src/sec10k/web/capabilities.py `_parse_difficult`'s bare-paragraph branch sets `current['heading'] = 'Explicitly unsupported'` and then also appends `{'term': 'Explicitly unsupported', 'detail': <383-char paragraph>}` from `_split_lead(joined)` on the same lead. Against the committed README, that group's one item has `term == 'Explicitly unsupported'`, identical to the group label rendered directly above it.",
+      "repro": "python3 -c \"from src.sec10k.web import capabilities as c; d=c.parse_readme(); g=[g for g in d['difficult'] if g['heading']=='Explicitly unsupported'][0]; print(g['items'][0]['term'], len(g['items'][0]['detail']))\"",
+      "acceptance": "The bare-paragraph group either splits its prose into distinct term/detail pairs or renders as a single spanning descriptive row visually distinct from a term/detail entry, rather than duplicating the group heading as a meaningless term beside one giant paragraph."
+    },
+    {
+      "id": "R6",
+      "source": "pr-reviewer",
+      "severity": "MEDIUM",
+      "route": "debt",
+      "route_note": "Does not meet the blocking bar: the acceptance criterion was that a README edit which EMPTIES the panel turns red, and that now holds. Defeating the check requires hand-authored filler that is distinct, long and plausible — not a realistic regression, and every content heuristic loses that arms race eventually. Logged rather than chased in a third round.",
+      "claim": "R1's content check is defeated by a README mutation using distinct, sufficiently long but meaningless filler, so a genuinely degraded panel still passes clean.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:189-242 checks only within-row/within-item distinctness and per-cell minimum length, never cross-row duplication or content signal. A mutated README with 9 rows like '| Alpha row | Sample A1 | Passes fine |' and 3 items reading '**Some Term N.** This is a plausible looking filler sentence padded out' returns `{'passed': True, 'failures': []}`.",
+      "repro": "python3 -c \"from src.repo_hygiene import eval_adapter as ea; print(ea.run_case({'input':{'checks':['capabilities_parse'],'file':'/tmp/README_filler.md','min_works_well':8,'min_difficult':3}}))\"",
+      "acceptance": "Cross-row/cross-item duplicate-detail detection or a distinct-word-count floor per cell, with a fixture pinning it."
+    },
+    {
+      "id": "R7",
+      "source": "pr-reviewer",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "`_margin_centers` does not recognize the `margin-inline-start`/`margin-inline-end` longhand form, so a legitimate future CSS edit using longhands would be wrongly flagged as not centring.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:139-166 regex-matches literal `margin-inline\\s*:` and `margin\\s*:`, neither matching `margin-inline-start:auto;margin-inline-end:auto`, so it returns False.",
+      "repro": "python3 -c \"from src.repo_hygiene import eval_adapter as ea; print(ea._margin_centers('max-width:1500px;margin-inline-start:auto;margin-inline-end:auto;padding:16px 20px'))\" -> False",
+      "acceptance": "`_margin_centers` also recognizes the inline longhands (or margin-left/margin-right) both resolving to auto, with a case covering it."
+    }
+  ]
+}

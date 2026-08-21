@@ -1,0 +1,21 @@
+{
+  "id": "ui-capabilities-parse",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "capabilities_parse"
+    ],
+    "min_works_well": 8,
+    "min_difficult": 3
+  },
+  "expect": {},
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "S4 replaced the footer's 'see the README's works-well and difficult/unsupported lists' link with two tables rendered from a live parse of README.md (src/sec10k/web/capabilities.py), so there is no second copy of those lists to drift (the INV-S2 argument applied to docs). This case is the guard: it watched red before `src/sec10k/web/capabilities.py` existed (ImportError), and green once the module parsed the committed README into >=8 works-well rows and >=3 difficult entries. It exists to turn a future README restructure red instead of silently emptying the `/api/capabilities` panel."
+  },
+  "provenance": "S4, created 2026-08-21 alongside src/sec10k/web/capabilities.py. Watched RED (module did not exist yet), GREEN once written; the committed README currently yields 9 works-well rows and 7 difficult entries across 4 bold-lead groups."
+}

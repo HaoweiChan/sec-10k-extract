@@ -1,0 +1,24 @@
+{
+  "id": "ui-layout-centering",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "layout_centering"
+    ],
+    "selectors": [
+      "header",
+      "main",
+      "footer"
+    ]
+  },
+  "expect": {},
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "S4: on a wide screen `main{max-width:1500px}` had no auto margin, so the whole page hugged the left edge — the human asked for header/main/footer to share one max-width and be centred. Watched red against the pre-fix file (`header` and `footer` declared no `max-width` at all; `main` had `max-width` but no `margin-inline:auto`), green after `header,main,footer{max-width:1500px;margin-inline:auto}`."
+  },
+  "provenance": "S4, created 2026-08-21 alongside the centering fix. Watched RED against the pre-fix stylesheet, GREEN after."
+}
