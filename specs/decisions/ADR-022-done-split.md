@@ -3,7 +3,7 @@
 Date: 2026-08-20. Status: accepted. Amends: ADR-009.
 
 **Ruling**: `tasks/DONE.md` becomes the second sanctioned ledger file — an append-only, one-line-per-milestone archive; a row may leave `TODO.md` only when its Status carries no `UNRUN` gate.
-**Because**: `TODO.md` is a working set (groundwork GW-004's hot/cold split) that has grown to 21 rows of settled history, and archiving it must not let an unobserved gate quietly disappear the way ADR-009 was written to stop.
+**Because**: `TODO.md` is a working set (a hot/cold split: live rows vs. settled history) that has grown to 21 rows of settled history, and archiving it must not let an unobserved gate quietly disappear the way ADR-009 was written to stop.
 **Enforced by**: `tasks/DONE.md` line format; advisory — no hook parses either ledger file
 
 ---
@@ -21,7 +21,7 @@ The cost of the same design at month's end is legibility. `TODO.md` now
 carries T1 through T11, three gate rows (G1–G3), two held-out runs (H1–H2), a
 pre-submission row (S1), and an open-debt table — most of it settled weeks
 ago and read past every time the file is opened to find what's *next*. That is
-exactly the hot/cold split groundwork GW-004 names: a working set that never
+exactly the hot/cold split this repo relies on: a working set that never
 sheds its cold history stops being a working set.
 
 ## Decision

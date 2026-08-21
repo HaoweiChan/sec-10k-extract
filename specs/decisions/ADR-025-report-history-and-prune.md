@@ -1,6 +1,6 @@
 # ADR-025 — A history line every run, a full report only when it earns its keep, and the uncited-dump prune
 
-Date: 2026-08-21. Status: accepted. Implements groundwork GW-008.
+Date: 2026-08-21. Status: accepted.
 
 **Ruling**: `evals/run.py` appends one `evals/report/history.jsonl` line on every run; a full per-case `evals/report/<ts>-<suite>.json` is written only for `--report`, `--suite all`, a `--dir` held-out run, or a red run; 165 uncited routine-gate dumps are pruned, lossless because every one was backfilled into `history.jsonl` first.
 **Because**: 188 report files / 18 MB on `main`, only 19 ever cited as a report of record anywhere outside `evals/report/`; every PR diff since T1 carries the other 169 as pure weight, and their only residual value — the score/pass time series — needs one line, not a full case dump.

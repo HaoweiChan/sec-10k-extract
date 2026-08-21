@@ -3,7 +3,7 @@
  "pr": 18,
  "task": "S3",
  "result": "REQUEST_CHANGES",
- "reviewer": "groundwork:pr-reviewer (fresh context; repair diff f4a4251..HEAD + standing round-1 findings)",
+ "reviewer": "pr-reviewer subagent (fresh context; repair diff f4a4251..HEAD + standing round-1 findings)",
  "gate": "pass -- invariant 14/14 = 1.000, fast 52/52 = 1.000, baseline 1.0 untouched",
  "counts": {
   "HIGH": 0,

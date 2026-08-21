@@ -34,6 +34,6 @@ the coverage map that `spec-drift` and methodology audits check against.
 
 ## Our design choices (not mandated)
 
-Eval-first groundwork conventions; deterministic-first pipeline with LLM deferred
+Eval-first conventions; deterministic-first pipeline with LLM deferred
 until residual-failure data exists; anchor-based ground truth; FastAPI on Zeabur;
 stdlib-only parsing at B. Each recorded in `specs/decisions/`.

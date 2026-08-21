@@ -5,17 +5,10 @@
         "source": "git",
         "url": "https://github.com/DietrichGebert/ponytail.git"
       }
-    },
-    "groundwork": {
-      "source": {
-        "source": "git",
-        "url": "https://github.com/HaoweiChan/groundwork.git"
-      }
     }
   },
   "enabledPlugins": {
-    "ponytail@ponytail": true,
-    "groundwork@groundwork": true
+    "ponytail@ponytail": true
   },
   "hooks": {
     "PostToolUse": [
@@ -25,16 +18,6 @@
           {
             "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post-edit-invariant.sh"
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-end-prompt-log.py"
           }
         ]
       }

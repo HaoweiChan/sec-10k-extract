@@ -2564,7 +2564,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "rationale": "groundwork targets problems where requirements are clear but correctness is hard to define up front, so correctness is encoded as executable invariants and metrics rather than prose that cannot be run.",
+      "rationale": "scaffold targets problems where requirements are clear but correctness is hard to define up front, so correctness is encoded as executable invariants and metrics rather than prose that cannot be run.",
       "id": "claude_eval_set_is_the_spec",
       "community": 27,
       "norm_label": "the eval set is the spec"
@@ -2654,7 +2654,7 @@
       "norm_label": "sec-10k-extract"
     },
     {
-      "label": "groundwork eval-first scaffold",
+      "label": "scaffold eval-first scaffold",
       "file_type": "concept",
       "source_file": "README.md",
       "source_location": "lines 10-14",
@@ -2663,9 +2663,9 @@
       "author": null,
       "contributor": null,
       "rationale": "Chosen because 10-K extraction has no public ground truth: correctness must be encoded as executable invariants and hand-labelled cases, and every claim in the README is traceable to a committed report in evals/report/.",
-      "id": "readme_groundwork",
+      "id": "readme_scaffold",
       "community": 27,
-      "norm_label": "groundwork eval-first scaffold"
+      "norm_label": "scaffold eval-first scaffold"
     },
     {
       "label": "Contract-v2 output envelope",
@@ -4696,7 +4696,7 @@
       "norm_label": "hooks are law, claude.md is advice"
     },
     {
-      "label": "ADR-001: Adapting the Task 2 planning prompt to groundwork conventions",
+      "label": "ADR-001: Adapting the Task 2 planning prompt to scaffold conventions",
       "file_type": "document",
       "source_file": "specs/decisions/ADR-001-planning-adaptations.md",
       "source_location": null,
@@ -4706,7 +4706,7 @@
       "contributor": null,
       "id": "specs_decisions_adr_001_planning_adaptations",
       "community": 12,
-      "norm_label": "adr-001: adapting the task 2 planning prompt to groundwork conventions"
+      "norm_label": "adr-001: adapting the task 2 planning prompt to scaffold conventions"
     },
     {
       "label": "Normative specs vs executable enforcement vs descriptive architecture",
@@ -9642,7 +9642,7 @@
       "source_file": "README.md",
       "source_location": "lines 10-14",
       "weight": 1.0,
-      "source": "readme_groundwork",
+      "source": "readme_scaffold",
       "target": "claude_eval_set_is_the_spec"
     },
     {
@@ -9673,7 +9673,7 @@
       "source_location": "lines 10-14",
       "weight": 1.0,
       "source": "readme_sec_10k_extract",
-      "target": "readme_groundwork"
+      "target": "readme_scaffold"
     },
     {
       "relation": "conceptually_related_to",
