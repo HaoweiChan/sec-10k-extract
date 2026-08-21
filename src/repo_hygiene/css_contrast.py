@@ -280,6 +280,11 @@ def check_contrast(css, pairs, minimum=4.5):
     dark, light = parse_tokens(css)
     pairs = [dict(p, fg_opacity=rule_opacity(css, p["fg_opacity_from"]))
              if "fg_opacity_from" in p else p for p in pairs]
+    # fg_from names a rule too, and that rule's own `opacity:` is just as real
+    # as one reached through fg_opacity_from — round-1 R1's translucent-text
+    # defect otherwise re-enters through any of the 39 fg_from pairs unseen.
+    pairs = [dict(p, fg_opacity=rule_opacity(css, p["fg_from"]))
+             if "fg_from" in p and "fg_opacity" not in p else p for p in pairs]
     pairs = [dict(p, on=_bind_ground(p["on"], css)) for p in pairs]
     failures, measured = [], {}
     for pair in pairs:  # a pair must still paint the token it claims to measure
@@ -379,6 +384,14 @@ def _demo():
         {"id": "t", "fg": "var(--ink)", "on": ["var(--bg)"], "fg_from": ".ttl"}])
     assert any("paints 'var(--bg)'" in f and "measures 'var(--ink)'" in f
                for f in fails), fails
+
+    # R18: an `opacity` on a rule already bound by fg_from must be read too —
+    # round-1 R1's translucent-text defect re-entering through the fg_from
+    # side, not just fg_opacity_from. `.ttl{opacity:.35}` must go red.
+    translucent = css + ".ttl{color:var(--ink);opacity:.35}"
+    fails, _ = check_contrast(translucent, [
+        {"id": "t", "fg": "var(--ink)", "on": ["var(--bg)"], "fg_from": ".ttl"}])
+    assert any("t = " in f for f in fails), fails
 
     # bg_from binds the GROUND side the way fg_from binds the text side.
     # Round-2b: the banner chips were hardcoded copies of the CSS, so reverting

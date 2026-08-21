@@ -59,6 +59,14 @@
           "from": ".warn"
         }
       ],
+      "row-resting": [
+        {
+          "from": "#sidebar"
+        },
+        {
+          "from": ".it"
+        }
+      ],
       "row-hover": [
         {
           "from": "#sidebar"
@@ -347,7 +355,7 @@
       {
         "id": "row-code",
         "fg": "var(--amber-ink)",
-        "on": "panel-sidebar",
+        "on": "row-resting",
         "fg_from": ".it .code",
         "note": "resting row"
       },
@@ -366,7 +374,7 @@
       {
         "id": "row-title",
         "fg": "var(--dim)",
-        "on": "panel-sidebar",
+        "on": "row-resting",
         "fg_from": ".it .ttl",
         "note": "resting row"
       },
@@ -386,7 +394,7 @@
       {
         "id": "badge-plain",
         "fg": "var(--dim)",
-        "on": "panel-sidebar",
+        "on": "row-resting",
         "fg_from": ".b",
         "note": "the conf/method/chars badges"
       },
@@ -405,7 +413,7 @@
       {
         "id": "badge-extracted",
         "fg": "var(--ok)",
-        "on": "panel-sidebar",
+        "on": "row-resting",
         "fg_from": ".b.st-extracted"
       },
       {
@@ -423,7 +431,7 @@
       {
         "id": "badge-missing",
         "fg": "var(--bad)",
-        "on": "panel-sidebar",
+        "on": "row-resting",
         "fg_from": ".b.st-missing"
       },
       {
@@ -441,7 +449,7 @@
       {
         "id": "badge-ibr",
         "fg": "var(--accent)",
-        "on": "panel-sidebar",
+        "on": "row-resting",
         "fg_from": ".b.st-incorporated_by_reference"
       },
       {
@@ -459,7 +467,7 @@
       {
         "id": "badge-lo",
         "fg": "var(--warn)",
-        "on": "panel-sidebar",
+        "on": "row-resting",
         "fg_from": ".b.lo",
         "note": "the validator-fired flag"
       },
@@ -483,5 +491,5 @@
     "class": "no-mechanical-check",
     "note": "S3 restyled src/sec10k/web/static/index.html and found-and-fixed two defects inside the same diff with no case behind either, which hard rule 2 forbids. Round-1 review found a third of the same species (the hovered row at 4.33:1) and proved the published minima wrong on five pairs. Round-2 review then falsified the ROUND-1 VERSION OF THIS CASE with mutations its author had not thought of: darkening --grid made the page unreadable while the case stayed green, and repointing `.it .ttl` at another token measured 1.46:1 while the case stayed green. Both are now red. What this case guards is stated exactly in the css_contrast module docstring, including the holes: it reads token VALUES live, models the declared ground stacks (body's grid/scanline overlay included, per scheme), and for a pair carrying `fg_from` asserts that the named rule still paints the token the pair measures. It does NOT resolve the cascade. Round 2b closed a fourth hole review found — grounds were literal copies of the CSS, so the round-2 banner fix could be silently reverted; the ground side is now rule-bound like the text side. Deliberately NOT covered, both filed as debt rather than silently enforced or silently dropped: `button:disabled{opacity:.5}` (2.20:1 light, which WCAG 1.4.3 exempts), and a descendant-scoped hover rule such as `#sidebar button:hover`, which check_button_specificity does not catch (round-2 R17)."
   },
-  "provenance": "S3 / PR #18, created 2026-08-21 in the round-1 repair, ground model rebuilt in the round-2 repair. Pair table hand-derived from the stylesheet's own rules; 39 of the 46 pairs carry `fg_from` naming the rule they model, and the check reads that rule's declared `color:` out of the file. The seven without it are elements that inherit their color (pre.text, #pane h2, .ev dd, .warn .msg, and the four `#banner .src` count lines, which carry only their own opacity) — those pairs are token-bound only, which the module docstring says plainly. GROUND STACKS follow the paint order the page produces, which in round 1 they did not: `body` paints --bg then two --grid line layers (a grid INTERSECTION is the worst ground) and, in dark only, a 1.2%-white scanline and a 6% cyan radial glow; light overrides background-image to the two grid layers alone, so the `body` ground is declared per scheme. Panels, rows and banner chips paint their own opaque background, so no grid reaches them. WATCHED RED BEFORE EACH FIX (hard rule 2), every mutation reproducible by pointing `input.file` at the stylesheet named. All figures below were re-measured against THIS pair table on 2026-08-21; the round-1 row published smaller counts because the round-1 table was smaller and its grounds were flat. ROUND 1: (A) pre-fix S3, `git show 3ee3871:src/sec10k/web/static/index.html` — 13 pairs red, floor 3.33:1, including row-title-hover 4.33 light. (B) the current file with the light block reverted to the TinBoker palette's raw FILL values — 26 pairs red, floor 2.17:1. (C) the current file with `:not(.it)` deleted from the button hover rule — the selector check fires. ROUND 2, the mutations that falsified (A)-(C)'s version of this case: (M1) light `--grid` darkened to hsl(213 20% 30% / .9) — was green, now 7 pairs red, floor 1.15:1 at caret-amber; (M2) `.it .ttl` repointed from var(--dim) to var(--line) — was green at a real 1.46:1, now 3 pairs red on the rule-binding assertion, not on a ratio. (M3) `#sidebar button:hover{background:var(--amber)}` appended is STILL GREEN — round-2 R17, filed as debt, and recorded here so the next reader does not mistake it for covered. THE FIXES: round 1, light --dim 40%->38%, dark --bad 61%->66%, `opacity:.85` off `#banner .src`; round 2, the four banner status chips mix against var(--bg) instead of `transparent`, so the page grid no longer runs through the banner and costs it up to 0.4 of a contrast point (light banner-ok was 4.78 flat but 4.47 over a grid intersection, i.e. below the floor this case enforces). ROUND 2b, after review mutated the round-2 case rather than replaying the author's own mutations: (N1) the four banner chips reverted to `color-mix(…,transparent)` — the round-2 case returned green because `grounds` hardcoded the chip colors as literal strings, duplicating the CSS instead of reading it; the text side was bound by `fg_from` and the GROUND side was not. Now 4 pairs red, floor 4.30, light banner-ok 4.47. Every colour-carrying ground layer is now `{\"from\": \"<selector>\"}` and read from that rule's `background`. (N2) `.it[aria-current=true]` made translucent — still green, and that is CORRECT, not a hole: the selected row sits on #sidebar's opaque --panel, so a 12% amber wash over panel is arithmetically identical to mixing with panel. The banner differed only because it sits on the gridded body. (N3) `#sidebar` stripped of its `background` — raises ValueError rather than falling back to a literal, which the runner reports as a failed case. The only literals left in `grounds` are body's gradient overlay layers, which come from `background-image`, not a `background` colour."
+  "provenance": "S3 / PR #18, created 2026-08-21 in the round-1 repair, ground model rebuilt in the round-2 repair. Pair table hand-derived from the stylesheet's own rules; 39 of the 46 pairs carry `fg_from` naming the rule they model, and the check reads that rule's declared `color:` out of the file. The seven without it are elements that inherit their color (pre.text, #pane h2, .ev dd, .warn .msg, and the four `#banner .src` count lines, which carry only their own opacity) — those pairs are token-bound only, which the module docstring says plainly. GROUND STACKS follow the paint order the page produces, which in round 1 they did not: `body` paints --bg then two --grid line layers (a grid INTERSECTION is the worst ground) and, in dark only, a 1.2%-white scanline and a 6% cyan radial glow; light overrides background-image to the two grid layers alone, so the `body` ground is declared per scheme. Panels, rows and banner chips paint their own opaque background, so no grid reaches them. WATCHED RED BEFORE EACH FIX (hard rule 2), every mutation reproducible by pointing `input.file` at the stylesheet named. All figures below were re-measured against THIS pair table on 2026-08-21; the round-1 row published smaller counts because the round-1 table was smaller and its grounds were flat. ROUND 1, re-measured against THIS pair table after the R18/R19 repair (both change what is measured, not the fixture): (A) pre-fix S3, `git show 3ee3871:src/sec10k/web/static/index.html` — 15 pairs red, floor 3.11:1, including row-title-hover 4.33 light. (B) the current file with light `--amber-ink`/`--ok`/`--bad`/`--accent` overridden, inside the same `@media(prefers-color-scheme:light){:root{...}}` block, to the dark block's own raw FILL values — `hsl(38 96% 56%)`/`hsl(145 66% 47%)`/`hsl(0 80% 66%)`/`hsl(190 92% 56%)` respectively, undoing the round-1 darkening fix — 26 pairs red, floor 1.28:1. (C) the current file with `:not(.it)` deleted from the button hover rule — the selector check fires. ROUND 2, the mutations that falsified (A)-(C)'s version of this case: (M1) light `--grid` darkened to hsl(213 20% 30% / .9) — was green, now 7 pairs red, floor 1.15:1 at caret-amber; (M2) `.it .ttl` repointed from var(--dim) to var(--line) — was green at a real 1.46:1, now 3 pairs red on the rule-binding assertion, not on a ratio. (M3) `#sidebar button:hover{background:var(--amber)}` appended is STILL GREEN — round-2 R17, filed as debt, and recorded here so the next reader does not mistake it for covered. THE FIXES: round 1, light --dim 40%->38%, dark --bad 61%->66%, `opacity:.85` off `#banner .src`; round 2, the four banner status chips mix against var(--bg) instead of `transparent`, so the page grid no longer runs through the banner and costs it up to 0.4 of a contrast point (light banner-ok was 4.78 flat but 4.47 over a grid intersection, i.e. below the floor this case enforces). ROUND 2b, after review mutated the round-2 case rather than replaying the author's own mutations: (N1) the four banner chips reverted to `color-mix(…,transparent)` — the round-2 case returned green because `grounds` hardcoded the chip colors as literal strings, duplicating the CSS instead of reading it; the text side was bound by `fg_from` and the GROUND side was not. Now 4 pairs red, floor 4.30, light banner-ok 4.47. Every colour-carrying ground layer is now `{\"from\": \"<selector>\"}` and read from that rule's `background`. (N2) `.it[aria-current=true]` made translucent — still green, and that is CORRECT, not a hole: the selected row sits on #sidebar's opaque --panel, so a 12% amber wash over panel is arithmetically identical to mixing with panel. The banner differed only because it sits on the gridded body. (N3) `#sidebar` stripped of its `background` — raises ValueError rather than falling back to a literal, which the runner reports as a failed case. The only literals left in `grounds` are body's gradient overlay layers, which come from `background-image`, not a `background` colour."
 }
