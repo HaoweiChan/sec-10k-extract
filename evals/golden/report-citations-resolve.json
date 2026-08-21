@@ -1,0 +1,7 @@
+{
+  "id": "report-citations-resolve",
+  "task": "repo_hygiene",
+  "suites": ["invariant", "fast"],
+  "input": {"checks": ["report_citations"]},
+  "expect": {}
+}

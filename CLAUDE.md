@@ -27,7 +27,7 @@ specs/             ONLY: 000-invariants.md, per-task contracts, decisions/ADR-*.
 evals/golden/      hand-labeled cases (JSON, one per case)
 evals/adversarial/ cases known or designed to break the pipeline
 evals/fixtures/    committed EDGAR filings, provenance in its README
-evals/report/      every run's output, committed to git
+evals/report/      history.jsonl line per run; full report on --report/all/--dir/red (ADR-025)
 prompts/           AI-collaboration record (auto-dumped raw/ + curated files)
 src/<task>/        implementation + eval_adapter.py per task
 ```
