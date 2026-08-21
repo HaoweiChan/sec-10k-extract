@@ -1,108 +1,143 @@
 {
-  "pr": 18,
-  "task": "S3",
-  "round": 1,
-  "result": "REQUEST_CHANGES",
-  "counts": {
-    "HIGH": 0,
-    "MEDIUM": 4,
-    "LOW": 4
-  },
-  "routed": {
-    "repair": [
-      "R1",
-      "R2",
-      "R3",
-      "R4",
-      "R5"
-    ],
-    "debt": [
-      "R6",
-      "R7",
-      "R8"
-    ]
-  },
-  "gate": "pass - invariant 13/13, fast 51/51",
-  "findings": [
-    {
-      "id": "R1",
-      "severity": "MEDIUM",
-      "route": "repair",
-      "claim": "In light mode, hovering an item row drops the row's title and badge text to 4.33:1 \u2014 below WCAG AA 4.5:1 and a regression from the 4.77:1 the pre-diff palette gave.",
-      "evidence": "index.html:114 `.it:hover{background:var(--muted)}` with `--muted:hsl(214 13% 86%)` (line 33), against `.it .ttl{color:var(--dim)}` (line 121, 11px) and `.b{color:var(--dim)}` (lines 123,127, 10px) with `--dim:hsl(215 14% 40%)`. Trigger: OS light, extract any fixture, hover any #sidebar row. Pre-diff the same --dim measured 4.77:1, so this diff moved it from passing to failing.",
-      "repro": "orchestrator reproduced independently: dim-on-muted = 4.33",
-      "acceptance": "`--dim` on `--muted` and on the aria-current amber wash is >= 4.5:1 in both schemes, with hover/selected grounds included in whatever check backs the contrast claim.",
-      "orchestrator_note": "VERIFIED 4.33 exactly. Blocks: makes the row's published contrast claim dishonest, and is a real AA regression introduced by this diff."
-    },
-    {
-      "id": "R2",
-      "severity": "MEDIUM",
-      "route": "repair",
-      "claim": "The Status cell's headline claim \u2014 'measured minima now 4.62:1 light, 6.71:1 dark across banner, legend, item code, badges, hints, links' \u2014 is false; the diff's own tokens produce 4.99:1 and 5.13:1 dark and 3.69:1 light on elements named in that very list.",
-      "evidence": "index.html:98 `.s-unsupported,.s-failed` with dark `--bad:hsl(0 80% 61%)` over the 10% tint = 4.99:1. Line 125 `.b.st-missing` on `--panel` = 5.13:1. Line 94 `#banner .src{opacity:.85}` = 3.92:1 dark on the failed banner, 3.69:1 light on the success banner. The URL-mode failure the Status cell itself reports renders exactly the 4.99:1 banner with a 3.92:1 count line.",
-      "repro": "orchestrator reproduced independently: 4.99 / 5.13 / 3.92 / 3.69",
-      "acceptance": "Either the claimed minima are corrected to the actual measured values across every text/ground pair the stylesheet can produce, or the offending colors are corrected so the stated minima hold. `#banner .src`'s 0.85 opacity must be inside the measurement.",
-      "orchestrator_note": "VERIFIED all four figures exactly. The original measurement sampled ONE banner variant (success) and ONE badge (st-extracted) and generalised. Blocks: false numbers in a document of record."
-    },
-    {
-      "id": "R3",
-      "severity": "MEDIUM",
-      "route": "repair",
-      "claim": "The row's own Validation gate requires the three-mode browser pass 'with a screenshot', and the Status cell says screenshots were not committed \u2014 the one acceptance criterion the gate cannot cover is unverifiable by a reviewer, and R1 shows the manual pass did have a hole.",
-      "evidence": "tasks/TODO.md:48 Validation cell vs Status cell. No image artifact of any kind on the branch. The two checkable criteria both pass (view self-check ok; invariant 13/13, fast 51/51), so the screenshot is the entire delta between 'gate green' and 'this row is done'.",
-      "repro": "sed -n '48p' tasks/TODO.md ; git diff --numstat origin/main...task/S3",
-      "acceptance": "Either the screenshot evidence is committed / linked in the PR body covering all three modes AND both schemes, or the Validation cell is amended to drop a criterion the branch does not satisfy.",
-      "orchestrator_note": "Blocks: violates the task's own stated acceptance criteria. Hard rule 3 \u2014 a gate that has not run is written UNRUN, never quietly declared done."
-    },
-    {
-      "id": "R4",
-      "severity": "MEDIUM",
-      "route": "repair",
-      "claim": "Two defects were found and fixed inside this task and neither became a case in evals/adversarial/, violating hard rule 2; nothing in the eval set reads index.html, so a re-introduction of either defect ships silently.",
-      "evidence": "tasks/TODO.md:48 Status cell names both defects. Both are decidable statically with no browser: (1) a selector-specificity assertion over the stylesheet text, (2) arithmetic over the hsl() literals. `grep -rl 'index.html' evals/golden evals/adversarial` returns nothing; neither committed report contains a case touching the web layer.",
-      "repro": "grep -rl 'index.html' evals/golden evals/adversarial  ->  (no output)",
-      "acceptance": "At least one case in evals/adversarial/ that parses index.html and asserts (a) no bare `button` rule outranks a `.it` rule for a property `.it` relies on, and (b) every text/background pair the stylesheet can produce clears 4.5:1 in both schemes \u2014 watched red against the pre-fix stylesheet first, per hard rule 2.",
-      "orchestrator_note": "VERIFIED the grep returns nothing. Blocks: repo hard rule 2, for defects this PR itself introduced. This is the finding that converts 'fixed once' into 'cannot regress'."
-    },
-    {
-      "id": "R5",
-      "severity": "LOW",
-      "route": "repair",
-      "claim": "The Status cell's diff-size claim is wrong: it says (+129/-~60); the actual change is +93/-36.",
-      "evidence": "tasks/TODO.md:48 vs `git diff --numstat` -> `93\t36\tsrc/sec10k/web/static/index.html`. 129 is the combined +/- total that --stat prints, not the insertion count.",
-      "repro": "git diff --numstat origin/main...task/S3 -- src/sec10k/web/static/index.html",
-      "acceptance": "The ledger row quotes the numstat figures (+93/-36) or drops the count.",
-      "orchestrator_note": "VERIFIED 93/36. LOW, so it does not meet the blocking bar on its own. Routed to repair anyway ONLY because it is a false number inside the exact cell R2/R3 are rewriting \u2014 logging a debt row about a line being edited in the same commit is worse than fixing it."
-    },
-    {
-      "id": "R6",
-      "severity": "LOW",
-      "route": "debt",
-      "claim": "The incorporated_by_reference badge is painted cyan, which the style skill reserves for interactive elements only, so a static status chip reads as clickable.",
-      "evidence": "index.html:126 `.b.st-incorporated_by_reference{color:var(--accent)}` where line 23 defines --accent with the comment 'cyan - interactive only'. The badge is a non-interactive <span>. Skill hard rule: cyan = interactive, amber = brand; don't swap them.",
-      "repro": "grep -n 'st-incorporated_by_reference\\|interactive only' src/sec10k/web/static/index.html",
-      "acceptance": "The IBR badge uses a non-cyan token, or the skill's cyan rule is explicitly waived with a reason.",
-      "orchestrator_note": "LOW; does not violate the Validation cell, turn the gate red, or falsify a published number. Debt. One-line fix if promoted."
-    },
-    {
-      "id": "R7",
-      "severity": "LOW",
-      "route": "debt",
-      "claim": "Dark became the default scheme but no color-scheme is declared, so UA-rendered control internals and any prefers-color-scheme:no-preference client get light-mode defaults on a near-black canvas.",
-      "evidence": "index.html:16 dark is now the :root default and line 31 flips light behind a media query; no `color-scheme` property and no meta. Affected UA-drawn internals: the #url placeholder, the #fx select popup, the input[type=file] control. Also `theme-color` #0a0d14 does not match the computed canvas #07090e.",
-      "repro": "grep -n 'color-scheme\\|theme-color' src/sec10k/web/static/index.html",
-      "acceptance": "`:root{color-scheme:dark light}` declared so form-control internals follow the active palette, and theme-color matching --bg.",
-      "orchestrator_note": "LOW. Real and one line, but below the blocking bar. Debt."
-    },
-    {
-      "id": "R8",
-      "severity": "LOW",
-      "route": "debt",
-      "claim": "While an extraction is in flight all three Extract buttons are disabled and their labels drop to 2.20:1 in light mode.",
-      "evidence": "index.html:89 `button:disabled{opacity:.5}` composited over --bg; light label/fill at 50% = 2.20:1 (dark = 3.20:1). busy(true) disables every button for the fetch duration.",
-      "repro": "orchestrator reproduced independently: 2.20",
-      "acceptance": "Disabled buttons keep a legible label, or the busy state is acknowledged as intentionally illegible in the row.",
-      "orchestrator_note": "VERIFIED 2.20. Reviewer notes WCAG 1.4.3 exempts disabled controls, so this is legibility not conformance. Debt."
-    }
+ "round": 1,
+ "pr": 18,
+ "task": "S3",
+ "result": "REQUEST_CHANGES",
+ "reviewer": "groundwork:pr-reviewer (fresh context, full diff main...task/S3)",
+ "gate": "pass -- invariant 13/13 = 1.000, fast 51/51 = 1.000 >= baseline 1.0",
+ "counts": {
+  "HIGH": 0,
+  "MEDIUM": 6,
+  "LOW": 5
+ },
+ "routing_rule": "REPAIR requires HIGH/MEDIUM AND (violates acceptance | turns gate red | makes a published number or claim dishonest). Everything else -> debt, regardless of severity.",
+ "routed": {
+  "repair": [
+   "R1",
+   "R2",
+   "R3",
+   "R4",
+   "R5",
+   "R6"
+  ],
+  "debt": [
+   "R7",
+   "R8",
+   "R9",
+   "R10",
+   "R11"
   ]
+ },
+ "findings": [
+  {
+   "id": "R1",
+   "severity": "MEDIUM",
+   "claim": "The published dark-mode contrast minimum of 6.71:1 is false — two of the seven categories it explicitly names measure well below it, and one banner element fails AA outright.",
+   "evidence": "The claim appears in commit 3ee3871 (\"Measured minima are 4.62:1 light and 6.71:1 dark across banner, legend, item code, badges, hints, links and the button label on its fill\") and verbatim in tasks/TODO.md:48. Recomputing from the token block in src/sec10k/web/static/index.html:16-40, 92-99, 123-129: dark `.s-failed`/`.s-unsupported` banner text (--bad hsl(0 80% 61%) on color-mix(--bad 10%, --bg)) = 4.99:1, dark `.b.st-missing` badge on --panel = 5.13:1, and `#banner .src` at opacity .85 (index.html:94) inside a failed banner = 3.92:1 dark / 3.69:1 light — below the 4.5:1 AA floor. 6.71/4.62 is what --dim on the gridded --bg measures (6.74/4.66 flat), i.e. only the neutral text was measured; --bad was left at the palette's raw fill value in dark (index.html:24) and never checked. The failed banner is exactly the URL-mode state the row's acceptance criterion names (\"URL mode still fails loudly\").",
+   "repro": "python3 -c on the hsl() values at src/sec10k/web/static/index.html:16-40 with a WCAG 2.x relative-luminance ratio; compare against the numbers in tasks/TODO.md:48. Confirmed values: dark s-failed 4.99, dark .b.st-missing 5.13, dark #banner .src 3.92, light #banner .src 3.69.",
+   "acceptance": "Either the published minima are corrected to the real measured floor across all named categories (including --bad and the opacity-.85 `.src` span), or --bad/`.src` are adjusted so the stated 6.71:1 dark / 4.62:1 light claim actually holds; the number that ships in TODO.md and the commit message must be reproducible from the token block.",
+   "route": "repair",
+   "route_reason": "published number dishonest: the 6.71/4.62 minima ship in tasks/TODO.md and commit 3ee3871, and states the audit never visited fall below them; the failed-banner state is also named in the acceptance criteria"
+  },
+  {
+   "id": "R2",
+   "severity": "MEDIUM",
+   "claim": "The diff size published in the ledger row, `+129/−~60`, is wrong; the real churn is +93/−36.",
+   "evidence": "tasks/TODO.md:48 reads \"`src/sec10k/web/static/index.html` only (+129/−~60)\". `git diff main...task/S3 --numstat -- src/sec10k/web/static/index.html` returns `93 36`, and `gh pr view 18 --json files` reports additions 93 / deletions 36. 129 is the additions+deletions total misreported as additions, and 60 matches nothing.",
+   "repro": "git diff main...task/S3 --numstat -- src/sec10k/web/static/index.html",
+   "acceptance": "tasks/TODO.md:48 states +93/−36 (or drops the count); every number in the ledger row reproduces from a command a reviewer can run.",
+   "route": "repair",
+   "route_reason": "published number dishonest: +129/-~60 reproduces from no command"
+  },
+  {
+   "id": "R3",
+   "severity": "MEDIUM",
+   "claim": "Two defects the author reports finding and fixing in this diff produced no eval case and no red-watch, violating CLAUDE.md hard rule 2, and the absence of any mechanical check is the direct cause of R1.",
+   "evidence": "tasks/TODO.md:48 and commit 3ee3871 both state \"Two defects found and fixed during the pass, both mine, both introduced by this diff\" — (1) the `button:hover` / `.it[aria-current]` specificity collision, (2) light-palette fill colors used as text at 2.40–3.51:1. `git diff main...task/S3 --stat` shows zero files added under evals/adversarial/ or evals/golden/. CLAUDE.md hard rule 2: \"Every new failure becomes a case in evals/adversarial/ before it is fixed. Watch the new case fail first.\" Both defects are mechanically checkable without a browser (a contrast computation over the `:root`/`@media` token block; a selector-scoping assertion that `button:hover` is written `button:not(.it):hover`) — and because neither exists, the contrast number in R1 shipped wrong.",
+   "repro": "git diff main...task/S3 --stat | grep evals/adversarial  -> no output. Then: the contrast script in R1 reproduces the miss that no case caught.",
+   "acceptance": "An adversarial case (a small python check over src/sec10k/web/static/index.html, wired into the invariant or fast suite) that goes red against the pre-fix token block for the light fill colors and against an unscoped `button:hover` rule, with the red run recorded before the fix — or an explicit ADR ruling that UI styling is out of the eval set's reach, which then makes R4's browser evidence mandatory.",
+   "route": "repair",
+   "route_reason": "CLAUDE.md hard rule 2 binds, and R1's repair cannot be watched red without exactly the check this finding asks for -- the two are one fix"
+  },
+  {
+   "id": "R4",
+   "severity": "MEDIUM",
+   "claim": "The row's own acceptance criterion — three input modes re-driven in a browser \"with a screenshot\" — is not satisfied by anything in the PR; the sole validation for this row is unverifiable prose.",
+   "evidence": "tasks/TODO.md:48 Validation column: \"all three input modes re-driven in a browser against the local app, with a screenshot\". The same row's Status column then says \"Screenshots were taken in-session, not committed\". `git diff main...task/S3 --stat` lists 7 files: 4 evals/report JSONs, index.html, DONE.md, TODO.md — no image, no evidence pack. The row also cites an upload of \"a synthetic 4-item filing -> `ambiguous`, 4 extracted / 17 missing / 2 omitted\", but that file is not committed either, and per src/sec10k/extract.py:138-143 a 4-extracted document only reaches `ambiguous` if an AMBIGUOUS_CODES validator fired — the claim is neither reproducible nor derivable. (The one claim I could check does hold: aapl-2025 returns doc_status=success, 18 extracted / 5 IBR, 23 items.)",
+   "repro": "git diff main...task/S3 --stat  (no screenshot or evidence artifact); python3 -c \"from src.sec10k.extract import extract_items; from src.sec10k.web import view; print(view.build_view(extract_items('evals/fixtures/aapl-2025/filing.htm'))['counts'])\" verifies only the fixture mode.",
+   "acceptance": "The three screenshots (or an equivalent committed evidence artifact) land in the PR, and the synthetic upload fixture is committed under evals/fixtures/ so the 4/17/2 -> `ambiguous` claim is reproducible — or the acceptance criterion in tasks/TODO.md:48 is rewritten to what the PR actually delivers.",
+   "route": "repair",
+   "route_reason": "violates the task's own acceptance criteria verbatim (screenshot evidence; reproducible three-mode walk)"
+  },
+  {
+   "id": "R5",
+   "severity": "MEDIUM",
+   "claim": "Dark is now the default theme but the page never declares `color-scheme`, so every UA-rendered control internal still paints in the light scheme on a near-black canvas.",
+   "evidence": "src/sec10k/web/static/index.html:15-40 makes the near-black palette the `:root` default with light behind `@media (prefers-color-scheme:light)` — the inverse of main, where light was the default. `grep -n color-scheme` on the new file returns only the two media queries; there is no `color-scheme:dark` / `color-scheme:light dark` declaration. Concretely: `input[type=file]` (index.html:79-81, markup line ~110) gets `background:var(--bg)` = hsl(220 34% 4%) while its `::file-selector-button` and \"No file chosen\" chrome stay UA-light; Safari and pre-121 Chrome ignore the `scrollbar-width`/`scrollbar-color` on index.html:42 (Firefox-only properties) and render light scrollbars over `pre.text` and `details pre`; `<select>` popup, autofill and the UA focus ring likewise. At main this only bit users whose OS was dark; now it is the default path for every visitor including one with no OS preference.",
+   "repro": "Open http://localhost:8000/ with the OS set to dark (or no preference) and look at the file-input control in the upload mode row; compare with the same page after adding `color-scheme:dark` to `:root`.",
+   "acceptance": "`:root{color-scheme:dark}` with `@media (prefers-color-scheme:light){:root{color-scheme:light}}` (or `color-scheme:light dark`), so the file-selector button, select popup, scrollbars and autofill follow the authored theme in Safari and Chrome as well as Firefox.",
+   "route": "repair",
+   "route_reason": "this diff flipped the default theme from light to dark, so the light UA controls on a near-black canvas are a regression it introduced, in the upload control the acceptance criteria name"
+  },
+  {
+   "id": "R6",
+   "severity": "MEDIUM",
+   "claim": "The page now hard-depends on two third-party origins for its typography while the commit and the ledger row both claim it \"was one self-contained file and stays one\", and nothing verifies the fallback.",
+   "evidence": "src/sec10k/web/static/index.html:8-10 adds `preconnect` to fonts.googleapis.com and fonts.gstatic.com plus a blocking `<link>` stylesheet; at main the page used only `-apple-system`/`ui-monospace` system stacks and rendered identically with the network off. Commit 3ee3871: \"The page was one self-contained file and stays one.\" No CSP is set (`grep -rn \"Content-Security\" src/sec10k/web/*.py` -> no match), so nothing breaks today, but on a locked-down or offline reviewer instance the JetBrains Mono stack, the `zero` slashed-zero and the entire typographic premise of the restyle silently fall back to `ui-monospace` (index.html:28, 44-45) — a state no check exercises. The deployed Zeabur instance (tasks/TODO.md S2) would also make an outbound third-party request on every page load.",
+   "repro": "Serve the app and load it with fonts.googleapis.com blocked (devtools request blocking or /etc/hosts); the page renders in the fallback stack with no indication, and no committed artifact records what that looks like.",
+   "acceptance": "Either the two font files are self-hosted under src/sec10k/web/static/ (which makes the \"self-contained\" claim true and offline-safe), or the commit message and tasks/TODO.md:48 stop calling the page self-contained and the fallback rendering is captured as evidence alongside the R4 screenshots.",
+   "route": "repair",
+   "route_reason": "published claim dishonest: \"the page was one self-contained file and stays one\" is false once two third-party origins are required for the typography"
+  },
+  {
+   "id": "R7",
+   "severity": "LOW",
+   "claim": "Amber is now simultaneously the brand chrome and the warning/ambiguous status color, so the `.b.lo` \"look here\" flag no longer stands out from the item code sitting directly above it in every row.",
+   "evidence": "src/sec10k/web/static/index.html:25 sets `--warn:var(--amber-ink); --amb:var(--amber-ink)`, i.e. both status tokens resolve to the identical brand amber. That same amber is then painted on `legend` (:73-74), `h1::before` (:68), `.it .code` (:120), the `button` fill (:83-84) and the selected row (:117-118). At main, `.it .code` had no color (inherited `--ink`) and amber was reserved for warn/ambiguous. In render() every sidebar row emits `<span class=\"code\">` immediately above `<span class=\"b lo\">`, so the low-confidence flag (:129, `color:var(--warn)`) is now the same hue as the item number one line up. `.s-success_with_warning` (:96) and `.s-ambiguous` (:97) also now differ only by 10% vs 12% background alpha of the identical color.",
+   "repro": "Extract any fixture with an evidence warning (e.g. a filing where a validator fires) and compare the sidebar row's `.code` and `.b.lo` under the new palette vs. `git stash` / main.",
+   "acceptance": "`--warn`/`--amb` are distinguishable from the brand amber used for `legend`/`.it .code`/`h1::before` (or `.it .code` returns to `--ink`), so a warning still reads as a warning; and `.s-success_with_warning` vs `.s-ambiguous` differ by more than 2% background alpha.",
+   "route": "debt",
+   "route_reason": "LOW -- scope rule: only HIGH/MEDIUM can trigger repair"
+  },
+  {
+   "id": "R8",
+   "severity": "LOW",
+   "claim": "The file's own comment says `--accent` is cyan \"interactive only\", but a non-interactive status badge is painted with it, and one genuinely interactive element is missing from the transition list.",
+   "evidence": "src/sec10k/web/static/index.html:23 — `--accent:hsl(190 92% 56%);  /* cyan — interactive only */`. index.html:127 — `.b.st-incorporated_by_reference{color:var(--accent);border-color:var(--accent)}` is a static `<span>` badge with no handler, so a non-clickable chip reads as interactive. Conversely index.html:62 lists `button,select,input,.it,a` for the 150ms transition but omits `summary`, which index.html:143 gives a cyan hover (`summary:hover{color:var(--accent)}`) — the skill's hard rule is that every interactive element gets the 150ms transition.",
+   "repro": "Extract evals/fixtures/textron-2001 (or any filing with IBR items) and hover the `incorporated_by_reference` badge — cyan, not clickable; then hover a `<summary>` — instant color snap, no 150ms ease.",
+   "acceptance": "Either the IBR status badge moves off `--accent` (or the \"interactive only\" comment is corrected to name the exception), and `summary` joins the transition selector list on index.html:62.",
+   "route": "debt",
+   "route_reason": "LOW -- scope rule: only HIGH/MEDIUM can trigger repair"
+  },
+  {
+   "id": "R9",
+   "severity": "LOW",
+   "claim": "`h1::before{content:\"> \"}` injects generated text into the page's only h1, changing its accessible name for screen readers versus main.",
+   "evidence": "src/sec10k/web/static/index.html:68 adds `h1::before{content:\"> \";color:var(--amber-ink)}`. Chrome/Safari and NVDA/VoiceOver include `::before` text in the accessible name, so the document's sole h1 is announced as \"greater-than sec10k inspector\" rather than \"sec10k inspector\". The main version has no generated content on the heading.",
+   "repro": "Inspect the computed accessible name of `<h1>` in devtools' Accessibility pane on the new file vs. `git show main:src/sec10k/web/static/index.html`.",
+   "acceptance": "The prompt glyph carries `aria-hidden` semantics — e.g. move it to a separate `<span aria-hidden=\"true\">` sibling, or accept it with the accessible-name change documented; the h1's accessible name should match main.",
+   "route": "debt",
+   "route_reason": "LOW -- scope rule: only HIGH/MEDIUM can trigger repair"
+  },
+  {
+   "id": "R10",
+   "severity": "LOW",
+   "claim": "The new `:focus-visible` outline is clipped on item rows because the sidebar hides overflow, so keyboard focus in the item list shows only two horizontal segments.",
+   "evidence": "src/sec10k/web/static/index.html:61 — `:focus-visible{outline:2px solid var(--accent);outline-offset:2px}` — combined with index.html:110 `#sidebar{...overflow:hidden}` and index.html:111 `.it{display:block;width:100%}`. Because `.it` fills the sidebar's content box, an outline drawn 2px outside it falls outside the clipping box and its left/right edges are cut; for interior rows the top/bottom segments also collide with the adjacent rows' 1px `border-bottom`.",
+   "repro": "Extract any fixture, then Tab into the item list and step through rows with the keyboard; the cyan ring's vertical edges do not render.",
+   "acceptance": "Focus on `.it` rows renders a complete, unclipped indicator — e.g. `outline-offset:-2px` for `.it:focus-visible`, or drop `overflow:hidden` in favour of `border-radius` clipping that does not eat the ring.",
+   "route": "debt",
+   "route_reason": "LOW -- scope rule: only HIGH/MEDIUM can trigger repair"
+  },
+  {
+   "id": "R11",
+   "severity": "LOW",
+   "claim": "The dark-mode hover feedback on item rows is a 1.09:1 background change, effectively invisible, and hovering the already-selected row produces no change at all.",
+   "evidence": "src/sec10k/web/static/index.html:114 `.it:hover{background:var(--muted)}` with `--muted:hsl(216 26% 11%)` (index.html:17) against `.it`'s own `background:var(--panel)` = hsl(218 30% 7%) (index.html:112) — computed contrast 1.09:1 (main's `color-mix(--accent 8%)` hover measured 1.15:1). Separately, `.it:hover` (0,2,0) and `.it[aria-current=true]` (0,2,0) have equal specificity and aria-current is declared later (index.html:117), so the selected row shows no hover response.",
+   "repro": "python3 WCAG ratio on hsl(216 26% 11%) vs hsl(218 30% 7%) -> 1.09; then hover an unselected then the selected row in the browser at OS-dark.",
+   "acceptance": "`.it:hover` produces a perceptible background delta in dark mode (or adds a second cue such as a border/inset line), and hovering the selected row gives some feedback.",
+   "route": "debt",
+   "route_reason": "LOW -- scope rule: only HIGH/MEDIUM can trigger repair"
+  }
+ ]
 }
