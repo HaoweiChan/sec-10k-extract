@@ -1,0 +1,19 @@
+{
+  "id": "ui-truncated-notice-in-overlay",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "truncated_notice_in_overlay"
+    ]
+  },
+  "expect": {},
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "Live-caught while re-measuring content-bottom alignment after amendment (7)'s `.pane-meta` overlay fix landed: jpm-2024 item 1A (136,416 chars, shown to 40,000) still measured pre.text bottom 1161 vs #src-frame bottom 1185 at 1920x1080 — a 24px gap. Cause: the truncated-text notice ('Showing the first N of M characters') was still its own in-flow <div> sibling right after pre.text, the exact defect class `.pane-meta` had just been fixed for, reintroduced through a second element neither ui-pane-meta-amendment nor ui-equal-pane-heights could see (both are scoped to CSS selectors, not the JS render template's element order). Fixed by folding the notice into `.pane-meta`'s own `<dl>` as a `shown` row — already out of flow. Watched red against the pre-fix template (it.truncated referenced before the .pane-meta block), green once it moved inside."
+  },
+  "provenance": "S5 round 4, created 2026-08-22 immediately after finding the defect via browser re-measurement, before the fix, per hard rule 2."
+}

@@ -189,6 +189,209 @@ def check_layout_centering(case):
     return bad
 
 
+def _flat_rules(css):
+    """Yield (selector_list, body) for every rule in css, comments stripped.
+
+    Does not track @media nesting — a rule inside `@media(...){...}` is
+    yielded the same as a top-level one, losing the condition it's scoped
+    under. That is a real hole (see css_contrast's own module docstring for
+    the same trade elsewhere in this file), but nothing this scans (pane
+    `height`, `#sidebar` `overflow`, `.it .ttl` `color`/`font-weight`) is
+    declared inside a media query in this stylesheet today.
+    """
+    css = css_contrast._strip_comments(css)
+    for m in re.finditer(r"([^{}]+)\{([^{}]*)\}", css):
+        yield [s.strip() for s in m.group(1).split(",")], m.group(2)
+
+
+def _declared_for(css, selector, prop):
+    """Last-declared `prop:` value across every rule whose selector list
+    contains `selector` verbatim, or None. `last` approximates the cascade
+    for same-specificity id/class selectors within one file — not a real
+    resolver, same limitation css_contrast documents for its own helpers."""
+    val = None
+    # (?<![\w-]) stops `height` from matching inside `min-height` — a plain
+    # substring search did exactly that and silently read #pane's 230px
+    # min-height as if it were the shared height this check exists to pin.
+    pat = r"(?<![\w-])" + re.escape(prop) + r"\s*:\s*([^;]+)"
+    for sels, body in _flat_rules(css):
+        if selector in sels:
+            m = re.search(pat, body)
+            if m:
+                val = m.group(1).strip()
+    return val
+
+
+def check_pane_heights(case):
+    """`#sidebar`, `#pane` and `#source` must resolve to the SAME declared
+    `height` (S5: `#sidebar` grew with the item count while `#pane`/
+    `#source` were capped at 520px inside, leaving the three columns
+    ragged — tops shared via the grid's `align-items:start`, but nothing
+    made the bottoms match), and the item list must declare its own
+    scrolling overflow rather than letting the column grow without bound.
+    """
+    inp = case.get("input", {})
+    css = (ROOT / inp.get("file", UI_STYLESHEET)).read_text()
+    panes = inp.get("panes", ["#sidebar", "#pane", "#source"])
+    list_sel = inp.get("scroll_list", "#sidebar")
+    bad = []
+    heights = {p: _declared_for(css, p, "height") for p in panes}
+    for p, h in heights.items():
+        if not h:
+            bad.append(f"{p}: no height declared")
+    distinct = {h for h in heights.values() if h}
+    if len(distinct) > 1:
+        bad.append(f"panes do not share one height declaration: {heights}")
+    overflow = (_declared_for(css, list_sel, "overflow-y")
+                or _declared_for(css, list_sel, "overflow"))
+    if not overflow or overflow in ("hidden", "visible"):
+        bad.append(f"{list_sel}: no scrolling overflow declared for the item list "
+                   f"(got {overflow!r})")
+    return bad, {"heights": heights, "list_overflow": overflow}
+
+
+def check_title_legibility(case):
+    """`.it .ttl` must resolve to the page's ink token at font-weight >= 600,
+    not `--dim` (S5: item titles read as grey noise beside the amber item
+    code). Reads the rule's OWN declared `color:`/`font-weight:` — the same
+    not-a-cascade-resolver limitation css_contrast documents; the rendered
+    ratio itself stays covered by ui-contrast-and-specificity's row-title*
+    pairs, which this check does not duplicate.
+    """
+    inp = case.get("input", {})
+    css = (ROOT / inp.get("file", UI_STYLESHEET)).read_text()
+    sel = inp.get("selector", ".it .ttl")
+    want_color = inp.get("ink_token", "var(--ink)")
+    min_weight = inp.get("min_weight", 600)
+    body = css_contrast._rule_body(css, sel)
+    color = css_contrast.rule_color(css, sel)
+    weight_m = re.search(r"font-weight\s*:\s*(\d+)", body)
+    weight = int(weight_m.group(1)) if weight_m else None
+    bad = []
+    if color != want_color:
+        bad.append(f"{sel}: color is {color!r}, want {want_color!r}")
+    if weight is None or weight < min_weight:
+        bad.append(f"{sel}: font-weight is {weight!r}, want >= {min_weight}")
+    return bad, {"color": color, "font_weight": weight}
+
+
+def _margin_side(body, side):
+    """The resolved value of one side of a `margin` shorthand, mirroring the
+    CSS 1/2/3/4-value expansion rules (top,right,bottom,left, wrapping)."""
+    m = re.search(r"(?:^|[;\s])margin\s*:\s*([^;]+)", body)
+    if not m:
+        return None
+    parts = m.group(1).split()
+    order = {1: [0, 0, 0, 0], 2: [0, 1, 0, 1], 3: [0, 1, 2, 1], 4: [0, 1, 2, 3]}.get(len(parts))
+    if not order:
+        return None
+    return parts[order[{"top": 0, "right": 1, "bottom": 2, "left": 3}[side]]]
+
+
+def check_pane_meta_amendment(case):
+    """S5 amendment (5)+(7): the parsed pane's heading/offsets/evidence block
+    (`.pane-meta`) must start collapsed on every render, must not sit flush
+    against the pane edge, and must be taken OUT of #pane's flex flow —
+    the round-3 shape left it in-flow after pre.text, which quietly stole
+    ~65px of pre.text's height and broke the content-bottom alignment
+    requirement (3)/(7) beside it. `position:absolute` is the mechanical
+    proof it can no longer do that; a non-zero `left` is the mechanical
+    proof it isn't flush. Separately, pre.text's own bottom margin was the
+    OTHER half of that 65px gap (a 14px visual gutter #source-body's iframe
+    never had) — it must resolve to 0 so the two content regions' bottoms
+    truly coincide, not just get closer.
+    """
+    inp = case.get("input", {})
+    text = (ROOT / inp.get("file", UI_STYLESHEET)).read_text()
+    bad = []
+    if re.search(r'<details[^>]*\bclass="pane-meta"[^>]*\bopen\b'
+                 r'|<details[^>]*\bopen\b[^>]*\bclass="pane-meta"', text):
+        bad.append("pane-meta details renders `open` — must start collapsed")
+    # A bare `.pane-meta{}` rule not existing at all (only `.pane-meta[open]`,
+    # the round-3 shape) is itself the defect this check exists to catch, not
+    # a case for _rule_body's usual "stale pair" exception — report it as a
+    # failure like any other, rather than letting the whole run crash.
+    try:
+        body = css_contrast._rule_body(text, ".pane-meta")
+    except ValueError:
+        bad.append(".pane-meta: no rule found — not position:absolute, "
+                   "not inset from the pane edge")
+    else:
+        if not re.search(r"(?:^|[;\s])position\s*:\s*absolute", body):
+            bad.append(".pane-meta: not position:absolute — back in #pane's "
+                       "flex flow, competing with pre.text for height")
+        left_m = re.search(r"(?:^|[;\s])left\s*:\s*([^;]+)", body)
+        if not left_m or left_m.group(1).strip() in ("0", "0px"):
+            bad.append(".pane-meta: no non-zero left inset — sits flush "
+                       "against the pane edge")
+    try:
+        pre_body = css_contrast._rule_body(text, "pre.text")
+    except ValueError:
+        bad.append("pre.text: no rule found")
+    else:
+        bottom = _margin_side(pre_body, "bottom")
+        if bottom is None or bottom not in ("0", "0px"):
+            bad.append(f"pre.text: margin-bottom is {bottom!r}, want 0 — a "
+                       "non-zero bottom margin is a gutter #source-body's "
+                       "iframe never had, so the content bottoms can't match")
+    return bad
+
+
+def check_bottom_panel_order(case):
+    """S5 amendment (6): `capabilities` must lead the panels below the split
+    — it's the one worth an interviewer reading — with `pipeline trace` and
+    `meta & timings` following, not leading; both mean nothing to the
+    interviewer the human is optimizing this page for.
+    """
+    inp = case.get("input", {})
+    text = (ROOT / inp.get("file", UI_STYLESHEET)).read_text()
+    order = inp.get("order", ["cap-box", "trace-box", "meta-box"])
+    positions = {}
+    bad = []
+    for ident in order:
+        m = re.search(r'id="' + re.escape(ident) + r'"', text)
+        if not m:
+            bad.append(f"#{ident}: not found")
+            continue
+        positions[ident] = m.start()
+    for a, b in zip(order, order[1:]):
+        if a in positions and b in positions and positions[a] > positions[b]:
+            bad.append(f"#{a} appears after #{b} in the file — want order {order}")
+    return bad
+
+
+def check_truncated_notice_in_overlay(case):
+    """S5 round 4 finding, live-caught while re-measuring after amendment
+    (7): the truncated-text notice ('Showing the first N of M characters')
+    used to render as its own in-flow sibling right after pre.text, which
+    steals pre.text's flex share on a large truncated item the exact same
+    way the round-3 `.pane-meta` did — jpm-2024 item 1A (136k chars, shown
+    to 40k) measured a live 24px content-bottom gap from it, even after
+    `.pane-meta` itself was already fixed. Any `it.truncated` reference in
+    #pane's render template must sit INSIDE the `.pane-meta` block (already
+    taken out of flow by amendment (7)), not beside it.
+    """
+    inp = case.get("input", {})
+    text = (ROOT / inp.get("file", UI_STYLESHEET)).read_text()
+    anchor = inp.get("anchor", '$("#pane").innerHTML')
+    start = text.find(anchor)
+    if start < 0:
+        return [f"{anchor!r} not found"]
+    end = text.find(inp.get("end_anchor", 'const pre = $("#pane pre.text")'), start)
+    template = text[start:end if end > 0 else start + 4000]
+    meta_m = re.search(r'<details[^>]*class="pane-meta"', template)
+    if not meta_m:
+        return [".pane-meta block not found in #pane's render template"]
+    meta_start = meta_m.start()
+    bad = []
+    for m in re.finditer(r"it\.truncated", template):
+        if m.start() < meta_start:
+            bad.append(f"it.truncated referenced before .pane-meta (offset "
+                       f"{m.start()} < {meta_start}) — still an in-flow "
+                       "sibling stealing pre.text's flex height")
+    return bad
+
+
 def check_capabilities_parse(case):
     """The committed README must still yield a non-trivial parse through
     capabilities.py — the check that turns a README restructure red instead
@@ -323,6 +526,11 @@ CHECKS = {
     "ui_stylesheet": check_ui_stylesheet,
     "typography_floor": check_typography_floor,
     "layout_centering": check_layout_centering,
+    "pane_heights": check_pane_heights,
+    "title_legibility": check_title_legibility,
+    "pane_meta_amendment": check_pane_meta_amendment,
+    "bottom_panel_order": check_bottom_panel_order,
+    "truncated_notice_in_overlay": check_truncated_notice_in_overlay,
     "capabilities_parse": check_capabilities_parse,
     "anchor_contract": check_anchor_contract,
 }

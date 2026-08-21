@@ -1,0 +1,19 @@
+{
+  "id": "ui-pane-meta-amendment",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "pane_meta_amendment"
+    ]
+  },
+  "expect": {},
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "S5 amendment (5)+(7), 2026-08-22: the human found heading matched/offsets/evidence meaningless to an interviewer ('the interviewer would be confused about these information cuz it's meaningless to them') and asked it out of the way, plus flagged it running flush against the pane edge. The ruling (not a deletion — offsets are INV-S2's own proof) was: keep it, collapsed by default, relabelled in plain language, padded off the edge. Doing that naively (leaving the collapsed <details> in #pane's normal flex flow after pre.text, which is what round 3 shipped) is ALSO the defect behind (7): a collapsed-but-in-flow trailing sibling still steals ~65px of pre.text's flex share, so the content BOTTOMS stopped matching even though the tops did. `position:absolute` with a non-zero `left` inset is the fix for both at once: out of flow (no longer steals height) and inset (no longer flush). The remaining ~14px of that same gap came from pre.text's own bottom margin, a gutter #source-body's iframe never had; this check also asserts that margin resolves to 0. Watched red against the pre-amendment file (no bare `.pane-meta{}` rule existed at all, only `.pane-meta[open]{}`, and pre.text's margin was `0 14px 14px`), green once the base rule declared `position:absolute;left:14px` and pre.text's margin became `0 14px`."
+  },
+  "provenance": "S5 round 4, created 2026-08-22 before the overlay fix, per hard rule 2."
+}

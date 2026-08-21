@@ -1,0 +1,17 @@
+<!-- S5 amendment (7) regression fixture, live-caught while re-measuring
+     jpm-2024 item 1A: the truncated-text notice rendered as its own in-flow
+     sibling right after pre.text, stealing pre.text's flex share on a large
+     truncated item the same way the round-3 `.pane-meta` did before it was
+     fixed. Caught by
+     evals/adversarial/ui-truncated-notice-in-overlay-regression.json
+     (expect.min_failures/max_failures). -->
+<script>
+$("#pane").innerHTML = `
+    <div class="src-hdr"><span class="lbl">Item ${esc(it.item)}</span></div>
+    <pre class="text">${esc(it.text)}</pre>
+    ${it.truncated ? `<div class="hint">Showing the first ${it.text.length} of ${it.chars} characters.</div>` : ""}
+    <details class="pane-meta"><summary>where this text came from</summary>
+      <dl class="ev"></dl>
+    </details>`;
+const pre = $("#pane pre.text");
+</script>

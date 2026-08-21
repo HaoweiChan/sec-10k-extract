@@ -1,0 +1,22 @@
+{
+  "id": "ui-title-legibility",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "title_legibility"
+    ],
+    "selector": ".it .ttl",
+    "ink_token": "var(--ink)",
+    "min_weight": 600
+  },
+  "expect": {},
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "S5 requirement 4: `.it .ttl` was `--dim` at the smallest declared size, so item titles (\"Business\", \"Risk Factors\") read as grey noise beside the amber item code. Watched red against the pre-fix file (`color:var(--dim)`, no `font-weight` declared at all), green once the rule read `color:var(--ink);font-weight:700`. Token-level only — the rendered ratio for the same rule is covered by ui-contrast-and-specificity's row-title/row-title-hover/row-title-selected pairs, re-grounded from `var(--dim)` to `var(--ink)` in the same diff; this check exists so a future edit that quietly repoints `.ttl` back at `--dim` or drops the weight goes red here even before a contrast run."
+  },
+  "provenance": "S5, created 2026-08-22 before the title-color fix, per hard rule 2."
+}

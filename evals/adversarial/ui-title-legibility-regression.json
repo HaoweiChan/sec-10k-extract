@@ -1,0 +1,26 @@
+{
+  "id": "ui-title-legibility-regression",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "title_legibility"
+    ],
+    "file": "evals/fixtures/repo_hygiene/title-still-dim.html",
+    "selector": ".it .ttl",
+    "ink_token": "var(--ink)",
+    "min_weight": 600
+  },
+  "expect": {
+    "min_failures": 2,
+    "max_failures": 2
+  },
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "Pins the pre-S5 `.it .ttl` rule as a known-bad fixture: color is `var(--dim)` not `var(--ink)` (1 failure) and no `font-weight` is declared at all, i.e. below the 600 floor (1 failure) — 2 total, exact count so a regressed check that only catches the color half still goes red."
+  },
+  "provenance": "S5, created 2026-08-22 alongside ui-title-legibility.json. Watched RED against src/repo_hygiene/eval_adapter.py's check_title_legibility (2 failures on the fixture)."
+}
