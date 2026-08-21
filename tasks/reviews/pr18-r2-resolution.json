@@ -19,9 +19,9 @@
   },
   {
    "id": "R14",
-   "disposition": "fixed",
-   "covered_by": "tasks/TODO.md Contents cell + PR body",
-   "note": "Freeze premise restated on a verified basis rather than asserted: repo_hygiene imports only re/pathlib plus its own sibling, and is reached only through evals/run.py -- it adds no pipeline capability."
+   "disposition": "partially fixed",
+   "covered_by": "tasks/TODO.md Contents cell ONLY",
+   "note": "Freeze premise restated on a verified basis rather than asserted: repo_hygiene imports only re/pathlib plus its own sibling, and is reached only through evals/run.py -- it adds no pipeline capability. CORRECTION (round 3, R21): this record previously claimed the PR body half was also done. It was not -- the orchestrator never updated the body, which still said 'nothing outside src/sec10k/web/static/ changes'. The overclaim was the orchestrator's, not the implementer's, and is corrected here rather than silently amended."
   },
   {
    "id": "R15",
