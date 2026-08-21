@@ -30,6 +30,7 @@ its ruling and what enforces it. Full context — Context/Decision/Consequences
 - ADR-023 — a retitle is its own rule with its own date: five era-label corrections (items 5, 10, 12, 13, 15), item set unchanged — enforced by `evals/adversarial/era-label-*.json`, `src/sec10k/segment.py::_demo` · amends ADR-010, ADR-015
 - ADR-024 — 10-K/A stays out of scope; the refusal is asserted on both detection routes, not left to `ACCEPTED_FORMS` — enforced by `src/sec10k/normalize.py::_demo`
 - ADR-025 — one `history.jsonl` line every run, a full report only for `--report`/`all`/`--dir`/red; 165 uncited gate dumps pruned, backfilled first — enforced by `evals/run.py`, `src/repo_hygiene/eval_adapter.py::check_report_citations`
+- ADR-026 — boilerplate chrome is reported as opt-in `{start,end,kind}` spans, never removed; `normalized_text` and every offset are byte-identical with exclusion on and off — enforced by `evals/adversarial/boilerplate-offsets-invariant.json`, `src/sec10k/boilerplate.py`
 
 Amended-by is also recorded on each amended ADR's own Status line — this
 index only cross-references it for scanning.

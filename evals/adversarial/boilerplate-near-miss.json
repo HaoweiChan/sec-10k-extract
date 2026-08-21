@@ -1,0 +1,29 @@
+{
+  "id": "boilerplate-near-miss",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {"path": "evals/fixtures/cvx-2015/filing.htm", "exclude_boilerplate": true},
+  "expect": {
+    "checks": [
+      {"type": "boilerplate", "enabled": true},
+      {"type": "boilerplate", "kind": "running_head", "max": 0},
+      {"type": "boilerplate", "kind": "page_number", "max": 0},
+      {"type": "boilerplate", "kind": "edgar_chrome", "max": 0},
+
+      {"type": "boilerplate", "value": "$", "max": 0},
+      {"type": "boilerplate", "value": ")", "max": 0},
+      {"type": "boilerplate", "value": "—", "max": 0},
+      {"type": "boilerplate", "value": "Total", "max": 0},
+      {"type": "boilerplate", "value": "2015", "max": 0},
+      {"type": "boilerplate", "value": "1", "max": 0},
+      {"type": "boilerplate", "value": "29", "max": 0},
+      {"type": "boilerplate", "value": "United States", "max": 0},
+      {"type": "boilerplate", "value": "Notes to the Consolidated Financial Statements", "max": 0},
+
+      {"type": "verbatim"},
+      {"type": "no_overlap_ordered"},
+      {"type": "no_empty_success"}
+    ]
+  },
+  "provenance": "ADR-026 §g, the REFRAIN direction, whole-document. cvx-2015 (legacy HTML, EDGAR accession 0000093410-16-000049) was chosen because it is the corpus's worst case for a naive repeated-line rule and has no page chrome at all to confuse the result: measured 2026-08-22 over normalized_text (417,523 chars, 21,845 lines), it contains 518 distinct line texts repeating 3+ times, including '$' 1,058x, ')' 860x, em-dash 600x, '2015' 86x, '1' 72x, 'Total' 34x -- and 2,063 lines that consist of nothing but a bare number. A rule keyed on repetition alone would strip thousands of table cells out of this filing. The correct answer for this document is ZERO exclusions, and that is what the three max-0 kind checks assert; the nine value checks name the specific lines that would fall first, each with the gate that saves it (all fail MAX_GAP_CV: '$' CV 5.89, ')' 6.28, em-dash 7.67, '2015' 1.97, '1' 2.04, 'Total' 1.56, '29' 0.84, 'United States' 2.06, 'Notes to the Consolidated Financial Statements' 2.27).\n\nThis fixture is also the acceptance criterion's 'page-number-like figure inside real prose' at scale: 2,063 bare-number lines and not one of them is adjacent to a chrome line, so PAGE_NUMBER's adjacency rule (ADR-026 §b) yields nothing. If that rule is ever weakened to 'a line that is only a number', this case goes red by roughly two thousand.\n\ncvx-2015 has an outstanding debt case of its own (evals/adversarial/cvx-2015-internal-pointer.json, class internal-pointer-to-paginated-section). That debt is about item 6's pointer status, is unrelated to chrome, and is why this case asserts only verbatim/no_overlap_ordered/no_empty_success on the item side rather than per-item statuses -- it must not be coupled to a known-red extraction question."
+}

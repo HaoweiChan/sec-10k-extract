@@ -10,6 +10,7 @@ import hashlib
 import time
 from pathlib import Path
 
+from src.sec10k.boilerplate import find_chrome
 from src.sec10k.normalize import ACCEPTED_FORMS, COLLAPSE_FLOOR, select_and_normalize
 from src.sec10k.segment import (
     assign_boundaries, classify, expected_items, filter_candidates, item_label,
@@ -38,8 +39,8 @@ def _item(code, cand, status, period_end=None):
 
 
 def _envelope(doc_status, text="", items=None, warnings=None, meta=None,
-              trace=None, t0=None):
-    return {
+              trace=None, t0=None, boilerplate=None):
+    env = {
         "normalized_text": text,
         "doc_status": doc_status,
         "warnings": warnings or [],
@@ -49,13 +50,22 @@ def _envelope(doc_status, text="", items=None, warnings=None, meta=None,
         "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0},  # deterministic-only at B
         "items": items or [],
     }
+    if boilerplate is not None:
+        # ADR-026: the key exists only when the caller asked. `[]` means "asked,
+        # found none" and is not the same answer as the key being absent.
+        env["boilerplate"] = boilerplate
+    return env
 
 
-def extract_items(path):
+def extract_items(path, exclude_boilerplate=False):
     """Extract items from a 10-K filing.
 
     Returns {"normalized_text": str, "doc_status": str, "items": [...], ...}
     per specs/001-sec10k-contract.md.
+
+    `exclude_boilerplate=True` adds ONE key, `boilerplate` — the chrome runs
+    found in `normalized_text` (ADR-026). It is a pure annotation: nothing else
+    in the envelope moves, so INV-S2 offsets mean the same thing either way.
     """
     t0 = time.monotonic()
     raw_bytes = Path(path).read_bytes()
@@ -72,6 +82,11 @@ def extract_items(path):
     text, meta, warnings = select_and_normalize(raw)
     meta["input_sha256"] = sha
     trace.append({"layer": "select+normalize", **meta})
+    # ADR-026 layer 3b, opt-in. Computed here, off the normalized text, and
+    # then carried untouched to whichever envelope this run returns — including
+    # the `failed`/`unsupported` refusals, which still have readable text a
+    # caller who asked for chrome is entitled to. Nothing downstream reads it.
+    chrome = find_chrome(text) if exclude_boilerplate else None
 
     # ORDER IS THE CONTRACT'S, NOT A PREFERENCE (001-sec10k-contract, envelope
     # rules): collapse is tested BEFORE form identity. A truncated download
@@ -83,7 +98,7 @@ def extract_items(path):
             "code": "normalization_collapse", "item": None,
             "message": f"{len(raw)} raw chars normalized to {len(text)}"})
         return _envelope("failed", text, meta=meta, warnings=warnings,
-                         trace=trace, t0=t0)
+                         trace=trace, t0=t0, boilerplate=chrome)
 
     if meta["form_type"] not in ACCEPTED_FORMS:
         # refusal, not a best-effort parse (contract v2 envelope rules)
@@ -91,7 +106,7 @@ def extract_items(path):
         warnings.append({"code": "unsupported_form", "item": None,
                          "message": f"not an accepted 10-K form (detected: {found})"})
         return _envelope("unsupported", text, meta=meta, warnings=warnings,
-                         trace=trace, t0=t0)
+                         trace=trace, t0=t0, boilerplate=chrome)
 
     expected = expected_items(meta.get("period_end"))
     # taxonomy era is the item set the filing's date implies, not its file
@@ -143,4 +158,4 @@ def extract_items(path):
     else:
         doc_status = "success"
     return _envelope(doc_status, text, items=items, meta=meta,
-                     warnings=warnings, trace=trace, t0=t0)
+                     warnings=warnings, trace=trace, t0=t0, boilerplate=chrome)

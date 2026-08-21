@@ -335,6 +335,61 @@ def test_confidence():
     assert reason is not None and "no confidence" in reason, reason
 
 
+def test_boilerplate_checks():
+    """The two ADR-026 check types that are pure functions of a result dict.
+
+    (`offsets_invariant_under_exclusion` calls extract_items, so it is out of
+    scope here for the same reason `deterministic` is — see the module
+    docstring.) The `min` default is the part worth pinning: a selector with no
+    bound asserts PRESENCE, so a typo in `value` fails loudly, but a selector
+    carrying only `max` is asserting absence and must not also demand one. The
+    first draft got that backwards and turned every near-miss check red.
+    """
+    text = "Table of Contents\nbody prose here\n12\nmore prose"
+    #       0..17            18..33          34..36  37..
+    run = lambda s, e, k: {"start": s, "end": e, "kind": k}  # noqa: E731
+    r = {"normalized_text": text, "items": [],
+         "boilerplate": [run(0, 18, "running_head"), run(34, 37, "page_number")]}
+    off = {"normalized_text": text, "items": []}
+
+    # enabled, both directions
+    assert eval_check(r, {"type": "boilerplate", "enabled": True}) is None
+    assert eval_check(off, {"type": "boilerplate", "enabled": True}) is not None
+    assert eval_check(off, {"type": "boilerplate", "enabled": False}) is None
+    assert eval_check(r, {"type": "boilerplate", "enabled": False}) is not None
+    # a check that selects but the envelope has no key at all
+    assert eval_check(off, {"type": "boilerplate", "value": "x", "max": 0}) is not None
+
+    # value / kind selection, and the min default
+    assert eval_check(r, {"type": "boilerplate", "value": "Table of Contents"}) is None
+    assert eval_check(r, {"type": "boilerplate", "value": "Table of Contnts"}) is not None
+    assert eval_check(r, {"type": "boilerplate", "kind": "page_number"}) is None
+    assert eval_check(r, {"type": "boilerplate", "kind": "edgar_chrome"}) is not None
+    # ...but `max` alone asserts absence and must NOT imply min 1
+    assert eval_check(r, {"type": "boilerplate", "kind": "edgar_chrome", "max": 0}) is None
+    assert eval_check(r, {"type": "boilerplate", "value": "body prose here", "max": 0}) is None
+    assert eval_check(r, {"type": "boilerplate", "value": "Table of Contents",
+                          "max": 0}) is not None
+    assert eval_check(r, {"type": "boilerplate", "min": 2, "max": 2}) is None
+    assert eval_check(r, {"type": "boilerplate", "min": 3}) is not None
+
+    # spans_sane: the off-by-one guard. Clean first...
+    assert eval_check(r, {"type": "boilerplate_spans_sane"}) is None
+    # ...then each way it can be wrong, one at a time
+    for bad, why in [
+        ([run(0, 99999, "running_head")], "outside"),
+        ([run(1, 18, "running_head")], "line start"),
+        ([run(0, 17, "running_head")], "line end"),
+        ([run(0, 34, "running_head")], "more than one line"),
+        ([run(34, 37, "page_number"), run(0, 18, "running_head")], "out of order"),
+    ]:
+        reason = eval_check({"normalized_text": text, "items": [], "boilerplate": bad},
+                            {"type": "boilerplate_spans_sane"})
+        assert reason is not None and why in reason, (why, reason)
+    assert eval_check(off, {"type": "boilerplate_spans_sane"}) is not None
+
+
+
 TESTS = [
     test_item_field,
     test_ibr_spans_are_checked,
@@ -351,6 +406,7 @@ TESTS = [
     test_only_items,
     test_item_absent_any_status,
     test_no_empty_success,
+    test_boilerplate_checks,
 ]
 
 

@@ -1,0 +1,17 @@
+{
+  "id": "boilerplate-offsets-invariant",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/msft-2013/filing.htm", "exclude_boilerplate": true},
+  "expect": {
+    "checks": [
+      {"type": "offsets_invariant_under_exclusion"},
+      {"type": "boilerplate_spans_sane"},
+      {"type": "verbatim"},
+      {"type": "no_overlap_ordered"},
+      {"type": "known_items_only"},
+      {"type": "no_empty_success"}
+    ]
+  },
+  "provenance": "ADR-026 §d, the invariant-suite half of S6's acceptance criterion: 'INV-S2 offset invariance holds with exclusion both on and off'. INV-S2 says every extracted item's text is a verbatim slice of normalized_text and that offsets index normalized_text. ADR-026 rules that boilerplate is reported as spans and never removed, which makes invariance an EQUALITY rather than a promise -- so the check asserts the equality directly: extract_items(path, exclude_boilerplate=True) and extract_items(path, exclude_boilerplate=False) are run on the same file and their normalized_text, items, warnings and doc_status (adapter DETERMINISM_FIELDS) are compared field by field. The same check also asserts the default-off half of the contract in both directions -- the OFF envelope must carry no 'boilerplate' key at all, and the ON envelope must carry one -- because 'nothing changes unless the caller asks' is two claims, not one.\n\nmsft-2013 is the fixture because it is the one where exclusion has the most to do: 96 running heads and 94 page numbers, 190 spans, 2,002 characters. A rewriting implementation would displace roughly two thousand characters of offsets here, which is far more than a rounding error and would fail loudly. A fixture where detection finds nothing could not distinguish 'invariant' from 'inert'.\n\nIn the invariant suite because a break here is not a quality regression, it is the provenance guarantee INV-S2 exists for. Cost measured 2026-08-22: extract_items on msft-2013 is 0.236s, so this case adds roughly 0.7s to a suite that ran 32 cases in 9.5s. The txt-era counterpart runs in the fast suite as boilerplate-txt-chrome's offsets_invariant_under_exclusion check."
+}
