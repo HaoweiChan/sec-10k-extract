@@ -2,6 +2,6 @@
   "id": "adr-header-and-index",
   "task": "repo_hygiene",
   "suites": ["invariant", "fast"],
-  "input": {},
+  "input": {"checks": ["adr_headers", "adr_index"]},
   "expect": {}
 }

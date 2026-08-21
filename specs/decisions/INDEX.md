@@ -29,6 +29,7 @@ its ruling and what enforces it. Full context — Context/Decision/Consequences
 - ADR-022 — `tasks/DONE.md` is the second sanctioned ledger; a row leaves TODO.md only with no `UNRUN` gate — enforced by `tasks/DONE.md` line format · amends ADR-009
 - ADR-023 — a retitle is its own rule with its own date: five era-label corrections (items 5, 10, 12, 13, 15), item set unchanged — enforced by `evals/adversarial/era-label-*.json`, `src/sec10k/segment.py::_demo` · amends ADR-010, ADR-015
 - ADR-024 — 10-K/A stays out of scope; the refusal is asserted on both detection routes, not left to `ACCEPTED_FORMS` — enforced by `src/sec10k/normalize.py::_demo`
+- ADR-025 — one `history.jsonl` line every run, a full report only for `--report`/`all`/`--dir`/red; 165 uncited gate dumps pruned, backfilled first — enforced by `evals/run.py`, `src/repo_hygiene/eval_adapter.py::check_report_citations`
 
 Amended-by is also recorded on each amended ADR's own Status line — this
 index only cross-references it for scanning.
