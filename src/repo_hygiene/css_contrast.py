@@ -6,11 +6,26 @@ text at 2.40-3.51:1, (b) a bare `button:hover` rule outranking `.it`'s own
 selected rule. Both are decidable from the file text with no browser, so they
 become a case (hard rule 2) rather than a promise.
 
-ponytail: the text/ground PAIRS are declared in the case JSON, not discovered
-by cascading the stylesheet — the token VALUES are read live from the file, so
-a color that moves is caught. Ceiling: a brand-new element/ground combination
-is invisible until someone adds it to the pair list. Upgrade path is a real
-CSS cascade, which is a browser, which is what this check exists to avoid.
+ponytail: this does NOT resolve the CSS cascade. What it guards, exactly:
+
+  * token VALUES — every color is resolved live out of the file, so moving
+    `--dim` or `--grid` moves the measurement;
+  * the ground STACKS and text/ground PAIRS declared in the case JSON;
+  * for a pair carrying `fg_from`/`fg_opacity_from`, that one named rule's own
+    declared `color:`/`opacity:`, so a rule repointed at a different token
+    goes red instead of measuring a color the page no longer paints.
+
+What it is blind to, and these are real holes, not hypotheticals:
+
+  * an element/ground combination nobody added to the pair list;
+  * a pair with no `fg_from` — its `fg` is asserted against nothing, so
+    repointing that rule passes green (round-2 R13 demonstrated 1.46:1);
+  * any OTHER rule that wins the cascade for a pair's element — a later
+    `#sidebar span{color:…}`, an `opacity` on an ancestor, an inline style.
+
+Closing the last one means resolving the cascade, which means a browser,
+which is the dependency this check exists to avoid. The trade is deliberate;
+the claim is narrowed to match it rather than the other way round.
 """
 import re
 
@@ -168,18 +183,39 @@ def contrast(fg, bg):
     return (hi + 0.05) / (lo + 0.05)
 
 
-def rule_opacity(css, selector):
-    """The `opacity:` declared on `selector`'s own rule, else 1.0.
+def _rule_body(css, selector):
+    """The declaration block of `selector`'s own rule.
 
-    Read from the file rather than restated in the case, so re-introducing a
-    translucent text span cannot slip past the pair that models it.
+    Anchored at a rule boundary so a short selector (`a`, `.b`) cannot match
+    the tail of a longer one. Raises if absent — a pair naming a rule that no
+    longer exists is a stale pair, and staying silent about it is how the
+    round-1 version of this check ended up guarding less than it claimed.
     """
-    css = _strip_comments(css)
-    m = re.search(re.escape(selector) + r"\s*\{([^{}]*)\}", css)
+    m = re.search(r"(?:^|[}{;\n])\s*" + re.escape(selector) + r"\s*\{([^{}]*)\}",
+                  _strip_comments(css), re.M)
     if not m:
         raise ValueError(f"selector {selector!r} not found — pair is stale")
-    o = re.search(r"opacity\s*:\s*([\d.]+)", m.group(1))
+    return m.group(1)
+
+
+def rule_opacity(css, selector):
+    """The `opacity:` declared on `selector`'s OWN rule, else 1.0.
+
+    Only that one rule. An `opacity` arriving from any other selector that
+    also matches the element is invisible here — see the module docstring.
+    """
+    o = re.search(r"opacity\s*:\s*([\d.]+)", _rule_body(css, selector))
     return float(o.group(1)) if o else 1.0
+
+
+def rule_color(css, selector):
+    """The `color:` value declared on `selector`'s OWN rule, else None.
+
+    Lets a pair assert that the rule it claims to model still paints the token
+    the pair measures. Text comparison, not cascade resolution.
+    """
+    c = re.search(r"(?:^|[;\s])color\s*:\s*([^;]+)", _rule_body(css, selector))
+    return c.group(1).strip() if c else None
 
 
 def measure(pair, tokens):
@@ -203,8 +239,18 @@ def check_contrast(css, pairs, minimum=4.5):
     pairs = [dict(p, fg_opacity=rule_opacity(css, p["fg_opacity_from"]))
              if "fg_opacity_from" in p else p for p in pairs]
     failures, measured = [], {}
+    for pair in pairs:  # a pair must still paint the token it claims to measure
+        if "fg_from" in pair:
+            got = rule_color(css, pair["fg_from"])
+            if got != pair["fg"]:
+                failures.append(f"{pair['id']}: rule {pair['fg_from']!r} paints "
+                                f"{got!r}, but the pair measures {pair['fg']!r}")
     for scheme, tokens in (("dark", dark), ("light", light)):
         for pair in pairs:
+            # a ground may differ by scheme (body paints a different overlay
+            # stack in light than in dark), declared as {"dark":[…],"light":[…]}
+            if isinstance(pair["on"], dict):
+                pair = dict(pair, on=pair["on"][scheme])
             ratio, _ = measure(pair, tokens)
             measured[f"{scheme}/{pair['id']}"] = ratio
             if ratio < minimum:
@@ -270,6 +316,33 @@ def _demo():
     pairs = [{"id": "ink", "fg": "var(--ink)", "on": ["var(--bg)"]}]
     fails, measured = check_contrast(css, pairs)
     assert measured["dark/ink"] == 21.0 and fails == ["light: ink = 2.85:1 < 4.5:1"]
+
+    # _rule_body anchors at a rule boundary: a one-character selector must not
+    # match the tail of a longer one (`a{}` is not `#banner .src{}`).
+    two = "a{color:var(--x)}\n.data{color:var(--y)}"
+    assert rule_color(two, "a") == "var(--x)" and rule_color(two, ".data") == "var(--y)"
+    assert rule_color("p{font-size:1px}", "p") is None
+    try:
+        _rule_body(two, ".nope")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("a stale pair must fail loudly, not silently")
+
+    # fg_from binds a pair to the rule it claims to model. Round-2 R13:
+    # repointing `.it .ttl` at another token measured 1.46:1 while staying green.
+    bound = css + ".ttl{color:var(--bg)}"
+    fails, _ = check_contrast(bound, [
+        {"id": "t", "fg": "var(--ink)", "on": ["var(--bg)"], "fg_from": ".ttl"}])
+    assert any("paints 'var(--bg)'" in f and "measures 'var(--ink)'" in f
+               for f in fails), fails
+
+    # a ground may differ by scheme — body paints a different overlay stack in
+    # light than in dark, so `on` accepts {"dark": [...], "light": [...]}
+    _, per = check_contrast(css, [{"id": "g", "fg": "var(--ink)",
+                                   "on": {"dark": ["var(--bg)"],
+                                          "light": ["var(--ink)"]}}])
+    assert per["dark/g"] == 21.0 and per["light/g"] == 1.0
     assert not check_button_specificity(css)
     assert check_button_specificity(css.replace("button:not(.it):hover", "button:hover"))
     print("css_contrast self-check ok")

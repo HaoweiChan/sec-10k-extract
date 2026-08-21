@@ -1,72 +1,355 @@
 {
   "id": "ui-contrast-and-specificity",
   "task": "repo_hygiene",
-  "suites": ["invariant", "fast"],
+  "suites": [
+    "invariant",
+    "fast"
+  ],
   "input": {
-    "checks": ["ui_stylesheet"],
+    "checks": [
+      "ui_stylesheet"
+    ],
     "min_ratio": 4.5,
     "grounds": {
-      "bg": ["var(--bg)"],
-      "panel": ["var(--panel)"],
-      "row-hover": ["var(--muted)"],
-      "row-selected": ["color-mix(in srgb,var(--amber) 12%,var(--panel))"],
-      "banner-success": ["var(--bg)", "color-mix(in srgb,var(--ok) 10%,transparent)"],
-      "banner-warning": ["var(--bg)", "color-mix(in srgb,var(--warn) 10%,transparent)"],
-      "banner-ambiguous": ["var(--bg)", "color-mix(in srgb,var(--amb) 12%,transparent)"],
-      "banner-failed": ["var(--bg)", "color-mix(in srgb,var(--bad) 10%,transparent)"],
-      "button": ["var(--amber)"],
-      "button-hover": ["color-mix(in srgb,var(--amber) 88%,var(--bg))"]
+      "body": {
+        "dark": [
+          "var(--bg)",
+          "var(--grid)",
+          "var(--grid)",
+          "hsl(0 0% 100% / .012)",
+          "hsl(190 90% 30% / .06)"
+        ],
+        "light": [
+          "var(--bg)",
+          "var(--grid)",
+          "var(--grid)"
+        ]
+      },
+      "bg-flat": [
+        "var(--bg)"
+      ],
+      "panel": [
+        "var(--panel)"
+      ],
+      "row-hover": [
+        "var(--muted)"
+      ],
+      "row-selected": [
+        "color-mix(in srgb,var(--amber) 12%,var(--panel))"
+      ],
+      "banner-success": [
+        "color-mix(in srgb,var(--ok) 10%,var(--bg))"
+      ],
+      "banner-warning": [
+        "color-mix(in srgb,var(--warn) 10%,var(--bg))"
+      ],
+      "banner-ambiguous": [
+        "color-mix(in srgb,var(--amb) 12%,var(--bg))"
+      ],
+      "banner-failed": [
+        "color-mix(in srgb,var(--bad) 10%,var(--bg))"
+      ],
+      "button": [
+        "var(--amber)"
+      ],
+      "button-hover": [
+        "color-mix(in srgb,var(--amber) 88%,var(--bg))"
+      ]
     },
     "pairs": [
-      {"id": "body-ink", "fg": "var(--ink)", "on": "bg", "note": "body, pre.text, select/input text"},
-      {"id": "pane-ink", "fg": "var(--ink)", "on": "panel", "note": "#pane h2, .ev dd, .warn .msg"},
-
-      {"id": "hint-dim", "fg": "var(--dim)", "on": "panel", "note": ".hint, .none, summary, .ev dt"},
-      {"id": "sha-dim", "fg": "var(--dim)", "on": "bg", "note": ".sha, footer, .mode label"},
-      {"id": "banner-idle", "fg": "var(--dim)", "on": "bg", "note": ".s-idle — the boot and busy banner"},
-
-      {"id": "legend-amber", "fg": "var(--amber-ink)", "on": "panel", "note": "legend, .warn code"},
-      {"id": "caret-amber", "fg": "var(--amber-ink)", "on": "bg", "note": "h1::before"},
-      {"id": "link-accent", "fg": "var(--accent)", "on": "bg", "note": "header/footer links"},
-      {"id": "link-accent-panel", "fg": "var(--accent)", "on": "panel", "note": "summary:hover"},
-
-      {"id": "banner-ok", "fg": "var(--ok)", "on": "banner-success", "note": "doc_status: success"},
-      {"id": "banner-warn", "fg": "var(--warn)", "on": "banner-warning", "note": "success_with_warning"},
-      {"id": "banner-amb", "fg": "var(--amb)", "on": "banner-ambiguous", "note": "ambiguous — the upload mode's outcome"},
-      {"id": "banner-bad", "fg": "var(--bad)", "on": "banner-failed", "note": "failed/unsupported — the URL mode's outcome"},
-
-      {"id": "src-ok", "fg": "var(--ok)", "on": "banner-success", "fg_opacity_from": "#banner .src", "note": "#banner .src count line"},
-      {"id": "src-warn", "fg": "var(--warn)", "on": "banner-warning", "fg_opacity_from": "#banner .src"},
-      {"id": "src-amb", "fg": "var(--amb)", "on": "banner-ambiguous", "fg_opacity_from": "#banner .src"},
-      {"id": "src-bad", "fg": "var(--bad)", "on": "banner-failed", "fg_opacity_from": "#banner .src"},
-      {"id": "src-idle", "fg": "var(--dim)", "on": "bg", "fg_opacity_from": "#banner .src"},
-
-      {"id": "row-code", "fg": "var(--amber-ink)", "on": "panel", "note": ".it .code, resting row"},
-      {"id": "row-code-hover", "fg": "var(--amber-ink)", "on": "row-hover"},
-      {"id": "row-code-selected", "fg": "var(--amber-ink)", "on": "row-selected"},
-      {"id": "row-title", "fg": "var(--dim)", "on": "panel", "note": ".it .ttl and plain .b, resting row"},
-      {"id": "row-title-hover", "fg": "var(--dim)", "on": "row-hover", "note": "R1: 4.33:1 before the fix"},
-      {"id": "row-title-selected", "fg": "var(--dim)", "on": "row-selected"},
-
-      {"id": "badge-extracted", "fg": "var(--ok)", "on": "panel"},
-      {"id": "badge-extracted-hover", "fg": "var(--ok)", "on": "row-hover"},
-      {"id": "badge-extracted-selected", "fg": "var(--ok)", "on": "row-selected"},
-      {"id": "badge-missing", "fg": "var(--bad)", "on": "panel"},
-      {"id": "badge-missing-hover", "fg": "var(--bad)", "on": "row-hover"},
-      {"id": "badge-missing-selected", "fg": "var(--bad)", "on": "row-selected"},
-      {"id": "badge-ibr", "fg": "var(--accent)", "on": "panel"},
-      {"id": "badge-ibr-hover", "fg": "var(--accent)", "on": "row-hover"},
-      {"id": "badge-ibr-selected", "fg": "var(--accent)", "on": "row-selected"},
-      {"id": "badge-lo", "fg": "var(--warn)", "on": "panel", "note": ".b.lo — the validator-fired flag"},
-
-      {"id": "button-label", "fg": "var(--on-amber)", "on": "button", "note": "Extract, resting"},
-      {"id": "button-label-hover", "fg": "var(--on-amber)", "on": "button-hover"}
+      {
+        "id": "body-ink",
+        "fg": "var(--ink)",
+        "on": "body",
+        "fg_from": "body",
+        "note": "body copy on the gridded canvas"
+      },
+      {
+        "id": "pre-ink",
+        "fg": "var(--ink)",
+        "on": "bg-flat",
+        "note": "pre.text and select/input paint their own flat var(--bg) — no grid behind them"
+      },
+      {
+        "id": "pane-ink",
+        "fg": "var(--ink)",
+        "on": "panel",
+        "note": "#pane h2, .ev dd, .warn .msg — inherited, no color rule of their own"
+      },
+      {
+        "id": "hint-dim",
+        "fg": "var(--dim)",
+        "on": "panel",
+        "fg_from": ".hint"
+      },
+      {
+        "id": "mode-label-dim",
+        "fg": "var(--dim)",
+        "on": "panel",
+        "fg_from": ".mode label",
+        "note": "inside fieldset{background:var(--panel)}, NOT the body"
+      },
+      {
+        "id": "ev-dt-dim",
+        "fg": "var(--dim)",
+        "on": "panel",
+        "fg_from": ".ev dt"
+      },
+      {
+        "id": "summary-dim",
+        "fg": "var(--dim)",
+        "on": "panel",
+        "fg_from": "summary"
+      },
+      {
+        "id": "none-dim",
+        "fg": "var(--dim)",
+        "on": "panel",
+        "fg_from": ".none"
+      },
+      {
+        "id": "sha-dim",
+        "fg": "var(--dim)",
+        "on": "body",
+        "fg_from": ".sha"
+      },
+      {
+        "id": "footer-dim",
+        "fg": "var(--dim)",
+        "on": "body",
+        "fg_from": "footer"
+      },
+      {
+        "id": "banner-idle",
+        "fg": "var(--dim)",
+        "on": "body",
+        "fg_from": ".s-idle",
+        "note": "the boot and busy banner"
+      },
+      {
+        "id": "legend-amber",
+        "fg": "var(--amber-ink)",
+        "on": "panel",
+        "fg_from": "legend"
+      },
+      {
+        "id": "warn-code",
+        "fg": "var(--warn)",
+        "on": "panel",
+        "fg_from": ".warn code"
+      },
+      {
+        "id": "caret-amber",
+        "fg": "var(--amber-ink)",
+        "on": "body",
+        "fg_from": "h1::before"
+      },
+      {
+        "id": "link-accent",
+        "fg": "var(--accent)",
+        "on": "body",
+        "fg_from": "a"
+      },
+      {
+        "id": "link-accent-panel",
+        "fg": "var(--accent)",
+        "on": "panel",
+        "fg_from": "summary:hover"
+      },
+      {
+        "id": "banner-ok",
+        "fg": "var(--ok)",
+        "on": "banner-success",
+        "fg_from": ".s-success"
+      },
+      {
+        "id": "banner-warn",
+        "fg": "var(--warn)",
+        "on": "banner-warning",
+        "fg_from": ".s-success_with_warning"
+      },
+      {
+        "id": "banner-amb",
+        "fg": "var(--amb)",
+        "on": "banner-ambiguous",
+        "fg_from": ".s-ambiguous"
+      },
+      {
+        "id": "banner-bad",
+        "fg": "var(--bad)",
+        "on": "banner-failed",
+        "fg_from": ".s-unsupported,.s-failed",
+        "note": "failed/unsupported — the URL mode's outcome"
+      },
+      {
+        "id": "src-ok",
+        "fg": "var(--ok)",
+        "on": "banner-success",
+        "fg_opacity_from": "#banner .src",
+        "note": "the count line: inherits the banner's color, carries only its own opacity"
+      },
+      {
+        "id": "src-warn",
+        "fg": "var(--warn)",
+        "on": "banner-warning",
+        "fg_opacity_from": "#banner .src"
+      },
+      {
+        "id": "src-amb",
+        "fg": "var(--amb)",
+        "on": "banner-ambiguous",
+        "fg_opacity_from": "#banner .src"
+      },
+      {
+        "id": "src-bad",
+        "fg": "var(--bad)",
+        "on": "banner-failed",
+        "fg_opacity_from": "#banner .src"
+      },
+      {
+        "id": "src-idle",
+        "fg": "var(--dim)",
+        "on": "body",
+        "fg_opacity_from": "#banner .src"
+      },
+      {
+        "id": "row-code",
+        "fg": "var(--amber-ink)",
+        "on": "panel",
+        "fg_from": ".it .code",
+        "note": "resting row"
+      },
+      {
+        "id": "row-code-hover",
+        "fg": "var(--amber-ink)",
+        "on": "row-hover",
+        "fg_from": ".it .code"
+      },
+      {
+        "id": "row-code-selected",
+        "fg": "var(--amber-ink)",
+        "on": "row-selected",
+        "fg_from": ".it .code"
+      },
+      {
+        "id": "row-title",
+        "fg": "var(--dim)",
+        "on": "panel",
+        "fg_from": ".it .ttl",
+        "note": "resting row"
+      },
+      {
+        "id": "row-title-hover",
+        "fg": "var(--dim)",
+        "on": "row-hover",
+        "fg_from": ".it .ttl",
+        "note": "round-1 R1: 4.33:1 before the fix"
+      },
+      {
+        "id": "row-title-selected",
+        "fg": "var(--dim)",
+        "on": "row-selected",
+        "fg_from": ".it .ttl"
+      },
+      {
+        "id": "badge-plain",
+        "fg": "var(--dim)",
+        "on": "panel",
+        "fg_from": ".b",
+        "note": "the conf/method/chars badges"
+      },
+      {
+        "id": "badge-plain-hover",
+        "fg": "var(--dim)",
+        "on": "row-hover",
+        "fg_from": ".b"
+      },
+      {
+        "id": "badge-plain-selected",
+        "fg": "var(--dim)",
+        "on": "row-selected",
+        "fg_from": ".b"
+      },
+      {
+        "id": "badge-extracted",
+        "fg": "var(--ok)",
+        "on": "panel",
+        "fg_from": ".b.st-extracted"
+      },
+      {
+        "id": "badge-extracted-hover",
+        "fg": "var(--ok)",
+        "on": "row-hover",
+        "fg_from": ".b.st-extracted"
+      },
+      {
+        "id": "badge-extracted-selected",
+        "fg": "var(--ok)",
+        "on": "row-selected",
+        "fg_from": ".b.st-extracted"
+      },
+      {
+        "id": "badge-missing",
+        "fg": "var(--bad)",
+        "on": "panel",
+        "fg_from": ".b.st-missing"
+      },
+      {
+        "id": "badge-missing-hover",
+        "fg": "var(--bad)",
+        "on": "row-hover",
+        "fg_from": ".b.st-missing"
+      },
+      {
+        "id": "badge-missing-selected",
+        "fg": "var(--bad)",
+        "on": "row-selected",
+        "fg_from": ".b.st-missing"
+      },
+      {
+        "id": "badge-ibr",
+        "fg": "var(--accent)",
+        "on": "panel",
+        "fg_from": ".b.st-incorporated_by_reference"
+      },
+      {
+        "id": "badge-ibr-hover",
+        "fg": "var(--accent)",
+        "on": "row-hover",
+        "fg_from": ".b.st-incorporated_by_reference"
+      },
+      {
+        "id": "badge-ibr-selected",
+        "fg": "var(--accent)",
+        "on": "row-selected",
+        "fg_from": ".b.st-incorporated_by_reference"
+      },
+      {
+        "id": "badge-lo",
+        "fg": "var(--warn)",
+        "on": "panel",
+        "fg_from": ".b.lo",
+        "note": "the validator-fired flag"
+      },
+      {
+        "id": "button-label",
+        "fg": "var(--on-amber)",
+        "on": "button",
+        "fg_from": "button",
+        "note": "Extract, resting"
+      },
+      {
+        "id": "button-label-hover",
+        "fg": "var(--on-amber)",
+        "on": "button-hover",
+        "fg_from": "button"
+      }
     ]
   },
   "expect": {},
   "triage": {
     "class": "no-mechanical-check",
-    "note": "S3 restyled src/sec10k/web/static/index.html and found-and-fixed two defects inside the same diff with no case behind either, which hard rule 2 forbids. Round-1 review then found a third of the same species (the hovered row at 4.33:1) and proved the published minima wrong on five pairs, because the original measurement sampled ONE banner variant and ONE badge and generalised. This case is the mechanical floor those three defects needed: it reads the token block LIVE out of index.html, resolves var()/color-mix()/alpha the way CSS does, composites each text color over its real ground stack, and asserts WCAG AA 4.5:1 in BOTH schemes — plus the selector-scoping rule that keeps `button:hover` from outranking `.it[aria-current]`. Deliberately NOT covered: `button:disabled{opacity:.5}` (2.20:1 light), which WCAG 1.4.3 exempts and which is filed as debt rather than silently enforced or silently dropped."
+    "note": "S3 restyled src/sec10k/web/static/index.html and found-and-fixed two defects inside the same diff with no case behind either, which hard rule 2 forbids. Round-1 review found a third of the same species (the hovered row at 4.33:1) and proved the published minima wrong on five pairs. Round-2 review then falsified the ROUND-1 VERSION OF THIS CASE with mutations its author had not thought of: darkening --grid made the page unreadable while the case stayed green, and repointing `.it .ttl` at another token measured 1.46:1 while the case stayed green. Both are now red. What this case guards is stated exactly in the css_contrast module docstring, including the holes: it reads token VALUES live, models the declared ground stacks (body's grid/scanline overlay included, per scheme), and for a pair carrying `fg_from` asserts that the named rule still paints the token the pair measures. It does NOT resolve the cascade. Deliberately NOT covered, both filed as debt rather than silently enforced or silently dropped: `button:disabled{opacity:.5}` (2.20:1 light, which WCAG 1.4.3 exempts), and a descendant-scoped hover rule such as `#sidebar button:hover`, which check_button_specificity does not catch (round-2 R17)."
   },
-  "provenance": "S3 / PR #18 round-1 repair, created 2026-08-21. Pair table hand-derived from the stylesheet's own rules — every entry names the selector it models in `note` or in its id. Ground stacks follow the paint order the page actually produces: #banner sits on the body (var(--bg)) under a translucent color-mix tint; .it rows sit on #sidebar's var(--panel) until :hover swaps in var(--muted) or [aria-current=true] swaps in the amber wash. WATCHED RED BEFORE THE FIX (hard rule 2), all three reproducible by pointing input.file at the stylesheet named. (A) The pre-fix S3 stylesheet, `git show 3ee3871:src/sec10k/web/static/index.html` — 8 pairs red, floor 3.52:1: row-title-hover 4.33 light (round-1 R1); src-idle 3.52 / src-ok 3.69 / src-amb 3.79 / src-warn 3.88 / src-bad 4.05 light and src-bad 3.92 dark (round-1 R2); badge-missing-selected 4.21 dark, which this case found and review did not. (B) That same file with the light block reverted to the TinBoker palette's raw FILL values from the skill's core-token table (--amber-ink:var(--amber) with --amber 33 92% 44%, --accent 196 88% 40%, --ok 152 64% 32%, --bad 0 72% 50%) — the fill-as-text state S3 fixed with no case behind it: 29 pairs red, floor 1.95:1, caret-amber 2.41 and row-code-hover 2.24, bracketing the 2.40-3.51:1 the author had measured by hand. (C) That same file with `:not(.it)` deleted from the button hover rule — the selector check fires: \"unscoped hover rule 'button:hover:not(:disabled)' outranks .it state rules\". THE FIX, entirely in the token block: light --dim 40%->38%, dark --bad 61%->66%, and `opacity:.85` dropped from `#banner .src`. GREEN AFTER: floor 4.88:1 dark, 4.57:1 light. CEILING (ponytail): the pair list is declared, not cascaded — a brand-new element/ground combination is invisible to this case until it is added here. The upgrade path is a real CSS cascade, i.e. a browser, which is what this check exists to avoid needing."
+  "provenance": "S3 / PR #18, created 2026-08-21 in the round-1 repair, ground model rebuilt in the round-2 repair. Pair table hand-derived from the stylesheet's own rules; 39 of the 46 pairs carry `fg_from` naming the rule they model, and the check reads that rule's declared `color:` out of the file. The seven without it are elements that inherit their color (pre.text, #pane h2, .ev dd, .warn .msg, and the four `#banner .src` count lines, which carry only their own opacity) — those pairs are token-bound only, which the module docstring says plainly. GROUND STACKS follow the paint order the page produces, which in round 1 they did not: `body` paints --bg then two --grid line layers (a grid INTERSECTION is the worst ground) and, in dark only, a 1.2%-white scanline and a 6% cyan radial glow; light overrides background-image to the two grid layers alone, so the `body` ground is declared per scheme. Panels, rows and banner chips paint their own opaque background, so no grid reaches them. WATCHED RED BEFORE EACH FIX (hard rule 2), every mutation reproducible by pointing `input.file` at the stylesheet named. All figures below were re-measured against THIS pair table on 2026-08-21; the round-1 row published smaller counts because the round-1 table was smaller and its grounds were flat. ROUND 1: (A) pre-fix S3, `git show 3ee3871:src/sec10k/web/static/index.html` — 13 pairs red, floor 3.33:1, including row-title-hover 4.33 light. (B) the current file with the light block reverted to the TinBoker palette's raw FILL values — 26 pairs red, floor 2.17:1. (C) the current file with `:not(.it)` deleted from the button hover rule — the selector check fires. ROUND 2, the mutations that falsified (A)-(C)'s version of this case: (M1) light `--grid` darkened to hsl(213 20% 30% / .9) — was green, now 7 pairs red, floor 1.15:1 at caret-amber; (M2) `.it .ttl` repointed from var(--dim) to var(--line) — was green at a real 1.46:1, now 3 pairs red on the rule-binding assertion, not on a ratio. (M3) `#sidebar button:hover{background:var(--amber)}` appended is STILL GREEN — round-2 R17, filed as debt, and recorded here so the next reader does not mistake it for covered. THE FIXES: round 1, light --dim 40%->38%, dark --bad 61%->66%, `opacity:.85` off `#banner .src`; round 2, the four banner status chips mix against var(--bg) instead of `transparent`, so the page grid no longer runs through the banner and costs it up to 0.4 of a contrast point (light banner-ok was 4.78 flat but 4.47 over a grid intersection, i.e. below the floor this case enforces)."
 }
