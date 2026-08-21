@@ -238,7 +238,7 @@ evals/golden/     hand-labelled cases (anchors verified, counts recorded)
 evals/adversarial/ cases designed or found to break the pipeline
 evals/heldout/    frozen; unreachable by the normal suites
 evals/fixtures/   committed EDGAR filings, provenance per file
-evals/report/     every run's raw output, committed
+evals/report/     history.jsonl line per run; full report on --report/all/--dir/red (ADR-025)
 prompts/          curated AI-collaboration record
 src/sec10k/       the pipeline; web/ is the inspector
 ```

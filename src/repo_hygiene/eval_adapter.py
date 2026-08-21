@@ -1,17 +1,24 @@
 """Eval adapter for repo_hygiene — structural checks on the repo's own
-documentation (specs/decisions/), not on filing extraction. Case shape:
+documentation (specs/decisions/, evals/report/ citations), not on filing
+extraction. Case shape:
 
-    "task": "repo_hygiene"
+    "task": "repo_hygiene",
+    "input": {"checks": ["adr_headers", "adr_index"]}   # names below, in CHECKS
 
-No "input"/"expect" needed: what's under test is the specs/decisions/ tree
-itself, so the checks are hardcoded here rather than case-declared (there is
-only one thing this task judges).
+Checks are hardcoded functions, selected by name so one adapter can back
+several distinct invariant cases (ADR-025 added report_citations).
 """
 import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 DECISIONS = ROOT / "specs" / "decisions"
+REPORT_DIR = ROOT / "evals" / "report"
+# same locations ADR-025's prune treated as "outside evals/report/" — a
+# citation anywhere else is a report of record and must resolve on disk
+CITE_SCAN = ["docs", "specs", "tasks", "README.md", "src", "evals/golden",
+             "evals/adversarial", "evals/heldout", "prompts", ".github"]
+REPORT_REF_RE = re.compile(r"evals/report/([0-9]{8}-[0-9]{6}-[A-Za-z0-9_]+\.json)")
 
 
 def check_adr_headers():
@@ -58,6 +65,36 @@ def check_index():
     return bad
 
 
+def check_report_citations():
+    """Every evals/report/<ts>-*.json cited outside evals/report/ must exist
+    on disk — the invariant a prune (ADR-025) must never violate."""
+    bad = []
+    for rel in CITE_SCAN:
+        p = ROOT / rel
+        files = [p] if p.is_file() else (p.rglob("*") if p.is_dir() else [])
+        for f in files:
+            if not f.is_file():
+                continue
+            try:
+                text = f.read_text(errors="ignore")
+            except Exception:
+                continue
+            for name in REPORT_REF_RE.findall(text):
+                if not (REPORT_DIR / name).exists():
+                    bad.append(f"{f.relative_to(ROOT)}: cites missing evals/report/{name}")
+    return bad
+
+
+CHECKS = {
+    "adr_headers": check_adr_headers,
+    "adr_index": check_index,
+    "report_citations": check_report_citations,
+}
+
+
 def run_case(case):
-    failures = check_adr_headers() + check_index()
+    names = case.get("input", {}).get("checks") or ["adr_headers", "adr_index"]
+    failures = []
+    for name in names:
+        failures += CHECKS[name]()
     return {"passed": not failures, "failures": failures}
