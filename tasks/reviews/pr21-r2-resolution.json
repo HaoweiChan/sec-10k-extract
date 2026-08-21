@@ -1,0 +1,87 @@
+{
+ "round": 2,
+ "pr": 21,
+ "task": "S4",
+ "disposition": "V1 rewritten and re-verified across the whole fixture set; R5 and R8 fixed; R6/R7 routed to debt per the reviewer's own routing",
+ "gate": "pass -- invariant 22/22 = 1.000, fast 60/60 = 1.000, baseline 1.0 untouched",
+ "resolutions": [
+  {
+   "id": "V1",
+   "disposition": "fixed",
+   "covered_by": "src/sec10k/web/anchor.py (new, pure-stdlib mirror of index.html's algorithm) + evals/adversarial/ui-anchor-contract.json; index.html: coreOf/buildSourceIndex/findAnchor rewritten",
+   "note": "Both round-2 failure modes fixed, plus a third the fix's own full-fixture-set check caught before shipping. (a) whole-filing unanchored: root-caused to node-boundary whitespace being an arbitrary per-filing choice -- fixed by dropping whitespace from the matching problem entirely (coreOf/core_of strip it from both needle and haystack) rather than trying to model how much separator belongs at a join. This surfaced a THIRD bug: cat-2023's `<b>Item 1.</b>Business.` renders with ZERO characters between the nodes, which the round-3 draft (still inserting exactly one boundary space) also broke -- the core-strip design fixes both directions at once. (b) jpm-2024's confidently-wrong anchors: the `expectedFrac` fraction heuristic is REMOVED, replaced by body agreement -- among every occurrence of a heading, the one whose following core text shares the longest run with the item's own extracted `text` (its own heading prefix stripped first -- comparing item.text as-is scored 0 agreement at every occurrence, everywhere, a fourth bug the same full-fixture-set check caught) wins; below AGREEMENT_MIN agreeing characters (relaxed to the target's own length when shorter, so a genuine 5-char body like 'None.' still anchors), the result is unanchored rather than a guess. `find_anchor_frac` (the exact round-1 algorithm) is kept in anchor.py only to reproduce and pin the bug it caused."
+  },
+  {
+   "id": "R5",
+   "disposition": "fixed",
+   "covered_by": "src/repo_hygiene/eval_adapter.py run_case (new expect.max_failures); all three regression cases pin exact counts (typography-floor-decimal: 1, layout-centering-asymmetric: 2, capabilities-parse-content: 19)",
+   "note": "Watched red: with only min_failures, a simulated broken _margin_centers that always returns False (over-firing on `main`, which genuinely centres, in addition to header/footer) still reported passed:True (3 >= 2). Green after: the same simulation now reports passed:False under max_failures:2 (3 > 2)."
+  },
+  {
+   "id": "R8",
+   "disposition": "fixed",
+   "covered_by": "src/sec10k/web/capabilities.py _parse_difficult (bare-paragraph branch now returns {\"detail\": ...} with no \"term\" key); index.html loadCapabilities renders that shape as a single colspan=2 row",
+   "note": "Watched red against the pre-fix module (git show HEAD~1): the 'Explicitly unsupported' group's one item had term == 'Explicitly unsupported', a verbatim duplicate of the group heading band rendered directly above it. Green after, verified live: both the group band and the descriptive row beneath it render as colspan=2, and the check_capabilities_parse content check (R1) was updated to skip the term-length floor for items with no 'term' key rather than KeyError."
+  },
+  {
+   "id": "R6",
+   "disposition": "debt",
+   "debt_row": "tasks/TODO.md, Open debt table, 'R6: the capabilities content check is defeated by distinct-but-meaningless filler' (Origin: PR #21 R6)"
+  },
+  {
+   "id": "R7",
+   "disposition": "debt",
+   "debt_row": "tasks/TODO.md, Open debt table, 'R7: `_margin_centers` does not recognize the `margin-inline-start`/`margin-inline-end` longhand form' (Origin: PR #21 R7)"
+  }
+ ],
+ "v1_anchor_table": {
+  "method": "Live Browser tool run against all 37 real fixtures (aapl-2026-10q and ksb-2007 are non-10-K/unsupported and truncated-download extracts zero items, so all three show 0/0/0 correctly). For each item with a heading_text, scrollSourceToItem() was called and the RESULT WAS VERIFIED INDEPENDENTLY of findAnchor's own scoring, via document.caretRangeFromPoint() reading the actually-rendered DOM text near the top of the source pane after scrolling, compared against the item's own heading/body core. 'wrong' = anchored but the rendered text at the anchor does not agree with the item.",
+  "totals": {"itemsWithHeading": 641, "anchored": 639, "unanchored": 2, "wrong": 0},
+  "per_fixture": [
+   {"fixture": "aapl-2025", "doc_status": "success", "itemsWithHeading": 23, "anchored": 23, "unanchored": 0, "wrong": 0},
+   {"fixture": "aapl-2026-10q", "doc_status": "unsupported", "itemsWithHeading": 0, "anchored": 0, "unanchored": 0, "wrong": 0},
+   {"fixture": "axp-2008", "doc_status": "success_with_warning", "itemsWithHeading": 16, "anchored": 16, "unanchored": 0, "wrong": 0},
+   {"fixture": "ba-2003", "doc_status": "success", "itemsWithHeading": 17, "anchored": 17, "unanchored": 0, "wrong": 0},
+   {"fixture": "bac-2006", "doc_status": "success", "itemsWithHeading": 20, "anchored": 20, "unanchored": 0, "wrong": 0},
+   {"fixture": "caps-cover-2016", "doc_status": "success", "itemsWithHeading": 20, "anchored": 20, "unanchored": 0, "wrong": 0},
+   {"fixture": "cat-2023", "doc_status": "success", "itemsWithHeading": 23, "anchored": 23, "unanchored": 0, "wrong": 0},
+   {"fixture": "cvx-2015", "doc_status": "success_with_warning", "itemsWithHeading": 20, "anchored": 20, "unanchored": 0, "wrong": 0},
+   {"fixture": "fy2021-item9c", "doc_status": "success_with_warning", "itemsWithHeading": 21, "anchored": 21, "unanchored": 0, "wrong": 0},
+   {"fixture": "ge-1994", "doc_status": "success_with_warning", "itemsWithHeading": 14, "anchored": 14, "unanchored": 0, "wrong": 0},
+   {"fixture": "gs-2002", "doc_status": "success", "itemsWithHeading": 16, "anchored": 16, "unanchored": 0, "wrong": 0, "reviewer_named": true},
+   {"fixture": "heading-unnumbered", "doc_status": "ambiguous", "itemsWithHeading": 22, "anchored": 22, "unanchored": 0, "wrong": 0},
+   {"fixture": "ibm-1997", "doc_status": "success_with_warning", "itemsWithHeading": 15, "anchored": 15, "unanchored": 0, "wrong": 0, "reviewer_named": true},
+   {"fixture": "ibr-pointer-first", "doc_status": "success_with_warning", "itemsWithHeading": 14, "anchored": 14, "unanchored": 0, "wrong": 0},
+   {"fixture": "intc-2002", "doc_status": "success", "itemsWithHeading": 16, "anchored": 16, "unanchored": 0, "wrong": 0},
+   {"fixture": "items-stripped", "doc_status": "ambiguous", "itemsWithHeading": 12, "anchored": 12, "unanchored": 0, "wrong": 0},
+   {"fixture": "jnj-2016", "doc_status": "success", "itemsWithHeading": 21, "anchored": 21, "unanchored": 0, "wrong": 0},
+   {"fixture": "jpm-2024", "doc_status": "ambiguous", "itemsWithHeading": 22, "anchored": 21, "unanchored": 1, "wrong": 0, "unanchored_items": ["6"], "note": "Item 6 'Reserved': heading repeats (TOC + body) and the body is EMPTY ('Item 6. Reserved' with nothing after it) -- no signal exists to disambiguate, so find_anchor correctly reports unanchored rather than guessing (hard rule 4). Items 1, 1A, 1B, 2, 3, 4, 5, 7, 7A, 8, 9, 9A -- every item round 2 shipped wrong on this fixture -- now all anchor correctly and were independently verified.", "reviewer_named": true},
+   {"fixture": "ko-1997", "doc_status": "success_with_warning", "itemsWithHeading": 15, "anchored": 15, "unanchored": 0, "wrong": 0},
+   {"fixture": "ksb-2007", "doc_status": "unsupported", "itemsWithHeading": 0, "anchored": 0, "unanchored": 0, "wrong": 0},
+   {"fixture": "malformed-html", "doc_status": "ambiguous", "itemsWithHeading": 19, "anchored": 18, "unanchored": 1, "wrong": 0, "unanchored_items": ["8"], "note": "This fixture is deliberately malformed markup. Python's html.parser (used by anchor.py's visible_text_chunks, which cross-checks the ui-anchor-contract eval case) and the browser's own much more lenient, error-correcting HTML parser structure this specific malformed document differently, so the DOM text-node layout the live browser sees for item 8 diverges from what anchor.py sees -- an honest miss in the browser, not a wrong anchor, and a disclosed limitation of using a stdlib parser as a DOM proxy rather than a defect in the algorithm itself."},
+   {"fixture": "msft-2013", "doc_status": "success", "itemsWithHeading": 20, "anchored": 20, "unanchored": 0, "wrong": 0},
+   {"fixture": "nike-2006", "doc_status": "success", "itemsWithHeading": 20, "anchored": 20, "unanchored": 0, "wrong": 0, "reviewer_named": true},
+   {"fixture": "nvda-2024", "doc_status": "success", "itemsWithHeading": 23, "anchored": 23, "unanchored": 0, "wrong": 0},
+   {"fixture": "premier-pacific-2016", "doc_status": "success", "itemsWithHeading": 20, "anchored": 20, "unanchored": 0, "wrong": 0},
+   {"fixture": "reac-2015", "doc_status": "success_with_warning", "itemsWithHeading": 20, "anchored": 20, "unanchored": 0, "wrong": 0},
+   {"fixture": "sandston-2021", "doc_status": "success_with_warning", "itemsWithHeading": 20, "anchored": 20, "unanchored": 0, "wrong": 0},
+   {"fixture": "sgrp-2019", "doc_status": "success", "itemsWithHeading": 20, "anchored": 20, "unanchored": 0, "wrong": 0},
+   {"fixture": "spans-transposed", "doc_status": "success_with_warning", "itemsWithHeading": 20, "anchored": 20, "unanchored": 0, "wrong": 0},
+   {"fixture": "spatz-2014", "doc_status": "success_with_warning", "itemsWithHeading": 20, "anchored": 20, "unanchored": 0, "wrong": 0},
+   {"fixture": "textron-2001", "doc_status": "success_with_warning", "itemsWithHeading": 15, "anchored": 15, "unanchored": 0, "wrong": 0},
+   {"fixture": "tgt-2002", "doc_status": "success_with_warning", "itemsWithHeading": 16, "anchored": 16, "unanchored": 0, "wrong": 0},
+   {"fixture": "toc-titled", "doc_status": "success", "itemsWithHeading": 20, "anchored": 20, "unanchored": 0, "wrong": 0, "reviewer_named": true},
+   {"fixture": "truncated-download", "doc_status": "failed", "itemsWithHeading": 0, "anchored": 0, "unanchored": 0, "wrong": 0},
+   {"fixture": "wfc-2008", "doc_status": "success_with_warning", "itemsWithHeading": 20, "anchored": 20, "unanchored": 0, "wrong": 0},
+   {"fixture": "wmt-2010", "doc_status": "success", "itemsWithHeading": 20, "anchored": 20, "unanchored": 0, "wrong": 0, "reviewer_named": true},
+   {"fixture": "xom-2021", "doc_status": "ambiguous", "itemsWithHeading": 21, "anchored": 21, "unanchored": 0, "wrong": 0}
+  ]
+ },
+ "python_mirror_cross_check": {
+  "note": "evals/adversarial/ui-anchor-contract.json runs the same algorithm in Python (src/sec10k/web/anchor.py) across the same 38 fixture dirs / 641 items, gated in the invariant/fast suites. 0 failures, with jpm-2024 Item 6 excluded as an honest miss by the same reasoning as the browser run. Confirms the live browser numbers are not a one-off measurement -- the algorithm's contract is pinned and will go red on a future regression even without a browser."
+ },
+ "counts": {
+  "fixed": 3,
+  "debt": 2
+ }
+}
