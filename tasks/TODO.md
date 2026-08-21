@@ -38,7 +38,6 @@ high-quality prompt records."
 
 | # | Depends | Milestone | Contents | Reviewer evidence | Validation | Status |
 |---|---------|-----------|----------|-------------------|------------|--------|
-| T14 | — | A6 — taxonomy completeness + 10-K/A stretch | per-era taxonomy diffed against the authoritative item set; 10-K/A amendment handling as stretch only | T1 T5 | every taxonomy gap becomes a case before any code (hard rule 2); 10-K/A explicitly ruled in or out in an ADR | **pr (#17)** — 921be5f (4 red / 11 assertions) → e147e15 (fast 51/51, invariant 13/13); ADR-023 (five era-label corrections, item set unchanged), ADR-024 (10-K/A ruled OUT) · **pr-reviewer RAN — 5 rounds, APPROVED**: 10 findings (0 HIGH / 5 MEDIUM / 5 LOW), 8 repaired, 0 rejected, 2 routed to debt (R3, R4); gate green every round; two circuit breakers, both cleared by human decision. Full trace `tasks/reviews/pr17-r1..r5.json` + resolutions |
 
 **Pre-submission gate** — parked by decision (2026-08-17) while the A-track
 runs. The T8 walk S1 was waiting on has now run (11/11 green).
