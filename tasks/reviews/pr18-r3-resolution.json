@@ -1,0 +1,63 @@
+{
+ "round": 3,
+ "pr": 18,
+ "task": "S3",
+ "disposition": "human-directed repair after circuit breaker",
+ "human_decision": "Willy, 2026-08-21: fix R18/R19, remove the report dumps, correct R20/R22, run the browser criterion, rerun both gates. R21 already corrected. R23-R25 remain documented debt.",
+ "gate": "pass -- invariant 15/15 = 1.000, fast 53/53 = 1.000, baseline 1.0 untouched",
+ "orchestrator_verification": "All re-run by the orchestrator, not accepted on report: both acceptance mutations now RED (.it .ttl{opacity:.35} -> floor 1.58; .it{background:var(--dim)} -> floor 1.00) with the unmutated file still green at 4.57; figure (A) re-measured at 15 red / floor 3.11 matching what the case now publishes; prune losslessness checked programmatically -- 164 files removed, 0 without a history.jsonl line; the only report the branch still adds is a rename of the one red run (score 0.9333), which ADR-025's predicate keeps.",
+ "resolutions": [
+  {
+   "id": "R18",
+   "disposition": "fixed",
+   "covered_by": "css_contrast.check_contrast now reads rule_opacity for fg_from pairs; _demo pins it",
+   "note": "Closes the reintroduction path for round-1 R1 on all 39 bound pairs."
+  },
+  {
+   "id": "R19",
+   "disposition": "fixed",
+   "covered_by": "new `row-resting` ground stacking {\"from\":\".it\"} over {\"from\":\"#sidebar\"}; 7 resting row/badge pairs moved onto it",
+   "note": "`.it` was the sixth painter the O1 ground audit missed. `none-dim` correctly stayed on panel-sidebar -- `.none` is not inside `.it`."
+  },
+  {
+   "id": "R20",
+   "disposition": "fixed",
+   "covered_by": "tasks/TODO.md",
+   "note": "14/14, 52/52 -> 15/15, 53/53, verified against a live run at HEAD."
+  },
+  {
+   "id": "R21",
+   "disposition": "fixed at the breaker",
+   "note": "Orchestrator's own failure -- the PR body and the overclaiming round-2 resolution record, both corrected before escalating."
+  },
+  {
+   "id": "R22",
+   "disposition": "fixed",
+   "covered_by": "case provenance",
+   "note": "Figure (A) re-measured 15 red / floor 3.11 (was a carried-forward 13 / 3.33). Figure (B) restated as a mutation reconstructible from committed state -- light amber-ink/ok/bad/accent overridden to the dark block's own FILL values -- measured 26 red / floor 1.28."
+  },
+  {
+   "id": "R23",
+   "disposition": "debt"
+  },
+  {
+   "id": "R24",
+   "disposition": "debt"
+  },
+  {
+   "id": "R25",
+   "disposition": "debt"
+  }
+ ],
+ "blocker_found_by_human_and_missed_by_round_3": {
+  "id": "H1",
+  "claim": "The branch carried uncited routine-gate full report dumps contrary to ADR-025, which the round-3 review did not raise.",
+  "disposition": "fixed",
+  "note": "164 pruned (24 committed on this branch plus stragglers of the same kind), ~123k lines, every one backfilled into history.jsonl first and verified present before deletion. The single red run (20260821-164154-invariant.json, score 0.9333) was correctly kept -- ADR-025 writes a full report for a red run. Worth recording that three review rounds missed this: every round was pointed at the contrast instrument, and none checked the branch against an ADR that landed mid-PR via a main merge."
+ },
+ "browser_criterion": "RUN -- tasks/reviews/pr18-browser-walk.json. No longer UNRUN.",
+ "counts": {
+  "fixed": 6,
+  "debt": 3
+ }
+}
