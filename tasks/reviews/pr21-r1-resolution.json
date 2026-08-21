@@ -1,0 +1,66 @@
+{
+ "round": 1,
+ "pr": 21,
+ "task": "S4",
+ "disposition": "all seven findings repaired, two logged as debt per the review's own routing",
+ "gate": "pass -- invariant 21/21 = 1.000, fast 59/59 = 1.000, baseline 1.0 untouched",
+ "resolutions": [
+  {
+   "id": "R1",
+   "disposition": "fixed",
+   "covered_by": "evals/adversarial/ui-capabilities-parse-content.json (expect.min_failures) + evals/fixtures/repo_hygiene/capabilities-empty-cells.md",
+   "note": "check_capabilities_parse (src/repo_hygiene/eval_adapter.py) now also asserts no works_well row has all-identical cells, every cell clears min_cell_chars, and every difficult item's term/detail clear their own minimums. Watched red against the pre-fix check directly (0 failures on the 9-row/3-entry all-placeholder fixture) and via the new case; green after (19 failures on the same fixture). Written against the V3 {term, detail} shape."
+  },
+  {
+   "id": "R2",
+   "disposition": "fixed",
+   "covered_by": "evals/adversarial/ui-typography-floor-decimal.json (expect.min_failures) + evals/fixtures/repo_hygiene/typography-floor-decimal.html",
+   "note": "check_typography_floor's regex changed from `(\\d+)px` to `([\\d.]+)px` with a float comparison. Watched red against the pre-fix regex (`re.findall` on `font-size:10.5px` returned []) and via the new case; green after (['10.5px < 11px floor'])."
+  },
+  {
+   "id": "R3",
+   "disposition": "fixed",
+   "covered_by": "evals/adversarial/ui-layout-centering-asymmetric.json (expect.min_failures) + evals/fixtures/repo_hygiene/layout-centering-asymmetric.html",
+   "note": "New _margin_centers() parses the margin/margin-inline shorthand into components and requires both inline sides to resolve to `auto`, replacing the substring search for the token `auto`. Watched red against the pre-fix regex (asymmetric `margin-inline:auto 0` and `margin:0 auto 0 0` both matched) and via the new case; green after (header and footer flagged, main -- which genuinely centres with a single `auto` -- correctly not flagged)."
+  },
+  {
+   "id": "R4",
+   "disposition": "fixed",
+   "covered_by": "src/sec10k/web/capabilities.py _demo() self-check (python3 -m src.sec10k.web.capabilities)",
+   "note": "_strip_md gained italic rules for `*text*` and `_text_`, ordered after the bold rule. A snake_case_identifier round-trip assertion pins that the underscore rule does not eat identifiers. Watched red against the pre-fix module (git-show'd copy): the real README's `*ahead*` bullet came out with asterisks still attached; green after, pinned by a real-content regression assertion in _demo()."
+  },
+  {
+   "id": "V1",
+   "disposition": "fixed",
+   "covered_by": "src/sec10k/web/static/index.html: buildSourceIndex/findAnchor/rawOffset/anchorY/itemRegion/scrollSourceToItem",
+   "note": "Cross-node, whitespace/case/entity-normalized substring search over a per-node offset index (not per-character, to stay memory-sane on multi-MB filings), translated back to a DOM (node, offset) rather than requiring one node to hold the whole heading. Two more defects surfaced live in browser verification and are fixed in the same diff: (a) every 10-K's table of contents repeats every heading near the front, so a plain first-match search always landed on the TOC link, not the body section -- disambiguated using the extractor's own item.start offset (as a fraction of normalized_text) to pick whichever source occurrence's fractional position is closest; (b) a pixel position cached at the iframe's `load` event drifted by ~62,000px once webfonts/deferred content finished reflowing -- anchors are now cached as DOM (node, offset) only, and pixel Y is recomputed fresh from the current layout on every use. Verified live (Browser tool) on aapl-2025 (HTML, item 7): scrollTop lands at 70,330, with 'Item 7. Management's Discussion and Analysis...' followed by real MD&A body text visible in the pane -- not the TOC, not the top of the document. Verified on ibm-1997 (.txt, item 7): scrollTop lands at 18,628, on the literal 'ITEM 7. MANAGEMENT'S DISCUSSION...' text inside the single giant <pre> node, not at its top (was 13 pre-fix). The unanchored path was verified by simulating a null anchor: #anchor-status reads 'unanchored -- heading not found in source' and clears once restored."
+  },
+  {
+   "id": "V2",
+   "disposition": "fixed",
+   "covered_by": "src/sec10k/web/static/index.html: itemRegion(), bindSourceScroll(), bindPaneScroll()",
+   "note": "Scroll-sync fraction now maps within the SELECTED ITEM's own [start, end) region (this item's anchor to the next resolvable item's anchor, or document end), computed fresh on every scroll tick via the same on-demand anchorY() as V1 -- not cached, for the same reflow-drift reason. Falls back to whole-document proportional only when the item has no anchor. Verified live on aapl-2025 item 7: driving pre.text to fraction 0.500 drove the source to fraction 0.4999994 WITHIN the item's own region (70,349-84,032), landing on 'Selling, General and Administrative' -- genuinely mid-Item-7 content, not the middle of the whole 155,278px document. Reverse direction (source -> pre) verified at fraction 0.2, exact round-trip. Verified on ibm-1997 (.txt) using item 1 (large enough to be scrollable, unlike the incorporation-by-reference-stub item 7 used for the V1 .txt check): fraction 0.5 -> 0.50005 within region, landing mid-paragraph in the Business narrative ('...these companies may be devoting more of their resources...')."
+  },
+  {
+   "id": "V3",
+   "disposition": "fixed",
+   "covered_by": "src/sec10k/web/capabilities.py _split_lead() + _parse_difficult() (new {term, detail} shape); index.html loadCapabilities() renders table.cap-diff with a Issue/Detail thead and a colspan=2 group-label band",
+   "note": "capabilities.py now returns each difficult-list item as {term, detail} instead of one fused string, covering both README shapes (a `- **Term.** detail...` bullet and the bare `**Heading** -- detail...` paragraph the 'Explicitly unsupported' group uses). Verified live: #cap-box's second table has a 2-column <thead> (Issue/Detail), each group renders as a spanning label row followed by term/detail rows -- e.g. 'Closed since B-freeze' band, then ['2002-2003 transitional numbering', 'listed here as unfixed until T9. ...'] as two real cells, not one ~800-char fused paragraph."
+  },
+  {
+   "id": "V4",
+   "disposition": "debt",
+   "debt_row": "tasks/TODO.md, Open debt table, 'V4: extracted-text pane and source pane are not top-aligned' (Origin: PR #21 V4)"
+  },
+  {
+   "id": "V5",
+   "disposition": "debt",
+   "debt_row": "tasks/TODO.md, Open debt table, 'V5: source pane is unobservable alongside the item pane below the 1100px breakpoint' (Origin: PR #21 V5)"
+  }
+ ],
+ "mechanism_note": "R1/R2/R3's regression cases use a new `expect.min_failures` field, read by eval_adapter.run_case for the repo_hygiene task only: when present, a case passes iff the check(s) return AT LEAST that many failures, inverting the default 'passed = no failures' scoring. This lets a case assert a check DOES catch a known-bad committed fixture (evals/fixtures/repo_hygiene/*), which is the shape hard rule 2 needs for a regex/parser fix -- proving the miss is closed, not just that the real file stays clean, which a regressed check would also do vacuously.",
+ "counts": {
+  "fixed": 6,
+  "debt": 2
+ }
+}
