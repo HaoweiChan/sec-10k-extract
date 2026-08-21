@@ -13,11 +13,22 @@ ponytail: this does NOT resolve the CSS cascade. What it guards, exactly:
   * the ground STACKS and text/ground PAIRS declared in the case JSON;
   * for a pair carrying `fg_from`/`fg_opacity_from`, that one named rule's own
     declared `color:`/`opacity:`, so a rule repointed at a different token
-    goes red instead of measuring a color the page no longer paints.
+    goes red instead of measuring a color the page no longer paints;
+  * for a ground layer written `{"from": "<selector>"}`, that rule's own
+    declared `background:`. Round-2b review found the ground side was still
+    hardcoded copies of the CSS while the text side was bound, so reverting
+    the banner chips to `transparent` left the case green at a rendered
+    4.47:1 — the very fix the grid model had just forced. Every colour-carrying
+    ground layer is now read from its rule, and a named rule that declares no
+    background raises rather than falling back to a literal.
 
 What it is blind to, and these are real holes, not hypotheticals:
 
   * an element/ground combination nobody added to the pair list;
+  * `body`'s gradient overlay — the grid lines, scanline and glow come from
+    `background-image` gradients, not a `background` colour, so those layers
+    stay declared literals. The `var(--grid)` inside them is still live, so a
+    token move is caught; a change to the gradient GEOMETRY is not;
   * a pair with no `fg_from` — its `fg` is asserted against nothing, so
     repointing that rule passes green (round-2 R13 demonstrated 1.46:1);
   * any OTHER rule that wins the cascade for a pair's element — a later
@@ -208,6 +219,23 @@ def rule_opacity(css, selector):
     return float(o.group(1)) if o else 1.0
 
 
+def rule_background(css, selector):
+    """The `background`/`background-color` declared on `selector`'s OWN rule.
+
+    Raises if the rule declares none. A ground layer that names a rule must
+    resolve from that rule or fail loudly — silently falling back to a literal
+    is exactly the hole this closes: round-2 shipped the banner chips as
+    hardcoded copies of the CSS, so reverting the rule to `transparent` left
+    the case green while the rendered ratio fell to 4.47:1.
+    """
+    m = re.search(r"(?:^|[;\s])background(?:-color)?\s*:\s*([^;]+)",
+                  _rule_body(css, selector))
+    if not m:
+        raise ValueError(f"selector {selector!r} declares no background — "
+                         f"ground layer is stale")
+    return m.group(1).strip()
+
+
 def rule_color(css, selector):
     """The `color:` value declared on `selector`'s OWN rule, else None.
 
@@ -232,12 +260,27 @@ def measure(pair, tokens):
     return round(contrast(over(fg, ground), ground), 2), ground
 
 
+def _bind_ground(on, css):
+    """Resolve a ground stack's `{"from": selector}` layers against the file.
+
+    A layer is either a literal color expression or `{"from": "<selector>"}`,
+    which reads that rule's own `background`. Binding the GROUND side matters
+    as much as `fg_from` binds the text side — a ground copied into the case
+    as a literal cannot notice its rule changing underneath it.
+    """
+    if isinstance(on, dict) and "dark" in on:
+        return {k: _bind_ground(v, css) for k, v in on.items()}
+    return [rule_background(css, layer["from"]) if isinstance(layer, dict) else layer
+            for layer in on]
+
+
 # ------------------------------------------------------------------- checks
 def check_contrast(css, pairs, minimum=4.5):
     """Every declared text/ground pair clears `minimum` in BOTH schemes."""
     dark, light = parse_tokens(css)
     pairs = [dict(p, fg_opacity=rule_opacity(css, p["fg_opacity_from"]))
              if "fg_opacity_from" in p else p for p in pairs]
+    pairs = [dict(p, on=_bind_ground(p["on"], css)) for p in pairs]
     failures, measured = [], {}
     for pair in pairs:  # a pair must still paint the token it claims to measure
         if "fg_from" in pair:
@@ -336,6 +379,40 @@ def _demo():
         {"id": "t", "fg": "var(--ink)", "on": ["var(--bg)"], "fg_from": ".ttl"}])
     assert any("paints 'var(--bg)'" in f and "measures 'var(--ink)'" in f
                for f in fails), fails
+
+    # bg_from binds the GROUND side the way fg_from binds the text side.
+    # Round-2b: the banner chips were hardcoded copies of the CSS, so reverting
+    # the rule to `transparent` left the case green at a rendered 4.47:1.
+    chip = ("body{background:hsl(0 0% 100%)}"
+            ".c{background:color-mix(in srgb,hsl(0 0% 0%) 50%,var(--bg))}")
+    assert rule_background(chip, ".c").startswith("color-mix")
+    bound = _bind_ground([{"from": "body"}, {"from": ".c"}], chip)
+    assert bound[0] == "hsl(0 0% 100%)" and bound[1].startswith("color-mix")
+    assert _bind_ground({"dark": [{"from": "body"}], "light": ["var(--bg)"]},
+                        chip) == {"dark": ["hsl(0 0% 100%)"], "light": ["var(--bg)"]}
+    try:  # a named rule with no background must fail loudly, never fall back
+        rule_background("p{color:red}", "p")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("a stale ground layer must raise, not silently pass")
+
+    # bg_from binds the GROUND side the way fg_from binds the text side.
+    # Round-2b: the banner chips were hardcoded copies of the CSS, so reverting
+    # the rule to `transparent` left the case green at a rendered 4.47:1.
+    chip = ("body{background:hsl(0 0% 100%)}"
+            ".c{background:color-mix(in srgb,hsl(0 0% 0%) 50%,var(--bg))}")
+    assert rule_background(chip, ".c").startswith("color-mix")
+    bound = _bind_ground([{"from": "body"}, {"from": ".c"}], chip)
+    assert bound[0] == "hsl(0 0% 100%)" and bound[1].startswith("color-mix")
+    assert _bind_ground({"dark": [{"from": "body"}], "light": ["var(--bg)"]},
+                        chip) == {"dark": ["hsl(0 0% 100%)"], "light": ["var(--bg)"]}
+    try:  # a named rule with no background must fail loudly, never fall back
+        rule_background("p{color:red}", "p")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("a stale ground layer must raise, not silently pass")
 
     # a ground may differ by scheme — body paints a different overlay stack in
     # light than in dark, so `on` accepts {"dark": [...], "light": [...]}
