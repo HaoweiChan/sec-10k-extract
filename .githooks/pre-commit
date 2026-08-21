@@ -1,8 +1,10 @@
 #!/bin/sh
 # Eval gate: no commit may regress the fast suite below the recorded baseline.
+# ADR-025: no --no-report here — a green run writes just its history.jsonl
+# line, a red (blocked) run also gets a full report to debug from.
 cd "$(git rev-parse --show-toplevel)" || exit 1
 [ -f evals/run.py ] || exit 0  # project removed the eval harness — no gate
-python3 -m evals.run --suite fast --baseline .eval-baseline.json --no-report
+python3 -m evals.run --suite fast --baseline .eval-baseline.json
 status=$?
 if [ $status -ne 0 ]; then
   echo ""

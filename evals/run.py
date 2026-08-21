@@ -17,6 +17,15 @@ Each task implements src/<task>/eval_adapter.py with:
 
 The runner owns: discovery, suite filtering, scoring, baseline gating,
 report history. Adapters own: how to run a case and judge it.
+
+Report policy (ADR-025): every run appends one line to
+evals/report/history.jsonl — that line is the time series. A full per-case
+report (evals/report/<ts>-<suite>.json) is written only when it earns its
+keep: --report was passed, --suite all, a --dir held-out run (never
+traceless), or the run is red (any scored case failed, or score fell below
+baseline). --no-report suppresses the full report even on red — for the
+high-frequency PostToolUse invariant hook — but never suppresses the
+history line, and never overrides a --dir run.
 """
 import argparse
 import importlib
@@ -66,10 +75,18 @@ def git_sha():
         ).stdout.strip()
         # a report's sha must not claim code the run wasn't actually on. -uno:
         # every run writes an untracked report into evals/report/, so without
-        # it the second run in a session always stamps -dirty on identical code
+        # it the second run in a session always stamps -dirty on identical
+        # code. evals/report/history.jsonl is excluded the same way: once
+        # committed it's a TRACKED file this same run is about to append a
+        # line to, so without the exclusion every run after the first would
+        # report -dirty on an otherwise-identical tree — the exact bug -uno
+        # exists to prevent, one file later. This is the one place dirty is
+        # decided; history's "sha"/"dirty" fields (main(), below) are derived
+        # from this same string so the two never disagree.
         dirty = subprocess.run(
-            ["git", "status", "--porcelain", "-uno"], cwd=ROOT, capture_output=True,
-            text=True, timeout=5, check=True,
+            ["git", "status", "--porcelain", "-uno", "--",
+             ".", ":!evals/report/history.jsonl"],
+            cwd=ROOT, capture_output=True, text=True, timeout=5, check=True,
         ).stdout.strip()
         return sha + "-dirty" if dirty else sha
     except Exception:  # git absent, not a repo, etc. — never crash the runner over this
@@ -95,7 +112,12 @@ def main():
     ap.add_argument("--suite", default="fast")
     ap.add_argument("--baseline", default=str(BASELINE))
     ap.add_argument("--update-baseline", action="store_true")
-    ap.add_argument("--no-report", action="store_true")
+    ap.add_argument("--report", action="store_true",
+                     help="force a full per-case report even on a routine green run")
+    ap.add_argument("--no-report", action="store_true",
+                     help="suppress the full report even on a red run (history line still "
+                          "written); for the high-frequency PostToolUse hook. Ignored on "
+                          "--dir runs, which always write a report")
     ap.add_argument("--dir", default=None,
                      help="discover cases from only this directory (e.g. evals/heldout), "
                           "instead of CASE_DIRS")
@@ -108,6 +130,7 @@ def main():
               "Add cases under evals/golden/ or evals/adversarial/.")
         return 0
 
+    t0 = time.monotonic()
     # A "debt" case documents a limitation we have decided NOT to fix yet. It
     # is committed, it RUNS every time, and its result is printed — but it is
     # excluded from the score, because scoring it would force the choice
@@ -134,22 +157,53 @@ def main():
 
     print(f"[eval] suite '{args.suite}': {passed}/{len(results)} = {score:.3f}"
           + (f"  (+{len(debt)} enumerated debt, unscored)" if debt else ""))
-
-    report = {"suite": args.suite, "score": score, "git_sha": git_sha(),
-              "results": results,
-              "debt": debt_results}
-    write_report = not args.no_report
-    if args.no_report and args.dir:
-        # held-out/--dir runs must never be traceless (docs/evals/evaluation-strategy.md)
-        print("[eval] --no-report ignored for --dir runs: writing report anyway")
-        write_report = True
-    if write_report:
-        REPORT_DIR.mkdir(parents=True, exist_ok=True)
-        stamp = time.strftime("%Y%m%d-%H%M%S")
-        (REPORT_DIR / f"{stamp}-{args.suite}.json").write_text(json.dumps(report, indent=2))
+    wall_s = round(time.monotonic() - t0, 2)
 
     baseline_path = Path(args.baseline)
     baseline = json.loads(baseline_path.read_text()) if baseline_path.exists() else {}
+    is_red = passed < len(results) or (args.suite in baseline and score < baseline[args.suite])
+
+    # Report policy (ADR-025): a full per-case dump is expensive (one JSON per
+    # case) and most runs are routine — only worth keeping in full when it's
+    # the record of a `--suite all` sweep, a held-out run (never traceless,
+    # per docs/evals/evaluation-strategy.md), a red run (debugging needs the
+    # detail), or explicitly requested with --report. Every OTHER run still
+    # gets exactly one line in history.jsonl — that line is the time series.
+    write_full = args.report or args.suite == "all" or bool(args.dir) or is_red or args.update_baseline
+    if args.no_report:
+        if args.dir:
+            print("[eval] --no-report ignored for --dir runs: writing report anyway")
+        else:
+            write_full = False
+
+    sha = git_sha()
+    dirty = bool(sha) and sha.endswith("-dirty")
+    short_sha = (sha[:-len("-dirty")] if dirty else sha)[:7] if sha else None
+
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    report_name = None
+    if write_full:
+        report = {"suite": args.suite, "score": score, "git_sha": sha,
+                   "results": results, "debt": debt_results}
+        report_name = f"{stamp}-{args.suite}.json"
+        (REPORT_DIR / report_name).write_text(json.dumps(report, indent=2))
+
+    history_line = {
+        "ts": stamp, "suite": args.suite, "sha": short_sha, "dirty": dirty,
+        "passed": passed, "total": len(results), "score": round(score, 4),
+        "wall_s": wall_s,
+        # structurally zero, not measured: no paid dependency exists anywhere
+        # in this pipeline (metric 10 / ADR-020).
+        "cost_usd": 0.0,
+        "report": report_name,
+        "debt_count": len(debt),
+    }
+    if args.dir:
+        history_line["dir"] = args.dir
+    with (REPORT_DIR / "history.jsonl").open("a") as f:
+        f.write(json.dumps(history_line) + "\n")
+
     if args.update_baseline:
         baseline[args.suite] = score
         baseline_path.write_text(json.dumps(baseline, indent=2) + "\n")

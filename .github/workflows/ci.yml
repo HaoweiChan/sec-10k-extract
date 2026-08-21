@@ -40,7 +40,7 @@ jobs:
         with:
           python-version: '3.11'
       # invariants are absolute: the runner requires 100%, no baseline involved
-      - run: python3 -m evals.run --suite invariant --no-report
+      - run: python3 -m evals.run --suite invariant
 
   fast-eval:
     runs-on: ubuntu-latest
@@ -49,5 +49,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      # compares against .eval-baseline.json — the same gate as .githooks/pre-commit
-      - run: python3 -m evals.run --suite fast --no-report
+      # compares against .eval-baseline.json — the same gate as .githooks/pre-commit.
+      # --report (ADR-025): this is the report-of-record run for main at head,
+      # so it writes the full per-case report even though the gate is green.
+      - run: python3 -m evals.run --suite fast --report

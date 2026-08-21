@@ -1,13 +1,15 @@
 """Eval adapter for repo_hygiene — structural checks on the repo's own
-artifacts (specs/decisions/, the inspector stylesheet), not on filing
-extraction. Case shape:
+artifacts (specs/decisions/, evals/report/ citations, the inspector
+stylesheet), not on filing extraction. Case shape:
 
-    "task": "repo_hygiene"
-    "input": {"checks": ["adr_headers", "adr_index"]}   # default if omitted
+    "task": "repo_hygiene",
+    "input": {"checks": ["adr_headers", "adr_index"]}   # names below, in CHECKS
 
-Each check name maps to a function in CHECKS. The ADR checks need no case
-input (there is one specs/decisions/ tree); `ui_stylesheet` is case-declared,
-because WHICH text sits on WHICH ground is the reviewable part.
+Each check name maps to a function in CHECKS, so one adapter can back several
+distinct invariant cases (ADR-025 added report_citations; S3 added
+ui_stylesheet). The ADR and citation checks need no case input — there is one
+specs/decisions/ tree and one evals/report/ — while `ui_stylesheet` is
+case-declared, because WHICH text sits on WHICH ground is the reviewable part.
 """
 import re
 from pathlib import Path
@@ -18,6 +20,12 @@ UI_STYLESHEET = "src/sec10k/web/static/index.html"
 
 ROOT = Path(__file__).resolve().parents[2]
 DECISIONS = ROOT / "specs" / "decisions"
+REPORT_DIR = ROOT / "evals" / "report"
+# same locations ADR-025's prune treated as "outside evals/report/" — a
+# citation anywhere else is a report of record and must resolve on disk
+CITE_SCAN = ["docs", "specs", "tasks", "README.md", "src", "evals/golden",
+             "evals/adversarial", "evals/heldout", "prompts", ".github"]
+REPORT_REF_RE = re.compile(r"evals/report/([0-9]{8}-[0-9]{6}-[A-Za-z0-9_]+\.json)")
 
 
 def check_adr_headers():
@@ -64,6 +72,26 @@ def check_index():
     return bad
 
 
+def check_report_citations():
+    """Every evals/report/<ts>-*.json cited outside evals/report/ must exist
+    on disk — the invariant a prune (ADR-025) must never violate."""
+    bad = []
+    for rel in CITE_SCAN:
+        p = ROOT / rel
+        files = [p] if p.is_file() else (p.rglob("*") if p.is_dir() else [])
+        for f in files:
+            if not f.is_file():
+                continue
+            try:
+                text = f.read_text(errors="ignore")
+            except Exception:
+                continue
+            for name in REPORT_REF_RE.findall(text):
+                if not (REPORT_DIR / name).exists():
+                    bad.append(f"{f.relative_to(ROOT)}: cites missing evals/report/{name}")
+    return bad
+
+
 def check_ui_stylesheet(case):
     """WCAG AA over the inspector's token block + the .it selector-scoping rule.
 
@@ -86,6 +114,7 @@ def check_ui_stylesheet(case):
 CHECKS = {
     "adr_headers": lambda case: check_adr_headers(),
     "adr_index": lambda case: check_index(),
+    "report_citations": lambda case: check_report_citations(),
     "ui_stylesheet": check_ui_stylesheet,
 }
 
