@@ -1,0 +1,82 @@
+{
+ "round": 1,
+ "pr": 18,
+ "task": "S3",
+ "gate": "pass -- invariant 14/14 = 1.000, fast 52/52 = 1.000, baseline 1.0 untouched",
+ "orchestrator_verification": "Every implementer claim was re-run by the orchestrator before acceptance: gate both suites; per-scheme floors via run_case; churn via git diff --numstat; the red-watch replayed against `git show 3ee3871:src/sec10k/web/static/index.html` (8 pairs red, floor 3.52) and against a mutation stripping `:not(.it)` (selector check fires).",
+ "resolutions": [
+  {
+   "id": "R1",
+   "disposition": "fixed",
+   "covered_by": "evals/adversarial/ui-contrast-and-specificity.json pairs src-idle/src-ok/src-warn/src-amb/src-bad, badge-missing-selected",
+   "note": "Published minima replaced with values quoted from the check: 4.88:1 dark (badge-missing-selected), 4.57:1 light (badge-ibr-hover). Fixes in the token block only: light --dim 40%->38%, dark --bad 61%->66%, opacity:.85 dropped from `#banner .src`."
+  },
+  {
+   "id": "R2",
+   "disposition": "fixed",
+   "covered_by": "git diff main...task/S3 --numstat -- src/sec10k/web/static/index.html",
+   "note": "Row restated to +102/-37 with the reproducing command named. Number moved three times during repair; see round-2 note."
+  },
+  {
+   "id": "R3",
+   "disposition": "fixed",
+   "covered_by": "evals/adversarial/ui-contrast-and-specificity.json + src/repo_hygiene/css_contrast.py",
+   "note": "Watched red first, verified by the orchestrator: 8 pairs red at floor 3.52 on the pre-fix stylesheet, and the selector check fires when `:not(.it)` is stripped. Case runs in BOTH suites (invariant 13->14, fast 51->52). Also caught badge-missing-selected 4.21 dark, which neither review round found."
+  },
+  {
+   "id": "R4",
+   "disposition": "fixed by amendment",
+   "covered_by": "tasks/TODO.md S3 Validation cell",
+   "note": "The browser criterion could not be met -- the implementer cannot drive a browser -- so it is marked UNRUN rather than quietly dropped. The unreproducible `4 extracted / 17 missing / 2 omitted -> ambiguous` upload claim was DELETED, not restated: the synthetic fixture was never committed and cannot be reconstructed. The aapl-2025 claim was kept and now points at the golden case that proves it."
+  },
+  {
+   "id": "R5",
+   "disposition": "fixed",
+   "covered_by": "src/sec10k/web/static/index.html:35,47",
+   "note": "`color-scheme:dark` / `color-scheme:light` folded into the two existing :root blocks. Orchestrator decision: this PR flipped the default scheme, so light UA controls on a near-black canvas are a regression it introduced, on the default path, in the upload mode's primary control. Parser verified unaffected (the `--` prefix is mandatory) and pinned by a new _demo assertion."
+  },
+  {
+   "id": "R6",
+   "disposition": "fixed by amendment",
+   "covered_by": "tasks/TODO.md S3 Contents cell",
+   "note": "Fonts deliberately NOT self-hosted. The false claim was the word 'self-contained'; the cell now names the Google Fonts stylesheet as the page's one outbound dependency and states the ui-monospace fallback."
+  },
+  {
+   "id": "R7",
+   "disposition": "debt",
+   "became": "tasks/TODO.md open-debt row 'Five LOW presentation findings from the S3 restyle'"
+  },
+  {
+   "id": "R8",
+   "disposition": "debt",
+   "became": "tasks/TODO.md open-debt row 'Five LOW presentation findings from the S3 restyle'"
+  },
+  {
+   "id": "R9",
+   "disposition": "debt",
+   "became": "tasks/TODO.md open-debt row 'Five LOW presentation findings from the S3 restyle'"
+  },
+  {
+   "id": "R10",
+   "disposition": "debt",
+   "became": "tasks/TODO.md open-debt row 'Five LOW presentation findings from the S3 restyle'"
+  },
+  {
+   "id": "R11",
+   "disposition": "debt",
+   "became": "tasks/TODO.md open-debt row 'Five LOW presentation findings from the S3 restyle'"
+  }
+ ],
+ "debt_filed": [
+  "Five LOW presentation findings from the S3 restyle (R7-R11)",
+  "button:disabled at 2.20:1 deliberately excluded from the enforced set",
+  "The contrast check's two ceilings",
+  "tasks/TODO.md may carry more cell-count defects"
+ ],
+ "counts": {
+  "fixed": 4,
+  "fixed_by_amendment": 2,
+  "rejected": 0,
+  "debt": 5
+ }
+}
