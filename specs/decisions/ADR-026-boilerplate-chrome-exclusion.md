@@ -6,7 +6,7 @@ T8 feature freeze (`tasks/TODO.md`, **Freeze guard**), on the pattern
 
 **Ruling**: boilerplate chrome detection ships as an **opt-in annotation, not an edit**. `extract_items(path, exclude_boilerplate=True)` adds one envelope key, `boilerplate` — a list of `{start, end, kind}` runs into `normalized_text`. `normalized_text` and every item offset are byte-for-byte identical with the flag on and off; the stripped view is a derived string produced on demand by `src/sec10k/boilerplate.strip_chrome()` and is never stored.
 **Because**: the only way to "remove" text and still satisfy INV-S2 is to not remove it. Rewriting the text moves every offset after each removal, which breaks INV-S2 for exclusion-on runs; carrying a second, stripped copy of the document in the envelope is the second-copy drift hazard the contract already refuses for item text ("there is deliberately no separate `text` field to drift from them"). Spans cost nothing, are addressable, and make offset invariance true by construction rather than by care.
-**Enforced by**: `evals/adversarial/boilerplate-chrome-detected.json`, `evals/adversarial/boilerplate-near-miss.json`, `evals/adversarial/boilerplate-txt-chrome.json`, `evals/adversarial/boilerplate-offsets-invariant.json` (`invariant` suite), `src/sec10k/boilerplate.py::_demo`
+**Enforced by**: the five `evals/adversarial/boilerplate-*.json` cases (`boilerplate-offsets-invariant` in the `invariant` suite) and `src/sec10k/boilerplate.py::_demo`, which `.github/workflows/ci.yml`'s unit-tests job runs — see §g.
 
 ---
 
@@ -245,8 +245,11 @@ are accepted deliberately.
   number has prose before it and nothing after, so no boundary is adjacent.
   Pinned in `boilerplate._demo` so it stays a known shape rather than a
   surprise.
-- **Typographic rules and separators** (ge-1994's `- -----…` lines, 37×) are
-  arguably chrome and are not detected. CV 0.82, above the gate.
+- **Typographic rules and separators** are arguably chrome and are not
+  detected: ge-1994's rule line — `- ` followed by 75 dashes, 77 characters —
+  occurs 37× at CV 0.82, above the gate. Pinned by
+  `boilerplate-txt-chrome`, whose check first shipped naming a 70-character
+  string that occurs zero times and therefore pinned nothing (PR #25 R3).
 
 ### f2. What was NOT done, and why
 
@@ -263,22 +266,37 @@ No fixture was added. Every case in §g runs against filings already committed �
 33 real committed** populations ADR-021 §b8 defines, and every figure
 `docs/analysis-report.md` derives from them, do not move. The S3 row's precedent for synthesizing input outside `evals/fixtures/`
 was available and was not needed: the near-miss material this feature has to be
-falsified against (`$` × 1,058, `Total` × 39, 2,063 bare-number lines, a
+falsified against (`$` × 1,058, `Total` × 39, 2,045 bare-number lines, a
 repeated bare `Item 8`) is already in the committed corpus, and real material
 is better adversarial input than anything hand-written.
 
 ## g. Enforcement
 
-Four cases, both directions, plus the module self-check.
+Five cases, both directions, plus the module self-check. Rewritten in PR #25's
+round-1 repair; the first version of this table overstated two rows, which is
+recorded here rather than quietly fixed.
 
-| case | suite | asserts |
-|---|---|---|
-| `boilerplate-chrome-detected` | fast | msft-2013: `Table of Contents` is `running_head` ≥ 90×, page numbers fire, and with the flag OFF the envelope carries no `boilerplate` key at all |
-| `boilerplate-near-miss` | fast | cvx-2015: detection reports **nothing** — `$`, `)`, `Total`, `2015`, and 2,063 bare-number lines all stay; msft-2013: `Total`, `PART II`, `Item 8`, `Item 7`, `PART I` are never chrome |
-| `boilerplate-txt-chrome` | fast | ge-1994: `<PAGE>`/`<TABLE>`/`<CAPTION>`/`<S>`-`<C>` lines are `edgar_chrome`; the Item 1 heading text is not |
-| `boilerplate-offsets-invariant` | **invariant** | msft-2013 and ge-1994: `normalized_text`, `items`, `warnings`, `doc_status` are byte-identical with the flag on and off (INV-S2 both ways) |
+| case | fixture | suite | asserts |
+|---|---|---|---|
+| `boilerplate-chrome-detected` | msft-2013 | fast | `Table of Contents` fires as `running_head` (90–100×) and page numbers with it; `Total`, `PART II`, `PART I`, `Item 8`, `Item 7`, `Item 1`, `(In millions)` never do — the fire and refrain directions on one document. Also the stripped view: 2,002 characters removed, exactly the span total, `Table of Contents` gone from it (R2) |
+| `boilerplate-near-miss` | cvx-2015 | fast | detection reports **nothing at all** — `$` × 1,058, `)` × 860, `Total`, `2015`, and 2,045 bare-number lines all stay. Also the `MAX_GAP_CV` boundary: this case goes red at 0.84, the lowest CV that admits a false positive anywhere in the corpus |
+| `boilerplate-txt-chrome` | ge-1994 | fast | `<PAGE>`/`<TABLE>`/`<CAPTION>`/`<S>`-`<C>` lines are `edgar_chrome`; `Item 1. Business`, `GECS`, `GE` and the 77-character rule line are not. Carries the **txt-era** half of the offset-invariance criterion via its own `offsets_invariant_under_exclusion` check |
+| `boilerplate-section-heads` | jpm-2024 | fast | the `MIN_SPREAD` gate: `Notes to consolidated financial statements` (73×, CV 0.28 — more regular than the real page header) and `2024` are never chrome, and the case goes red at `MIN_SPREAD` 0.40. Also the **above** half of page-number adjacency: 286 page numbers, halving to 143 if the rule only looks below (R4, R5) |
+| `boilerplate-offsets-invariant` | msft-2013 | **invariant** | `normalized_text`, `items`, `warnings`, `doc_status` byte-identical with the flag on and off, and the `boilerplate` key present on exactly one side (INV-S2 both ways) |
+
+Two corrections to the row set above, both from PR #25 round 1: this table
+previously credited `boilerplate-offsets-invariant` with running ge-1994 as
+well as msft-2013 — it runs msft-2013 only, and the txt-era half is
+`boilerplate-txt-chrome`'s — and `boilerplate-txt-chrome`'s rule-line check
+named a 70-character string that occurs zero times in the filing, so it pinned
+nothing until the value was corrected (R3).
 
 `src/sec10k/boilerplate.py::_demo` pins the synthetic direction the fixtures
 cannot: that a clustered repeat does not fire, that under `MIN_REPEATS`
 nothing fires however regular, that a 4-digit year is not a page number, that
 spans never overlap, and that `strip_chrome` windows correctly on one item.
+**It is run by `.github/workflows/ci.yml`'s unit-tests job** — added in PR #25
+(R1), which measured what the claim was worth while it was not: `MIN_REPEATS`
+8→20, `MIN_SPREAD` 0.70→0.95, `PAGE_DIGITS` 3→4 and a no-op `strip_chrome` all
+left the eval gate 33/33 and 74/74 green with only `_demo` red, and nothing
+automated ran `_demo`.

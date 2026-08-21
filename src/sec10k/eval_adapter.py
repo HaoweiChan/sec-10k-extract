@@ -250,6 +250,35 @@ def eval_check(result, chk, path=None):
                 return f"boilerplate run {b} does not end at a line end"
             if "\n" in text[b["start"]:b["end"] - 1]:
                 return f"boilerplate run {b} spans more than one line"
+    elif t == "boilerplate_stripped":
+        # PR #25 R2: the three checks above all read the SPANS, so replacing
+        # strip_chrome's body with `return text[start:end]` — a total no-op —
+        # left every suite green. This one derives the stripped view, which is
+        # the "a stripped run is reconstructible" half of S6's acceptance.
+        if "boilerplate" not in result:
+            return "no boilerplate in result (was exclude_boilerplate set?)"
+        from src.sec10k.boilerplate import strip_chrome
+        text, spans = result["normalized_text"], result["boilerplate"]
+        stripped = strip_chrome(text, spans)
+        removed = len(text) - len(stripped)
+        # the spans and the removal are the same set of characters: nothing
+        # extra came out, and nothing the envelope named stayed in
+        want = sum(b["end"] - b["start"] for b in spans)
+        if removed != want:
+            return f"stripped view removed {removed} chars, spans total {want}"
+        if "removed_chars" in chk and removed != chk["removed_chars"]:
+            return f"stripped view removed {removed} chars != {chk['removed_chars']}"
+        for v in chk.get("not_contains", []):
+            if v in stripped:
+                return f"stripped view still contains {v!r}"
+        if spans:
+            b = spans[0]
+            # the window form — how a caller strips ONE item's body — and the
+            # reconstruction identity: the original run is still addressable
+            if strip_chrome(text, spans, start=b["start"], end=b["end"]) != "":
+                return "a chrome run is not fully removed from its own window"
+            if not text[b["start"]:b["end"]].strip():
+                return "chrome run does not reconstruct to its original text"
     elif t == "offsets_invariant_under_exclusion":
         # S6's acceptance criterion, asserted as the equality ADR-026 §d claims
         # it is: run the same file both ways and compare. Self-contained — it

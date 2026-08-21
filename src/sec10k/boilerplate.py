@@ -28,7 +28,8 @@ part of the line). Three kinds, resolved in this order, one kind per line:
   page_number   a line that is only a number (optionally 'Page N' or '- N -'),
                 ADJACENT to a boundary line — an edgar_chrome or running_head
                 line, skipping blanks. Bare numbers on their own are table
-                cells: cvx-2015 has 2,063 of them and no page numbers.
+                cells: cvx-2015 has 2,045 of them (lines where str.isdigit() is
+                true) and no page numbers.
 
 Self-check: python3 -m src.sec10k.boilerplate
 """
@@ -36,14 +37,19 @@ import re
 import statistics
 from collections import defaultdict
 
-# Thresholds. Provenance for each is ADR-026 §c, measured over the 24 real
-# EDGAR filings in evals/fixtures/ (the self-created mutants are excluded —
-# they are copies of filings already counted).
+# Thresholds. ADR-026 §c owns the corpus definition, the sweep and every
+# figure derived from them; it is deliberately not restated here. PR #25 R6
+# found this comment saying "24 real EDGAR filings" where §c says 28 — a
+# second copy of a number drifts, so there is now one copy.
 MIN_REPEATS = 8    # measured: smallest TRUE chrome run is 8, first false
                    # positive is at 6 — nothing occurs exactly 7 times, so 7
                    # and 8 are the same gate on this corpus (§c1, not "the
                    # boundary": two counts of margin, one true run below it)
-MAX_GAP_CV = 0.60  # measured: chrome tops out at 0.58, nearest non-chrome is 0.84
+MAX_GAP_CV = 0.60  # measured: chrome tops out at 0.58, nearest non-chrome is 0.84.
+                   # Raising it to anything below 0.84 changes NO output on any
+                   # fixture, so no case can go red there and none should be
+                   # written — 0.84 is where it starts being wrong, and
+                   # boilerplate-near-miss goes red at exactly 0.84 (PR #25 R4).
 MIN_SPREAD = 0.70  # measured: chrome bottoms out at 0.82, nearest non-chrome is 0.64
 PAGE_DIGITS = 3    # judgment call, NOT measured — see ADR-026 §c4
 

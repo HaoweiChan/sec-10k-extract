@@ -388,6 +388,26 @@ def test_boilerplate_checks():
         assert reason is not None and why in reason, (why, reason)
     assert eval_check(off, {"type": "boilerplate_spans_sane"}) is not None
 
+    # boilerplate_stripped (PR #25 R2). The span/removal equality is the branch
+    # that catches a no-op strip_chrome, and it catches over-removal too.
+    ok = {"type": "boilerplate_stripped", "removed_chars": 21,
+          "not_contains": ["Table of Contents"]}
+    assert eval_check(r, ok) is None, eval_check(r, ok)
+    assert eval_check(r, {"type": "boilerplate_stripped", "removed_chars": 99}) is not None
+    assert eval_check(r, {"type": "boilerplate_stripped",
+                          "not_contains": ["body prose here"]}) is not None
+    assert eval_check(off, {"type": "boilerplate_stripped"}) is not None
+    # a span that claims more than strip_chrome removes -> the equality fires.
+    # 0..18 and 34..37 are 18 + 3 = 21 chars; widening one span's END past a
+    # line boundary is caught by spans_sane, so the honest way to break the
+    # equality here is a duplicate span, which strip_chrome skips as already
+    # consumed while the sum still counts it twice.
+    dup = {"normalized_text": text, "items": [],
+           "boilerplate": [run(0, 18, "running_head"), run(0, 18, "running_head"),
+                           run(34, 37, "page_number")]}
+    reason = eval_check(dup, {"type": "boilerplate_stripped"})
+    assert reason is not None and "spans total" in reason, reason
+
 
 
 TESTS = [

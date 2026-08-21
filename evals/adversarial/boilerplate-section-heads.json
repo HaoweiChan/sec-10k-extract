@@ -1,0 +1,27 @@
+{
+  "id": "boilerplate-section-heads",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {"path": "evals/fixtures/jpm-2024/filing.htm", "exclude_boilerplate": true},
+  "expect": {
+    "checks": [
+      {"type": "boilerplate", "value": "JPMorgan Chase & Co./2024 Form 10-K", "kind": "running_head", "min": 280, "max": 290},
+      {"type": "boilerplate", "kind": "page_number", "min": 280, "max": 290},
+      {"type": "boilerplate", "kind": "edgar_chrome", "max": 0},
+
+      {"type": "boilerplate", "value": "Notes to consolidated financial statements", "max": 0},
+      {"type": "boilerplate", "value": "2024", "max": 0},
+      {"type": "boilerplate", "value": "Part I", "max": 0},
+      {"type": "boilerplate", "value": "Management’s discussion and analysis", "max": 0},
+      {"type": "boilerplate", "value": "December 31,", "max": 0},
+      {"type": "boilerplate", "value": "Year ended December 31,", "max": 0},
+      {"type": "boilerplate", "value": "Total", "max": 0},
+
+      {"type": "boilerplate_spans_sane"},
+      {"type": "boilerplate_stripped", "not_contains": ["JPMorgan Chase & Co./2024 Form 10-K"]},
+      {"type": "verbatim"},
+      {"type": "no_overlap_ordered"}
+    ]
+  },
+  "provenance": "Added in PR #25 round-1 repair, closing findings R4 and R5 together -- both are holes in the same fixture gap, and jpm-2024 is the only committed filing that exhibits either shape. The pre-repair near-miss corpus was msft-2013 + cvx-2015, whose worst near-miss spreads are 0.35 and 0.26, so neither could constrain MIN_SPREAD anywhere near its 0.70 value.\n\nMeasured 2026-08-22 over jpm-2024 normalized_text (1,213,298 chars, 20,550 lines): 572 chrome spans, 286 running_head + 286 page_number, exactly one distinct running-head text.\n\nR4 -- the MIN_SPREAD threshold was pinned by nothing. Every probe below, with its measured count / gap CV / spread and the gate that actually rejects it:\n  'Notes to consolidated financial statements'  73x  CV 0.28  spread 0.42  -> SPREAD\n  '2024'                                         8x  CV 0.57  spread 0.64  -> SPREAD\n  'Part I'                                      20x  CV 0.26  spread 0.14  -> SPREAD\n  'Management's discussion and analysis'        38x  CV 1.79  spread 0.32  -> CV (and spread)\n  'December 31,'                                35x  CV 1.46  spread 0.76  -> CV\n  'Year ended December 31,'                     66x  CV 2.31  spread 0.78  -> CV\n  'Total'                                       10x  CV 1.75  spread 0.79  -> CV\nThe first two are the ones that carry R4: they are the only probes here whose CV already clears MAX_GAP_CV, so lowering MIN_SPREAD to 0.40 admits exactly them -- 73 + 8 = 81 new false spans, 572 -> 653 -- and turns this case red. 'Notes to consolidated financial statements' is the sharp one: CV 0.28 is MORE regular than the real page header's 0.37, so nothing but spread tells them apart. The four CV-rejected probes are near-miss pins on the other axis and are labelled as such rather than credited to spread. Verified red at MIN_SPREAD = 0.40, green at 0.70. ADR-026 f1 records these section-level heads as a deliberate recall loss; this case is what makes that a decision rather than an accident, and it is what c6's 'zero false positives' rests on for this filing.\n\nR5 -- the 'above' half of the page-number adjacency rule (src/sec10k/boilerplate.py, `kinds.get(neighbour(i, -1)) or kinds.get(neighbour(i, 1))`) was unexercised: msft-2013 (94) and ge-1994 (392), the only fixtures the other cases run, are unchanged by dropping it, and boilerplate._demo is blind to it because its synthetic pages happen to carry a head below every number. jpm-2024 puts its page number ABOVE the running head, so the below-only mutation halves the count 286 -> 143 and the min-280 page_number check goes red. That check therefore carries R5 on its own. Bands (280-290) rather than exact counts, for the reason given in boilerplate-chrome-detected's provenance.\n\nedgar_chrome max 0: SGML furniture cannot survive iXBRL normalization, so a nonzero count would mean the furniture regex had started matching normalized prose. boilerplate_stripped carries the R2 property on a second, much larger document -- it asserts the span/removal equality rather than a hard character count, because that count is what the msft case pins."
+}
