@@ -15,9 +15,13 @@ import re
 from pathlib import Path
 
 from . import css_contrast
+from src.sec10k.web import anchor as web_anchor
 from src.sec10k.web import capabilities as web_capabilities
+from src.sec10k.web.view import build_view
+from src.sec10k.extract import extract_items
 
 UI_STYLESHEET = "src/sec10k/web/static/index.html"
+FIXTURES = "evals/fixtures"
 
 ROOT = Path(__file__).resolve().parents[2]
 DECISIONS = ROOT / "specs" / "decisions"
@@ -229,14 +233,87 @@ def check_capabilities_parse(case):
         if short:
             bad.append(f"works_well row {i}: cell(s) under {min_cell_chars} "
                        f"chars (placeholder-shaped): {short}")
+    # R8: a bare heading-with-inline-content group's one item has no
+    # "term" key at all (a spanning descriptive row, not a fake term/detail
+    # pair) — only check the term floor when a term is actually present.
     thin = [it for it in diff_items
-            if len(it["term"]) < min_term_chars or len(it["detail"]) < min_detail_chars]
+            if ("term" in it and len(it["term"]) < min_term_chars)
+            or len(it["detail"]) < min_detail_chars]
     if thin:
         bad.append(f"{len(thin)} difficult item(s) with a term under "
                    f"{min_term_chars} chars or detail under {min_detail_chars} "
                    f"chars (placeholder-shaped): {thin}")
 
     return bad, {"works_well_rows": len(works), "difficult_entries": len(diff_items)}
+
+
+def _fixture_file(d):
+    """A fixture dir's single filing file, or None if it doesn't have
+    exactly one — mirrors app.py's `_fixture_file`, without the traversal
+    guard this read-only check doesn't need."""
+    files = [f for f in d.iterdir() if f.is_file()]
+    return files[0] if len(files) == 1 else None
+
+
+def check_anchor_contract(case):
+    """For every committed filing fixture, every extracted item's own
+    `heading_text` must be locatable in that filing's ORIGINAL source text
+    by the SAME algorithm the inspector's compare pane uses client-side
+    (src/sec10k/web/anchor.py mirrors index.html's normalizeNode/
+    buildSourceIndex/findAnchor) — i.e. `find_anchor` must not return None.
+
+    This pins the anchor CONTRACT across the whole fixture set even though
+    the DOM half (iframe, TreeWalker, getBoundingClientRect) cannot be
+    reached from Python (PR #21 round 2, V1). Watched red against the
+    round-1 algorithm (`find_anchor_frac`, kept in anchor.py for exactly
+    this): on jpm-2024 it locks onto the front cross-reference table for
+    several items, and pinning that mis-selection against body agreement
+    scores below AGREEMENT_MIN — the same "confidently wrong" failure the
+    live browser walk reproduced. Green against `find_anchor` (body
+    agreement), the algorithm actually shipped.
+    """
+    inp = case.get("input", {})
+    fixtures_dir = ROOT / inp.get("fixtures_dir", FIXTURES)
+    bad = []
+    checked_items = 0
+    for d in sorted(p for p in fixtures_dir.iterdir() if p.is_dir()):
+        f = _fixture_file(d)
+        if f is None:
+            continue  # not a single-file filing fixture (e.g. repo_hygiene/)
+        is_html = f.suffix.lower() in (".htm", ".html")
+        try:
+            result = extract_items(str(f))
+        except Exception as e:
+            bad.append(f"{d.name}: extract_items raised {type(e).__name__}: {e}")
+            continue
+        view = build_view(result)
+        raw = f.read_text(errors="ignore")
+        chunks = web_anchor.visible_text_chunks(raw, is_html)
+        index_text, _nodes = web_anchor.build_source_index(chunks)
+        for it in view["items"]:
+            heading = it.get("heading_text")
+            if not heading:
+                continue  # no heading recorded for this item — nothing to locate
+            item_text = it.get("text") or ""
+            needle = web_anchor.core_of(heading)
+            has_body = bool(web_anchor.core_of(item_text)[len(needle):]) if needle else False
+            multi = index_text.count(needle) > 1 if needle else False
+            checked_items += 1
+            anchor = web_anchor.find_anchor(index_text, heading, item_text)
+            if anchor is None and (has_body or not multi):
+                # An honest miss is only EXPECTED when the heading repeats
+                # (a TOC/cross-reference entry exists to confuse it with)
+                # AND the item has no body at all to disambiguate with (e.g.
+                # jpm-2024 Item 6 "Reserved" — heading appears twice, body is
+                # empty, so no signal distinguishes the two and `find_anchor`
+                # correctly refuses to guess). Anything else failing to
+                # anchor — a single occurrence that still doesn't match, or
+                # a real body that still scores below threshold — is a
+                # genuine contract violation.
+                bad.append(f"{d.name} item {it.get('item')}: heading_text "
+                          f"{heading!r} not anchorable in source")
+    return bad, {"fixtures_checked": len(list(sorted(p for p in fixtures_dir.iterdir() if p.is_dir()))),
+                "items_checked": checked_items}
 
 
 CHECKS = {
@@ -247,6 +324,7 @@ CHECKS = {
     "typography_floor": check_typography_floor,
     "layout_centering": check_layout_centering,
     "capabilities_parse": check_capabilities_parse,
+    "anchor_contract": check_anchor_contract,
 }
 
 
@@ -265,7 +343,19 @@ def run_case(case):
     # decimal font-size / an asymmetric margin / an emptied table needs a
     # fixture proving the miss is fixed, not just a fixture proving the real
     # file is clean, which a regressed check would also pass vacuously).
-    # `expect.min_failures` inverts scoring for that one case only.
-    min_failures = case.get("expect", {}).get("min_failures")
-    passed = len(failures) >= min_failures if min_failures is not None else not failures
+    # `expect.min_failures`/`max_failures` invert scoring for that one case.
+    # min_failures ALONE is a floor, not an exact count (PR #21 round-2 R5):
+    # a regressed check that ALSO over-fires on something it must not flag
+    # (e.g. `main`, which genuinely centres, in the layout-centering-
+    # asymmetric fixture) still clears the floor and reports green, hiding
+    # exactly the false positive the fixture's own triage note promises is
+    # excluded. Pairing it with max_failures pins an EXACT count, so both a
+    # regressed miss (too few) and a regressed over-fire (too many) go red.
+    expect = case.get("expect", {})
+    min_failures, max_failures = expect.get("min_failures"), expect.get("max_failures")
+    if min_failures is not None or max_failures is not None:
+        passed = ((min_failures is None or len(failures) >= min_failures) and
+                  (max_failures is None or len(failures) <= max_failures))
+    else:
+        passed = not failures
     return {"passed": passed, "failures": failures, **info}

@@ -108,6 +108,14 @@ def _parse_difficult(section):
     detail that follows, rather than kept as one fused string (V3): the
     panel renders these as separate table columns, so a reader can scan
     issues without reading full paragraphs.
+
+    A bare heading-with-inline-content paragraph (no `- ` bullets under it
+    at all -- the README's "Explicitly unsupported" group is the one case
+    of this shape) has no independent term of its own: `_split_lead` would
+    hand back the group's OWN heading as "the term", duplicating the band
+    already rendered above it beside one long paragraph (R8, PR #21 round
+    3). That shape gets a `{"detail": ...}` item with no "term" key at all,
+    rendered as a single spanning descriptive row instead of a fake pair.
     """
     blocks = re.split(r"\n\s*\n", section.strip())
     groups, current = [], None
@@ -135,8 +143,7 @@ def _parse_difficult(section):
         current = {"heading": heading, "items": []}
         groups.append(current)
         if rest:
-            term, detail = _split_lead(joined)
-            current["items"].append({"term": term, "detail": detail})
+            current["items"].append({"detail": _strip_md(joined)})
     return groups
 
 
@@ -203,8 +210,10 @@ irrelevant
                        "that must survive, and a link."},
         ], g1["items"]
         assert g2["heading"] == "Group two"
+        # R8: a bare heading-with-inline-content group has no term of its
+        # own -- no "term" key at all, a single spanning descriptive row
         assert g2["items"] == [
-            {"term": "Group two", "detail": "inline detail, no bullets beneath it at all."}]
+            {"detail": "Group two — inline detail, no bullets beneath it at all."}]
         # missing file -> honest empty state, never a fabricated row
         assert parse_readme(Path("/nonexistent/README.md")) == {
             "works_well": [], "difficult": []}
@@ -222,7 +231,12 @@ irrelevant
     assert len(real["works_well"]) >= 8, real["works_well"]
     real_items = [it for g in real["difficult"] for it in g["items"]]
     assert len(real_items) >= 3, real_items
-    assert all(set(it) == {"term", "detail"} for it in real_items), real_items
+    assert all(set(it) <= {"term", "detail"} and "detail" in it for it in real_items), real_items
+    # R8 regression, pinned to real content: "Explicitly unsupported" has no
+    # bullets under it, so its one item must be a spanning row (no "term")
+    unsupported = [it for g in real["difficult"] if g["heading"] == "Explicitly unsupported"
+                   for it in g["items"]]
+    assert len(unsupported) == 1 and "term" not in unsupported[0], unsupported
     # R4 regression, pinned to real content: the README's "Closed since
     # B-freeze" bullet contains `*ahead*` — it must come out asterisk-free
     joined = " ".join(it["detail"] for it in real_items)

@@ -1,0 +1,19 @@
+{
+  "id": "ui-anchor-contract",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "anchor_contract"
+    ]
+  },
+  "expect": {},
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "PR #21 round 3 (V1): pins the compare pane's client-side heading-anchor CONTRACT across every committed filing fixture, via src/sec10k/web/anchor.py — a pure-stdlib mirror of index.html's coreOf/buildSourceIndex/findAnchor kept in lockstep because the DOM half (iframe, TreeWalker, getBoundingClientRect) cannot be reached from Python. Watched red against find_anchor_frac (the round-2 algorithm, kept in anchor.py only to reproduce the bug it caused): among 35 items across the fixture set where the two algorithms disagree, jpm-2024 alone shows 12 (items 1, 1A, 1B, 2, 3, 4, 5, 7, 7A, 8, 9, 9A), every one landing on the filing's front cross-reference table instead of the real section — reproducing round 3's live browser finding in Python. Green against find_anchor (round 3, body agreement over a whitespace-free core index): 0 failures across 38 fixture dirs / 641 items with a heading_text, with the sole apparent miss (jpm-2024 Item 6 'Reserved', which repeats with an EMPTY body) correctly excluded as an honest, unavoidable miss rather than a defect — there is no signal to disambiguate it, and find_anchor correctly refuses to guess (hard rule 4)."
+  },
+  "provenance": "PR #21 round 3, created 2026-08-21. This check itself uncovered two more real bugs before anything shipped: (1) the round-3 draft still assumed exactly one separator character belongs between adjacent DOM text nodes, which cat-2023 falsified (`<b>Item 1.</b>Business.` renders with zero characters between them) — fixed by dropping whitespace from the matching problem entirely (core_of); (2) comparing an item's own extracted `text` (which starts with its own heading) against the source text FOLLOWING a heading match scored 0 agreement at every occurrence including the correct one, on every fixture, until the item's own heading prefix was stripped from the comparison target first. Both fixes are pinned in anchor.py's own _demo() as well as this case."
+}

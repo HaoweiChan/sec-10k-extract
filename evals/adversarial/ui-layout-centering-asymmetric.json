@@ -17,7 +17,8 @@
     ]
   },
   "expect": {
-    "min_failures": 2
+    "min_failures": 2,
+    "max_failures": 2
   },
   "triage": {
     "class": "no-mechanical-check",

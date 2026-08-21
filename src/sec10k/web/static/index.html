@@ -272,11 +272,19 @@ async function loadCapabilities(){
       : `<div class="none">No data — README.md's table did not parse.</div>`;
     html += "<h3>what is difficult, unreliable, or unsupported</h3>";
     // V3: term and detail are real columns, not one fused paragraph cell —
-    // capabilities.py already returns them as separate {term, detail} fields.
+    // capabilities.py already returns them as separate {term, detail}
+    // fields. R8: a group with no `- ` bullets under it at all (just one
+    // bold-lead paragraph, e.g. "Explicitly unsupported") has no item of
+    // its own to split — capabilities.py hands back {detail} with no
+    // "term" key, rendered here as a single spanning row rather than
+    // duplicating the group band as a meaningless term.
     html += diff.length
       ? `<table class="cap-t cap-diff"><thead><tr><th>Issue</th><th>Detail</th></tr></thead><tbody>${diff.map(g =>
           `<tr><td class="grp" colspan="2">${esc(g.heading)}</td></tr>` +
-          g.items.map(it => `<tr><td>${esc(it.term)}</td><td>${esc(it.detail)}</td></tr>`).join("")
+          g.items.map(it => "term" in it
+            ? `<tr><td>${esc(it.term)}</td><td>${esc(it.detail)}</td></tr>`
+            : `<tr><td colspan="2">${esc(it.detail)}</td></tr>`
+          ).join("")
         ).join("")}</tbody></table>`
       : `<div class="none">No data — README.md's section did not parse.</div>`;
     box.innerHTML = html;
@@ -307,80 +315,131 @@ async function loadCapabilities(){
 // cached DOM position, against whatever the CURRENT layout says.
 let SOURCE_INDEX = null, ITEM_START_ANCHORS = [];
 
-function normalizeChunk(raw){
-  return raw.replace(/\s+/g, " ").toLowerCase();
+// Matching problem (a)-(c), and why whitespace plays no part in it: a
+// heading is frequently split across DOM tags (iXBRL wraps near-every
+// token in its own span), so no single text node need contain the whole
+// heading, and searching requires concatenating every text node in order.
+// How MUCH whitespace should separate two adjacent nodes when concatenated
+// turned out to be unanswerable in general — this codebase has now seen it
+// go three different ways on real, committed filings: a node ending in
+// whitespace joined to a node starting with whitespace can want ZERO
+// inserted separators (an unconditional one produces a double space that
+// breaks an exact match against a single-spaced needle); two nodes like
+// `<b>Item 1.</b>Business.` can ALSO want zero (there is no space in the
+// rendered text at all, so inserting one breaks the match the other way).
+// Modelling "how many spaces" is a losing game; coreOf drops whitespace
+// from the matching problem entirely instead, on both the needle and the
+// haystack, so two runs of text are "the same" here iff their
+// non-whitespace characters agree in order. A parallel rawIndexOf still
+// allows translating a match back to a DOM (node, offset) for scrolling.
+function coreOf(s){
+  let out = "";
+  for(const ch of String(s ?? "")) if(!/\s/.test(ch)) out += ch.toLowerCase();
+  return out;
 }
 
 // Heading text may carry literal HTML entities if it ever came from a
-// scraped source; decode via a scratch element rather than hand-rolling an
-// entity table, then apply the same whitespace/case normalization the
-// source side uses.
-function normalizeHeading(s){
+// scraped source; decode via a scratch element before taking its core.
+function coreOfHeading(s){
   const ta = document.createElement("textarea");
   ta.innerHTML = String(s ?? "");
-  return ta.value.replace(/\s+/g, " ").trim().toLowerCase();
+  return coreOf(ta.value);
 }
 
 function buildSourceIndex(doc){
   const walker = doc.createTreeWalker(doc.body || doc.documentElement, NodeFilter.SHOW_TEXT);
-  const nodes = [], chunks = [];
+  const nodes = [], parts = [];
   let node, cursor = 0;
   while((node = walker.nextNode())){
-    const norm = normalizeChunk(node.nodeValue);
-    if(!norm) continue;
-    nodes.push({node, start: cursor, normLen: norm.length});
-    chunks.push(norm, " ");           // a boundary space so words from
-    cursor += norm.length + 1;        // adjacent tags don't fuse together
+    const raw = node.nodeValue, coreChars = [], rawIndexOf = [];
+    for(let i = 0; i < raw.length; i++){
+      if(/\s/.test(raw[i])) continue;
+      coreChars.push(raw[i].toLowerCase());
+      rawIndexOf.push(i);
+    }
+    if(!coreChars.length) continue;
+    const core = coreChars.join("");
+    nodes.push({node, start: cursor, coreLen: core.length, rawIndexOf});
+    parts.push(core);          // no separator: whitespace carries no
+    cursor += core.length;     // matching information (see coreOf)
   }
-  return {text: chunks.join(""), nodes};
+  return {text: parts.join(""), nodes};
 }
 
-// normalized global offset -> {node, offset-in-RAW-node-text}. Binary
-// search picks the node (nodes[] is built in ascending start order); the
-// normalized->raw offset conversion only re-walks that ONE node.
-function rawOffset(nodes, globalOffset){
+// core-text offset -> {node, offset-in-RAW-node-text}. Binary search picks
+// the node (nodes[] is built in ascending start order); the reverse offset
+// is a direct lookup into that node's own rawIndexOf, built by the SAME
+// pass that produced the text this offset was found in — one source of
+// truth, not two passes that can silently disagree.
+function rawOffset(nodes, coreOffset){
   let lo = 0, hi = nodes.length - 1, hit = null;
   while(lo <= hi){
     const mid = (lo + hi) >> 1, n = nodes[mid];
-    if(globalOffset < n.start) hi = mid - 1;
-    else if(globalOffset >= n.start + n.normLen) lo = mid + 1;
+    if(coreOffset < n.start) hi = mid - 1;
+    else if(coreOffset >= n.start + n.coreLen) lo = mid + 1;
     else { hit = n; break; }
   }
   if(!hit) return null;
-  const target = globalOffset - hit.start, raw = hit.node.nodeValue;
-  let normI = 0, prevSpace = false;
-  for(let rawI = 0; rawI < raw.length; rawI++){
-    const isSpace = /\s/.test(raw[rawI]);
-    if(isSpace && prevSpace) continue;
-    if(normI === target) return {node: hit.node, offset: rawI};
-    normI++;
-    prevSpace = isSpace;
-  }
-  return {node: hit.node, offset: Math.max(0, raw.length - 1)};
+  return {node: hit.node, offset: hit.rawIndexOf[coreOffset - hit.start]};
 }
 
-// A 10-K's table of contents lists every item heading near the front,
-// verbatim, before the body ever reaches it — so a plain first-match
-// indexOf finds the TOC link, not the section (confirmed live on aapl-2025:
-// "Item 7. Management's..." appears at source offset 19,461 inside a TOC
-// `<a>`, and again — the real body heading — at 118,018). Disambiguating
-// among matches uses a hint we already have for free: the extractor's own
-// `start` offset for this item, as a fraction of the total normalized text,
-// is roughly where the item lives in the DOCUMENT too. Among every match,
-// the one whose fractional position is closest to that hint wins.
-function findAnchor(index, headingText, expectedFrac){
-  const needle = normalizeHeading(headingText);
+// A 10-K's table of contents (and, on some filings, a front cross-reference
+// table) repeats every item heading verbatim before the real section, so a
+// plain first-match search finds that entry, not the body. Body agreement
+// disambiguates: a TOC/index entry is followed by more entries and page
+// numbers, never by the item's own prose, so among every occurrence of the
+// heading, the one whose FOLLOWING core text shares the longest run with
+// the opening of the item's own extracted `text` (itself core-ified, with
+// its OWN heading prefix stripped first — item.text starts with its own
+// heading, so comparing it as-is would compare "companybackground..."
+// against "item1.businesscompanybackground..." and never agree from
+// character 0) is the real section. Below AGREEMENT_MIN agreeing
+// characters this reports unanchored rather than guessing — a confidently
+// WRONG anchor (round-2's fraction heuristic locked onto jpm-2024's front
+// index table and showed the wrong item, with no warning) is worse than an
+// honest miss (hard rule 4).
+const AGREEMENT_WINDOW = 400;   // raw chars of the source scanned per candidate
+const AGREEMENT_MIN = 15;       // core (whitespace-free) chars that must agree
+
+function commonPrefixLen(a, b){
+  const n = Math.min(a.length, b.length);
+  let i = 0;
+  while(i < n && a[i] === b[i]) i++;
+  return i;
+}
+
+function targetCore(itemText, needle){
+  let core = coreOf(itemText);
+  if(needle && core.startsWith(needle)) core = core.slice(needle.length);
+  return core;
+}
+
+function findAnchor(index, headingText, itemText){
+  const needle = coreOfHeading(headingText);
   if(!needle) return null;
-  let best = null, bestDist = Infinity, from = 0;
-  while(true){
+  const occurrences = [];
+  for(let from = 0; ; ){
     const i = index.text.indexOf(needle, from);
     if(i < 0) break;
-    if(expectedFrac == null){ best = i; break; }
-    const dist = Math.abs(i / Math.max(1, index.text.length) - expectedFrac);
-    if(dist < bestDist){ bestDist = dist; best = i; }
+    occurrences.push(i);
     from = i + 1;
   }
-  return best == null ? null : rawOffset(index.nodes, best);
+  if(!occurrences.length) return null;
+  if(occurrences.length === 1) return rawOffset(index.nodes, occurrences[0]);  // no ambiguity to break
+  const target = targetCore(itemText, needle);
+  if(!target) return null;   // several candidates, no body to disambiguate with — honest miss
+  let best = occurrences[0], bestScore = -1;
+  for(const occ of occurrences){
+    const following = index.text.slice(occ + needle.length, occ + needle.length + AGREEMENT_WINDOW);
+    const score = commonPrefixLen(following, target);
+    if(score > bestScore){ bestScore = score; best = occ; }
+  }
+  // A genuinely short item ("None.", "Not applicable.") can never reach
+  // AGREEMENT_MIN chars even at the CORRECT occurrence, since there is
+  // nothing more of the target left to agree on — require the full target
+  // instead once it is shorter than the floor.
+  const required = Math.min(AGREEMENT_MIN, target.length);
+  return bestScore >= required ? rawOffset(index.nodes, best) : null;
 }
 
 // A cached (node, offset) -> a FRESH document-relative Y, computed against
@@ -403,11 +462,7 @@ function anchorY(doc, anchor){
 function buildItemAnchors(doc){
   SOURCE_INDEX = buildSourceIndex(doc);
   const items = (VIEW && VIEW.items) || [];
-  const normChars = (VIEW && VIEW.norm_chars) || 0;
-  ITEM_START_ANCHORS = items.map(it => {
-    const frac = (it.start != null && normChars) ? it.start / normChars : null;
-    return findAnchor(SOURCE_INDEX, it.heading_text, frac);
-  });
+  ITEM_START_ANCHORS = items.map(it => findAnchor(SOURCE_INDEX, it.heading_text, it.text));
 }
 
 // Item i's [start, end) region in CURRENT pixel space (V2 — mapping across
