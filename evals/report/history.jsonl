@@ -192,3 +192,5 @@
 {"ts": "20260821-164154", "suite": "invariant", "sha": "817b449", "dirty": true, "passed": 14, "total": 15, "score": 0.9333, "wall_s": 2.35, "cost_usd": 0.0, "report": "20260821-164154-invariant.json", "debt_count": 4}
 {"ts": "20260821-164157", "suite": "invariant", "sha": "817b449", "dirty": true, "passed": 15, "total": 15, "score": 1.0, "wall_s": 2.34, "cost_usd": 0.0, "report": null, "debt_count": 4}
 {"ts": "20260821-164235", "suite": "fast", "sha": "817b449", "dirty": true, "passed": 53, "total": 53, "score": 1.0, "wall_s": 7.87, "cost_usd": 0.0, "report": null, "debt_count": 4}
+{"ts": "20260821-165047", "suite": "invariant", "sha": "5d45315", "dirty": true, "passed": 15, "total": 15, "score": 1.0, "wall_s": 2.39, "cost_usd": 0.0, "report": null, "debt_count": 4}
+{"ts": "20260821-165056", "suite": "fast", "sha": "5d45315", "dirty": true, "passed": 53, "total": 53, "score": 1.0, "wall_s": 8.01, "cost_usd": 0.0, "report": null, "debt_count": 4}
