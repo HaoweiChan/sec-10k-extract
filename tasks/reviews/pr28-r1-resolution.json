@@ -1,0 +1,42 @@
+{
+  "pr": 28,
+  "round": 1,
+  "task": "T4",
+  "review": "tasks/reviews/pr28-r1.json",
+  "resolved_by": "implementer",
+  "date": "2026-08-22",
+  "protocol": "Every finding's repro was re-run before anything was edited; all three reproduced. R1 is a prose claim, so the honest form was: reproduce the measurement, correct the wording in every place it was published, and turn the corrected claim into a check that was then falsified by mutation (TAIL_RE disabled) and reverted; `git diff` on src/ is empty.",
+  "gate_at_resolution": {
+    "invariant": "34/34 = 1.000",
+    "fast": "76/76 = 1.000",
+    "baseline": "1.000, not moved"
+  },
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "reproduced": true,
+      "repro_observed": "python3 -c \"...re.search('(?i)annual report to security holders', normalized_text)...\" on evals/fixtures/ibm-1997/filing.txt -> 45796 [('14', 23948, 31727)] [] ; normalized length 46932, so the hit sits 46932-31727 = 15,205 chars after the last span end, i.e. inside the tail the envelope's own unattributed_content warning reports. 'item 14' was wrong; 'raw line 931' and the functional conclusion (not a pointer, no real fixture flips) were right.",
+      "fix": "Three places corrected: (1) tasks/TODO.md T4 row Status cell now reads 'normalized offset 45796 — in the 15,205-char unattributed tail AFTER the last item span, item 14 ending at 31727; not inside item 14, as the first version of this cell and commit 24d203c's message said'; (2) evals/adversarial/ibr-security-holders.json triage.note says the same and records the correction; (3) commit 24d203c's message cannot be rewritten (branch pushed), so the repair commit's message states the correction explicitly. Plus two checks added to the case: norm_contains('Annual report to security holders') and text_not_contains(14, same) — the corrected claim as an assertion.",
+      "covered_by": "ibr-security-holders (norm_contains + text_not_contains item 14); falsified: with segment.TAIL_RE monkeypatched to a never-matching pattern the case goes red with \"item 14 contains forbidden 'Annual report to security holders'\" (plus doc_status 'success' != 'success_with_warning'); unpatched it passes."
+    },
+    {
+      "id": "R2",
+      "severity": "LOW",
+      "status": "debt",
+      "reproduced": true,
+      "repro_observed": "grep -n 'nine synthetic' evals/bench.py -> 222:    corpus's is skewed by nine synthetic derivatives (ADR-021 §b8). ; len(SYNTHETIC) -> 10",
+      "debt_row": "`heldout_sizes` docstring still counts nine synthetic derivatives; `SYNTHETIC` has ten"
+    },
+    {
+      "id": "R3",
+      "severity": "LOW",
+      "status": "debt",
+      "reproduced": true,
+      "repro_observed": "grep -ic 'exhibit 13' evals/fixtures/tgt-2002/filing.htm -> 0 ; grep -il 'exhibit 13' evals/fixtures/*/filing.* evals/heldout/fixtures/*/filing.* -> wmt-2010, ko-1997, pgr-2023",
+      "debt_row": "The 'Exhibit 13' debt row was written with the wrong fixture names",
+      "note": "The wrong names sat in a debt row that is itself new in this PR, so the row's wording was corrected in place (wmt-2010 + ko-1997 EX-13.1 header + held-out pgr-2023; tgt-2002 dropped) and the R3 debt row records that the correction happened and that the load-bearing claim (no committed pointer whose only external-document term is 'Exhibit 13') survived it unchanged."
+    }
+  ]
+}
