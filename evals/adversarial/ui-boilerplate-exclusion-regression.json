@@ -1,0 +1,25 @@
+{
+  "id": "ui-boilerplate-exclusion-regression",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "boilerplate_plumbing"
+    ],
+    "ui_file": "evals/fixtures/repo_hygiene/boilerplate-checkbox-default-on.html",
+    "api_file": "evals/fixtures/repo_hygiene/boilerplate-wire-broken.py"
+  },
+  "expect": {
+    "min_failures": 9,
+    "max_failures": 9
+  },
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "Pair A of two. Nine ways the S8 wire breaks by NAME or by DEFAULT, one failure each, at an EXACT count so that both a regressed miss (too few) and a regressed over-fire (too many) go red. The nine: (1) the checkbox ships `checked`; (2) the fixture mode hardcodes `exclude_boilerplate: true` instead of reading the checkbox; (3) excludeBp() ignores the checkbox and returns a constant, which is (2) relocated one level up and severs all three modes at once; (4) the extracted-item pane renders `it.text`, showing UN-stripped text under a header that says 'boilerplate hidden'; (5) the truncation notice counts the un-stripped string; (6) the url handler reads `excludeBoilerplate` while the UI sends `exclude_boilerplate`; (7) the upload handler compares `== \"true\"` while the JS appends `=1`; (8) `_run` forwards `not exclude_boilerplate`, which also covers the older `extract_items(path)` shape; (9) the pane header no longer says it is hiding anything — the inverse of shape 4 and the same lie, since a silent strip is that label's absence over stripped text. Every OTHER hop in the pair is correctly wired, so a check that blanket-failed would overshoot the count rather than reach it.",
+    "history": "Grew 3 -> 5 -> 9 shapes across two review rounds, which is itself the finding: each round the check asserted one level below where the property actually lived. Round 1 (R2) added the name-binding shapes. Round 2 (R5) added shapes 4 and 5 — the R1 repair had moved the rendered string from a pinned field (`text`) to an unpinned one (`display_text`) read only by an index.html expression nothing looked at, so deleting `it.display_text ?? ` left invariant 36/36 and fast 78/78 fully green. Round 2 (R6) added shape 3. Shape 9 came from this implementer attacking its own repair rather than from the review. Pair B (ui-boilerplate-wire-values) carries the shapes that break by VALUE while every name is right."
+  },
+  "provenance": "S8, created 2026-08-22; extended in the PR #27 round-1 and round-2 repairs, per hard rule 2."
+}

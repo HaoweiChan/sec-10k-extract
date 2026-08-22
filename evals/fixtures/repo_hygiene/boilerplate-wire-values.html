@@ -1,0 +1,46 @@
+<!-- S8 regression fixture, UI half of pair B: three attacks aimed at the
+     CHECK rather than at a hop, all of which passed the allow-list before it
+     was closed. Every name on the wire is correct here; the pinned
+     expressions are all present and spelled right.
+
+       1. excludeBp() is pinned and correct — and a second definition below
+          it shadows it (JS declarations hoist, the last one binds), so the
+          helper returns a constant at runtime while the pin is satisfied.
+       2. the checkbox is present and UNCHECKED, and `disabled`, so it can
+          never be ticked: every hop is intact and the capability is
+          unreachable.
+       3. the url mode's call site is commented out with `//` and replaced
+          with a flagless one — the pinned expression is still in the file,
+          as dead text.
+       4. the fixture mode's call site is the same defect in the `/* */`
+          spelling, which `_live` did not strip until PR #27 R10. Both
+          spellings are pinned because the block form re-admitted BOTH of
+          the findings the allow-list was written for, with the gate green.
+
+     Caught by evals/adversarial/ui-boilerplate-wire-values.json
+     (expect.min_failures/max_failures). -->
+<label><input type="checkbox" id="exclude-bp" disabled> exclude boilerplate</label>
+<script>
+function excludeBp(){ const c = $("#exclude-bp"); return !!(c && c.checked); }
+function excludeBp(){ return true; }
+$("#go-fx").onclick = () => call("/api/extract/fixture",
+  {method:"POST", headers:{"Content-Type":"application/json"},
+   /* body: JSON.stringify({fixture: $("#fx").value, exclude_boilerplate: excludeBp()})}); */
+   body: JSON.stringify({fixture: $("#fx").value})});
+$("#go-url").onclick = () => call("/api/extract/url",
+  {method:"POST", headers:{"Content-Type":"application/json"},
+   // body: JSON.stringify({url: $("#url").value, exclude_boilerplate: excludeBp()})});
+   body: JSON.stringify({url: $("#url").value})});
+$("#go-up").onclick = () => {
+  const f = $("#up").files[0];
+  call("/api/extract/upload?filename=" + encodeURIComponent(f.name) +
+       (excludeBp() ? "&exclude_boilerplate=1" : ""),
+       {method:"POST", body: f});
+};
+const hdrRight = (VIEW.boilerplate_excluded ? "boilerplate hidden · " : "") + rest;
+$("#pane").innerHTML = `
+    <pre class="text">${esc(it.display_text ?? it.text)}</pre>
+    <details class="pane-meta"><dl class="ev">
+      ${it.truncated ? `<dt>shown</dt><dd>first ${(it.display_text ?? it.text).length.toLocaleString()} of ${it.chars.toLocaleString()} characters</dd>` : ""}
+    </dl></details>`;
+</script>

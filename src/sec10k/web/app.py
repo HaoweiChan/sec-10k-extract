@@ -102,16 +102,22 @@ def _cache_source(raw: bytes, suffix: str) -> str:
     return token
 
 
-def _run(path: str, source: dict, raw: bytes = None):
+def _run(path: str, source: dict, raw: bytes = None,
+         exclude_boilerplate: bool = False):
     """Extract and shape for the UI. Never leaks a traceback to the browser.
 
     `raw` is the original bytes already in hand for upload/URL; the fixture
     path has none yet, so it is read from disk here instead. Caching is
     best-effort: a read failure loses the compare pane, never the extraction
     itself, so `source.token` is simply absent and the UI says so honestly.
+
+    `exclude_boilerplate` is ADR-026's opt-in flag, and this is the one place
+    all three input modes converge, so it is the one place it is passed on.
+    It changes nothing in the envelope except adding the `boilerplate` spans;
+    build_view is what turns those into a stripped PANE (S8).
     """
     try:
-        result = extract_items(path)
+        result = extract_items(path, exclude_boilerplate=exclude_boilerplate)
     except Exception as e:                       # refuse loudly, hard rule 4
         return _err(500, "extractor_exception", f"{type(e).__name__}: {e}",
                     source=source)
@@ -147,7 +153,8 @@ def extract_fixture(body: dict):
         f = _fixture_file(name)
     except FileNotFoundError as e:
         return _err(404, "bad_input", str(e))
-    return _run(str(f), {"mode": "fixture", "name": name, "file": f.name})
+    return _run(str(f), {"mode": "fixture", "name": name, "file": f.name},
+                exclude_boilerplate=bool((body or {}).get("exclude_boilerplate")))
 
 
 @app.post("/api/extract/upload")
@@ -169,7 +176,11 @@ async def extract_upload(request: Request):
         p = Path(td) / f"upload{suffix}"
         p.write_bytes(raw)
         return _run(str(p), {"mode": "upload", "name": name, "bytes": len(raw),
-                             "sha256": hashlib.sha256(raw).hexdigest()[:16]}, raw=raw)
+                             "sha256": hashlib.sha256(raw).hexdigest()[:16]}, raw=raw,
+                    # a query STRING here, not a JSON bool: this mode's body
+                    # is the filing itself, so the flag has nowhere else to ride
+                    exclude_boilerplate=request.query_params.get(
+                        "exclude_boilerplate") == "1")
 
 
 @app.post("/api/extract/url")
@@ -199,7 +210,8 @@ def extract_url(body: dict):
         p = Path(td) / f"edgar{suffix}"
         p.write_bytes(raw)
         return _run(str(p), {"mode": "url", "name": url, "bytes": len(raw),
-                             "sha256": hashlib.sha256(raw).hexdigest()[:16]}, raw=raw)
+                             "sha256": hashlib.sha256(raw).hexdigest()[:16]}, raw=raw,
+                    exclude_boilerplate=bool((body or {}).get("exclude_boilerplate")))
 
 
 @app.get("/api/source/{token}")

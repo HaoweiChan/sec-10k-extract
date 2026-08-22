@@ -17,10 +17,13 @@ from pathlib import Path
 from . import css_contrast
 from src.sec10k.web import anchor as web_anchor
 from src.sec10k.web import capabilities as web_capabilities
-from src.sec10k.web.view import build_view
+from src.sec10k.web.view import DISPLAY_MAX, build_view
 from src.sec10k.extract import extract_items
 
 UI_STYLESHEET = "src/sec10k/web/static/index.html"
+API_FILE = "src/sec10k/web/app.py"
+EXTRACT_ENDPOINTS = ("/api/extract/fixture", "/api/extract/upload",
+                     "/api/extract/url")
 FIXTURES = "evals/fixtures"
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -477,6 +480,11 @@ def check_anchor_contract(case):
     """
     inp = case.get("input", {})
     fixtures_dir = ROOT / inp.get("fixtures_dir", FIXTURES)
+    # S8/PR#27 R1: the anchor oracle is the item's own `text`, so it is only
+    # a real contract if it holds with ADR-026's exclusion ON as well. It did
+    # not — the stripped body scored below AGREEMENT_MIN on six items — and
+    # the case that runs this with the flag set is what says so.
+    exclude = bool(inp.get("exclude_boilerplate"))
     bad = []
     checked_items = 0
     for d in sorted(p for p in fixtures_dir.iterdir() if p.is_dir()):
@@ -485,7 +493,7 @@ def check_anchor_contract(case):
             continue  # not a single-file filing fixture (e.g. repo_hygiene/)
         is_html = f.suffix.lower() in (".htm", ".html")
         try:
-            result = extract_items(str(f))
+            result = extract_items(str(f), exclude_boilerplate=exclude)
         except Exception as e:
             bad.append(f"{d.name}: extract_items raised {type(e).__name__}: {e}")
             continue
@@ -519,6 +527,305 @@ def check_anchor_contract(case):
                 "items_checked": checked_items}
 
 
+def check_boilerplate_exclusion(case):
+    """S8. The inspector's extracted-item pane must hide detected chrome when
+    the caller asks for it, and be BYTE-IDENTICAL to the un-flagged run when
+    it does not. Both directions, per item, on a real fixture.
+
+    The oracle here deliberately does not call `strip_chrome`: it marks the
+    characters the envelope's own `boilerplate` spans cover and rebuilds the
+    expected string from the mark. A check that re-ran the implementation
+    would agree with any window or off-by-one bug the implementation has.
+
+    Pinned, per item:
+      both `text` == `normalized_text[start:end][:DISPLAY_MAX]` — verbatim,
+           the INV-S2 slice, in BOTH modes. PR #27 R1: `text` is also the
+           oracle `findAnchor` matches against the original filing, so it is
+           not the pane's to restyle. Pinning it identical across the two
+           runs is what makes `ui-anchor-contract-boilerplate` true by
+           construction rather than by luck.
+      ON   `display_text` == that same slice with exactly the chrome
+           characters inside `[start, end)` dropped, and ABSENT when it
+           would equal `text`. So a strip that ignores the item window, or
+           is off by one, disagrees.
+      OFF  no `display_text` at all.
+      both `start`, `end`, `chars`, `status`, `method`, `confidence`
+           identical between the runs, and `normalized_text` identical too —
+           exclusion is display-only (ADR-026 s.d, INV-S2).
+
+    At least one item per fixture must actually come out DIFFERENT under ON,
+    or the fixture has stopped exercising the exclusion and the case says so
+    rather than passing vacuously.
+    """
+    inp = case.get("input", {})
+    # "text" is in here deliberately (PR #27 R1): the anchor oracle must be
+    # the same string with the flag on and off, so the two runs must agree on
+    # it, not merely each be self-consistent.
+    pinned = ("item", "part", "start", "end", "chars", "status", "method",
+              "confidence", "heading_text", "text")
+    bad, stripped_items = [], 0
+    for rel in inp.get("fixtures", []):
+        off = extract_items(str(ROOT / rel))
+        on = extract_items(str(ROOT / rel), exclude_boilerplate=True)
+        text = on.get("normalized_text") or ""
+        spans = on.get("boilerplate")
+        if not spans:
+            bad.append(f"{rel}: exclude_boilerplate=True reported no chrome — "
+                       "this fixture no longer exercises the exclusion")
+            continue
+        if (off.get("normalized_text") or "") != text:
+            bad.append(f"{rel}: normalized_text differs between the runs — "
+                       "exclusion is display-only (ADR-026 s.d)")
+        hidden = bytearray(len(text))
+        for sp in spans:
+            hidden[sp["start"]:sp["end"]] = b"\x01" * (sp["end"] - sp["start"])
+        v_off, v_on = build_view(off), build_view(on)
+        if v_off.get("boilerplate_excluded") is not False:
+            bad.append(f"{rel}: view reports boilerplate_excluded="
+                       f"{v_off.get('boilerplate_excluded')!r} on an un-flagged run")
+        if v_on.get("boilerplate_excluded") is not True:
+            bad.append(f"{rel}: view reports boilerplate_excluded="
+                       f"{v_on.get('boilerplate_excluded')!r} on an excluded run")
+        if len(v_off["items"]) != len(v_on["items"]):
+            bad.append(f"{rel}: {len(v_off['items'])} items un-flagged vs "
+                       f"{len(v_on['items'])} excluded — zip below would hide it")
+        for a, b in zip(v_off["items"], v_on["items"]):
+            code = a.get("item")
+            for k in pinned:
+                if a.get(k) != b.get(k):
+                    # truncated: `text` is up to DISPLAY_MAX chars and an
+                    # unreadable failure is a failure nobody acts on
+                    bad.append(f"{rel} item {code}: {k} moved under exclusion "
+                               f"({a.get(k)!r:.90} -> {b.get(k)!r:.90})")
+            s, e = a.get("start"), a.get("end")
+            if s is None or e is None:
+                if a["text"] or b["text"]:
+                    bad.append(f"{rel} item {code}: null span but non-empty text")
+                continue
+            raw = text[s:e]
+            for label, got in (("un-flagged", a["text"]), ("excluded", b["text"])):
+                if got != raw[:DISPLAY_MAX]:
+                    bad.append(f"{rel} item {code}: {label} `text` is no longer "
+                               f"the verbatim slice — findAnchor matches this "
+                               f"string against the original filing (INV-S2, R1)")
+            if "display_text" in a:
+                bad.append(f"{rel} item {code}: un-flagged run carries a "
+                           f"display_text — nothing is hidden with the flag off")
+            want = "".join(c for k, c in enumerate(raw, s) if not hidden[k])
+            pane = b.get("display_text", b["text"])
+            if pane != want[:DISPLAY_MAX]:
+                bad.append(
+                    f"{rel} item {code}: excluded pane is identical to the "
+                    f"un-flagged one — nothing was stripped"
+                    if pane == a["text"] else
+                    f"{rel} item {code}: excluded pane != the item slice minus "
+                    f"its own chrome runs ({len(pane)} chars shown, "
+                    f"expected {len(want[:DISPLAY_MAX])})")
+            if want == raw and "display_text" in b:
+                bad.append(f"{rel} item {code}: display_text emitted although it "
+                           f"is identical to text — dead payload")
+            # not redundant with the `chars` pairing above: that one only says
+            # the two runs AGREE, and they would agree if both reported the
+            # shown length. This says WHICH length is right.
+            if b["chars"] != e - s:
+                bad.append(f"{rel} item {code}: chars became {b['chars']} — it "
+                           f"reports the SPAN length ({e - s}), not the shown length")
+            if want != raw:
+                stripped_items += 1
+    if inp.get("fixtures") and not stripped_items:
+        bad.append("no item anywhere had chrome inside its own span — the "
+                   "exclusion direction was never exercised")
+    return bad, {"items_stripped": stripped_items}
+
+
+JS_COMMENT_RE = re.compile(r"^[ \t]*//.*$", re.M)
+JS_BLOCK_COMMENT_RE = re.compile(r"/\*.*?\*/", re.S)
+HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.S)
+PY_COMMENT_RE = re.compile(r"^[ \t]*#.*$", re.M)
+
+
+def _live(src, lang):
+    """`src` with commented-out code removed. A pin has to be satisfied by
+    code that RUNS: commenting a call site out and leaving it in the file is
+    a realistic way to sever the wire while every pin still finds its text
+    (measured — it passed the first version of the allow-list, and so did an
+    `<!-- -->`-ed checkbox).
+
+    Per language, deliberately. Only FULL-line `//` goes, so the `https://`
+    inside a URL survives; `/* */` goes wherever it appears, since the
+    stylesheet's 22 comments are all genuine and nothing in this file opens
+    `/*` inside a string; and `#` is stripped ONLY from Python, because the
+    inspector's stylesheet is full of id selectors like `#banner{...}` that
+    start a line with `#` and are not comments at all.
+
+    The `/* */` form was missing until PR #27 R10, which is worth recording
+    because of WHAT it re-admitted: block-commenting a call site while
+    leaving the pinned text inside the comment reproduced both of the
+    findings this check was rewritten for, with the whole gate green."""
+    if lang == "py":
+        return PY_COMMENT_RE.sub("", src)
+    return JS_COMMENT_RE.sub(
+        "", JS_BLOCK_COMMENT_RE.sub("", HTML_COMMENT_RE.sub("", src)))
+
+
+def _squash(s):
+    """Whitespace-free form. Same argument as `anchor.py`'s `core_of`: how a
+    line happens to be wrapped or indented carries no information about what
+    it does, so it is not part of what "the same expression" means here."""
+    return "".join(s.split())
+
+
+# Every expression that carries the checkbox's value from the DOM to
+# extract_items, pinned WHOLE, plus what each one is for.
+#
+# PR #27 R5 and R6 are why this is an allow-list. Two rounds of asking each
+# hop a QUESTION about itself — does it mention the flag? do the two ends use
+# the same key? — left the VALUE unchecked at every hop but one, and `not
+# bool(...)`, `!= "1"`, `False and bool(...)`, `return true`, `$("#exclude-bp
+# -OLD")` and a deleted `display_text ??` all answered the questions
+# correctly while severing the wire. A question can always be answered by a
+# broken hop, and a list of FORBIDDEN operators only ever bans the inversions
+# somebody already thought of. Pinning the permitted expression makes
+# everything else red by default, including the next inversion nobody
+# thought of.
+#
+# ponytail: whitespace-insensitive but token-exact, so reformatting survives
+# and a semantic edit does not. A DELIBERATE change to any of these must
+# update the pin — the friction is the point, because editing the wire is
+# exactly the moment to re-check that it still carries the checkbox.
+WIRE_UI = [
+    ("the excludeBp() helper reads the checkbox's own .checked",
+     'function excludeBp(){ const c = $("#exclude-bp"); return !!(c && c.checked); }'),
+    ("the fixture mode puts the checkbox value on the wire",
+     'JSON.stringify({fixture: $("#fx").value, exclude_boilerplate: excludeBp()})'),
+    ("the url mode puts the checkbox value on the wire",
+     'JSON.stringify({url: $("#url").value, exclude_boilerplate: excludeBp()})'),
+    ("the upload mode appends the checkbox value to its query string",
+     '(excludeBp() ? "&exclude_boilerplate=1" : "")'),
+    ("the pane SAYS it is hiding text — R5's defect was un-stripped text "
+     "under this label, and the inverse, a silent strip, is the same lie",
+     '(VIEW.boilerplate_excluded ? "boilerplate hidden · " : "")'),
+    ("the extracted-item pane renders the STRIPPED string",
+     '<pre class="text">${esc(it.display_text ?? it.text)}</pre>'),
+    ("the truncation notice counts the STRIPPED string",
+     '${(it.display_text ?? it.text).length.toLocaleString()}'),
+]
+
+# per handler, sliced out of app.py so each is unique without more context
+WIRE_HANDLER = {
+    "/api/extract/fixture":
+        'exclude_boilerplate=bool((body or {}).get("exclude_boilerplate"))',
+    "/api/extract/url":
+        'exclude_boilerplate=bool((body or {}).get("exclude_boilerplate"))',
+    "/api/extract/upload":
+        'exclude_boilerplate=request.query_params.get("exclude_boilerplate") == "1"',
+}
+
+# A pin proves its expression is present; it cannot prove nothing SHADOWS it.
+# A second `function excludeBp(){ return true; }` after the pinned one leaves
+# the pin satisfied and wins at runtime (declarations hoist, last one binds),
+# and a second `pre.text` render makes `$("#pane pre.text")` ambiguous. So the
+# definition sites themselves must be unique — measured: the shadowing attack
+# passed the allow-list until this was added.
+UNIQUE_UI = [
+    ("nothing may shadow the excludeBp() helper", "function excludeBp"),
+    ("nothing may shadow the extracted-item render", '<pre class="text">'),
+]
+
+WIRE_API = [
+    ("_run forwards the flag into extract_items unmodified",
+     "extract_items(path, exclude_boilerplate=exclude_boilerplate)"),
+]
+
+# no trailing `\)`: `@app.post("/api/extract/x", response_model=None)` is
+# app.py's own decorator style (see `@app.get("/", response_class=...)`),
+# and requiring the paren immediately after the literal let a fourth
+# unwired mode through in that spelling (PR #27 R11)
+ROUTE_RE = re.compile(r'@app\.post\("(/api/extract/[^"]+)"')
+
+
+def check_boilerplate_plumbing(case):
+    """S8. The ADR-026 flag has to survive the whole trip — checkbox,
+    excludeBp(), request, handler, `_run`, `extract_items` — the checkbox has
+    to start OFF, and the pane has to render the string the exclusion
+    produced. None of that is reachable from the eval harness (no browser,
+    and importing app.py would drag fastapi into the dependency-free unit
+    job), so it is checked in the two files that carry the wire, the shape
+    the ui-* checks have used since S3.
+
+    It works by ALLOW-LIST: `WIRE_UI`, `WIRE_HANDLER` and `WIRE_API` above
+    hold every expression on the path, each of which must appear exactly once
+    in the file's LIVE text — `//`, `/* */`, `<!-- -->` and Python `#`
+    comments stripped, so a call site commented out in any of those four
+    forms cannot satisfy its own pin. (Narrowed deliberately: it once said
+    "a dead call site cannot satisfy its own pin", and PR #27 R10 was
+    precisely the fifth form. Dead code that is not COMMENTED — inside a
+    string literal, or behind a condition that is never true — still
+    satisfies its pin.) `UNIQUE_UI` additionally forbids a second definition
+    shadowing a pinned one; the routes are pinned as a set, so a fourth input
+    mode declared with an `@app.post("/api/extract/…"` decorator cannot be
+    added without wiring it — any OTHER way of registering a route, such as
+    a single-quoted literal or `app.add_api_route`, is not seen; and the
+    checkbox may be neither `checked` nor `disabled`. None of those is
+    hypothetical: each was written as an attack on the allow-list and passed
+    it before it was closed (`ui-boilerplate-wire-values` pins them).
+
+    What it still cannot do is in the debt row: it cannot prove FastAPI
+    BINDS any of this. An HTTP case was considered and rejected — see the
+    row for the reason and for the correction to what that row first claimed.
+    """
+    inp = case.get("input", {})
+    ui = _live((ROOT / inp.get("ui_file", UI_STYLESHEET)).read_text(), "js")
+    api = _live((ROOT / inp.get("api_file", API_FILE)).read_text(), "py")
+    bad = []
+    boxes = re.findall(r'<input[^>]*id="exclude-bp"[^>]*>', ui)
+    if len(boxes) != 1:
+        bad.append(f"expected exactly one #exclude-bp checkbox in the UI, "
+                   f"found {len(boxes)}")
+    for box in boxes:
+        if 'type="checkbox"' not in box:
+            bad.append(f"#exclude-bp is not a checkbox: {box}")
+        if re.search(r"\bchecked\b", box):
+            bad.append(f"#exclude-bp defaults to CHECKED — ADR-026 is opt-in "
+                       f"and OFF must stay today's behaviour: {box}")
+        # a box that cannot be ticked is OFF forever, which passes every
+        # other check here and makes the whole feature unreachable
+        if re.search(r"\bdisabled\b", box):
+            bad.append(f"#exclude-bp is DISABLED — the wire is intact and the "
+                       f"capability is still unreachable: {box}")
+
+    def pin(haystack, where, why, expr):
+        n = _squash(haystack).count(_squash(expr))
+        if n != 1:
+            bad.append(f"{where}: {why} — expected exactly one "
+                       f"`{expr}`, found {n}. If this expression changed on "
+                       f"purpose, update its pin AND re-check that the wire "
+                       f"still carries the checkbox's value unmodified.")
+
+    for why, expr in WIRE_UI:
+        pin(ui, "index.html", why, expr)
+    for why, token in UNIQUE_UI:
+        n = _squash(ui).count(_squash(token))
+        if n != 1:
+            bad.append(f"index.html: {why} — `{token}` occurs {n} times, "
+                       f"expected 1")
+    for why, expr in WIRE_API:
+        pin(api, "app.py", why, expr)
+
+    routes = set(ROUTE_RE.findall(api))
+    if routes != set(EXTRACT_ENDPOINTS):
+        bad.append(f"app.py's /api/extract routes are {sorted(routes)}, not the "
+                   f"{sorted(EXTRACT_ENDPOINTS)} this check knows how to pin — "
+                   f"an input mode was added or removed without wiring it")
+    for ep in sorted(routes & set(EXTRACT_ENDPOINTS)):
+        j = api.index(f'"{ep}"')
+        k = api.find("\n@app.", j + 1)
+        pin(api[j:k if k > 0 else len(api)], f"app.py {ep}",
+            "the handler reads the flag off the request and forwards it "
+            "unmodified", WIRE_HANDLER[ep])
+    return bad
+
+
 CHECKS = {
     "adr_headers": lambda case: check_adr_headers(),
     "adr_index": lambda case: check_index(),
@@ -533,6 +840,8 @@ CHECKS = {
     "truncated_notice_in_overlay": check_truncated_notice_in_overlay,
     "capabilities_parse": check_capabilities_parse,
     "anchor_contract": check_anchor_contract,
+    "boilerplate_exclusion": check_boilerplate_exclusion,
+    "boilerplate_plumbing": check_boilerplate_plumbing,
 }
 
 

@@ -1,0 +1,46 @@
+<!-- S8 regression fixture, UI half of pair A: five ways the "exclude
+     boilerplate" wire breaks by NAME or by DEFAULT, while every other hop
+     stays correctly wired so the check has to distinguish rather than
+     blanket-fail. Pair B (boilerplate-wire-values.html) carries the shapes
+     that break by VALUE instead.
+
+       1. the checkbox ships `checked`, so the deployed inspector no longer
+          shows today's behaviour by default.
+       2. the fixture mode hardcodes `exclude_boilerplate: true` instead of
+          reading the checkbox (PR #27 R2 shape b).
+       3. excludeBp() ignores the checkbox and returns a constant
+          (PR #27 R6 shape M4) — this is shape 2 relocated one level up, and
+          it severs all three modes at once.
+       4. the extracted-item pane renders `it.text`, so it shows UN-stripped
+          text under a header that says "boilerplate hidden" (PR #27 R5).
+       5. the truncation notice counts the un-stripped string too
+          (PR #27 R6 shape M7).
+       6. the pane header no longer says it is hiding anything — the inverse
+          of shape 4, and the same lie: R5's defect was un-stripped text
+          under a "boilerplate hidden" label, and a silent strip is that
+          label's absence over stripped text.
+
+     Caught by evals/adversarial/ui-boilerplate-exclusion-regression.json
+     (expect.min_failures/max_failures). -->
+<label><input type="checkbox" id="exclude-bp" checked> exclude boilerplate</label>
+<script>
+function excludeBp(){ return true; }
+$("#go-fx").onclick = () => call("/api/extract/fixture",
+  {method:"POST", headers:{"Content-Type":"application/json"},
+   body: JSON.stringify({fixture: $("#fx").value, exclude_boilerplate: true})});
+$("#go-url").onclick = () => call("/api/extract/url",
+  {method:"POST", headers:{"Content-Type":"application/json"},
+   body: JSON.stringify({url: $("#url").value, exclude_boilerplate: excludeBp()})});
+$("#go-up").onclick = () => {
+  const f = $("#up").files[0];
+  call("/api/extract/upload?filename=" + encodeURIComponent(f.name) +
+       (excludeBp() ? "&exclude_boilerplate=1" : ""),
+       {method:"POST", body: f});
+};
+const hdrRight = rest;
+$("#pane").innerHTML = `
+    <pre class="text">${esc(it.text)}</pre>
+    <details class="pane-meta"><dl class="ev">
+      ${it.truncated ? `<dt>shown</dt><dd>first ${it.text.length.toLocaleString()} of ${it.chars.toLocaleString()} characters</dd>` : ""}
+    </dl></details>`;
+</script>
