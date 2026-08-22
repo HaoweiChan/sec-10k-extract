@@ -1,0 +1,61 @@
+{
+  "pr": 31,
+  "round": 2,
+  "task": "S2",
+  "branch": "task/S2",
+  "head": "1c7cf5d",
+  "reviewer": "groundwork:pr-reviewer, fresh context, scoped to the repair diff f63c245..0592a89 plus the nine standing findings",
+  "gate_at_review": {"invariant": "42/42 = 1.000", "fast": "84/84 = 1.000", "baseline": "{\"fast\": 1.0}, unmoved", "note": "denominators moved from 39/81 by the origin/main merge (PR #30 / T3)"},
+  "result": "REQUEST_CHANGES",
+  "standing_closed": ["R1", "R2", "R3", "R5", "R6", "R7", "R8", "R9"],
+  "counts": {"HIGH": 0, "MEDIUM": 3, "LOW": 3},
+  "routing_note": "R4 (relocated, MEDIUM), R10 and R11 (new, MEDIUM) all meet the blocking bar: R4 and R10 concern the gate's own behaviour, R11 publishes numbers contradicted by the tree inside the file CLAUDE.md calls the spec. R12 is LOW and would route to debt, but it is a second field of the SAME `triage` object R11 forces the implementer to correct -- fixing R11 while leaving R12's retracted sentence in place would ship a JSON object that contradicts itself internally. That is a bundling decision, not a severity one. R13 and R14 are LOW, need no edit to a file otherwise being touched, and route to debt.",
+  "breaker_state": "Round 2 of 3. A round-3 review that does not approve trips the circuit breaker and escalates to the human.",
+  "findings": [
+    {"id": "R4", "status": "relocated", "severity": "MEDIUM", "route": "repair",
+     "claim": "The source-3 precedence assertions are real in a bare shell but silently disappear whenever the ambient environment carries an absolute GIT_INDEX_FILE — which is exactly what `git commit` sets when committing from a linked worktree or with `-a`, i.e. inside this repo's own pre-commit eval gate — so the git-first mutation the acceptance names goes GREEN precisely where the gate is enforced, and nothing is reported.",
+     "evidence": "src/repo_hygiene/eval_adapter.py:876-892 `_temp_repo` runs `git commit --allow-empty` with `env=clean_full` (:995-997), which strips only GIT_LOCATION_VARS and GIT_SHA; an inherited absolute GIT_INDEX_FILE points the commit at another repo's index, the commit fails, `_temp_repo` returns None, and :1000 `if head:` skips all three precedence assertions with no `bad.append` — the resolution's claim that they 'skip loudly' (tasks/reviews/pr31-r1-resolution.json, R4 note) is false, the skip is silent and the case reports 0 failures either way. Measured hook environments: plain `git commit` -> GIT_INDEX_FILE=.git/index (relative, harmless); `git commit -a` -> /tmp/r10b/.git/index.lock (absolute); commit from a linked worktree -> /private/tmp/r10b/.git/worktrees/r10b-wt/index (absolute). This PR was authored in a linked worktree.",
+     "repro": "GIT_INDEX_FILE=<an absolute path to another repo's index> python3 -c \"...; print(ea._temp_repo(tempfile.mkdtemp(), clean_full)); <apply M6 git-first>; print(ea.check_build_identity(case))\" -> None, then [] (M6 green). Without GIT_INDEX_FILE the same M6 gives 2 failures.",
+     "acceptance": "`_temp_repo` builds its checkout in an environment it controls (strip GIT_INDEX_FILE and the other per-invocation GIT_* vars, or pass `-c` overrides), so a repo is built under a pre-commit/worktree environment too; and if it still cannot, the skip appends a failure or is otherwise visible in the case output rather than silently reducing the assertion count. Falsifier: the M6 git-first mutation must be red with an absolute GIT_INDEX_FILE exported."},
+
+    {"id": "R10", "status": "new", "severity": "MEDIUM", "route": "repair",
+     "claim": "The repair makes `build-identity` go RED on a correct implementation whenever an ambient GIT_DIR is set: the local-dev assertion's oracle still measures HEAD with the unscrubbed ambient environment while the resolver now scrubs, so the two disagree — a false failure in exactly the pre-commit-hook condition this case's own history cites.",
+     "evidence": "src/repo_hygiene/eval_adapter.py:1021-1027 computes `head` via `subprocess.run(['git','rev-parse','--short','HEAD'], cwd=ROOT)` with full env inheritance, then compares it to `build_id.git_sha(ROOT, dict(os.environ, GIT_SHA=''))`, which now strips GIT_DIR. With GIT_DIR pointing at any other repository, `head` is the stranger's sha and the resolver correctly returns this repo's. Before the repair both sides inherited GIT_DIR and agreed, so this is newly broken by the repair.",
+     "repro": "GIT_DIR=/tmp/r10/outer/.git python3 -c \"...; print(ea.check_build_identity(case))\" -> [\"a checkout with a .git must report its own short sha '097e8b5', got '537dfdb'\"]",
+     "acceptance": "The local-dev oracle measures HEAD in the same environment the resolver resolves in (strip GIT_LOCATION_VARS from the oracle subprocess too), so `check_build_identity` returns 0 failures with an arbitrary GIT_DIR exported, while M8 (dropping the resolver's scrub) stays red."},
+
+    {"id": "R11", "status": "new", "severity": "MEDIUM", "route": "repair",
+     "claim": "The repair updated the ADR and prompts for R2/R3 but left the eval case's own `triage` block stale: three of its six published mutation counts are now wrong, and its narrative still describes the half-fix R2 rejected as the fix.",
+     "evidence": "evals/adversarial/build-identity.json:19 `refalsified` publishes 'SHA_RE relaxed to `.+` (10)', 'precedence flipped so GIT_SHA outranks the build (1)', 'build_sha ignoring the file entirely (6)'. Re-measured on the repaired tree: 20, 2, 7 respectively (the resolution artifact itself records 20/2/7 for M4/M7/M9). :18 `red_first` still closes with 'Fixed in both — the resolver runs git in the environment it was handed', which is precisely the description ADR-027 §e and prompts/013 were corrected to retract ('The first fix was half of one'). This is the same class as R3 — published numbers/claims contradicting the artifact — inside the file that IS the spec.",
+     "repro": "Rebind build_id.SHA_RE to `.+` then ea.check_build_identity(case) -> 20 (case says 10); build_sha -> None -> 7 (case says 6).",
+     "acceptance": "`triage.refalsified` lists the mutation set and counts actually run against the repaired tree (the resolution's 10 mutations, or the six with corrected counts), and `triage.red_first` describes the scrub-in-`_rev_parse` fix rather than the environ-threading half."},
+
+    {"id": "R12", "status": "new", "severity": "LOW", "route": "repair",
+     "claim": "The generalisation ADR-027 §g just retracted for R9 survives verbatim in the case file's `what_this_cannot_prove`, so the eval set still publishes 'the failure mode if any of that is false is the honest one and not a regression'.",
+     "evidence": "evals/adversarial/build-identity.json:17: 'The failure mode if any of that is false is the honest one and not a regression: BUILD_SHA is absent or empty, the resolver rejects it, and /api/meta reports `unknown` exactly as it does today.' ADR-027 §g now states the opposite for build-cache staleness ('no validation can detect it') and for build-abort. The case file is a document of record under CLAUDE.md's 'the eval set IS the spec'.",
+     "repro": "python3 -c \"import json;print(json.load(open('evals/adversarial/build-identity.json'))['triage']['what_this_cannot_prove'])\"",
+     "acceptance": "`what_this_cannot_prove` names build-cache staleness as the assumption that does not fail closed, matching ADR-027 §g."},
+
+    {"id": "R13", "status": "new", "severity": "LOW", "route": "debt",
+     "claim": "Two of the three per-variable location-var assertions cannot fail: with a non-repository cwd, GIT_WORK_TREE and GIT_COMMON_DIR alone never make `git rev-parse` answer, so only GIT_DIR binds the scrub the code and prose describe as covering all three.",
+     "evidence": "src/repo_hygiene/eval_adapter.py:973-981 loops over GIT_LOCATION_VARS; control measurement with the scrub removed and cwd a temp dir: GIT_DIR -> rc 0, '537dfdb'; GIT_WORK_TREE -> rc 128 'not a git repository'; GIT_COMMON_DIR -> rc 128. Mutation M8b (`_rev_parse` strips GIT_DIR only, keeps GIT_WORK_TREE and GIT_COMMON_DIR) -> check_build_identity returns 0 failures, versus 2 for the full-scrub-removal M8.",
+     "repro": "Rebind build_id._rev_parse to a version whose env filter excludes only 'GIT_DIR', then ea.check_build_identity(case) -> [] (green).",
+     "acceptance": "Either the two extra assertions run in a state where those variables can actually redirect the answer (e.g. a real checkout as `root` with GIT_COMMON_DIR pointed at another repo), or the comment at build_id.py:31-36 and the case docstring stop claiming all three are held by a check."},
+
+    {"id": "R14", "status": "new", "severity": "LOW", "route": "debt",
+     "claim": "The corpus figure the R6 repair introduced is already false on the tree that ships: the comment says '38 measurable fixtures' while the merged tree has 41 fixture directories and 40 measurable filings.",
+     "evidence": "src/sec10k/boilerplate.py:66 and prompts/013-s2-build-identity.md:136 read '38 measurable fixtures (39 directories, one of which — repo_hygiene — is not a filing)'. The origin/main merge (1c7cf5d, T3) added evals/fixtures/amended-cover-2021 and evals/fixtures/comma-cover-2016; a directory walk now gives 41 dirs / 40 measurable. The substantive claim survives — the repeat-gated ceiling is still 35 on jpm-2024 and both new fixtures measure 17 — only the count is stale.",
+     "repro": "python3 -c \"from pathlib import Path;print(len([x for x in Path('evals/fixtures').iterdir() if x.is_dir()]))\" -> 41",
+     "acceptance": "Both places read 40 measurable / 41 directories (or drop the absolute count in favour of the corpus-walk command), with the 35/17 ceiling restated as re-measured on the merged tree."}
+  ],
+  "closed_detail": {
+    "R1": "Validation is one per-value rule applied at every source; 9 junk values measured through the DEFAULT /api/meta call shape all return 'unknown', positive override still works. M5 -> 10 failures, restored 0.",
+    "R2": "Closed at the resolver, not documented around. `_rev_parse` strips the three location vars on every path including the default. All three measured -> 'unknown' (unscrubbed control: '537dfdb'). ADR-027 §e and prompts/013 corrected. M8 -> 2 failures on both explicit and default environ.",
+    "R3": "All three documents read 18 with composition and score 80/81 named; artifact confirms len(failures)==18. No '16 failures' remains outside the historical review artifacts.",
+    "R5": "zbpack.json:6 and eval_adapter.py:868 byte-identical; command exits 0 under sh -u and in a chmod 500 directory. Old command's 127/1 exits re-verified.",
+    "R6": "Trigger and measurement now name the repeat-gated population; independently re-measured -- repeat-gated max 35 (jpm-2024), edgar_chrome 127/123/113/88. Detector constants unchanged.",
+    "R7": "Both documents read eval_adapter.py:699, re-verified after this round's edits moved the file again.",
+    "R8": "Debt row present with full evidence, survived the merge; no partial fix leaked into the code; NOT_A_SHA's comment now disclaims exhaustiveness and names the row.",
+    "R9": "§g splits three fail-closed assumptions from two that do not, names build-cache staleness; TODO gate keeps 'must MOVE across two redeploys' and stays UNRUN."
+  }
+}
