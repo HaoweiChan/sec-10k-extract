@@ -1,0 +1,44 @@
+{
+ "pr": 35,
+ "round": 2,
+ "date": "2026-08-23",
+ "result": "REQUEST_CHANGES",
+ "scope": "repair diff 6b26208..cf0e8d3 + standing R1-R5",
+ "gate": "invariant 48/48; fast 96/96; table fidelity 400/400 · 31/31; test_eval_adapter 18/18; ledger_table_shape on final TODO.md + fixtures README passed; --check-docs 56/4 unchanged; repair diff touches no src/ and not .eval-baseline.json",
+ "standing": {
+  "R1": "resolved — envelope_shape in all 7 table cases (1,1,1,1,1,2,2), both cases green, row 128 note says 5/7 → 7/7",
+  "R2": "NOT resolved — row 63 item (6): two more instances of the backwards '956 of 3,263' construction survive in ADR-020 §a:83 and §h3:557 (the verification grep was too narrow); every other R2 item verified true (README:47, ADR-020 header/§h2/§h3 figures, git_sha, README:196-200, ADR-021:328 = 20, analysis-report:421 = twelve)",
+  "R3": "debt row present + in-place verified",
+  "R4": "debt row present + in-place verified",
+  "R5": "debt row present + in-place verified"
+ },
+ "findings": [
+  {
+   "id": "R6",
+   "severity": "MEDIUM",
+   "route": "repair",
+   "claim": "Row 63's closure of item (6) is false as published: the backwards 'costs item-10 coverage — 956 of … 3,263' reading was reworded at three spots but still stands at two more in the same ADR the repair edited, so '(6) CLOSED … reworded at its three live spots' overclaims and R2 is only partly resolved.",
+   "evidence": "specs/decisions/ADR-020-fallback-not-justified.md:83 (§a) 'It costs item-10 coverage — 956 of the block's 3,263 chars — and nothing else.' and :557 (§h3) 'The interleaving costs item-10 coverage — 956 chars of 3,263 — and does not put items 11–13 beyond the contract.' — the exact construction PR #11 R25 called backwards (item 10 takes 956, the cost is 2,307). tasks/TODO.md:63 '(6) … reworded at its three live spots — ADR-020:141, docs/architecture/overview.md:250, the Combined-multi-item-heading row above … verified grep -rln \"956 of 3,263\" specs docs README.md → nothing' — the grep pattern cannot match 'of the block's 3,263' or 'chars of 3,263'.",
+   "repro": "grep -n '3,263' specs/decisions/ADR-020-fallback-not-justified.md | grep -v 'keeps 956\\|takes 956'  → :83 and :557 still read 'costs item-10 coverage — 956 …'",
+   "acceptance": "ADR-020 §a:83 and §h3:557 reworded to the 'item 10 keeps/takes 956 of the block's 3,263; the cost is 2,307' form (or row 63 (6) stops claiming the rewording is complete and names the two survivors), and the closure note's verification grep widened to one that would have found them (e.g. grep -rn 'costs item-10 coverage — 956' specs docs README.md tasks → nothing)."
+  },
+  {
+   "id": "R7",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "Row 63's closure note cites the reworded ADR-020 table row as 'ADR-020:141', but the same commit's header edit (2 → 3 lines at :15-17) moved that row to :142; :141 is the heading-unnumbered row.",
+   "evidence": "sed -n 141p specs/decisions/ADR-020-fallback-not-justified.md → '| `heading-unnumbered` item 8; …'; grep -n 'keeps 956' specs/decisions/ADR-020-fallback-not-justified.md → 142. Same shape as round-1 R4 (a line number invalidated by the PR's own insertion).",
+   "repro": "sed -n 141,142p specs/decisions/ADR-020-fallback-not-justified.md | cut -c1-60",
+   "acceptance": "Row 63 cites ADR-020:142 or the §b 'axp-2008 items 10, 11, 12, 13' row by name."
+  },
+  {
+   "id": "R8",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "README.md:198-200's new coverage sentence says all decimals in the window 'are checked', but check_docs also skips decimals adjacent to $/%/× and every (file, fixture, value) in DOC_ALLOW, and bounds the window at the next backticked fixture name — the sentence is narrower than 'anywhere in this repo' but still slightly wider than the instrument.",
+   "evidence": "evals/bench.py check_docs: `if text[nm.start()-1:nm.start()] == \"$\" or after[:1] in (\"%\",\"×\") …: continue`, `if (Path(rel).name, fixture, lit) in DOC_ALLOW: continue`, `stop = min(m.end()+DOC_WINDOW, eol, hits[i+1].start())`; README.md:198 'Decimals printed within 60 characters after a backticked fixture name, on the same line, in the five files … are checked … integers, aggregates and numbers anywhere else are not (ADR-021 §b12)'.",
+   "repro": "sed -n 196,200p README.md; python3 -c \"import sys;sys.path.insert(0,'.');import inspect,evals.bench as b;print(inspect.getsource(b.check_docs))\"",
+   "acceptance": "Either the README sentence adds 'except ratios/percentages/prices and the DOC_ALLOW history list' (one clause) or it is accepted as a pointer summary since it cites §b12, which spells out both exclusions — debt-note at most."
+  }
+ ]
+}
