@@ -220,7 +220,9 @@ def heldout_sizes():
     The held-out set is quarantined from measurement, but a file's byte count
     is not an extraction outcome and reveals nothing the pipeline decided.
     §5's sweep multiplier needs a real-filing size distribution and the dev
-    corpus's is skewed by nine synthetic derivatives (ADR-021 §b8).
+    corpus's is skewed by the `SYNTHETIC` set's self-created derivatives
+    (ADR-021 §b8) — named there, not counted here, so a new fixture cannot
+    re-stale this sentence (PR #28 R2).
     """
     out = {}
     if not HELDOUT_DIR.is_dir():

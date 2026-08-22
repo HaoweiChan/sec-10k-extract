@@ -186,8 +186,13 @@ The design makes this survive **by construction, not by care**:
 3. Therefore, for any input, `normalized_text`, `items`, `warnings` and
    `doc_status` are identical with the flag on and off. This is not an argument,
    it is an equality, and `evals/adversarial/boilerplate-offsets-invariant.json`
-   asserts it as an **invariant-suite** case on both an HTML fixture that fires
-   and a txt fixture that fires, by running the pipeline twice and comparing.
+   asserts it as an **invariant-suite** case on one HTML fixture that fires
+   (`msft-2013`), by running the pipeline twice and comparing; the txt fixture
+   that fires (`ge-1994`) carries the same `offsets_invariant_under_exclusion`
+   check in the **fast** suite, inside `boilerplate-txt-chrome` (sentence
+   narrowed 2026-08-23, L1, PR #25 R7 — the invariant suite still has no
+   txt-era offset-invariance case; adding one is the row's preferred fix,
+   left to a change that touches the gate's composition).
 
 **What "the item's text" means in the stripped view.** It is
 `strip_chrome(normalized_text, boilerplate, start=item.start, end=item.end)`:

@@ -509,13 +509,22 @@ def test_table_checks():
     assert eval_check(r, md) is None, eval_check(r, md)
     assert eval_check(r, {**md, "value": "nope"}) is not None
     # shape: a string, a record with a cell outside the text, a colspan of 1
-    # written out, a cell outside its table, a loose slice -- all red
+    # written out, a cell outside its table, a loose slice -- all red.
+    # PR #34 R2: the contract says `envelope_shape` refuses any other shape,
+    # and names document order and cell-in-span, so those two are red under
+    # BOTH check types, not only under tables_sane
+    t2 = {"start": 4, "end": 7, "header": 0, "rows": [[[4, 5], [6, 7]]]}
     for tables, via in [("10-Q", "envelope_shape"), ("10-Q", "tables_sane"),
                         ([{**tab, "rows": [[[0, 99]]]}], "envelope_shape"),
                         ([{**tab, "rows": [[[0, 1, 1]]]}], "envelope_shape"),
                         ([{**tab, "end": 3, "rows": [[[0, 1]], [[4, 5]]]}], "tables_sane"),
+                        ([{**tab, "end": 3, "rows": [[[0, 1]], [[4, 5]]]}], "envelope_shape"),
+                        ([t2, tab], "tables_sane"),
+                        ([t2, tab], "envelope_shape"),
                         ([{**tab, "rows": [[[0, 2]]]}], "tables_sane")]:
         assert eval_check({**r, "tables": tables}, {"type": via}) is not None, (tables, via)
+    # and the in-order pair is still in shape
+    assert eval_check({**r, "tables": [tab, t2]}, {"type": "envelope_shape"}) is None
     # a missing key is the default (no flag): every table check says so
     no = {k: v for k, v in r.items() if k != "tables"}
     assert eval_check(no, {"type": "envelope_shape"}) is None

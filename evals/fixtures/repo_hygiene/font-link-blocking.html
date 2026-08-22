@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- ui-font-link-nonblocking-regression: exactly THREE of these links must fire. -->
+<!-- ui-font-link-nonblocking-regression: exactly FOUR of these links must fire. -->
 <head>
 <!-- 1. the shipped fix — must NOT fire -->
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -18,5 +18,7 @@
 <link rel=stylesheet href=https://fonts.googleapis.com/css2?family=Unquoted>
 <!-- 8. PR #33 R2: `not all` is a non-screen idiom and media values are case-insensitive — must NOT fire -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=NotAll" media="not all" onload="this.media='ALL'">
+<!-- 9. PR #33 R5 (L1): a SECOND unquoted blocking link — MUST fire. With one unquoted link, the round-0 parser's miss of 7 and its over-fire on 8 cancelled to the same count of 3; two unquoted links make the pin 4 here and 3 at the round-0 parser, so a revert of the round-1 repair as a whole goes red -->
+<link rel=stylesheet href=https://fonts.googleapis.com/css2?family=Unquoted+Again>
 <style>:root{--bg:#000}</style>
 </head>

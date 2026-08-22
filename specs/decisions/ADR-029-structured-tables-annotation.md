@@ -298,8 +298,13 @@ msft-2013-table 78/78 · 6/6, tgt-2002-table-th 72/72 · 6/6, tables-cell-div
 `baseline['fast'] = 1.000 (recorded); baseline['table_cells_fidelity'] = 1.0;
 baseline['table_rows_fidelity'] = 1.0`. The committed `.eval-baseline.json`
 diff is exactly the runner's write: `"fast": 1.0` unchanged, two keys added.
-The `history.jsonl` lines for both runs carry the two new keys (ADR-025
-schema, additive).
+The `history.jsonl` lines for both runs carried the two new keys (ADR-025
+schema, additive) — but only in the working tree that made the move: neither
+line was committed with the PR, and no branch has them (`git log --all
+-S20260823-002950 -- evals/report/history.jsonl` is empty; the committed file
+at 1efc457 ends at `20260822-173510`). The time series for the two keys
+therefore starts with the first run recorded after the merge, not with the
+recording runs themselves (PR #34 R1, stated 2026-08-23, L1).
 
 That the gate is real and not a printed number: with a baseline holding
 **only** the two metric keys (no `fast` key, so the score gate cannot be what

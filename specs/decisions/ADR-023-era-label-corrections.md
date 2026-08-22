@@ -25,8 +25,11 @@ The diff ran in three passes:
    one of the 37 committed fixtures actually wrote, which is the filer's
    wording rather than the canon, and therefore evidence rather than proof.
 
-Pass 1 came back clean. Every code the form has ever carried is in `ORDER`;
-every `ADDED` date is the right rule's; no part is wrong; the 1993, 1997, SOX-
+Pass 1 came back clean. Every code and part is right: every code the form has
+ever carried is in `ORDER`, and every `ADDED` date is either its rule's or a
+documented period-end conversion of it (`9B` 2004-05-23, `9C` 2021-10-01 —
+ADR-010 ruling 2), with 7A's second phase-in date (§g) the one acknowledged
+omission; no part is wrong; the 1993, 1997, SOX-
 interim, 2005, 2010–2011, 2016, 2021 and 2023 phases all produce the item set
 the form does. That is a real finding, not an absence of one: the six months of
 era work recorded in ADR-007, ADR-010, ADR-013 and ADR-015 arrived at a
