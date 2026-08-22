@@ -1,0 +1,62 @@
+{
+  "pr": 35,
+  "round": 1,
+  "task": "L1",
+  "review": "tasks/reviews/pr35-r1.json",
+  "resolved_by": "implementer",
+  "date": "2026-08-23",
+  "protocol": "Every finding's repro was re-run before anything was edited; all five reproduced. R1 and R2 repaired (R2 by applying the doc halves, the code/case halves left open and the rows retitled the way row 128 was). R3-R5 routed to debt per the round's routing, corrected in place because the cells were being rewritten for R1/R2 anyway, and recorded in one new Debt row (Origin: PR #35 R3/R4/R5). ledger_table_shape re-run last on the final tasks/TODO.md: green.",
+  "gate_at_resolution": {
+    "invariant": "48/48 = 1.000 (+4 enumerated debt, unscored)",
+    "fast": "96/96 = 1.000 (+4 enumerated debt, unscored); table fidelity cells 1.0000 (400/400), rows 1.0000 (31/31)",
+    "baseline": "1.000, not moved; .eval-baseline.json untouched",
+    "self_checks": "python3 -m src.sec10k.test_eval_adapter 18/18; python3 -m src.repo_hygiene.css_contrast ok; python3 -m evals.bench --self-check ok; python3 -m evals.bench --check-docs evals/report/20260820-031540-bench.json unchanged at 56 checked / 4 unmatched; ledger_table_shape on tasks/TODO.md + evals/fixtures/README.md -> passed, [] (run last)"
+  },
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "HIGH",
+      "status": "fixed",
+      "reproduced": true,
+      "repro_observed": "grep -c envelope_shape over the seven table cases at 6b26208: aapl-2025-table 1, msft-2013-table 1, tgt-2002-table-th 1, tables-offsets-invariant 2, tables-refusal-path 2, tables-layout-bullet 0, tables-cell-div 0 -> 5/7 run it; the row-128 sentence 'all of which run envelope_shape' was false.",
+      "fix": "The smaller honest option: {\"type\": \"envelope_shape\"} added as the first check of evals/adversarial/tables-layout-bullet.json and tables-cell-div.json (no red-first: the tightening was already watched red in test_eval_adapter::test_table_checks). After: grep -c envelope_shape -> 7/7 (1,1,1,1,1,2,2); run_case on both cases -> passed. Row 128's R2 note rewritten: 'five of the seven ran envelope_shape before PR #35 round 1, and R1 added it to the two that ran tables_sane only (tables-layout-bullet, tables-cell-div) ... 5/7 -> 7/7'. The _tables_shape comment ('which every table case also runs', about tables_sane) is true: every table case carries tables_sane (reviewer's own sane= counts).",
+      "covered_by": "evals/adversarial/tables-layout-bullet.json and tables-cell-div.json now run envelope_shape (fast suite, 96/96); tasks/TODO.md row 128"
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "reproduced": true,
+      "repro_observed": "At 6b26208: sed -n 47p evals/fixtures/README.md | grep -c 'only item 10 can be recovered' -> 1; grep -n '14 remaining legitimate' ADR-021 -> :328; len(DOC_ALLOW) -> 20; grep -n 'ten measurement choices' docs/analysis-report.md -> :421; grep -rln '956 of 3,263' specs docs -> ADR-020, docs/architecture/overview.md (plus tasks/TODO.md:60, the Combined-multi-item-heading row); README.md:198 'anywhere in this repo' live.",
+      "fix": "Doc halves applied, each what the row's own text asks, each with its grep; code/case halves left open; rows retitled (closed parts marked CLOSED by L1 (2026-08-23, PR #35 R2), open part named first). Row 63: (1) evals/fixtures/README.md:47 now agrees with ADR-020 section c row 7 ('Yes, all four') -> grep -c 'only item 10 can be recovered' 0; (2) ADR-020 header :15-17 and section h3 now say 'four figures across three corrections', 'two of the three wrong ones (rounds 0 and 2) were the same error; round 1's 4 of 989 was the R7 denominator', 'committed twice' -> grep -c 'carried four figures' 2; (4) section h2 R8 bullet now 'correct under round 1's 2,000-char item-10 floor' + why section h3 lowered it to 500; (5) Verification citation carries the report's own git_sha c5af644...-dirty (json-load of evals/report/20260820-013206-fast.json -> c5af644186dcfc85bb5e81df8f028e26ec966265-dirty; git log -1 c3513eb^ -> c5af644, the parent); (6) '956 of 3,263' reworded at its three live spots (ADR-020:141, docs/architecture/overview.md:250, tasks/TODO.md Combined-multi-item-heading row) to 'item 10 keeps 956 of the block's 3,263 chars; the cost is 2,307' (the debt case's triage note already read it that way) -> grep -rln '956 of 3,263' specs docs README.md -> nothing; (3) stays open, row retitled 'PR #11 R22: the axp-2008 debt case's checks do not pin the four-way partition they are said to pin'. Row 65: (c) README.md:196-200 now states ADR-021 section b12's coverage (decimals within 60 chars after a backticked fixture name, same line, in the five DOC_FILES) -> grep -c 'anywhere in this repo' README.md 0; python3 -m evals.bench --check-docs evals/report/20260820-031540-bench.json unchanged at 56 checked / 4 unmatched; (a)(b)(d)(e) open, title now says so. Row 66: ADR-021 section b12:328 '14' -> '20' (len(DOC_ALLOW) = 20 re-measured at this commit, and it says the 14 was from memory) -> grep -n '14 remaining legitimate' nothing; docs/analysis-report.md:421 'ten' -> 'twelve', checked against ADR-021 itself: section b enumerates choices 1.-12. at :51-:301 and :42 says Twelve, so 'ten' was the stale one -> grep -n 'ten measurement choices' nothing; the T13 ledger row's '14'/'eleven' are archived in DONE.md (git history) and not edited; the _demo assertion stays open, row retitled to it.",
+      "covered_by": "The three rows' own closure notes carry every grep and output; tasks/TODO.md L1 Status cell lists 63/65/66 under 'doc halves closed inside rows that stay open' and moves their open parts to E as 63 (3), 65 (a)(b)(d)(e), 66 (_demo assertion)."
+    },
+    {
+      "id": "R3",
+      "severity": "LOW",
+      "status": "debt",
+      "reproduced": true,
+      "repro_observed": "awk 'NR==112||NR==113' tasks/TODO.md -> 112 'Two of the three location-var assertions in build-identity cannot fail', 113 'The 38 measurable fixtures corpus figure is stale' (the boilerplate.py comment row).",
+      "debt_row": "Three LOW findings from PR #35 round 1, all inside text L1 wrote",
+      "note": "Corrected in place in round 1: the L1 Status cell now files 113 (src/sec10k/boilerplate.py comment) under E and 112 (location-var fixture) under C. Line numbers re-derived from the final file: the new Debt row is appended as line 129, so 54-128 hold; awk on 112/113/128/129 pasted in the round-1 report."
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "status": "debt",
+      "reproduced": true,
+      "repro_observed": "grep -n 'sandston-2021)' specs/decisions/ADR-027-ambiguity-caps-confidence.md -> :165 at this branch (the section b insertion moved it from :162).",
+      "debt_row": "Three LOW findings from PR #35 round 1, all inside text L1 wrote",
+      "note": "Corrected in place: row 109's closure note and Where cell now cite ADR-027 section c's UNATTRIBUTED_MAX row by name (the note says why no line is cited). grep -c '§c:162' over tasks/TODO.md -> 2, both references to the defect (the L1 Status cell's round-1 line and the new Debt row's verbatim quote), not citations."
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "status": "debt",
+      "reproduced": true,
+      "repro_observed": "git diff --numstat origin/main...HEAD -- tasks/reviews/pr33-r1-resolution.json -> 2 added / 1 removed; the JSON content diff is one added key.",
+      "debt_row": "Three LOW findings from PR #35 round 1, all inside text L1 wrote",
+      "note": "Acknowledged in the L1 row's wording: 'additive in content (one key added, no sentence rewritten; git diff --numstat reads 2+/1- because JSON syntax re-emits the preceding shared_state line with a trailing comma)'. Nothing else changed."
+    }
+  ]
+}

@@ -247,7 +247,8 @@ combined-heading fan-out produces the identical spans and statuses through the
 same classifier, deterministically, at $0, for the whole class rather than the
 instances a model is invoked on. (The block's caption bullets interleave the
 four items, 10, 10, 11, 10, 11, 12, 10, 11, 13, 10, which costs item-10
-*coverage* under a four-way partition — 956 of 3,263 chars — but leaves all four
+*coverage* under a four-way partition — item 10 keeps 956 of the block's 3,263 chars, the
+cost is 2,307 — but leaves all four
 items contract-reachable.) The measured fallback-addressable surface across both
 eval sets is **4 of 768 items (0.52%)**. Cost stays structurally $0.00 and ADR-003's
 stdlib-only pipeline is untouched. `method: llm_fallback` stays in the contract

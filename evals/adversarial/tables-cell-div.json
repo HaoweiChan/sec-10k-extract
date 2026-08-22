@@ -5,6 +5,7 @@
   "input": {"path": "evals/fixtures/aapl-2025/filing.htm", "tables": true},
   "expect": {
     "checks": [
+      {"type": "envelope_shape"},
       {"type": "table", "anchor": "Trading symbol(s)", "header": 0,
        "rows": [
          ["", "", "", "", "", "", "", "", ""],

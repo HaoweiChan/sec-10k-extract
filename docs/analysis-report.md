@@ -418,7 +418,7 @@ What H1 actually bought, in order of value:
 
 **Input:** `evals/report/20260820-031540-bench.json`, written by
 `python3 -m evals.bench --json …` (a dev instrument added in T13; design and
-its ten measurement choices in
+its twelve measurement choices in
 [ADR-021](../specs/decisions/ADR-021-benchmark-instrument.md)). Every number in
 this section is a **field** of that file, or a ratio of two of its fields taken
 inline — the statistics the prose used to compute (R², the throughput range,
