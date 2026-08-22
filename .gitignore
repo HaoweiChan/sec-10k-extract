@@ -1,5 +1,9 @@
 __pycache__/
 *.pyc
+# build-time sha injection (ADR-028): zbpack.json's build_command writes
+# this into the image. NEVER committed — a checked-in sha is stale on the
+# next redeploy, and its absence resolves to the honest `unknown`.
+BUILD_SHA
 .venv/
 .env
 .DS_Store

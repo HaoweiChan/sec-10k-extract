@@ -32,6 +32,7 @@ its ruling and what enforces it. Full context — Context/Decision/Consequences
 - ADR-025 — one `history.jsonl` line every run, a full report only for `--report`/`all`/`--dir`/red; 165 uncited gate dumps pruned, backfilled first — enforced by `evals/run.py`, `src/repo_hygiene/eval_adapter.py::check_report_citations`
 - ADR-026 — boilerplate chrome is reported as opt-in `{start,end,kind}` spans, never removed; `normalized_text` and every offset are byte-identical with exclusion on and off — enforced by `evals/adversarial/boilerplate-offsets-invariant.json`, `src/sec10k/boilerplate.py`
 - ADR-027 — an `ambiguous` document caps every item at 0.75; `method` derives from the same `STRICT_SIM` cut as the confidence base; `FLOOR` deleted; `boundary_hygiene` reuses `HEADING_RE`; every validator threshold pinned inside its measured band — enforced by `evals/adversarial/items-stripped-escalation.json`, `evals/adversarial/spaced-letter-heading.json`, `src/sec10k/eval_adapter.py::envelope_shape` · amends ADR-007, ADR-008, ADR-018
+- ADR-028 — build identity is injected at build time (`BUILD_SHA` from Zeabur's build-phase `ZEABUR_GIT_COMMIT_SHA`) and outranks the `GIT_SHA` override; anything that is not `[0-9a-f]{7,40}` reports `unknown` rather than a label — enforced by `evals/adversarial/build-identity.json`, `src/sec10k/web/build_id.py`
 
 Amended-by is also recorded on each amended ADR's own Status line — this
 index only cross-references it for scanning.

@@ -11,11 +11,16 @@ ui_stylesheet). The ADR and citation checks need no case input — there is one
 specs/decisions/ tree and one evals/report/ — while `ui_stylesheet` is
 case-declared, because WHICH text sits on WHICH ground is the reviewable part.
 """
+import json
+import os
 import re
+import subprocess
+import tempfile
 from pathlib import Path
 
 from . import css_contrast
 from src.sec10k.web import anchor as web_anchor
+from src.sec10k.web import build_id
 from src.sec10k.web import capabilities as web_capabilities
 from src.sec10k.web.view import DISPLAY_MAX, build_view
 from src.sec10k.extract import extract_items
@@ -25,6 +30,8 @@ API_FILE = "src/sec10k/web/app.py"
 EXTRACT_ENDPOINTS = ("/api/extract/fixture", "/api/extract/upload",
                      "/api/extract/url")
 FIXTURES = "evals/fixtures"
+ZBPACK = "zbpack.json"
+GITIGNORE = ".gitignore"
 
 ROOT = Path(__file__).resolve().parents[2]
 DECISIONS = ROOT / "specs" / "decisions"
@@ -889,6 +896,265 @@ def check_external_stylesheets_nonblocking(case):
     return bad
 
 
+# Text a source can hand the resolver that is NOT a build identity, and must
+# therefore resolve to `unknown` (ADR-028) — fed through BOTH the file and the
+# `GIT_SHA` override, because the ruling is per-value, not per-source. None of
+# these is hypothetical: `printf %s "$FOO" > f` with FOO unset writes the empty
+# file, a build step whose shell never expands writes the literal, and an
+# operator acting on the S2 row's own title ("Set `GIT_SHA` on Zeabur") reaches
+# for `latest` or `main` or pastes a `${ZEABUR_GIT_COMMIT_SHA}` reference that
+# nothing expands at runtime (PR #31 R1: all four were build labels).
+#
+# NOT exhaustive, and the list does not claim to be: non-UTF-8 bytes are a
+# known gap (PR #31 R8, `## Debt` in tasks/TODO.md) — `build_sha` raises rather
+# than resolving on those.
+NOT_A_SHA = ["", "\n", "   ", "  \n\n ", "$ZEABUR_GIT_COMMIT_SHA",
+             "${ZEABUR_GIT_COMMIT_SHA}", "unknown", "HEAD", "main", "latest",
+             "a1b2c3", "0123456789abcdef0123456789abcdef012345678",
+             "zzzzzzz", "a1b2c3d4-dirty", "a1b2 c3d4e5f6"]
+
+# (file contents, reported label) — a real sha IS reported, cut to 12 like the
+# env-var branch always did, and surrounding whitespace is not a lie.
+REAL_SHA = [
+    ("0f1e2d3c4b5a", "0f1e2d3c4b5a"),
+    ("0f1e2d3c4b5a\n", "0f1e2d3c4b5a"),
+    ("  0f1e2d3c4b5a6978  \n", "0f1e2d3c4b5a"),
+    ("0f1e2d3c4b5a69788796a5b4c3d2e1f001234567", "0f1e2d3c4b5a"),
+    ("abcdef1", "abcdef1"),
+]
+
+# Pinned WHOLE, same argument as WIRE_UI: a question about the build command
+# ("does it mention the variable?") is answerable by a command that writes the
+# wrong thing. `printf %s` and not `echo`: `echo` appends a newline, which is
+# harmless here only by accident, and `printf` without a format string cannot
+# be handed a sha starting with `-`.
+BUILD_COMMAND = 'printf %s "${ZEABUR_GIT_COMMIT_SHA:-}" > BUILD_SHA || true'
+META_CALL = '"git_sha": git_sha(ROOT)'
+
+# Location variables exist to point git at a repository OTHER than the one you
+# are standing in, which is the opposite of the question this resolver asks.
+GIT_LOCATION_VARS = ["GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR"]
+
+
+def _no_git_env():
+    """The ambient environment with EVERY `GIT_*` variable removed.
+
+    For BUILDING a fixture repository, where the only safe assumption is that
+    we control nothing. Deliberately wider than the resolver's own scrub:
+    `GIT_INDEX_FILE` does not redirect `rev-parse`, so the resolver has no
+    reason to strip it, but it absolutely redirects `git commit` — and PR #31
+    R4 measured what that cost. `git commit -a` sets it, and so does
+    committing from a linked worktree (`.git/worktrees/<name>/index`), which
+    is how this PR was authored. Under an inherited absolute value the fixture
+    commit lands in another repository's index, `_temp_repo` returns None, and
+    every source-3 assertion silently disappears — the git-first falsifier
+    went from 2 failures to 0 inside exactly the pre-commit gate that is
+    supposed to be enforcing it.
+    """
+    return {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+
+
+def _temp_repo(td):
+    """`td` made into a real one-commit checkout; its short HEAD, or None.
+
+    Source 3 is the ONE branch a temp directory cannot exercise by accident,
+    and PR #31 R4 measured the cost of not exercising it: a resolver reordered
+    to try `git rev-parse` FIRST left this check at 0 failures, so the
+    published precedence table was enforced by nothing. Builds in
+    `_no_git_env()` rather than in whatever the caller inherited — the caller
+    is the thing being tested, so its environment is not a safe place to
+    construct the fixture from. A None here is NOT silently tolerated; see
+    the call site.
+    """
+    env = _no_git_env()
+
+    def run(*a):
+        return subprocess.run(["git", *a], cwd=td, env=env,
+                              capture_output=True, text=True)
+    if run("init", "-q").returncode:
+        return None
+    run("config", "user.email", "eval@example.invalid")
+    run("config", "user.name", "eval")
+    if run("commit", "--allow-empty", "-q", "-m", "build-identity").returncode:
+        return None
+    return run("rev-parse", "--short", "HEAD").stdout.strip() or None
+
+
+def check_build_identity(case):
+    """S2/ADR-028. `/api/meta` must report the sha of the build actually
+    running, and must say `unknown` rather than anything it cannot stand
+    behind. Three parts, because the property has three halves that fail
+    independently:
+
+    1. the RESOLVER, exercised for real — `build_id.py` is stdlib-only and
+       imports no fastapi, precisely so this case can call it (ADR-003: the
+       CI jobs install nothing). Every value a build can plausibly write is
+       fed through BOTH sources that carry text — the file and the `GIT_SHA`
+       override — and only a hex sha may come back out of either.
+    2. the PRECEDENCE, all four steps, and the ordering asserted rather than
+       merely observed: source 3 is exercised inside a real `git init`
+       checkout so that BUILD_SHA and GIT_SHA are seen to OUTRANK it, not
+       just to answer where it cannot (PR #31 R4). An ambient GIT_DIR must
+       not let source 3 answer about a different repository, on the explicit
+       environ AND on the default one `/api/meta` actually uses (R2).
+    3. the DEPLOYMENT plumbing, pinned as text, because nothing here can run
+       a Zeabur build: the `build_command` that writes the file, the
+       `.gitignore` line that keeps it out of the repo (a committed sha is
+       the stale label the S2 row refuses), and `/api/meta` calling the
+       shared resolver rather than growing a second copy.
+    """
+    inp = case.get("input", {})
+    bad = []
+    # A real PATH so `git` is found, and nothing else. `git rev-parse` honours
+    # GIT_DIR from the environment and the pre-commit hook SETS it — which is
+    # how this check first went red: the resolver answered with the repo's HEAD
+    # while pointed at a temp directory that is not a repository at all. That
+    # was a defect in `git_sha`, not in the test, and PR #31 R2 found the first
+    # fix half-done — it closed the leak only for callers passing an explicit
+    # environ, while `/api/meta` passes none. The resolver now strips the git
+    # location variables on every path; `clean` here is belt-and-braces so a
+    # failure names the resolver rather than this check's own environment.
+    clean = {"PATH": os.environ.get("PATH", "")}
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        f = root / build_id.BUILD_SHA_FILE
+        if build_id.git_sha(root, clean) != "unknown":
+            bad.append("no injected file, no GIT_SHA and no .git must be "
+                       f"`unknown`, got {build_id.git_sha(root, clean)!r}")
+        for junk in NOT_A_SHA:
+            f.write_text(junk)
+            got = build_id.git_sha(root, clean)
+            if got != "unknown":
+                bad.append(f"{build_id.BUILD_SHA_FILE} holding {junk!r} became "
+                           f"the build label {got!r} — a build label that is "
+                           f"not a sha is worse than `unknown`")
+        for text, want in REAL_SHA:
+            f.write_text(text)
+            got = build_id.git_sha(root, clean)
+            if got != want:
+                bad.append(f"{build_id.BUILD_SHA_FILE} holding {text!r} must "
+                           f"report {want!r}, got {got!r}")
+        f.write_text("0f1e2d3c4b5a")
+        got = build_id.git_sha(root, dict(clean, GIT_SHA="deadbeefcafe"))
+        if got != "0f1e2d3c4b5a":
+            bad.append(f"the build-written sha must outrank a hand-set "
+                       f"GIT_SHA — only the build knows it is current — "
+                       f"got {got!r}")
+        f.unlink()
+        got = build_id.git_sha(root, dict(clean, GIT_SHA="deadbeefcafe"))
+        if got != "deadbeefcafe":
+            bad.append("with no injected file the GIT_SHA override must still "
+                       f"answer, got {got!r}")
+        # PR #31 R1. The ruling is per-VALUE, not per-source: the override is
+        # the branch an operator actually reaches for (the row is titled "Set
+        # GIT_SHA on Zeabur"), so it is exactly where a placeholder gets typed.
+        for junk in NOT_A_SHA:
+            got = build_id.git_sha(root, dict(clean, GIT_SHA=junk))
+            if got != "unknown":
+                bad.append(f"GIT_SHA={junk!r} became the build label {got!r} — "
+                           f"the same value is rejected when it arrives in "
+                           f"{build_id.BUILD_SHA_FILE}, and where a lie enters "
+                           f"from does not make it true")
+        # PR #31 R2. `/api/meta` calls `git_sha(ROOT)` with no environ, so the
+        # DEFAULT path is the deployed path: an ambient GIT_DIR must not let
+        # `git rev-parse` answer about a repository that is not `root`.
+        for name in GIT_LOCATION_VARS:
+            got = build_id.git_sha(root, dict(clean, **{name: str(ROOT / ".git")}))
+            if got != "unknown":
+                bad.append(f"{name} in the environment made a non-repository "
+                           f"report {got!r} — that is another repo's sha, "
+                           f"served as this build's identity")
+        saved = {k: os.environ.get(k) for k in GIT_LOCATION_VARS}
+        try:
+            os.environ["GIT_DIR"] = str(ROOT / ".git")
+            got = build_id.git_sha(root)          # exactly app.py's call shape
+            if got != "unknown":
+                bad.append(f"on the DEFAULT environ — the one /api/meta uses — "
+                           f"an ambient GIT_DIR made a non-repository report "
+                           f"{got!r}. The deployed path is the one that has to "
+                           f"be closed, not just the one the eval passes.")
+        finally:
+            for k, v in saved.items():
+                os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v)
+
+    # PR #31 R4. Source 3, and the only place it can be exercised: a real
+    # checkout, so that BUILD_SHA and GIT_SHA are seen to OUTRANK it rather
+    # than merely to answer where it cannot.
+    clean_full = _no_git_env()
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        head = _temp_repo(td)
+        if not head:
+            # PR #31 R4: the previous version skipped here in silence, so a
+            # broken fixture and a passing precedence table were the same
+            # observation. An assertion that cannot run has not passed.
+            bad.append("could not build a temp git checkout, so the source-3 "
+                       "precedence assertions did not run — this check reports "
+                       "nothing about precedence until that is fixed")
+        else:
+            got = build_id.git_sha(root, clean_full)
+            if got != head:
+                bad.append(f"source 3: a real checkout must report its own "
+                           f"short sha {head!r}, got {got!r}")
+            got = build_id.git_sha(root, dict(clean_full, GIT_SHA="deadbeefcafe"))
+            if got != "deadbeefcafe":
+                bad.append(f"precedence: GIT_SHA must outrank `git rev-parse` "
+                           f"in a real checkout, got {got!r} (HEAD is {head!r})")
+            (root / build_id.BUILD_SHA_FILE).write_text("0f1e2d3c4b5a")
+            got = build_id.git_sha(root, dict(clean_full, GIT_SHA="deadbeefcafe"))
+            if got != "0f1e2d3c4b5a":
+                bad.append(f"precedence: the build-injected sha must outrank "
+                           f"BOTH GIT_SHA and `git rev-parse` in a real "
+                           f"checkout, got {got!r} (HEAD is {head!r})")
+
+    # local dev: a working checkout still reports its own short sha. The real
+    # ambient environment here, with only the override cleared — this is the
+    # branch that is SUPPOSED to find a repository. Skipped only where git
+    # cannot answer at all; a real BUILD_SHA sitting in the tree is the
+    # file-first case above, already pinned.
+    # PR #31 R10: the oracle must measure HEAD in the SAME environment the
+    # resolver resolves in. Once the resolver started stripping the location
+    # vars and this subprocess did not, an ambient GIT_DIR made the two
+    # disagree and turned correct code red — a false failure in precisely the
+    # pre-commit-hook condition this check's own history is about.
+    head = subprocess.run(
+        ["git", "rev-parse", "--short", "HEAD"], cwd=ROOT,
+        env={k: v for k, v in os.environ.items() if k not in GIT_LOCATION_VARS},
+        capture_output=True, text=True).stdout.strip()
+    if head and not build_id.build_sha(ROOT):
+        got = build_id.git_sha(ROOT, dict(os.environ, GIT_SHA=""))
+        if got != head:
+            bad.append(f"a checkout with a .git must report its own short sha "
+                       f"{head!r}, got {got!r}")
+
+    zb = json.loads((ROOT / inp.get("zbpack_file", ZBPACK)).read_text())
+    if _squash(zb.get("build_command", "")) != _squash(BUILD_COMMAND):
+        bad.append(f"{ZBPACK}: build_command is "
+                   f"{zb.get('build_command')!r}, not the pinned "
+                   f"`{BUILD_COMMAND}` — this is the ONLY thing that puts a "
+                   f"real sha in the image, and Zeabur exposes "
+                   f"ZEABUR_GIT_COMMIT_SHA in the build phase only")
+    ignored = [l.strip() for l in (ROOT / GITIGNORE).read_text().splitlines()]
+    if build_id.BUILD_SHA_FILE not in ignored:
+        bad.append(f"{GITIGNORE} does not ignore {build_id.BUILD_SHA_FILE} — a "
+                   f"committed build sha is stale the moment it is committed")
+    tracked = subprocess.run(["git", "ls-files", "--", build_id.BUILD_SHA_FILE],
+                             cwd=ROOT, capture_output=True, text=True).stdout
+    if tracked.strip():
+        bad.append(f"{build_id.BUILD_SHA_FILE} is TRACKED: {tracked.strip()}")
+
+    api = _live((ROOT / inp.get("api_file", API_FILE)).read_text(), "py")
+    n = _squash(api).count(_squash(META_CALL))
+    if n != 1:
+        bad.append(f"app.py: /api/meta must report the shared resolver's "
+                   f"answer — expected exactly one `{META_CALL}`, found {n}")
+    if re.search(r"def\s+_?git_sha\b", api):
+        bad.append("app.py defines its own git_sha — build identity has one "
+                   "implementation, in build_id.py, or the eval set is "
+                   "exercising a copy nobody serves")
+    return bad
+
+
 CHECKS = {
     "adr_headers": lambda case: check_adr_headers(),
     "adr_index": lambda case: check_index(),
@@ -906,6 +1172,7 @@ CHECKS = {
     "boilerplate_exclusion": check_boilerplate_exclusion,
     "boilerplate_plumbing": check_boilerplate_plumbing,
     "external_stylesheets_nonblocking": check_external_stylesheets_nonblocking,
+    "build_identity": check_build_identity,
 }
 
 
