@@ -1,0 +1,73 @@
+{
+ "pr": 30,
+ "round": 1,
+ "date": "2026-08-22",
+ "result": "REQUEST_CHANGES",
+ "gate": "[eval] suite 'invariant': 40/40 = 1.000 (+4 enumerated debt, unscored) / [eval] suite 'fast': 82/82 = 1.000 (+4 enumerated debt, unscored); .eval-baseline.json {\"fast\": 1.0} untouched; python3 -m src.sec10k.normalize -> ok",
+ "routing_rule": "repair = HIGH/MEDIUM and (acceptance violated | gate red | published claim dishonest); everything else debt (pr-loop scope boundary)",
+ "findings": [
+  {
+   "id": "R1",
+   "severity": "MEDIUM",
+   "route": "repair",
+   "claim": "The new 'Normalized-character figures ... stale by the <title> length' Debt row was appended onto the PR #28 R4/R5 row's line with no newline, so it is not a row in the Debt table at all: tasks/TODO.md line 103 is one 7-cell line in a 3-column table (cells 3..6 are the new row), and a Markdown renderer truncates/garbles it.",
+   "evidence": "tasks/TODO.md:103 — '...take them with the R2/R3 one-liners in the next ledger pass || **Normalized-character figures in the benchmark artifact of record...'; the diff hunk (`-` line ends 'ledger pass |', `+` line continues '| **Normalized...') shows this PR introduced it. Splitting line 103 on '|' yields 7 cells (header at :56 has 3); the vacuous_coverage row at :104 is correctly 3 cells.",
+   "repro": "awk 'NR==103{print gsub(/\\|/,\"|\")-1}' tasks/TODO.md  -> 7 ; sed -n 103p tasks/TODO.md | grep -o '.\\{40\\}|| \\*\\*Normalized'",
+   "acceptance": "tasks/TODO.md:103 ends at '...next ledger pass |' and the Normalized-character Debt row is its own 3-cell line; every Debt-table row has exactly 3 cells except the pre-existing :84/:89/:96 defects this PR did not touch."
+  },
+  {
+   "id": "R2",
+   "severity": "MEDIUM",
+   "route": "repair",
+   "claim": "The fixture provenance says the mutated 'December 31, 2016' is 'the first of 34 occurrences' in the raw premier-pacific-2016 file; the string occurs 40 times (34 is the count of LINES containing it).",
+   "evidence": "evals/fixtures/README.md:28 ('the first of 34 occurrences, raw offset 2196') and evals/adversarial/comma-cover-period.json 'provenance' ('the first of 34 'December 31, 2016' occurrences in the raw file'). grep -o counts 40; grep -c counts 34 lines. The rest of the one-byte claim reproduces (642,332 -> 642,331; cmp first difference at byte 2209 = offset 2208; exactly one 'December 31,2016' in the output, zero in the source; offset 2196 is the occurrence start).",
+   "repro": "grep -o 'December 31, 2016' evals/fixtures/premier-pacific-2016/filing.htm | wc -l  -> 40 ; grep -c 'December 31, 2016' evals/fixtures/premier-pacific-2016/filing.htm -> 34",
+   "acceptance": "Both places say 40 occurrences (or '34 lines'), and the number reproduces with the command that is implied by the wording."
+  },
+  {
+   "id": "R3",
+   "severity": "MEDIUM",
+   "route": "repair",
+   "claim": "T3-2 is fixed with no case in the gate suites: the only pin is a normalize._demo assert, so the eval gate (invariant 40/40, fast 82/82) cannot see AMENDMENT_RE at all — removing the new branch leaves both suites green — which is neither 'fix-with-case' nor 'debt' under criterion 1 / hard rule 2, and ADR-024 does not cover it: §2's _demo exemption is for 'a behaviour no fixture can carry', but a 10-K/A cover is trivially carried by a synthetic fixture (this same PR synthesizes comma-cover-2016 by one byte, and ksb-2007/aapl-2026-10q already are committed fixtures of refused forms), and §3 — cited for 'no fixture' — says in the same sentence 'no new code path', which the PR adds.",
+   "evidence": "src/sec10k/normalize.py:37-38, :199-201 (new AMENDMENT_RE branch); the only red/green is src/sec10k/normalize.py:_demo :217-220 (CI unit-tests job runs it; the Gate in CLAUDE.md does not). Measured: no committed or held-out fixture has /amendment\\s+no/i in text[:6000] (43 fixtures, zero hits), so no gate case exercises the branch; form_type_sniffed is unchanged on all 43 at HEAD (author's claim confirmed). specs/decisions/ADR-024-10ka-out-of-scope.md Decision §2 ('a behaviour no fixture can carry is proved at the layer'), §3 ('No new fixture, no new code path').",
+   "repro": "python3 -m evals.run --suite invariant && python3 -m evals.run --suite fast with AMENDMENT_RE.search monkeypatched to return None (or the `if not form.endswith...` block deleted): both stay 40/40 and 82/82. Only `python3 -m src.sec10k.normalize` goes red.",
+   "acceptance": "Either an adversarial case in the fast+invariant suites (e.g. a one-line synthetic cover copy with '(Amendment No. 1)' typeset below 'FORM 10-K', asserting doc_status unsupported / unsupported_form, watched red at 3c2b8f4), or T3-2 moved to the Debt table with the honest reason; if the _demo-only route is kept, an ADR amendment stating that _demo is an accepted disposition for gate-invisible fixes — not a selective citation of ADR-024 §3."
+  },
+  {
+   "id": "R4",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "'ZERO changes to ... warnings' (T3 row, commit message) is overstated: warning message strings change on cvx-2015 and wfc-2008 (codes unchanged).",
+   "evidence": "Pre/post snapshot over all 39 fixtures: cvx-2015 unattributed_content '9,731 chars before the first' -> '9,725'; wfc-2008 '7,423' -> '7,416'; truncated-download '1200 raw chars normalized to 13' -> '0' (that one is disclosed). Item status/confidence/span text, doc_status, form_type, form_type_sniffed, period_end: unchanged on all 38 as claimed; 18 fixtures shorten by exactly the listed amounts, total 286; held-out cost-2022 -15, csco-2016 -10, pgr-2023 -14 with nothing else moving.",
+   "repro": "extract_items on evals/fixtures/cvx-2015/filing.htm at 3c2b8f4 vs HEAD; diff result['warnings']",
+   "acceptance": "Row/commit say 'warning codes unchanged; unattributed_content/normalization_collapse messages re-count by the title length'."
+  },
+  {
+   "id": "R5",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "html-title-metadata provenance and the T3 row put the cover line 'For the fiscal year ended December 31, 2006' at offset 305; the string starts at 297 (305 is where COVER_DATE_RE's match 'fiscal year ended...' starts).",
+   "evidence": "HEAD bac-2006 normalized_text.find('For the fiscal year ended December 31, 2006') = 297, count 1; COVER_DATE_RE.search(text[:6000]).start() = 305. The case itself is sound: red at 3c2b8f4 with exactly the one claimed failure, 'SECURITIES AND EXCHANGE COMMISSION' 1x at 34, and warning_absent(period_end_unknown) does pin that the date still resolves once the title is gone.",
+   "repro": "python3 -c \"from src.sec10k.extract import extract_items as e; t=e('evals/fixtures/bac-2006/filing.htm')['normalized_text']; print(t.find('For the fiscal year ended December 31, 2006'))\"",
+   "acceptance": "Provenance says 297 (string) / 305 (regex match), or drops the offset."
+  },
+  {
+   "id": "R6",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "Edge shapes of the title skip: an unclosed <title> now swallows the whole document (html.parser treats title as RCDATA on 3.11 and 3.14, skip_depth never returns to 0) -> 0 chars -> failed/normalization_collapse, where main emitted tag soup; <noscript> text inside <head> still leaks; self-closing <title/>, uppercase <TITLE>, entities and nested tags in the title all behave. No committed or held-out fixture has a <title> outside <head>, an unclosed one, <noscript> or <textarea> (34 fixtures have exactly one open/one close, all before <body>).",
+   "evidence": "select_and_normalize('<html><head><title>x<meta charset=x></head><body><p>FORM 10-K</p>...') -> '' on both python3.11 and 3.14.6; '<noscript>JS OFF TEXT</noscript>' in head -> 'JS OFF TEXT\\n\\nFORM 10-K'.",
+   "repro": "ad-hoc python as above",
+   "acceptance": "Noted (debt or comment) or left as-is; a loud `failed` on a document a browser would also render blank is defensible."
+  },
+  {
+   "id": "R7",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "Two residual stale-number spots outside what the Debt row names: ADR-010 ruling 4 still narrates 'a truncated download — 13 normalized chars' (README:114 was re-measured to 0), and ADR-020's §d table also carries corpus 8,450,478 / median 108,938 which the row's ADR-020 clause lists only for ADR-021/analysis-report. Both are dated measurements, so this is completeness of the debt row, not a false current claim; evals.bench --check-docs is identical at main and HEAD (56 checked, 4 unmatched, exit 1 both) as stated.",
+   "evidence": "specs/decisions/ADR-010-g1-corrections.md:138; specs/decisions/ADR-020-fallback-not-justified.md:291-294; tasks/TODO.md:103 Debt row text names ADR-020 §d only for xom/jpm/bac.",
+   "repro": "grep -n '13 normalized' specs/decisions/ADR-010-g1-corrections.md; grep -n '108,938\\|8,450,478' specs/decisions/ADR-020-fallback-not-justified.md",
+   "acceptance": "Debt row's 'Where' cell names ADR-010:138 and the ADR-020 §d corpus/median lines too, or states that dated ADR narratives are out of its scope."
+  }
+ ]
+}

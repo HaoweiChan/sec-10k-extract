@@ -111,7 +111,7 @@ Verified by committed cases; run `python3 -m evals.run --suite all` to reproduce
 | Shell / tiny filers | Sandston FY2021, Premier Pacific FY2016 | `success`, including correct `omitted` for absent optional items |
 | Table-of-contents traps | `toc-titled` (synthetic hard form) | TOC suppressed, body headings win |
 | Non-10-K input | Apple Q1 FY2026 10-Q | **refused** as `unsupported`, zero items |
-| Truncated download | 13 normalized chars | **refused** as `failed`, with the right diagnosis (ADR-010) |
+| Truncated download | 0 normalized chars | **refused** as `failed`, with the right diagnosis (ADR-010) |
 | Large filings | JPM FY2024, 12.25 MiB | **0.55 s** (median of 3, `evals/report/20260820-031540-bench.json`), and it flags its own boundary problem |
 
 ## What is difficult, unreliable, or unsupported
