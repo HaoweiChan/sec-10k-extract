@@ -1,0 +1,80 @@
+{
+  "pr": 27,
+  "task": "S8",
+  "round": 2,
+  "date": "2026-08-22",
+  "reviewer": "groundwork:pr-reviewer (fresh context; scoped to the repair diff 4c1ae91..39dfa2c plus the two standing findings)",
+  "result": "REQUEST_CHANGES",
+  "counts": {
+    "HIGH": 0,
+    "MEDIUM": 2,
+    "LOW": 3
+  },
+  "standing_findings": "R1 and R2 both CLOSED and reported as such. R1's fix verified sensitive to wrong display_text/text splits; R2's four original shapes all now go red.",
+  "routing_note": "R5 and R6 are MEDIUM and routed repair; both defeat the task's headline requirement that ON hides chrome and default-OFF is unchanged, and both are checks that cannot fail. R5 is notable as a regression INTRODUCED BY THE R1 REPAIR: before it, `text` carried the stripped string and the exclusion case pinned the rendered output; after it, the rendered output is a client-side `display_text ?? text` expression no check reads. The orchestrator re-ran R5 and R6's M2 independently before routing - R5 leaves both suites fully green while the pane shows un-stripped text under a 'boilerplate hidden' header, and M2 is a one-character upload typo that makes every upload exclude, at 0 failures. R7/R8/R9 are LOW and route to debt regardless of criteria. R9 is a correction to a rationale whose CONCLUSION the reviewer independently verified as sound - the premise is wrong, the decision is right.",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "LOW",
+      "route": "closed",
+      "claim": "CLOSED - the anchor oracle is genuinely fixed: `text` is the verbatim INV-S2 slice in both modes, the new case is sensitive to the exact regression, and re-running the check with exclusion ON is clean.",
+      "evidence": "src/sec10k/web/view.py:55-64 sets `text: raw[:display_max]` unconditionally and gates `display_text` on `body != raw`; src/repo_hygiene/eval_adapter.py:504-513 now receives the verbatim slice. Measured at 39dfa2c: `check_anchor_contract` with exclusion ON -> 0 failures, 641 items / 38 fixtures. `check_boilerplate_exclusion` -> 0 failures, items_stripped 16, and it bites on wrong splits: `display_text = raw[:display_max]` -> 16 failures, `display_text = body` untruncated -> 3 failures.",
+      "repro": "check_anchor_contract({'input':{'exclude_boilerplate':True}}). ORCHESTRATOR RE-RAN INDEPENDENTLY: 0 failures, 641 items / 38 fixtures.",
+      "acceptance": "No further action for R1 itself; see R5 for the consumer the fix moved out of coverage."
+    },
+    {
+      "id": "R2",
+      "severity": "LOW",
+      "route": "closed",
+      "claim": "CLOSED for the four shapes it named - all four of R2's original mutations now go red against copies of the real app.py/index.html.",
+      "evidence": "Re-ran R2's own four mutations at 39dfa2c: (a) url handler reads `excludeBoilerplate` -> 2 failures; (b) fixture call site hardcodes `exclude_boilerplate: true` -> 1; (c) upload handler compares `== \"true\"` -> 1; (d) `_run` forwards `not exclude_boilerplate` -> 1; control -> 0. Fixture pair yields exactly 5 distinct messages, one per pinned shape.",
+      "repro": "check_boilerplate_plumbing against mutated copies of the real two files; and against the two committed fixtures -> 5.",
+      "acceptance": "No further action for the four named shapes; see R6 for the class that is still open."
+    },
+    {
+      "id": "R5",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The R1 fix moved the feature's headline behaviour out of eval coverage: the stripped string is now rendered only by a client-side `it.display_text ?? it.text` expression in index.html that no check reads, so deleting `it.display_text ?? ` - which makes the extracted-item pane show the UN-stripped text while the header still says 'boilerplate hidden' - leaves the whole gate green.",
+      "evidence": "src/sec10k/web/static/index.html:751 `<pre class=\"text\">${esc(it.display_text ?? it.text)}</pre>` and :755 `${(it.display_text ?? it.text).length...}` are the only consumers of `display_text`. `grep -rn display_text src/repo_hygiene/eval_adapter.py evals/golden evals/adversarial` returns only server-side payload assertions plus one triage sentence - nothing binds index.html to the key. Before the repair, `text` itself carried the stripped string, so check_boilerplate_exclusion pinned the RENDERED string; after the repair it pins a field the pane may ignore. Measured: with `${esc(it.display_text ?? it.text)}` replaced by `${esc(it.text)}`, invariant = 36/36 = 1.000 and fast = 78/78 = 1.000. The repair's own prompts/012 note says 'a payload key is a function signature' and 'grep every caller' - the new key's only caller is unchecked. The repo already has the machinery (check_boilerplate_plumbing reads index.html as text).",
+      "repro": "Replace `${esc(it.display_text ?? it.text)}` with `${esc(it.text)}` in src/sec10k/web/static/index.html and run both suites. ORCHESTRATOR RE-RAN INDEPENDENTLY: invariant 36/36 = 1.000, fast 78/78 = 1.000, both fully green with the pane showing un-stripped text under a 'boilerplate hidden' header.",
+      "acceptance": "check_boilerplate_plumbing (or an equivalent ui-* assertion) requires index.html's `pre.text` render AND the truncation-notice length to read `display_text` with `text` only as fallback, watched red against the deletion above; ui-boilerplate-exclusion-regression's fixture HTML carries the mutation as a sixth pinned shape at the exact count."
+    },
+    {
+      "id": "R6",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The rewritten `check_boilerplate_plumbing` binds the NAMES on the wire but only checks the flag's VALUE at one of the two value-carrying hops, so five realistic breakages against the real files still return 0 failures - two of which invert default-OFF into always-exclude, the same headline-requirement class R2 was raised for.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:699-717: `read = set(re.findall(r'\"([^\"]*)\"', expr))` compares only quoted literals, so any operator/inversion in the handler expression is invisible; the only value-integrity assertion is :731-735, the `_run` -> `extract_items` hop. Measured against copies of the real app.py + index.html at 39dfa2c, all returning 0 failures (control 0): M1 fixture handler `exclude_boilerplate=not bool((body or {}).get(\"exclude_boilerplate\"))` (fixture-dropdown mode inverted - default OFF now excludes); M2 upload handler `!= \"1\"` instead of `== \"1\"` (one-character typo; with the box unticked the query param is absent, `None != \"1\"` is True, so EVERY upload excludes - and upload is the no-network path an evaluator uses); M3 `exclude_boilerplate=False and bool(...)` (fixture mode never excludes); M4 `function excludeBp(){ return true; }` (helper ignores the checkbox - R2 shape (b) relocated one level up, and the docstring at :657-659 claims to require call sites to 'read excludeBp() rather than a constant', which M4 satisfies while severing all three modes); M5 `$(\"#exclude-bp-OLD\")` inside excludeBp (helper always false - the checkbox never excludes anything).",
+      "repro": "Copy app.py and index.html to a scratch dir, apply each of M1-M5, call check_boilerplate_plumbing against the copies - all five return []. ORCHESTRATOR RE-RAN M2 INDEPENDENTLY: 0 failures, [].",
+      "acceptance": "The check asserts each handler forwards the read value unmodified (no `not`/`!=`/constant between the request read and the `exclude_boilerplate=` kwarg) and that `excludeBp()`'s body actually reads `#exclude-bp`'s `.checked`; M1-M5 are added to the fixture pair at the new exact count and each is watched red individually before being claimed covered."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The new regression case's triage note states a rationale for the exact count that is factually false: it claims a blanket-failing check 'would exceed the pinned count rather than reach it', but an always-firing wire comparison hits exactly 5 on the fixture pair, because no endpoint in the pair reaches the comparison and agrees.",
+      "evidence": "evals/adversarial/ui-boilerplate-exclusion-regression.json triage.note. In the fixture pair the fixture endpoint fails at the UI branch (so `sent` stays None and the comparison is never reached), and url + upload both disagree - there is no agreeing pair for the comparison to be tested on. Measured: mutating eval_adapter.py:709 `if sent is not None and sent != read:` to `if sent is not None and True:` gives exactly 5 failures with the same 5 messages, i.e. the case stays PASS. The mutation IS caught, but by the OTHER half of the pair (ui-boilerplate-exclusion on the real files goes FAIL, invariant 35/36 = 0.972) - not by the exact count the note credits.",
+      "repro": "Apply the `sent != read` -> `True` mutation, run the fixture-pair check -> 5 failures, regression case PASS; invariant -> ui-boilerplate-exclusion FAIL, 35/36.",
+      "acceptance": "Either the triage note is corrected to credit the green half of the pair for the over-fire direction, or the fixture pair adds one endpoint where both ends agree so the exact count itself distinguishes a correct comparison from an always-firing one."
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The R1 fix serialises the item body twice for every item that contains any chrome, roughly doubling the ON-path payload, and nothing in the diff, the resolution or the TODO row discloses the cost.",
+      "evidence": "src/sec10k/web/view.py:62-63 emits `display_text` in addition to the (now always verbatim) `text`, both truncated at DISPLAY_MAX=40,000. Measured over the committed fixtures, `len(json.dumps(build_view(...)))` OFF -> ON: cat-2023 222,559 -> 428,434 (+205,875); nvda-2024 196,474 -> 376,530; heading-unnumbered 196,598 -> 376,859; msft-2013 201,641 -> 379,914; ge-1994 85,548 -> 161,045. 21 of 38 fixtures grow by more than 20 KB. Separately, `display_text` is emitted whenever `body != raw` even if the difference falls beyond DISPLAY_MAX, in which case it is byte-identical to `text`; the check's dead-payload guard only fires when NOTHING was stripped, so that redundancy is unpinned (0 such items on today's fixtures, so no live symptom).",
+      "repro": "For each fixture: json.dumps(build_view(extract_items(f))) vs the same with exclude_boilerplate=True.",
+      "acceptance": "Either emit only one body (e.g. send `display_text` and keep the anchor oracle's needle server-side) or record the doubling in the S8 row / a debt row as a knowingly accepted cost, with the measured numbers."
+    },
+    {
+      "id": "R9",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The rejection rationale for the HTTP option is written as 'evals/run.py has no skip state', but run.py does have an unscored case state - the `debt` suite - which is excluded from both `score` and `is_red`; the load-bearing half of the argument (three CI jobs install nothing) is verified true, so the conclusion stands but the stated fact does not.",
+      "evidence": "evals/run.py:141-147 separates the debt set, :148-150 `score = passed / len(results)` over the non-debt set only, and :166 `is_red` also excludes debt_results - four cases already use it. The claim appears verbatim in src/repo_hygiene/eval_adapter.py:664-668, tasks/TODO.md's corrected debt row, tasks/reviews/pr27-r1-resolution.json and prompts/012. VERIFIED TRUE in the same run: requirements.txt lists fastapi+uvicorn but not httpx; ci.yml has exactly three jobs and none runs `pip install`; `import fastapi` fails in this environment. So the conclusion is sound; the premise as written is not, and `debt` is a poor fit anyway (a dep-missing case would read as 'STILL RED' in CI and 'NOW GREEN - promote it' locally).",
+      "repro": "sed -n 135,170p evals/run.py; grep -rn '\"debt\"' evals/adversarial; grep -n 'pip install' .github/workflows/ci.yml",
+      "acceptance": "The three copies of the sentence say what is actually true - that run.py's only unscored state is the `debt` suite, which is semantically 'known-red limitation' and would misreport a dependency-conditional case in both directions - rather than 'no skip state'."
+    }
+  ]
+}
