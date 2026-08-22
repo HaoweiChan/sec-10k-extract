@@ -1,0 +1,28 @@
+{
+  "id": "spaced-letter-heading",
+  "task": "sec10k",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "path": "evals/fixtures/spaced-letter-heading/filing.htm"
+  },
+  "expect": {
+    "checks": [
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "item_present", "item": "9A", "status": "extracted"},
+      {"type": "item_field", "item": "9A", "field": "heading_text", "value": "Item 9 A. Controls and Procedures."},
+      {"type": "warning_absent", "code": "boundary_hygiene"},
+      {"type": "confidence", "item": "9A", "value": 0.95},
+      {"type": "doc_status", "value": "success"},
+      {"type": "no_empty_success"}
+    ]
+  },
+  "triage": {
+    "class": "validator-false-positive",
+    "note": "gates-2026-08-22 T5-3: boundary_hygiene re-applied a COPY of the heading regex over offsets the real regex (segment.HEADING_RE) produced, and the copy had drifted — HEADING_RE allows an optional space between the item number and its letter ('Item 9 A.'), the copy (`item\\s*9A\\b`) did not. So the one heading shape the two disagreed on was a false positive: the item is located correctly, then warned against and docked 0.15 for opening with the very heading that located it. The fix reuses HEADING_RE instead of a copy, which makes the layer-consistency assertion ADR-016 §2 keeps it for unable to drift again. ADR-011's IBR extension and INV-S1's enforcement list are untouched: the check still runs over every span-carrying item."
+  },
+  "provenance": "SELF-CREATED 2026-08-22 from evals/fixtures/sgrp-2019/filing.htm: ONE byte (0x20) inserted at raw offset 416348, between the '9' and the 'A' of the body heading 'Item\\n9A. Controls and Procedures.' (raw offset 416342, the only occurrence of that string; the contents-page entry is 'ITEM 9A.' and is untouched), so the heading reads 'Item\\n9 A. Controls and Procedures.' and normalizes to 'Item 9 A. Controls and Procedures.'. 490,291 -> 490,292 bytes; the derivation (scratch script) asserts the prefix and suffix are byte-identical to the source. Red at origin/main 4cb2128: unexpected warning 'boundary_hygiene' (item 9A span does not start with its heading), item 9A confidence 0.8 != 0.95, doc_status 'success_with_warning' != 'success' — the source fixture sgrp-2019 reads `success` with 9A at 0.95. The spaced-letter shape is not in any committed filing as a heading (cat-2023 has 'Item 1 A.' once, mid-sentence inside a cross-reference, never at line start), so this case is proved on the fixture the regex copy could not match rather than at the layer."
+}

@@ -1,6 +1,8 @@
 # ADR-007 — T4 segmentation: measured thresholds and era rulings
 
-Date: 2026-08-16. Status: accepted. Amended by: ADR-010, ADR-013, ADR-015.
+Date: 2026-08-16. Status: accepted. Amended by: ADR-010, ADR-013, ADR-015,
+ADR-027 (in place 2026-08-22: what `method: heading_lenient` names — see the
+note under "Deliberately not built").
 Implements layers 4-7 (`src/sec10k/segment.py`) under ADR-004/ADR-005's status
 semantics.
 
@@ -110,7 +112,12 @@ they resolve 13 of 13 fixtures). Two calls worth recording:
   (`malformed-html` Item 1A, whose heading tag is corrupted) *should* surface
   as `missing`, not be rescued by a looser pattern. It is added when a case
   demands it, not before — and `method` already carries `heading_lenient` in
-  the contract for that day.
+  the contract for that day. *Amended 2026-08-22 (ADR-027 §b): `heading_lenient`
+  is now emitted, and it names the weak-title tier of THIS line-anchored match
+  (title similarity in `[SIM_FLOOR, STRICT_SIM)`, the same condition that pays
+  `BASE_WEAK`) — not the mid-line candidate tier above, which stays unbuilt
+  and, if ever built, takes its own `method` value via ADR (the enum is
+  extensible by its own text).*
 - **SRC 7A-relief `omitted`** (ADR-005's own noted gap): an SRC that omits the
   7A heading entirely would currently report `missing`. No fixture exhibits
   it; ADR-005 already flags it as the case to add later.

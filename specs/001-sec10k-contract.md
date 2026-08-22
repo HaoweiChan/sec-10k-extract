@@ -11,10 +11,11 @@ unchanged; field rationale lives in `docs/product/task2-problem-definition.md`.
 {
   "normalized_text": "<the full filing as extractor-normalized plain text>",
   "doc_status": "success_with_warning",
-  "warnings": [{"code": "lenient_match", "message": "...", "item": "7A"}],
+  "warnings": [{"code": "keyword_fingerprint", "message": "...", "item": "1A"}],
   "meta": {
     "format_era": "ixbrl",
     "taxonomy_era": "modern",
+    "toc_manifest": ["1", "1A", "..."],
     "document_selected": "...",
     "input_sha256": "...",
     "extractor_version": "..."
@@ -38,6 +39,14 @@ unchanged; field rationale lives in `docs/product/task2-problem-definition.md`.
   ]
 }
 ```
+
+The example is the non-refusal shape. `meta.taxonomy_era` and
+`meta.toc_manifest` are present **on the non-refusal path only**
+(`success` / `success_with_warning` / `ambiguous`): a document the pipeline
+refused (`unsupported` / `failed`) has no era and no manifest to report
+(ADR-027 §f; the `envelope_shape` check type encodes exactly this). The
+warning code shown is one a path actually produces (ADR-016's table lists
+them all); the example once showed `lenient_match`, which nothing emits.
 
 ## Rules
 
@@ -69,7 +78,10 @@ unchanged; field rationale lives in `docs/product/task2-problem-definition.md`.
   magnitudes stand (no constant moves), and the phantom `BASE_MISSING = 0.55`
   — a value no item could ever actually carry — collapsed to the 0.40 every
   missing item already scored. The scale itself is an ordinal evidence
-  encoding — status tier, title-match quality, warning count — not a
+  encoding — status tier, title-match quality, warning count, and (ADR-027 §a)
+  the document verdict: when `doc_status` is `ambiguous` every item is capped
+  at the weak-title base (0.75), so an envelope can never say "we could not
+  resolve this document" over a column of 0.95s — not a
   probability.
 - Offsets are into `normalized_text`, NOT the raw file. Normalization is owned
   by the extractor but must be deterministic for a given input.
@@ -99,7 +111,16 @@ unchanged; field rationale lives in `docs/product/task2-problem-definition.md`.
   be empty.
 - `method` ∈ `heading_strict` | `heading_lenient` | `status_keyword` |
   `llm_fallback` (extensible via ADR) — feeds the deterministic-coverage
-  metric.
+  metric. Defined (ADR-027 §b): `heading_strict` — a line-anchored heading
+  whose title similarity to an era alias is ≥ `STRICT_SIM` (0.8);
+  `heading_lenient` — a line-anchored heading whose similarity is in
+  `[SIM_FLOOR, STRICT_SIM)`, the same condition that pays the weak confidence
+  base, so `method` and `evidence.confidence_base` can never disagree;
+  `status_keyword` — no heading was found and the entry exists because INV-S4
+  requires every expected item to appear with a status (the name predates the
+  implementation and is kept for v2 additivity); `llm_fallback` — declared,
+  never emitted (ADR-020). `envelope_shape` refuses any value outside the
+  enum; `item_field` pins the value per item.
 
 ## Envelope fields (v2, informative)
 

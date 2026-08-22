@@ -834,7 +834,7 @@ def check_boilerplate_plumbing(case):
 
 
 # Text a source can hand the resolver that is NOT a build identity, and must
-# therefore resolve to `unknown` (ADR-027) — fed through BOTH the file and the
+# therefore resolve to `unknown` (ADR-028) — fed through BOTH the file and the
 # `GIT_SHA` override, because the ruling is per-value, not per-source. None of
 # these is hypothetical: `printf %s "$FOO" > f` with FOO unset writes the empty
 # file, a build step whose shell never expands writes the literal, and an
@@ -918,7 +918,7 @@ def _temp_repo(td):
 
 
 def check_build_identity(case):
-    """S2/ADR-027. `/api/meta` must report the sha of the build actually
+    """S2/ADR-028. `/api/meta` must report the sha of the build actually
     running, and must say `unknown` rather than anything it cannot stand
     behind. Three parts, because the property has three halves that fail
     independently:

@@ -1,4 +1,4 @@
-"""Build identity for the inspector's status line (`/api/meta`). Ruling: ADR-027.
+"""Build identity for the inspector's status line (`/api/meta`). Ruling: ADR-028.
 
 Pure stdlib, no fastapi import, so the repo_hygiene eval adapter can import
 and exercise it for real — same convention as view.py and capabilities.py.

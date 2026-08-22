@@ -1,6 +1,12 @@
-# ADR-027 — S2: build identity is injected at build time, and never lies
+# ADR-028 — S2: build identity is injected at build time, and never lies
 
 Date: 2026-08-22. Status: accepted. Implements S2.
+
+Renumbered 027 -> 028 on 2026-08-22 when `origin/main` merged first with its own
+ADR-027 (ambiguity caps confidence, PR #32 / T5). `tasks/reviews/pr31-r1.json` and
+`pr31-r2.json` still cite this file as ADR-027 because that is what it was called
+when those rounds reviewed it; they are the record of a review, not of the tree,
+and are left as written per this repo's supersede-don't-retro-edit convention.
 
 **Ruling**: `/api/meta`'s `git_sha` resolves in one fixed order — the build-injected `BUILD_SHA` file, then the `GIT_SHA` env var, then `git rev-parse --short HEAD`, then the literal `"unknown"` — and a value that is not `[0-9a-f]{7,40}` is not a build identity at any of those steps. `BUILD_SHA` is written by `zbpack.json`'s `build_command` from Zeabur's build-phase `ZEABUR_GIT_COMMIT_SHA` and is never committed.
 **Because**: the S2 row's own ruling is that "a lying build label is worse than `build unknown`", so every way a build can hand the runtime a non-sha — an empty file, an unexpanded `$ZEABUR_GIT_COMMIT_SHA`, a branch name — has to resolve to `unknown` rather than be rendered as a build identity; and only the build knows its sha is current, so nothing a human set can outrank it.

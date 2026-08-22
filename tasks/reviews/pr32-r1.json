@@ -1,0 +1,37 @@
+{
+ "pr": 32,
+ "round": 1,
+ "date": "2026-08-22",
+ "result": "APPROVED",
+ "gate": "[eval] suite 'invariant': 42/42 = 1.000 (+4 enumerated debt, unscored) · [eval] suite 'fast': 84/84 = 1.000 (+4 enumerated debt, unscored) · .eval-baseline.json {\"fast\": 1.0} no diff vs origin/main · validate / eval_adapter 17/17 / metrics / bench self-checks ok",
+ "routing_rule": "repair = HIGH/MEDIUM and (acceptance violated | gate red | published claim dishonest); everything else debt (pr-loop scope boundary)",
+ "findings": [
+  {
+   "id": "R1",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "The T5 ledger row mis-attributes the UNATTRIBUTED_MAX upper band edge: it writes '0.2646 sandston-2021', but sandston-2021 measures 0.2648 and 0.2646 is fy2021-item9c (ADR-027 §c has it right).",
+   "evidence": "tasks/TODO.md:28 'UNATTRIBUTED_MAX (0.1242 wmt-2010, 0.2646 sandston-2021)' vs specs/decisions/ADR-027-ambiguity-caps-confidence.md §c table '(0.1242 wmt-2010, 0.2646 fy2021-item9c / 0.2648 sandston-2021)'; re-measured from extract_items at HEAD: fy2021-item9c 0.2646, sandston-2021 0.2648.",
+   "repro": "compute (first_start + (len(normalized_text) - last_end)) / len(normalized_text) over extract_items on evals/fixtures/sandston-2021 and evals/fixtures/fy2021-item9c",
+   "acceptance": "TODO.md row reads the same pair as ADR-027 §c (0.2646 fy2021-item9c / 0.2648 sandston-2021, or just the sandston value 0.2648)."
+  },
+  {
+   "id": "R2",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "ADR-027 §h's 'today at main' calibration row (0.95 n=203) does not reproduce from the committed artifacts at HEAD: running the committed instrument on the committed 20260822-162324-all.json at HEAD yields 0.95 n=204, because HEAD's ko-1997-shallow now targets item 8; the 203 needs origin/main's case files, which the ADR states in prose but a reader cannot obtain from the branch.",
+   "evidence": "specs/decisions/ADR-027-ambiguity-caps-confidence.md §h ('Today at main (20260822-162324-all.json, sha 4cb2128, main's case files): 0.95 n=203'); at HEAD: conf=0.95 n_targeted=204; with origin/main's evals/golden+adversarial copied beside the HEAD instrument: n_targeted=203 (all other rows 83/8/7/1/2 and debt 5/5, 4/4 identical either way).",
+   "repro": "python3 -m evals.metrics evals/report/20260822-162324-all.json | grep 'conf=0.95'   # 204 at HEAD; 203 only with main's case files",
+   "acceptance": "§h (and the matching Debt row) either shows the HEAD-reproducible 204 with a one-clause note that the +1 is ko-1997 item 8's new pin, or states explicitly that the 203 row is reproducible only by joining against 4cb2128's case files."
+  },
+  {
+   "id": "R3",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "The method-flip blast radius ('six span items flip on the committed corpus') omits a seventh flip on a committed held-out fixture: cost-2022 item 7 goes heading_strict -> heading_lenient (confidence already 0.75); no held-out case asserts method, so nothing goes red, but the stated radius is incomplete for anyone re-running --dir evals/heldout.",
+   "evidence": "specs/decisions/ADR-027-ambiguity-caps-confidence.md §b 'Six span items flip on the committed corpus (ba-2003 8, jnj-2016 7, ko-1997 7 (IBR) and 9, msft-2013 1A, textron-2001 1), nothing else'; main-vs-HEAD extract_items over evals/heldout/fixtures/*: cost-2022 item 7 method heading_strict -> heading_lenient, confidence 0.75 -> 0.75, offsets identical; csco-2016, mrk-1995, pgr-2023, spg-2019 byte-identical.",
+   "repro": "run extract_items at origin/main and HEAD on evals/heldout/fixtures/cost-2022/filing.htm and compare items[7].method",
+   "acceptance": "ADR-027 §b / Consequences notes the held-out flip (cost-2022 item 7) or scopes the 'six' explicitly to evals/fixtures."
+  }
+ ]
+}

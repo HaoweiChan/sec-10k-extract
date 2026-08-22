@@ -4,7 +4,7 @@ The deployed inspector's status line read `build unknown`
 (`curl -s https://whaleforce-sec10k.zeabur.app/api/meta` →
 `{"git_sha":"unknown", …}`), so nobody opening the one instance strangers
 actually use could tell which build they were looking at. Ruling:
-[ADR-027](../specs/decisions/ADR-027-build-identity.md).
+[ADR-028](../specs/decisions/ADR-028-build-identity.md).
 
 ## The prompt decisions that mattered
 
@@ -52,7 +52,7 @@ actually use could tell which build they were looking at. Ruling:
   `'latest'`, `'zzzzzzz'`, a 41-hex near-miss, and a value with a space in it.
 - **Corrected:** `SHA_RE = [0-9a-f]{7,40}` applied to what the build actually
   wrote, not to what it was supposed to write, and the ruling written into
-  ADR-027 §d rather than left in the code.
+  ADR-028 §d rather than left in the code.
 
 - **Assumed:** the check belongs in `src/repo_hygiene/eval_adapter.py` as a text
   pin over `app.py`, the shape S3 and S8 established, because ADR-003's CI jobs
@@ -89,7 +89,7 @@ actually use could tell which build they were looking at. Ruling:
   more expensive error: it would have closed the finding. The resolver now
   strips `GIT_DIR`/`GIT_WORK_TREE`/`GIT_COMMON_DIR` inside `_rev_parse`, on
   every path including the default, and `build-identity` asserts it with
-  `GIT_DIR` set in both a handed-in environ and the ambient one (ADR-027 §e).
+  `GIT_DIR` set in both a handed-in environ and the ambient one (ADR-028 §e).
 
 - **Assumed:** validation belongs on the injected file, because that is where a
   build writes text nobody typed. `GIT_SHA` is a human override — if an operator
