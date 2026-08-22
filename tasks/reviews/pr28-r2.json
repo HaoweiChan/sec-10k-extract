@@ -1,0 +1,33 @@
+{
+ "pr": 28,
+ "round": 2,
+ "date": "2026-08-22",
+ "result": "APPROVED",
+ "scope": "repair diff 3d5b072..5b05428 + standing R1-R3",
+ "gate": "[eval] suite 'invariant': 34/34 = 1.000 (+4 enumerated debt, unscored) | [eval] suite 'fast': 76/76 = 1.000 (+4 enumerated debt, unscored); .eval-baseline.json {\"fast\": 1.0} unchanged",
+ "standing": {
+  "R1": "resolved — numbers reproduce (45796 / [23948,31727) / 46932 / 15,205); new checks exist, pass, and go red under TAIL_RE monkeypatch and under a mutated norm_contains value",
+  "R2": "debt row present, bench.py untouched",
+  "R3": "debt row present; corrected names verified (tgt-2002 0 hits; wmt-2010 1; ko-1997 EX-13.1 header; pgr-2023 3); load-bearing claim holds"
+ },
+ "findings": [
+  {
+   "id": "R4",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "The corrected 'Exhibit 13' debt row (and the R3 debt row quoting round 1) says pgr-2023 writes 'included as Exhibit 13 to this Form 10-K' 3×, but only two of the three hits use 'included as'; the third says 'filed as Exhibit 13 to this Form 10-K'.",
+   "evidence": "tasks/TODO.md Debt table, 'EXTERNAL_DOC_RE still does not know Exhibit 13' row, Why-not-taken cell ('writes 'included as Exhibit 13 to this Form 10-K' 3×'). On evals/heldout/fixtures/pgr-2023/filing.htm (tag-stripped and via extract_items normalized_text): 'included as Exhibit 13 to this Form 10-K' -> 2 hits (offsets 4270 cover page, 166001 item 15); 'filed as Exhibit 13 to this Form 10-K' -> 1 hit (offset 31571, item 1); 'Exhibit 13 to this Form 10-K' -> 3. The wording was inherited verbatim from pr28-r1.json R3; non-load-bearing (all three name the Annual Report to Shareholders in the same sentence).",
+   "repro": "cd <worktree> && python3 -c \"import re;t=open('evals/heldout/fixtures/pgr-2023/filing.htm',errors='replace').read();t=re.sub(r'<[^>]+>',' ',t);t=re.sub(r'&#?\\w+;',' ',t);t=re.sub(r'\\s+',' ',t);print(len(re.findall(r'(?i)included as Exhibit 13 to this Form 10-K',t)),len(re.findall(r'(?i)Exhibit 13 to this Form 10-K',t)))\"  -> 2 3",
+   "acceptance": "Row says 'Exhibit 13 to this Form 10-K' 3× (2× 'included as', 1× 'filed as'), or drops the quoted phrase's count."
+  },
+  {
+   "id": "R5",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "The wmt-2010 parenthetical in the corrected 'Exhibit 13' row — 'its pointers name the Annual Report to Shareholders in the same sentence and classify IBR already' — conflates two items: the only Exhibit-13 sentence in wmt-2010 is in item 15, which classifies extracted 0.95, while the pointers that classify IBR (6/7/7A/8/11–14) never mention Exhibit 13.",
+   "evidence": "tasks/TODO.md Debt table, 'EXTERNAL_DOC_RE still does not know Exhibit 13' row. extract_items('evals/fixtures/wmt-2010/filing.htm'): sole /exhibit\\W{0,5}13/ hit at normalized offset 96489 inside item 15 ('15','extracted',0.95) — 'which are included in our Annual Report to Shareholders, are incorporated herein by reference to the portions of this Annual Report on Form 10-K filed as Exhibit 13 hereto'; IBR items are 6,7,7A,8,11,12,13,14 and contain no 'Exhibit 13'. The load-bearing claim is unaffected (the sentence does name the Annual Report), so this is wording precision only.",
+   "repro": "cd <worktree> && python3 -c \"import sys,re;sys.path.insert(0,'.');from src.sec10k.extract import extract_items as e;r=e('evals/fixtures/wmt-2010/filing.htm');t=r['normalized_text'];m=re.search('(?i)exhibit\\\\W{0,5}13',t);print([(i['item'],i['status']) for i in r['items'] if i.get('start') is not None and i['start']<=m.start()<i['end']])\"  -> [('15', 'extracted')]",
+   "acceptance": "Row distinguishes 'item 15's Exhibit-13 sentence names the Annual Report in the same sentence (item 15 is extracted, not a whole-item pointer)' from 'the Part II/III pointers classify IBR and do not mention Exhibit 13'."
+  }
+ ]
+}
