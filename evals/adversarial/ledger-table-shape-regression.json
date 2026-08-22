@@ -1,0 +1,25 @@
+{
+  "id": "ledger-table-shape-regression",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "ledger_table_shape"
+    ],
+    "files": [
+      "evals/fixtures/repo_hygiene/ledger-table-malformed.md"
+    ]
+  },
+  "expect": {
+    "min_failures": 9,
+    "max_failures": 9
+  },
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "The mutation half of ledger-table-shape, in the S5 `-regression` shape (expect.min_failures == max_failures pins an EXACT count, so a regressed miss and a regressed over-fire both go red). The fixture carries two tables. Table 1 (3 columns) must produce eight failures: one cell too many (1), one cell too few (1), an unescaped pipe inside a code span (2 — the row splits AND the span is named), a backslash-escaped pipe inside a code span (2 — GFM would strip the backslash and the naive counter splits the row), a backslash-escaped pipe outside any span (1 — GFM-legal, but every naive reader splits it, which is the rule), a strikethrough row with an extra cell (1). Table 2 (2 columns, after prose that ends table 1) must produce one: a three-cell row under a two-column header, which also proves the header width resets per table. Rows that must NOT fire: a pipe-free code span, a Markdown link, a struck row with the right count, and the two-column table's good row. A check that stopped at the first table, exempted struck rows, exempted escaped pipes, or counted span-aware would all move the count off 9."
+  },
+  "provenance": "L1 ledger pass, created 2026-08-23 alongside the check. First run against the fixture: exactly 9 failures, as listed in the triage note (lines 12, 13, 14 x2, 15 x2, 16, 17, 25 of the fixture). Mutations on a clean copy of evals/fixtures/README.md, same session: a pipe inside a code span → 2 failures ('7 cells, header has 6' + the span named); one cell too many → 1; one cell too few → 1 ('5 cells, header has 6'); a backslash-escaped pipe in a cell → 1; a struck row with an extra cell → 1; the untouched README → 0."
+}
