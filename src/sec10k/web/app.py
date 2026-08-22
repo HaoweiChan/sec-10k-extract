@@ -16,9 +16,7 @@ of tempfile does. The UI posts the File object straight as the body.
 Run: uvicorn src.sec10k.web.app:app --reload
 """
 import hashlib
-import os
 import secrets
-import subprocess
 import tempfile
 import urllib.error
 import urllib.request
@@ -30,6 +28,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 
 from src.sec10k.extract import extract_items
 from src.sec10k.web import capabilities as capabilities_mod
+from src.sec10k.web.build_id import git_sha
 from src.sec10k.web.view import build_view
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -50,23 +49,6 @@ app = FastAPI(title="sec10k-extract inspector")
 # ever runs behind more than one uvicorn worker.
 SOURCE_CACHE: "OrderedDict[str, tuple[str, bytes]]" = OrderedDict()
 SOURCE_CACHE_MAX = 3
-
-
-def _git_sha() -> str:
-    """Build identity for the status line. A deployed instance usually has no
-    .git directory, so GIT_SHA can be set as an env var instead — a reviewer
-    needs to know which build they are looking at, and "unknown" is a bad
-    answer on the one instance strangers will actually use."""
-    env = os.environ.get("GIT_SHA")
-    if env:
-        return env.strip()[:12]
-    try:
-        return subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"], cwd=ROOT,
-            capture_output=True, text=True, timeout=5, check=True,
-        ).stdout.strip()
-    except Exception:
-        return "unknown"
 
 
 def _fixture_file(name: str) -> Path:
@@ -142,7 +124,7 @@ def index():
 @app.get("/api/meta")
 def api_meta():
     fixtures = sorted(d.name for d in FIXTURES.iterdir() if d.is_dir())
-    return {"git_sha": _git_sha(), "fixtures": fixtures,
+    return {"git_sha": git_sha(ROOT), "fixtures": fixtures,
             "max_bytes": MAX_BYTES, "allowed_suffix": list(ALLOWED_SUFFIX)}
 
 

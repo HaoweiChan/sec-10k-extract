@@ -1,0 +1,55 @@
+{
+  "round": 2,
+  "pr": 31,
+  "task": "S2",
+  "branch": "task/S2",
+  "responds_to": "tasks/reviews/pr31-r2.json (head 1c7cf5d, REQUEST_CHANGES, 0 HIGH / 3 MEDIUM / 3 LOW; R1 R2 R3 R5 R6 R7 R8 R9 closed by the reviewer)",
+  "gate": "pass -- invariant 42/42 = 1.000, fast 84/84 = 1.000, baseline {\"fast\": 1.0} untouched (denominators re-measured on the merged tree 1c7cf5d, not carried over from round 1's 39/81)",
+  "measurement_method": "Every count below is one FRESH INTERPRETER per measurement (scratchpad measure.py), not in-process reimport. This is not incidental: a pure-reordering mutation such as M6 is byte-identical in SIZE to the original, so Python's (mtime, size) bytecode cache serves the stale .pyc when a file is rewritten twice inside one mtime tick, and the mutation silently never lands. That is what produced round 1's unexplained red BASELINE and this round's first, wrong reading of the M6-under-GIT_INDEX_FILE falsifier (0, then 2, then 0 across identical runs). `importlib.invalidate_caches()` was not sufficient; process isolation is. The earlier 'restore racing the next process' explanation in pr31-r1-resolution.json was wrong about the mechanism -- it was the bytecode cache -- and no repo file was ever left mutated.",
+  "tree_as_it_stands": "0 failures in a bare shell, 0 with an absolute GIT_INDEX_FILE exported, 0 with an ambient GIT_DIR exported.",
+  "resolutions": [
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "covered_by": "evals/adversarial/build-identity.json -- `_temp_repo()` now builds in `_no_git_env()`, and an unbuildable fixture appends a failure instead of skipping",
+      "note": "Both halves. (1) `_temp_repo` no longer takes an environment from its caller at all: it builds in `_no_git_env()`, the ambient environment with EVERY GIT_* variable removed. Deliberately wider than the resolver's own scrub -- GIT_INDEX_FILE does not redirect `rev-parse`, so the resolver has no reason to strip it, but it absolutely redirects `git commit`. The caller is the thing under test, so its environment is not a safe place to construct the fixture from. (2) `if not head:` now appends 'could not build a temp git checkout, so the source-3 precedence assertions did not run', because an assertion that cannot run has not passed. Falsifier the acceptance names, measured in its own interpreter: M6 git-first = 2 failures WITH an absolute GIT_INDEX_FILE exported (0 before this repair), and 2 without. M11 (forcing `_temp_repo` to fail) = 1 failure, so the skip is now visible. The false 'skip loudly' sentence is corrected in place in tasks/reviews/pr31-r1-resolution.json with a round-2 annotation rather than deleted -- a document of record that quietly loses a false claim is worse than one carrying its correction. `_temp_repo`'s own docstring, which said the assertions are 'skipped rather than faked', is rewritten to say a None is not silently tolerated."
+    },
+    {
+      "id": "R10",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "covered_by": "evals/adversarial/build-identity.json -- the local-dev oracle subprocess now runs with GIT_LOCATION_VARS stripped, matching the resolver exactly",
+      "note": "Confirmed as newly broken by the round-1 repair before fixing: with an ambient GIT_DIR the case returned 1 failure on CORRECT code (\"a checkout with a .git must report its own short sha '88b7c5e', got '4d94ffc'\") -- the oracle measured the stranger repo, the resolver correctly measured this one. The oracle now strips exactly what the resolver strips, so the two ask the same question. Both halves of the acceptance measured, each in its own interpreter: the case is 0 failures with an arbitrary GIT_DIR exported, AND M8 (dropping the resolver's scrub) stays red at 3 failures under that same GIT_DIR, 2 without it. Not a relocation: the fix aligned the oracle rather than loosening the assertion. Deliberately NOT reused `build_id.GIT_LOCATION_VARS` here -- the check keeps its own literal list, the same independent-oracle principle the other pins in this file follow, so the check states what it demands rather than importing it from the thing under test."
+    },
+    {
+      "id": "R11",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "covered_by": "evals/adversarial/build-identity.json triage.refalsified and triage.red_first",
+      "note": "`refalsified` replaced wholesale rather than patched: it now lists all 14 measurements actually run against the repaired, merged tree, with the method stated (one interpreter per measurement, and why). The three stale counts the reviewer named are re-measured and correct -- M4 SHA_RE relaxed = 20 (was published as 10), M7 GIT_SHA above BUILD_SHA = 2 (was 1), M9 build_sha ignores the file = 7 (was 6) -- and they now agree with the resolution artifacts. It also records the one measurement that is deliberately not red (M8b, 0) and points at the R13 debt row, so the green is declared rather than hidden. `red_first`'s closing sentence, which still described the environ-threading half-fix as the fix, now describes the scrub inside `_rev_parse` on every path including the default, and names R2 as having rejected the earlier version."
+    },
+    {
+      "id": "R12",
+      "severity": "LOW",
+      "disposition": "fixed",
+      "covered_by": "evals/adversarial/build-identity.json triage.what_this_cannot_prove",
+      "note": "The retracted generalisation is gone. The field now splits the three assumptions that fail CLOSED to `unknown` from the fourth that does not -- a cached build_command layer freezing BUILD_SHA at a valid previous sha, which SHA_RE accepts because it IS a real sha and which no validation can detect, since a sha cannot be interrogated about which build wrote it. Matches ADR-027 §g, and closes with why the S2 gate is worded 'must MOVE across two redeploys, not merely exist'. The triage object no longer contradicts itself or the ADR."
+    },
+    {
+      "id": "R13",
+      "severity": "LOW",
+      "disposition": "debt",
+      "covered_by": "tasks/TODO.md `## Debt`, row 'Two of the three location-var assertions in build-identity cannot fail', Origin: PR #31 R13",
+      "note": "Not fixed, per routing. Row carries the finding's claim, evidence, repro and acceptance verbatim. Independently re-measured this round: M8b (strip GIT_DIR only, keep GIT_WORK_TREE and GIT_COMMON_DIR) is the single green result out of fourteen measurements -- 0 failures, against 2 for the full M8 and 3 for M8 under an ambient GIT_DIR. The row records, as instructed, that build_id.py's comment and check_build_identity's docstring both still describe the scrub as covering all three while only GIT_DIR is held by a check; neither was edited, since editing them is one branch of the acceptance and this is routed to debt. Worth noting the direction: the resolver's scrub is WIDER than the assertion binding it, so the gap is in the check's reach, not in shipped behaviour."
+    },
+    {
+      "id": "R14",
+      "severity": "LOW",
+      "disposition": "debt",
+      "covered_by": "tasks/TODO.md `## Debt`, row 'The 38 measurable fixtures corpus figure is stale on the merged tree', Origin: PR #31 R14",
+      "note": "Not fixed, per the explicit instruction not to change the number in boilerplate.py. Re-measured on the merged tree to confirm the row is accurate: 41 fixture directories, 40 measurable (repo_hygiene is not a filing), repeat-gated ceiling still 35 on jpm-2024, edgar_chrome still 127 on ge-1994 and ibr-pointer-first. The row argues the fix should DROP the absolute count in favour of the corpus-walk command rather than re-pin a number that rots on the next merge -- correcting only the digits would preserve the defect class that produced this finding."
+    }
+  ],
+  "not_repaired_beyond_findings": "No changes outside R4, R10, R11, R12 and the two debt rows. The `38 measurable` figure (R14) and build_id.py's three-variable comment (R13) were left untouched on purpose."
+}
