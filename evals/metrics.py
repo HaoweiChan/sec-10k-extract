@@ -20,9 +20,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CASE_DIRS = ("golden", "adversarial", "heldout")
 
-# metric 6/8 threshold. Provisional and stated as such: ADR-008 says the
-# confidence scale is uncalibrated, so this is a reporting convention, not a
-# validated decision boundary.
+# metric 6/8 threshold. Provisional and stated as such: the confidence scale
+# is an ordinal evidence encoding, measured with stated bias (ADR-018), not a
+# probability, so this is a reporting convention, not a validated decision
+# boundary. Since ADR-027 every item in an `ambiguous` document sits at 0.75,
+# i.e. below this line — metric 6's coverage counts move accordingly.
 CONFIDENT = 0.8
 
 # checks that assert something about a named item, grouped by what they reveal
@@ -50,6 +52,13 @@ def _rate(hit, total):
     return None if not total else round(hit / total, 4)
 
 
+def _check_failures(r):
+    """The {"check","why"} failures of a result row. repo_hygiene rows carry
+    plain-string failures and no items — they are not sec10k checks, so they
+    never join against a case's declared checks (see _self_check's h1 row)."""
+    return [f for f in r.get("failures", []) if isinstance(f, dict)]
+
+
 def _unmatched_failures(rows, cases):
     """Failures whose check JSON matches nothing the case currently declares —
     the report predates a rewrite of that case's checks. Error-path rows (Fix
@@ -59,7 +68,7 @@ def _unmatched_failures(rows, cases):
         case = cases.get(r["id"], {})
         declared_keys = {json.dumps(c, sort_keys=True)
                           for c in case.get("expect", {}).get("checks", [])}
-        for f in r.get("failures", []):
+        for f in _check_failures(r):
             if json.dumps(f["check"], sort_keys=True) not in declared_keys:
                 n += 1
     return n
@@ -74,7 +83,7 @@ def compute(report, cases):
     for r in results:
         case = cases.get(r["id"], {})
         declared = case.get("expect", {}).get("checks", [])
-        failed_keys = [json.dumps(f["check"], sort_keys=True) for f in r.get("failures", [])]
+        failed_keys = [json.dumps(f["check"], sort_keys=True) for f in _check_failures(r)]
         # a crashed run (evals/run.py's exception path) has no failures list at
         # all, so every declared check of that case counts as failed rather
         # than silently passing by omission
@@ -133,7 +142,7 @@ def compute(report, cases):
             continue
         case = cases.get(r["id"], {})
         declared = case.get("expect", {}).get("checks", [])
-        failed_keys = [json.dumps(f["check"], sort_keys=True) for f in r.get("failures", [])]
+        failed_keys = [json.dumps(f["check"], sort_keys=True) for f in _check_failures(r)]
         for chk in declared:
             item = chk.get("item")
             if not item:
@@ -324,7 +333,15 @@ def _self_check():
             {"item": "7", "status": "missing", "confidence": 0.95, "method": "status_keyword"},
             {"item": "9", "status": "extracted", "confidence": 0.95, "method": "heading_strict"},
         ]},
-        {"id": "c2", "kind": "golden", "passed": False, "error": "boom", "seconds": 0}],
+        {"id": "c2", "kind": "golden", "passed": False, "error": "boom", "seconds": 0},
+        # a repo_hygiene row (src/repo_hygiene/eval_adapter.py): its failures are
+        # plain strings, not {"check","why"} dicts, and it has no items_summary.
+        # Every `--suite all` report since the UI cases landed carries rows like
+        # it, and the join used to crash on the first one — which is how the
+        # ADR-018 instrument became un-rerunnable without anyone noticing
+        # (gates-2026-08-22 T5 disposition). Must be skipped, never joined.
+        {"id": "h1", "kind": "adversarial", "passed": False, "seconds": 0,
+         "failures": ["#x: no height declared", "10.5px < 11px floor"]}],
         # a failing debt case (evals/run.py's unscored suite) targeting item 1
         # at the same confidence, plus an old-style debt row (pre this change,
         # no items_summary) that must not crash the join.

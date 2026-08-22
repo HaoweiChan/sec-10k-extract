@@ -274,7 +274,10 @@ length-inferred classification > missing because all candidates were rejected.
 
 **Set in T5 and recorded in ADR-008** (base 0.95 strict / 0.75 weak title;
 0.85 IBR, 0.80 omitted, 0.55 missing; −0.15 per warning naming the item;
-clamped to [0.20, 0.95]). Known limitation: the distribution is nearly binary
+clamped to [0.20, 0.95]). *Amended since: ADR-018 collapsed the 0.55 phantom
+to 0.40 and measured the scale; ADR-027 deleted the 0.20 floor and caps every
+item at 0.75 when the document is `ambiguous` — the ADRs are the record, this
+paragraph is the T5-era description.* Known limitation: the distribution is nearly binary
 — 224 of 283 items sit at 0.95 — and the scale is uncalibrated, so JPM's Item
 15 keeps 0.8 despite being the most wrong span in the set. At A-level: bucket dev + held-out
 items by score, measure empirical accuracy per bucket, publish the table in the

@@ -16,14 +16,16 @@ from src.sec10k.segment import (
     assign_boundaries, classify, expected_items, filter_candidates, item_label,
     find_candidates,
 )
-from src.sec10k.validate import AMBIGUOUS_CODES, score, validate
+from src.sec10k.validate import AMBIGUOUS_CODES, STRICT_SIM, score, validate
 
-VERSION = "0.6.0-t10"  # meta.extractor_version — audits compare across runs
+VERSION = "0.7.0-t5d"  # meta.extractor_version — audits compare across runs
 
 
 def _item(code, cand, status, period_end=None):
     part, title = item_label(code, period_end)
     if cand is None:
+        # no heading anywhere: the entry exists because INV-S4 says every
+        # expected item must appear with some status (contract, `method`)
         return {"item": code, "part": part, "title": title,
                 "heading_text": None, "start": None, "end": None,
                 "status": status,
@@ -32,7 +34,10 @@ def _item(code, cand, status, period_end=None):
         "item": code, "part": part, "title": title,
         "heading_text": cand["heading_text"], "start": cand["start"],
         "end": cand["end"], "status": status,
-        "method": "heading_strict",
+        # ADR-027 §b: `method` names the heading-match tier by the SAME cut
+        # that pays BASE_STRICT vs BASE_WEAK, so the envelope can no longer
+        # publish "strict" on a heading the score calls weak (SD-1)
+        "method": "heading_strict" if cand["similarity"] >= STRICT_SIM else "heading_lenient",
         "evidence": {"title_similarity": cand["similarity"],
                      "chars": cand["end"] - cand["start"]},
     }
@@ -144,14 +149,17 @@ def extract_items(path, exclude_boilerplate=False):
     warnings += findings
     trace.append({"layer": "validate",
                   "checks_fired": [w["code"] for w in findings]})
-    for i in items:
-        i["confidence"], i["evidence"] = score(i, warnings)
 
     # doc_status ladder (contract v2, fixed order). Only the three validators
     # named in AMBIGUOUS_CODES may reach `ambiguous`; the rest warn and move
-    # confidence, per the taxonomy's warn-don't-hard-fail policy.
+    # confidence, per the taxonomy's warn-don't-hard-fail policy. Decided
+    # BEFORE scoring: an `ambiguous` verdict caps every item (ADR-027 §a) —
+    # before that, no document-level warning ever reached an item's number.
     extracted = [i for i in items if i["status"] == "extracted"]
-    if not extracted or any(w["code"] in AMBIGUOUS_CODES for w in warnings):
+    ambiguous = not extracted or any(w["code"] in AMBIGUOUS_CODES for w in warnings)
+    for i in items:
+        i["confidence"], i["evidence"] = score(i, warnings, doc_ambiguous=ambiguous)
+    if ambiguous:
         doc_status = "ambiguous"
     elif warnings:
         doc_status = "success_with_warning"

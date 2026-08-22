@@ -20,6 +20,11 @@ CANONICAL = {
     "15": "IV", "16": "IV",
 }
 STATUSES = {"extracted", "missing", "incorporated_by_reference", "omitted"}
+# contract v2 normative enums read by `envelope_shape`. `heading_lenient` and
+# `llm_fallback` are in the contract by decision (ADR-027 / ADR-020): the
+# first is emitted for a weak-title heading match, the second never.
+DOC_STATUSES = {"success", "success_with_warning", "ambiguous", "unsupported", "failed"}
+METHODS = {"heading_strict", "heading_lenient", "status_keyword", "llm_fallback"}
 # statuses that carry offsets, per ADR-011. `incorporated_by_reference` points
 # at the pointer paragraph — real, inspectable text — so every span-level check
 # must reach it. `missing`/`omitted` have no span by definition.
@@ -42,10 +47,10 @@ def eval_check(result, chk, path=None):
     extract_items — it needs `path` to re-run the pipeline.
     """
     t = chk["type"]
-    by_code = {i["item"]: i for i in result["items"]}
+    by_code = {i["item"]: i for i in result.get("items", [])}
     entry = by_code.get(chk.get("item"))
-    extracted = [i for i in result["items"] if i["status"] == "extracted"]
-    spanned = [i for i in result["items"] if i["status"] in SPAN_STATUSES]
+    extracted = [i for i in result.get("items", []) if i["status"] == "extracted"]
+    spanned = [i for i in result.get("items", []) if i["status"] in SPAN_STATUSES]
     has_span = entry is not None and entry["status"] in SPAN_STATUSES
 
     if t == "item_present":
@@ -128,17 +133,67 @@ def eval_check(result, chk, path=None):
         # punishes overconfident wrongness. Until this check type existed no
         # case read the field at all, so every constant in ADR-008's
         # confidence table was free to change with the suite still green.
-        if entry is None:
+        # Without an "item" key the bound applies to EVERY item — that is how
+        # a case states ADR-027's document-level rule (an `ambiguous` document
+        # caps every item) without enumerating the item set.
+        if "item" not in chk:
+            targets = result["items"]
+        elif entry is None:
             return f"item {chk['item']} not in output"
-        c = entry.get("confidence")
-        if c is None:
-            return f"item {chk['item']} has no confidence"
-        if "value" in chk and c != chk["value"]:
-            return f"item {chk['item']} confidence {c} != {chk['value']}"
-        if "max" in chk and c > chk["max"]:
-            return f"item {chk['item']} confidence {c} > {chk['max']}"
-        if "min" in chk and c < chk["min"]:
-            return f"item {chk['item']} confidence {c} < {chk['min']}"
+        else:
+            targets = [entry]
+        for it in targets:
+            c = it.get("confidence")
+            if c is None:
+                return f"item {it['item']} has no confidence"
+            if "value" in chk and c != chk["value"]:
+                return f"item {it['item']} confidence {c} != {chk['value']}"
+            if "max" in chk and c > chk["max"]:
+                return f"item {it['item']} confidence {c} > {chk['max']}"
+            if "min" in chk and c < chk["min"]:
+                return f"item {it['item']} confidence {c} < {chk['min']}"
+    elif t == "envelope_shape":
+        # specs/001-sec10k-contract.md, Shape + Envelope fields: `meta`, `trace`,
+        # `timings`, `cost`, `heading_text`, `evidence` "must be present" and
+        # `method` is a normative enum — and until this check existed nothing in
+        # the vocabulary read any of them (gates-2026-08-22 SD-1/SD-2/SD-6). The
+        # internal shapes are implementation-owned, so only presence and the
+        # normative enums are asserted here; no value is fabricated or compared.
+        top = {"normalized_text", "doc_status", "warnings", "meta", "trace",
+               "timings", "cost", "items"}
+        extra = set(result) - top - {"boilerplate"}  # ADR-026's one optional key
+        if not top <= set(result) or extra:
+            return f"envelope keys: missing {sorted(top - set(result))}, undeclared {sorted(extra)}"
+        ds = result["doc_status"]
+        if ds not in DOC_STATUSES:
+            return f"doc_status {ds!r} not in contract enum"
+        refusal = ds in ("unsupported", "failed")
+        meta_keys = {"extractor_version", "input_sha256", "format_era", "document_selected"}
+        if not refusal:
+            # set only once the filing is accepted (SD-6): a refused document
+            # has no era and no manifest to report
+            meta_keys |= {"taxonomy_era", "toc_manifest"}
+        if not meta_keys <= set(result["meta"]):
+            return f"meta missing {sorted(meta_keys - set(result['meta']))}"
+        if not isinstance(result["trace"], list) or "total_ms" not in result["timings"] \
+                or not {"llm_calls", "tokens", "usd"} <= set(result["cost"]):
+            return "trace/timings/cost not in contract shape"
+        if refusal and result["items"]:
+            return f"{ds} envelope carries {len(result['items'])} items — refusal must not best-effort"
+        if ds == "success" and result["warnings"]:
+            return "doc_status success with non-empty warnings"
+        for w in result["warnings"]:
+            if not {"code", "item", "message"} <= set(w):
+                return f"warning not in contract shape: {w}"
+        item_keys = {"item", "part", "title", "heading_text", "start", "end",
+                     "status", "confidence", "method", "evidence"}
+        for i in result["items"]:
+            if not item_keys <= set(i):
+                return f"item {i.get('item')} missing {sorted(item_keys - set(i))}"
+            if i["method"] not in METHODS:
+                return f"item {i['item']} method {i['method']!r} not in contract enum"
+            if i["status"] not in STATUSES:
+                return f"item {i['item']} status {i['status']!r} not in contract enum"
     elif t == "known_items_only":
         bad = [i["item"] for i in result["items"] if i["item"] not in CANONICAL]
         bad += [i["item"] for i in result["items"] if i["status"] not in STATUSES]

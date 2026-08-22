@@ -1,9 +1,10 @@
 # ADR-008 — T5: the validator battery that survived measurement
 
-Date: 2026-08-16. Status: accepted. Amended by: ADR-013. Implements layers 8-9
-(`src/sec10k/validate.py`).
+Date: 2026-08-16. Status: accepted. Amended by: ADR-013, ADR-018, ADR-027
+(the last two in place, 2026-08-22 — each amended figure carries its marker).
+Implements layers 8-9 (`src/sec10k/validate.py`).
 
-**Ruling**: ship six label-free validators with measured thresholds (TOC manifest, unattributed content, last-item domination, boundary hygiene, relative numeric density, keyword fingerprints); reject the other four proposed ("Item 8 longest", "1A ≫ 1B", "spans end at sentence punctuation", part-region consistency) as false-positive generators.
+**Ruling**: ship six label-free validators with measured thresholds (TOC manifest, unattributed content, last-item domination, boundary hygiene, relative numeric density, keyword fingerprints) — seven since ADR-013 added `expected_items_mostly_missing` (amended 2026-08-22, ADR-027 §g; `grep -c 'warn("' src/sec10k/validate.py` → 7); reject the other four proposed ("Item 8 longest", "1A ≫ 1B", "spans end at sentence punctuation", part-region consistency) as false-positive generators.
 **Because**: a validator that cries wolf is a defect, not caution — each rejected check was measured to misfire on real fixtures (AAPL, Premier Pacific, JPM).
 **Enforced by**: `src/sec10k/validate.py`; `evals/golden/*-structure.json` cases; `evals/adversarial/heading-unnumbered.json`
 
@@ -20,7 +21,7 @@ false-positive rates rather than quietly omitted.
 | Validator | Threshold | Measured basis |
 |---|---|---|
 | TOC manifest cross-check | any mismatch | the filing's own contents page vs what we resolved — no threshold to set |
-| Unattributed content | > 17% | clean modern filings leave 0.7–7.6% outside every item; IBR-heavy and appendix-carrying ones leave 26.5–76.9%. Floor sits in the empty band |
+| Unattributed content | > 17% | clean modern filings leave 0.7–7.6% before the first span / after the last (*amended 2026-08-22, ADR-027 §g: not "outside every item" — interior gaps are not counted, and ADR-019 §d measured them nonzero on the 7 EXEC_OFFICERS_RE fixtures, up to 9.7 points*); IBR-heavy and appendix-carrying ones leave 26.5–76.9%. Floor sits in the empty band |
 | Last-item domination | > 50% | JPM 2024's Item 15 is 83.3% of the document; next highest in the set is 18.9% (Textron's exhibit list). Band midpoint |
 | Boundary hygiene | any | every span must open with its own heading; 0 failures across 14 fixtures, kept as a tripwire |
 | Numeric density, relative | d(8) ≤ d(1A) | absolute bands overlap across filers (d(1A) 0.001–0.008 vs d(8) 0.008–0.095 — they touch), but the *ordering* holds in 9 of 9 filings where both items are substantive |
@@ -75,7 +76,9 @@ the same way, which it previously missed.
 ## Escalation policy
 
 Only `toc_manifest_mismatch` and `last_item_dominates` may push `doc_status`
-to `ambiguous`. `unattributed_content` deliberately may not: IBM 1997 leaves
+to `ambiguous` (*amended 2026-08-22, ADR-027 §g: three codes since ADR-013
+added `expected_items_mostly_missing` — `len(AMBIGUOUS_CODES)` → 3*).
+`unattributed_content` deliberately may not: IBM 1997 leaves
 43% of its document outside every item and Textron 28%, because those filings
 incorporate by reference — that shape is normal, the honest report is a
 warning, and the eval set agrees (both cases require `success` or
@@ -91,14 +94,20 @@ as deferred, not forgotten.
 ## Confidence (layer 9)
 
 Base by heading-match quality (0.95 strict title match / 0.75 weak), by status
-for non-extracted items (0.85 IBR, 0.80 omitted, 0.55 missing), minus 0.15 per
-validator warning naming that item, clamped to [0.20, 0.95] and rounded to two
-places. Every input lands in the item's `evidence{}` — `title_similarity`,
-`chars`, `warnings`, `confidence_base` — so an auditor can recompute or dispute
-any score.
+for non-extracted items (0.85 IBR, 0.80 omitted, 0.55 missing — *amended
+2026-08-22: 0.40 since ADR-018 collapsed the phantom*), minus 0.15 per
+validator warning naming that item, clamped to [0.20, 0.95] (*amended
+2026-08-22, ADR-027 §a: capped at 0.95, or at 0.75 when the document is
+`ambiguous`; there is no floor — the 0.20 clamp was unreachable on pipeline
+output and is deleted*) and rounded to two places. Every input lands in the
+item's `evidence{}` — `title_similarity`, `chars`, `warnings`,
+`confidence_base` — so an auditor can recompute or dispute any score.
 
 **Known limitation, stated plainly**: the distribution is nearly binary — 224
-of 283 items sit at 0.95. The scale is uncalibrated, so JPM's Item 15 keeps
+of 283 items sit at 0.95. The scale is uncalibrated (*amended 2026-08-22: it
+is measured with stated bias since ADR-018 — an ordinal evidence encoding
+whose per-value table is published, not remapped; ADR-027 §h re-runs the
+instrument*), so JPM's Item 15 keeps
 0.8 despite being the most wrong span in the eval set (its 1,010,422-char
 extent is flagged at document level, but the item-level number does not yet
 reflect how wrong it is). Calibration — bucket dev + held-out items by score,

@@ -334,6 +334,65 @@ def test_confidence():
     reason = eval_check(r2, {"type": "confidence", "item": "1", "value": 0.55})
     assert reason is not None and "no confidence" in reason, reason
 
+    # no "item": the bound applies to every item (ADR-027's ambiguity cap is
+    # stated this way). One item over the cap is enough to fail, and the
+    # message names it.
+    assert eval_check(r, {"type": "confidence", "max": 0.95}) is None
+    reason = eval_check(r, {"type": "confidence", "max": 0.75})
+    assert reason is not None and "item 1 confidence 0.95 > 0.75" in reason, reason
+    assert eval_check(r, {"type": "confidence", "min": 0.85}) is None
+
+
+def _envelope(**over):
+    env = {"normalized_text": "Item 1. Business\nx", "doc_status": "success",
+           "warnings": [],
+           "meta": {"extractor_version": "t", "input_sha256": "s", "format_era": "html",
+                    "document_selected": "d", "taxonomy_era": "modern", "toc_manifest": []},
+           "trace": [], "timings": {"total_ms": 1}, "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0},
+           "items": [{"item": "1", "part": "I", "title": "Business", "heading_text": "Item 1. Business",
+                      "start": 0, "end": 18, "status": "extracted", "confidence": 0.95,
+                      "method": "heading_strict", "evidence": {}}]}
+    env.update(over)
+    return env
+
+
+def test_envelope_shape():
+    chk = {"type": "envelope_shape"}
+    assert eval_check(_envelope(), chk) is None
+    # every contract-mandated top-level field, individually (SD-2: none of
+    # these had any enforcement before)
+    for k in ("meta", "trace", "timings", "cost", "warnings", "items"):
+        e = _envelope(); del e[k]
+        assert eval_check(e, chk) is not None, k
+    assert eval_check(_envelope(extra_key=1), chk) is not None
+    # item-level mandatory fields and the normative method enum (SD-1)
+    for k in ("heading_text", "evidence", "method", "confidence", "part", "title"):
+        e = _envelope(); del e["items"][0][k]
+        assert eval_check(e, chk) is not None, k
+    e = _envelope(); e["items"][0]["method"] = "llm_magic"
+    assert "method" in eval_check(e, chk)
+    e = _envelope(); e["items"][0]["method"] = "heading_lenient"   # in the enum
+    assert eval_check(e, chk) is None
+    # contract rules that are shape-checkable: success => no warnings;
+    # refusal => no items; refusal envelopes need not carry taxonomy_era /
+    # toc_manifest (SD-6), non-refusal envelopes must
+    e = _envelope(warnings=[{"code": "x", "item": None, "message": "m"}])
+    assert eval_check(e, chk) is not None
+    e = _envelope(doc_status="success_with_warning",
+                  warnings=[{"code": "x", "item": None, "message": "m"}])
+    assert eval_check(e, chk) is None
+    e = _envelope(doc_status="unsupported")
+    assert eval_check(e, chk) is not None          # refusal carrying items
+    e = _envelope(doc_status="unsupported", items=[])
+    del e["meta"]["taxonomy_era"]; del e["meta"]["toc_manifest"]
+    assert eval_check(e, chk) is None
+    e = _envelope(); del e["meta"]["taxonomy_era"]
+    assert "taxonomy_era" in eval_check(e, chk)
+    e = _envelope(doc_status="bogus")
+    assert eval_check(e, chk) is not None
+    # the optional ADR-026 key is the ONE undeclared-by-default key allowed
+    assert eval_check(_envelope(boilerplate=[]), chk) is None
+
 
 def test_boilerplate_checks():
     """The two ADR-026 check types that are pure functions of a result dict.
@@ -415,6 +474,7 @@ TESTS = [
     test_ibr_spans_are_checked,
     test_checks_that_had_never_gone_red,
     test_confidence,
+    test_envelope_shape,
     test_doc_status,
     test_norm_checks,
     test_warning_absent,

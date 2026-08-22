@@ -7,24 +7,37 @@ labeled fixtures comes from.
 Policy (failure-taxonomy F7): every validator is itself a false-positive
 source, so validators emit warnings and move confidence; none hard-fails a run
 alone, and only the three named in `AMBIGUOUS_CODES` may push `doc_status` to
-`ambiguous`. Thresholds are measured, never assumed — ADR-008 carries the
-distributions and the priors this battery REJECTED after measuring them.
+`ambiguous`. Every threshold below states its measured basis or names itself
+a judgment call (SUBSTANTIVE_MIN, and MISSING_MAX's floor-not-midpoint), and
+each is pinned from both sides of its measured empty band by a committed case
+(ADR-027 §c lists the pins); ADR-008 carries the original distributions and
+the priors this battery REJECTED after measuring them.
 
 Self-check: python3 -m src.sec10k.validate
 """
 import re
 
-# ADR-008, measured over 13 fixtures. Clean modern filings leave 0.7-7.6% of
-# the document outside every item; IBR-heavy and appendix-carrying filings
-# leave 26.5-76.9%. The floor sits in that empty band.
+from src.sec10k.segment import HEADING_RE
+
+# ADR-008, measured over 13 fixtures: clean modern filings leave 0.7-7.6% of
+# the document before the first span / after the last; IBR-heavy and
+# appendix-carrying filings leave 26.5-76.9%. The floor sits in that empty
+# band. Re-measured 2026-08-22 over 36 span-bearing fixtures (ADR-027 §c): the
+# band is now (0.1242 wmt-2010, 0.2646 fy2021-item9c), pinned by
+# `warning_absent` on wmt-2010 and `warning_present` on sandston-2021.
 UNATTRIBUTED_MAX = 0.17
 # JPM 2024 puts its whole financial appendix after the Item 15 exhibit index,
 # so the last item swallows 83.3% of the document. Next highest in the set is
-# 18.9% (Textron's exhibit list). Band midpoint.
+# 18.9% (Textron's exhibit list). Band midpoint. Re-measured 2026-08-22: band
+# (0.1892 textron-2001, 0.7063 xom-2021), pinned on both (ADR-027 §c).
 LAST_ITEM_MAX = 0.50
 # content-shape validators cannot judge a pointer paragraph: GE's Item 8 is
 # "See index under item 14." (86 chars) and NVDA's is a 209-char internal
-# pointer, both legitimately `extracted` per ADR-004 shape 2
+# pointer, both legitimately `extracted` per ADR-004 shape 2. A judgment call,
+# not a band midpoint (ADR-008) — but the band IS measured (2026-08-22, ADR-027
+# §c): the longest extracted span that would misfire if judged is ko-1997's
+# 930-char Item 8 IBR list; the shortest span a case needs judged is
+# spans-transposed's 22,955-char Item 8. Pinned on both.
 SUBSTANTIVE_MIN = 5000
 
 # Only these may push doc_status to `ambiguous`. `unattributed_content` is
@@ -46,6 +59,11 @@ AMBIGUOUS_CODES = {"toc_manifest_mismatch", "last_item_dominates",
 # conservative report a consumer can inspect; a false `success_with_warning` on
 # a collapsed document is the silent failure the whole battery exists to
 # prevent. 0.25 still sits 5x above the worst real filing in the set.
+#
+# 2026-08-22 (ADR-027 §c): the band has narrowed since — axp-2008 (burned
+# held-out, ADR-020) loses 4 of 20 items = 0.20 and must NOT escalate, so the
+# measured empty band is now (0.20, 0.381 items-stripped) and the 5x margin is
+# 1.25x. Pinned on both sides; the floor stays.
 MISSING_MAX = 0.25
 
 # per-item vocabulary priors: does this span READ like its label?
@@ -108,9 +126,12 @@ def validate(text, items, accepted, manifest):
                  f"heading: {[i['item'] for i in missing][:8]}"
                  f"{'…' if len(missing) > 8 else ''}")
 
-    # 2. Unattributed content — everything outside every item. Localises the
-    # complement of coverage: preamble is the cover page, tail is signatures,
-    # and a large one means a whole region went unlabelled.
+    # 2. Unattributed content — the preamble (before the first span) plus the
+    # tail (after the last), NOT every gap: interior gaps between spans are not
+    # counted. ADR-019 §d measured them — nonzero only on the 7 EXEC_OFFICERS_RE
+    # fixtures, where this figure understates true non-coverage by up to 9.7
+    # points (ibm-1997). Preamble is the cover page, tail is signatures, and a
+    # large one means a whole region went unlabelled.
     if spans:
         first = min(s for s, _ in spans.values())
         last = max(e for _, e in spans.values())
@@ -133,11 +154,15 @@ def validate(text, items, accepted, manifest):
                  item=last_code)
 
     # 4. Boundary hygiene — every span must open with its own heading. Cheap,
-    # and it is the one thing that must never be wrong.
+    # and it is the one thing that must never be wrong. A layer-consistency
+    # assertion (ADR-016 §2), so it reads the heading with the SAME regex that
+    # produced the offset — a hand copy of it drifted ("Item 9 A." matched
+    # upstream, not here) and the only live path was a false positive
+    # (gates-2026-08-22 T5-3; `spaced-letter-heading`).
     for code, (s, e) in hygiene_spans.items():
         head = text[s:s + 60].split("\n")[0]
-        if not re.match(r"(?i)^\s*(part\s+[ivx]+\s*[-–—.:]?\s*)?item\s*" +
-                        re.escape(code) + r"\b", head):
+        m = HEADING_RE.match(head)
+        if not m or m.group(1) + (m.group(2) or "").upper() != code:
             warn("boundary_hygiene", f"item {code} span does not start with its heading",
                  item=code)
 
@@ -183,6 +208,19 @@ def validate(text, items, accepted, manifest):
 
 # ADR-008: coarse and clamped — no fake precision. Every input is recorded in
 # the item's evidence{} so an auditor can recompute or dispute the number.
+#
+# ADR-027 §b: the strict/weak title cut, measured 2026-08-22 over the 553
+# extracted spans of the 40-fixture corpus. title_similarity: min 0.5, median
+# 1.0; 5 spans sit below 0.8 (ba-2003 item 8 0.5, textron-2001 item 1 0.593,
+# jnj-2016 item 7 0.718, ko-1997 item 9 0.727, msft-2013 item 1A 0.727), the
+# next value up is 0.841 (intc-2002 item 5). The cut sits inside that empty
+# band (0.727, 0.841) and is pinned on both edges (msft-2013 1A at 0.75 /
+# `heading_lenient`, intc-2002 item 5 at 0.95 / `heading_strict`). It is an
+# evidence-strength tier, not a correctness boundary: 4 of the 5 weak-title
+# spans are case-asserted correct extractions. `method` is derived from the
+# same constant (extract.py), so the envelope cannot say "strict" where the
+# score says weak.
+STRICT_SIM = 0.8
 BASE_STRICT, BASE_WEAK = 0.95, 0.75
 BASE_IBR, BASE_OMITTED = 0.85, 0.80
 # ADR-018: was 0.55. Every missing item carries its own expected_item_missing
@@ -193,14 +231,28 @@ BASE_IBR, BASE_OMITTED = 0.85, 0.80
 # excluded from the penalty below.
 BASE_MISSING = 0.40
 WARN_PENALTY = 0.15
-FLOOR, CEIL = 0.20, 0.95
+# CEIL is the "never 1.0" guard (ADR-018 §7) and, since ADR-027 §a, the cap an
+# `ambiguous` document replaces with BASE_WEAK: the document-level verdict
+# bounds every item, so no item in a document the pipeline could not resolve
+# can outrank a weak-title item in one it did. The old FLOOR (0.20) is gone —
+# the four item-targeted codes can take a weak item to 0.15 only on hand-built
+# warnings, because boundary_hygiene cannot fire on pipeline output (ADR-016
+# §2); the three that can leave a weak item at 0.30 at worst, so the clamp
+# was decorative (gates-2026-08-22 T5-4).
+CEIL = 0.95
 
 
-def score(item, warns):
-    """Confidence for one item, from recorded evidence only."""
+def score(item, warns, doc_ambiguous=False):
+    """Confidence for one item, from recorded evidence only.
+
+    `doc_ambiguous` is the document-level verdict (extract.py's ladder): when
+    True every item is capped at BASE_WEAK (ADR-027 §a) — the only input to an
+    item's score that is not the item's own evidence, and the reason the
+    envelope can no longer read `ambiguous` over a column of 0.95s.
+    """
     ev = dict(item.get("evidence") or {})
     if item["status"] == "extracted":
-        base = BASE_STRICT if ev.get("title_similarity", 0) >= 0.8 else BASE_WEAK
+        base = BASE_STRICT if ev.get("title_similarity", 0) >= STRICT_SIM else BASE_WEAK
     elif item["status"] == "incorporated_by_reference":
         base = BASE_IBR
     elif item["status"] == "omitted":
@@ -212,7 +264,7 @@ def score(item, warns):
     # ever catch, so counting it too double-counts the same fact.
     hits = [w["code"] for w in warns if w.get("item") == item["item"]
             and w["code"] != "expected_item_missing"]
-    conf = max(FLOOR, min(CEIL, base - WARN_PENALTY * len(hits)))
+    conf = min(BASE_WEAK if doc_ambiguous else CEIL, base - WARN_PENALTY * len(hits))
     ev["warnings"] = hits
     ev["confidence_base"] = base
     return round(conf, 2), ev
@@ -245,6 +297,18 @@ def _demo():
             "start": items[0]["start"] + 40}]
     codes = [x["code"] for x in validate(text, ibr, {"1": {}}, [])]
     assert "boundary_hygiene" in codes, codes
+    # ...and it must read headings with segmentation's own regex: "Item 9 A."
+    # (optional space before the letter) is a heading upstream, so it is one
+    # here too. A hand copy of the regex said otherwise — T5-3's false positive,
+    # pinned on a fixture by `spaced-letter-heading`; this is the layer echo.
+    sp_text = "Item 9 A. Controls and Procedures\n" + "fine. " * 50 + "\nItem 15. Exhibits\nx"
+    sp_cut = sp_text.index("Item 15.")
+    sp_items = [{"item": "9A", "part": "II", "status": "extracted", "start": 0, "end": sp_cut,
+                 "evidence": {}},
+                {"item": "15", "part": "IV", "status": "extracted", "start": sp_cut,
+                 "end": len(sp_text), "evidence": {}}]
+    codes = [x["code"] for x in validate(sp_text, sp_items, {"9A": {}, "15": {}}, [])]
+    assert "boundary_hygiene" not in codes, codes
 
     # a manifest naming an item we never resolved is a strong, free signal
     w = validate(text, items, {"1": {}}, ["1", "7", "8"])
@@ -312,6 +376,25 @@ def _demo():
     # base that already encodes the status.
     miss = {"item": "9", "status": "missing", "evidence": {}}
     assert score(miss, [{"code": "expected_item_missing", "item": "9"}])[0] == BASE_MISSING
+
+    # ADR-027 §a: an `ambiguous` document caps EVERY item at BASE_WEAK — the
+    # strict item, the IBR item, the omitted item; the missing item is already
+    # below the cap and is untouched. Red before the cap existed: 0.95 / 0.85.
+    assert score(it, [], doc_ambiguous=True)[0] == BASE_WEAK
+    ibr_it = {"item": "10", "status": "incorporated_by_reference", "evidence": {}}
+    assert score(ibr_it, [], doc_ambiguous=True)[0] == BASE_WEAK
+    assert score(ibr_it, [])[0] == BASE_IBR
+    assert score(miss, [], doc_ambiguous=True)[0] == BASE_MISSING
+    # ADR-027 §b: the strict/weak cut is STRICT_SIM, pinned at both edges of
+    # its measured empty band (0.727, 0.841] — see the constant's comment.
+    weak = {"item": "1A", "status": "extracted", "evidence": {"title_similarity": 0.727}}
+    strong = {"item": "5", "status": "extracted", "evidence": {"title_similarity": 0.841}}
+    assert score(weak, [])[0] == BASE_WEAK and score(strong, [])[0] == BASE_STRICT
+    # no floor: four item-targeted hits on a weak item read 0.15, honestly
+    four = [{"code": c, "item": "8"} for c in ("last_item_dominates", "boundary_hygiene",
+                                              "numeric_density_inversion", "keyword_fingerprint")]
+    assert score({"item": "8", "status": "extracted", "evidence": {"title_similarity": 0.5}},
+                 four)[0] == 0.15
     print("[validate self-check] ok")
 
 
