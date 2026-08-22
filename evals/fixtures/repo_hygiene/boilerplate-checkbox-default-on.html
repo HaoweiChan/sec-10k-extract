@@ -1,0 +1,23 @@
+<!-- S8 regression fixture, UI half: the two client-side ways the "exclude
+     boilerplate" wire breaks silently. (1) the checkbox ships `checked`, so
+     the deployed inspector no longer shows today's behaviour by default,
+     which is the one thing ADR-026 promises every existing caller. (2) the
+     upload mode — the guaranteed, no-network path — does not send the flag,
+     so the checkbox works in two modes out of three and looks fine in a demo
+     that only clicks the fixture dropdown. Caught by
+     evals/adversarial/ui-boilerplate-exclusion-regression.json
+     (expect.min_failures/max_failures). -->
+<label><input type="checkbox" id="exclude-bp" checked> exclude boilerplate</label>
+<script>
+$("#go-fx").onclick = () => call("/api/extract/fixture",
+  {method:"POST", headers:{"Content-Type":"application/json"},
+   body: JSON.stringify({fixture: $("#fx").value, exclude_boilerplate: excludeBp()})});
+$("#go-url").onclick = () => call("/api/extract/url",
+  {method:"POST", headers:{"Content-Type":"application/json"},
+   body: JSON.stringify({url: $("#url").value, exclude_boilerplate: excludeBp()})});
+$("#go-up").onclick = () => {
+  const f = $("#up").files[0];
+  call("/api/extract/upload?filename=" + encodeURIComponent(f.name),
+       {method:"POST", body: f});
+};
+</script>

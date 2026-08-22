@@ -1,0 +1,25 @@
+{
+  "id": "ui-boilerplate-exclusion",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "boilerplate_exclusion",
+      "boilerplate_plumbing"
+    ],
+    "fixtures": [
+      "evals/fixtures/ge-1994/filing.txt",
+      "evals/fixtures/msft-2013/filing.htm"
+    ]
+  },
+  "expect": {},
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "S8 made ADR-026's exclusion reachable from the deployed inspector, and nothing could see either half of it. `boilerplate_exclusion` runs each fixture through extract_items twice — flag off, flag on — and compares the two build_view payloads item by item against an oracle that marks the characters the envelope's own `boilerplate` spans cover, rather than calling strip_chrome (a check that re-ran the implementation would agree with any window bug it has). It pins the OFF pane as the verbatim INV-S2 slice, the ON pane as that slice minus exactly the chrome inside [start, end), and start/end/chars/status/method/confidence plus normalized_text as identical across the two runs — display-only, ADR-026 s.d. It refuses to pass vacuously: if no item on any fixture has chrome inside its own span, that is itself a failure. Two eras deliberately: ge-1994 is txt-era `edgar_chrome`, msft-2013 is HTML `running_head`+`page_number`. `boilerplate_plumbing` covers what Python cannot reach — the checkbox must exist exactly once and must NOT default to checked, all three input modes must send the flag, all three handlers must forward it into _run, and _run must pass it to extract_items.",
+    "red_first": "Watched red before the implementation: 28 failures — 20 from `boilerplate_exclusion` (all 16 items with chrome inside their span reporting the excluded pane identical to the un-flagged one, and `boilerplate_excluded=None` on both runs of both fixtures) and 8 from `boilerplate_plumbing` (no checkbox at all, no flag on any of the three call sites or the three handlers, and _run calling extract_items(path))."
+  },
+  "provenance": "S8, created 2026-08-22 before the implementation, per hard rule 2."
+}

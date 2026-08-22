@@ -12,6 +12,8 @@ Self-check: python3 -m src.sec10k.web.view
 """
 from collections import Counter
 
+from src.sec10k.boilerplate import strip_chrome
+
 # JPM 2024's Item 15 span is 1,010,422 chars. Sending that to a browser per
 # item is not inspection, it is a download. Truncate for display and say so —
 # the full length always travels as `chars`, so a truncated pane can never be
@@ -21,19 +23,31 @@ TRACE_MAX = 400  # rejected-candidate lists on a bad filing can run to thousands
 
 
 def build_view(result, display_max=DISPLAY_MAX):
-    """Envelope -> UI payload. Never raises on a well-formed envelope."""
+    """Envelope -> UI payload. Never raises on a well-formed envelope.
+
+    S8: the envelope carries a `boilerplate` key exactly when the caller
+    passed `exclude_boilerplate=True` (ADR-026), so its presence — not a
+    second parameter — is what switches the pane to the stripped view. The
+    stripped view is ADR-026 s.d's definition and nothing more:
+    `strip_chrome(normalized_text, boilerplate, start, end)` per item,
+    derived here, never stored. `start`, `end` and `chars` keep reporting the
+    SPAN, identical with the flag on and off — INV-S2 offsets do not move
+    because a reader chose to hide the furniture between them.
+    """
     text = result.get("normalized_text") or ""
+    spans = result.get("boilerplate")     # present iff exclusion was asked for
     items = []
     for i in result.get("items", []):
         s, e = i.get("start"), i.get("end")
         has_span = s is not None and e is not None
-        body = text[s:e] if has_span else ""
+        raw = text[s:e] if has_span else ""
+        body = strip_chrome(text, spans, s, e) if has_span and spans is not None else raw
         items.append({
             "item": i.get("item"), "part": i.get("part"), "title": i.get("title"),
             "status": i.get("status"), "confidence": i.get("confidence"),
             "method": i.get("method"), "heading_text": i.get("heading_text"),
             "start": s, "end": e,
-            "chars": len(body) if has_span else None,
+            "chars": len(raw) if has_span else None,
             "text": body[:display_max],
             "truncated": len(body) > display_max,
             "evidence": i.get("evidence") or {},
@@ -48,6 +62,9 @@ def build_view(result, display_max=DISPLAY_MAX):
         "items": items,
         "norm_chars": len(text),
         "counts": _counts(result.get("items", [])),
+        # so the pane can SAY it is hiding text. `chars` still reports the
+        # full span, so without this the two numbers silently disagree.
+        "boilerplate_excluded": spans is not None,
     }
 
 
@@ -123,6 +140,32 @@ def _demo():
     empty = build_view({"doc_status": "failed", "normalized_text": "", "items": []})
     assert empty["items"] == [] and empty["counts"] == {}
     json.dumps(empty)
+
+    # S8: the same envelope plus ADR-026's `boilerplate` key renders the
+    # stripped view — and ONLY the shown text moves.
+    head = "ACME 10-K\n"
+    doc = head + "Item 1. Business\nreal prose\n" + head + "Item 7. MD&A\nmore prose\n"
+    h2 = doc.index(head, 1)                               # second head starts item 7
+    plain = {"normalized_text": doc, "items": [
+        {"item": "1", "status": "extracted", "start": 0, "end": h2},
+        {"item": "7", "status": "extracted", "start": h2, "end": len(doc)}]}
+    # one head per item, so a strip that ignores the window takes the wrong one
+    spans = [{"start": 0, "end": len(head), "kind": "running_head"},
+             {"start": h2, "end": h2 + len(head), "kind": "running_head"}]
+    off, on = build_view(plain), build_view(dict(plain, boilerplate=spans))
+    assert off["boilerplate_excluded"] is False and on["boilerplate_excluded"] is True
+    assert off["items"][0]["text"] == doc[:h2]            # OFF is verbatim
+    assert on["items"][0]["text"] == "Item 1. Business\nreal prose\n"
+    # windowed: item 7 loses its OWN head, not item 1's, and keeps its prose
+    assert on["items"][1]["text"] == "Item 7. MD&A\nmore prose\n"
+    for a, b in zip(off["items"], on["items"]):           # offsets never move
+        assert (a["start"], a["end"], a["chars"]) == (b["start"], b["end"], b["chars"])
+    assert on["items"][0]["chars"] == h2                  # the SPAN, not the shown text
+    # flag on, nothing detected: exclusion was still asked for, and asked-for
+    # with an empty answer must not fall back to the un-flagged path
+    none = build_view(dict(plain, boilerplate=[]))
+    assert none["boilerplate_excluded"] is True
+    assert none["items"][0]["text"] == doc[:h2]
     print("[view self-check] ok")
 
 

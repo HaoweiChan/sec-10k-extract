@@ -17,10 +17,13 @@ from pathlib import Path
 from . import css_contrast
 from src.sec10k.web import anchor as web_anchor
 from src.sec10k.web import capabilities as web_capabilities
-from src.sec10k.web.view import build_view
+from src.sec10k.web.view import DISPLAY_MAX, build_view
 from src.sec10k.extract import extract_items
 
 UI_STYLESHEET = "src/sec10k/web/static/index.html"
+API_FILE = "src/sec10k/web/app.py"
+EXTRACT_ENDPOINTS = ("/api/extract/fixture", "/api/extract/upload",
+                     "/api/extract/url")
 FIXTURES = "evals/fixtures"
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -519,6 +522,139 @@ def check_anchor_contract(case):
                 "items_checked": checked_items}
 
 
+def check_boilerplate_exclusion(case):
+    """S8. The inspector's extracted-item pane must hide detected chrome when
+    the caller asks for it, and be BYTE-IDENTICAL to the un-flagged run when
+    it does not. Both directions, per item, on a real fixture.
+
+    The oracle here deliberately does not call `strip_chrome`: it marks the
+    characters the envelope's own `boilerplate` spans cover and rebuilds the
+    expected string from the mark. A check that re-ran the implementation
+    would agree with any window or off-by-one bug the implementation has.
+
+    Pinned, per item:
+      OFF  `text` == `normalized_text[start:end][:DISPLAY_MAX]` — verbatim,
+           the INV-S2 slice, unchanged from before S8.
+      ON   `text` == that same slice with exactly the chrome characters that
+           fall inside `[start, end)` dropped. So a strip that ignores the
+           item window, or is off by one, disagrees.
+      both `start`, `end`, `chars`, `status`, `method`, `confidence`
+           identical between the runs, and `normalized_text` identical too —
+           exclusion is display-only (ADR-026 s.d, INV-S2).
+
+    At least one item per fixture must actually come out DIFFERENT under ON,
+    or the fixture has stopped exercising the exclusion and the case says so
+    rather than passing vacuously.
+    """
+    inp = case.get("input", {})
+    pinned = ("item", "part", "start", "end", "chars", "status", "method",
+              "confidence", "heading_text")
+    bad, stripped_items = [], 0
+    for rel in inp.get("fixtures", []):
+        off = extract_items(str(ROOT / rel))
+        on = extract_items(str(ROOT / rel), exclude_boilerplate=True)
+        text = on.get("normalized_text") or ""
+        spans = on.get("boilerplate")
+        if not spans:
+            bad.append(f"{rel}: exclude_boilerplate=True reported no chrome — "
+                       "this fixture no longer exercises the exclusion")
+            continue
+        if (off.get("normalized_text") or "") != text:
+            bad.append(f"{rel}: normalized_text differs between the runs — "
+                       "exclusion is display-only (ADR-026 s.d)")
+        hidden = bytearray(len(text))
+        for sp in spans:
+            hidden[sp["start"]:sp["end"]] = b"\x01" * (sp["end"] - sp["start"])
+        v_off, v_on = build_view(off), build_view(on)
+        if v_off.get("boilerplate_excluded") is not False:
+            bad.append(f"{rel}: view reports boilerplate_excluded="
+                       f"{v_off.get('boilerplate_excluded')!r} on an un-flagged run")
+        if v_on.get("boilerplate_excluded") is not True:
+            bad.append(f"{rel}: view reports boilerplate_excluded="
+                       f"{v_on.get('boilerplate_excluded')!r} on an excluded run")
+        if len(v_off["items"]) != len(v_on["items"]):
+            bad.append(f"{rel}: {len(v_off['items'])} items un-flagged vs "
+                       f"{len(v_on['items'])} excluded — zip below would hide it")
+        for a, b in zip(v_off["items"], v_on["items"]):
+            code = a.get("item")
+            for k in pinned:
+                if a.get(k) != b.get(k):
+                    bad.append(f"{rel} item {code}: {k} moved under exclusion "
+                               f"({a.get(k)!r} -> {b.get(k)!r})")
+            s, e = a.get("start"), a.get("end")
+            if s is None or e is None:
+                if a["text"] or b["text"]:
+                    bad.append(f"{rel} item {code}: null span but non-empty text")
+                continue
+            raw = text[s:e]
+            if a["text"] != raw[:DISPLAY_MAX]:
+                bad.append(f"{rel} item {code}: un-flagged text is no longer the "
+                           f"verbatim slice (INV-S2)")
+            want = "".join(c for k, c in enumerate(raw, s) if not hidden[k])
+            if b["text"] != want[:DISPLAY_MAX]:
+                bad.append(
+                    f"{rel} item {code}: excluded pane is identical to the "
+                    f"un-flagged one — nothing was stripped"
+                    if b["text"] == a["text"] else
+                    f"{rel} item {code}: excluded pane != the item slice minus "
+                    f"its own chrome runs ({len(b['text'])} chars shown, "
+                    f"expected {len(want[:DISPLAY_MAX])})")
+            # not redundant with the `chars` pairing above: that one only says
+            # the two runs AGREE, and they would agree if both reported the
+            # shown length. This says WHICH length is right.
+            if b["chars"] != e - s:
+                bad.append(f"{rel} item {code}: chars became {b['chars']} — it "
+                           f"reports the SPAN length ({e - s}), not the shown length")
+            if want != raw:
+                stripped_items += 1
+    if inp.get("fixtures") and not stripped_items:
+        bad.append("no item anywhere had chrome inside its own span — the "
+                   "exclusion direction was never exercised")
+    return bad, {"items_stripped": stripped_items}
+
+
+def check_boilerplate_plumbing(case):
+    """S8. The ADR-026 flag has to survive the whole trip — checkbox, request,
+    `_run`, `extract_items` — and the checkbox has to start OFF. Neither end
+    is reachable from the eval harness (no browser, and importing app.py
+    would drag fastapi into the dependency-free unit job), so this is a
+    structural check on the two files that carry the wire, the shape the ui-*
+    checks have used since S3. `ui-boilerplate-exclusion-regression` pins
+    that it actually catches a default-on checkbox and a dropped flag.
+    """
+    inp = case.get("input", {})
+    ui = (ROOT / inp.get("ui_file", UI_STYLESHEET)).read_text()
+    api = (ROOT / inp.get("api_file", API_FILE)).read_text()
+    bad = []
+    boxes = re.findall(r'<input[^>]*id="exclude-bp"[^>]*>', ui)
+    if len(boxes) != 1:
+        bad.append(f"expected exactly one #exclude-bp checkbox in the UI, "
+                   f"found {len(boxes)}")
+    for box in boxes:
+        if 'type="checkbox"' not in box:
+            bad.append(f"#exclude-bp is not a checkbox: {box}")
+        if re.search(r"\bchecked\b", box):
+            bad.append(f"#exclude-bp defaults to CHECKED — ADR-026 is opt-in "
+                       f"and OFF must stay today's behaviour: {box}")
+    for ep in EXTRACT_ENDPOINTS:
+        i = ui.find('"' + ep)
+        if i < 0:
+            bad.append(f"UI has no fetch call to {ep}")
+        elif "exclude_boilerplate" not in ui[i:i + 400]:
+            bad.append(f"UI call to {ep} does not send exclude_boilerplate")
+        j = api.find('"' + ep + '"')
+        if j < 0:
+            bad.append(f"app.py has no handler for {ep}")
+        else:
+            k = api.find("\n@app.", j + 1)
+            if "exclude_boilerplate" not in api[j:k if k > 0 else len(api)]:
+                bad.append(f"the {ep} handler does not pass exclude_boilerplate "
+                           f"into _run")
+    if not re.search(r"extract_items\(\s*path,\s*exclude_boilerplate=", api):
+        bad.append("_run does not pass exclude_boilerplate into extract_items")
+    return bad
+
+
 CHECKS = {
     "adr_headers": lambda case: check_adr_headers(),
     "adr_index": lambda case: check_index(),
@@ -533,6 +669,8 @@ CHECKS = {
     "truncated_notice_in_overlay": check_truncated_notice_in_overlay,
     "capabilities_parse": check_capabilities_parse,
     "anchor_contract": check_anchor_contract,
+    "boilerplate_exclusion": check_boilerplate_exclusion,
+    "boilerplate_plumbing": check_boilerplate_plumbing,
 }
 
 

@@ -1,0 +1,24 @@
+{
+  "id": "ui-boilerplate-exclusion-regression",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "boilerplate_plumbing"
+    ],
+    "ui_file": "evals/fixtures/repo_hygiene/boilerplate-checkbox-default-on.html",
+    "api_file": "evals/fixtures/repo_hygiene/boilerplate-flag-dropped.py"
+  },
+  "expect": {
+    "min_failures": 3,
+    "max_failures": 3
+  },
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "Pins the three silent-breakage shapes of the S8 wire as known-bad fixtures, at an EXACT count so that both a regressed miss (too few) and a regressed over-fire (too many) go red — PR #21 round-2 R5's rule: a floor alone would let a check that ALSO flags the two correctly-wired call sites report green. The three, one per failure: the checkbox ships `checked` (ADR-026 is opt-in and OFF must remain today's behaviour); the upload mode does not send the flag (works in two modes out of three, and upload is the guaranteed path an evaluator uses); `_run` accepts the flag and then calls `extract_items(path)` anyway, so every request is byte-identical whatever the checkbox says. The fixtures are correctly wired everywhere else, so the check has to distinguish rather than blanket-fail."
+  },
+  "provenance": "S8, created 2026-08-22 alongside ui-boilerplate-exclusion, per hard rule 2."
+}

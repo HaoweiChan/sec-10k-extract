@@ -99,6 +99,11 @@ button{padding:7px 14px;border:1px solid var(--amber);border-radius:var(--r);
 button:not(.it):hover:not(:disabled){background:color-mix(in srgb,var(--amber) 88%,var(--bg))}
 button:disabled{opacity:.5;cursor:default}
 .hint{font-size:12px;color:var(--dim)}
+/* S8: the exclusion toggle sits under the three modes, not inside one — it
+   applies to whichever mode is used, and a copy per mode is three checkboxes
+   that can disagree. */
+.opt{display:flex;gap:7px;align-items:center;flex-wrap:wrap;cursor:pointer;
+  margin-top:13px;font-size:13px}
 
 #banner{padding:11px 14px;border-radius:var(--r);margin-bottom:12px;font-weight:600;
   border:1px solid;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
@@ -263,6 +268,10 @@ footer a{color:var(--accent)}
       <span class="hint">Best-effort: EDGAR can block datacenter IPs. Upload is the reliable path.</span>
     </div>
   </div>
+  <label class="opt"><input type="checkbox" id="exclude-bp"> exclude boilerplate
+    <span class="hint">— hides detected running heads, page numbers and EDGAR
+    table furniture from the extracted-item pane. Display only: the offsets and
+    character count stay those of the full span (ADR-026).</span></label>
 </fieldset>
 
 <div id="banner" class="s-idle">No filing extracted yet.</div>
@@ -579,6 +588,10 @@ function scrollSourceToItem(i){
 let SYNC_GUARD = false;
 
 function syncOn(){ const c = $("#sync-scroll"); return c && c.checked; }
+// S8. Read at REQUEST time, not render time: the pane labels itself from the
+// response's own `boilerplate_excluded`, so toggling the box after an
+// extraction cannot make the label lie about the text on screen.
+function excludeBp(){ const c = $("#exclude-bp"); return !!(c && c.checked); }
 
 function bindSourceScroll(frame){
   frame.addEventListener("load", () => {
@@ -715,7 +728,12 @@ function show(i){
   // stays a collapsed, plainly-labelled <details>, positioned as an overlay
   // (see .pane-meta's CSS) so it never competes with pre.text for height
   // (round 4, amendment (5)+(7)).
-  const hdrRight = `Part ${esc(it.part || "—")} · ${esc(it.status)} · conf ${it.confidence ?? "—"} · via ${esc(it.method || "—")}`;
+  // S8: FIRST, not appended. Both header spans are `.lbl`, which ellipsises —
+  // measured live at a 1280px viewport, this band already truncates inside
+  // `via heading_strict`, so a trailing marker would be invisible exactly
+  // when the pane most needs to say it is hiding text.
+  const hdrRight = (VIEW.boilerplate_excluded ? "boilerplate hidden · " : "") +
+    `Part ${esc(it.part || "—")} · ${esc(it.status)} · conf ${it.confidence ?? "—"} · via ${esc(it.method || "—")}`;
   // The truncation notice used to be its own in-flow sibling after
   // pre.text, which is exactly the bug .pane-meta's own move to
   // position:absolute just fixed, reintroduced through a second element: on
@@ -732,6 +750,7 @@ function show(i){
     <details class="pane-meta"><summary>where this text came from</summary>
       <dl class="ev">
         ${it.truncated ? `<dt>shown</dt><dd>first ${it.text.length.toLocaleString()} of ${it.chars.toLocaleString()} characters</dd>` : ""}
+        ${VIEW.boilerplate_excluded ? `<dt>boilerplate</dt><dd>detected chrome is hidden from the text above; the offsets and character count below are still those of the full span (ADR-026)</dd>` : ""}
         <dt>heading matched</dt><dd>${it.heading_text ? esc(it.heading_text) : "— (no heading found)"}</dd>
         <dt>offsets</dt><dd>${it.start != null ? `[${it.start.toLocaleString()}, ${it.end.toLocaleString()})` : "null — no span for this status"}</dd>
         <dt>evidence</dt><dd>${esc(JSON.stringify(it.evidence || {}))}</dd>
@@ -747,14 +766,16 @@ $("#sidebar").addEventListener("click", e => {
 });
 $("#go-fx").onclick = () => call("/api/extract/fixture",
   {method:"POST", headers:{"Content-Type":"application/json"},
-   body: JSON.stringify({fixture: $("#fx").value})});
+   body: JSON.stringify({fixture: $("#fx").value, exclude_boilerplate: excludeBp()})});
 $("#go-url").onclick = () => call("/api/extract/url",
   {method:"POST", headers:{"Content-Type":"application/json"},
-   body: JSON.stringify({url: $("#url").value})});
+   body: JSON.stringify({url: $("#url").value, exclude_boilerplate: excludeBp()})});
 $("#go-up").onclick = () => {
   const f = $("#up").files[0];
   if(!f){ alert("Choose a .htm, .html or .txt filing first."); return; }
-  call("/api/extract/upload?filename=" + encodeURIComponent(f.name),
+  // this mode's body is the filing itself, so the flag rides the query string
+  call("/api/extract/upload?filename=" + encodeURIComponent(f.name) +
+       (excludeBp() ? "&exclude_boilerplate=1" : ""),
        {method:"POST", body: f});
 };
 boot();
