@@ -4,7 +4,7 @@ Date: 2026-08-20. Status: accepted.
 
 **Ruling**: Form 10-K/A is **out of scope** and keeps returning `doc_status: unsupported` with `unsupported_form` naming the detected form; the refusal is now pinned by a self-check on both detection routes rather than left as a side effect of `ACCEPTED_FORMS`.
 **Because**: an amendment's item set is whatever it chose to restate, not what its era requires, so every unamended item would report `missing` — supporting it means a second expected-set model, which is a capability the T8 freeze forbids and no committed fixture could test.
-**Enforced by**: `src/sec10k/normalize.py::_demo` (both routes), `src/sec10k/normalize.py::ACCEPTED_FORMS`
+**Enforced by**: `src/sec10k/normalize.py::_demo` (both byte-adjacent routes), `evals/adversarial/amended-cover-refused.json` (marker typeset apart from the form token; added 2026-08-22, see amendment note), `src/sec10k/normalize.py::ACCEPTED_FORMS`
 
 ---
 
@@ -91,6 +91,24 @@ consequence.**
    ADR-010 sin; so is committing a fixture for a form we refuse, which would
    also move the T13 benchmark corpus (`n=33`, 2.104 MiB, ADR-021 §b) and every
    published figure derived from it.
+
+**Amended 2026-08-22 (PR #30, cold-review finding T3-2 / review R3).** Point 3
+was written when `/A` detection was one regex alternative and held as long as
+the marker was byte-adjacent to the form token. A cover that typesets
+`FORM 10-K` on one line and `(Amendment No. 1)` on the next sniffed as a
+plain 10-K and was fully parsed — the refusal did not hold on the route this
+ADR calls the one that matters. Closing that needed a code path
+(`normalize.py::AMENDMENT_RE` / `AMENDMENT_REACH`, applied inside
+`sniff_form`), and a code path needs a gate case (hard rule 2; point 2's
+layer-assert treatment is for behaviour no fixture can carry, which this is
+not). So point 3 is superseded in that one respect: **one synthetic fixture,
+`evals/fixtures/amended-cover-2021` (sandston-2021 with one `<p>` inserted),
+carries `evals/adversarial/amended-cover-refused` in the fast + invariant
+suites**, registered in `evals/bench.py::SYNTHETIC` so it never sets the
+ADR-021 §5 sweep multiplier (the same treatment every other synthetic
+fixture gets — the benchmark-corpus concern point 3 named is handled by that
+registry, not by keeping fixtures out). `ACCEPTED_FORMS` and the ruling are
+unchanged; the two byte-adjacent `_demo` asserts stay.
 
 ### Why not "in", when the parser would mostly work
 

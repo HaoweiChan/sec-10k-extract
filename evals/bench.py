@@ -104,7 +104,7 @@ DERIVED_NOTE = ("computed from `records`; the report quotes these, so they are "
                 "fields here rather than arithmetic done in prose")
 
 # Fixtures that are NOT real EDGAR documents — self-created copies/mutations of
-# other members of this same corpus. Ten are marked SELF-CREATED in
+# other members of this same corpus. Eleven are marked SELF-CREATED in
 # evals/fixtures/README.md; `items-stripped` has no README row and its
 # provenance lives in evals/adversarial/items-stripped-escalation.json. Seven of
 # the first nine derive from the corpus's SMALLEST real filings, which is why they
@@ -113,7 +113,7 @@ DERIVED_NOTE = ("computed from `records`; the report quotes these, so they are "
 SYNTHETIC = {"toc-titled", "heading-unnumbered", "malformed-html",
              "caps-cover-2016", "fy2021-item9c", "ibr-pointer-first",
              "truncated-download", "spans-transposed", "items-stripped",
-             "ibr-security-holders", "comma-cover-2016"}
+             "ibr-security-holders", "comma-cover-2016", "amended-cover-2021"}
 
 # ---------------------------------------------------------------- cost basis
 # Anthropic first-party API list price, AS OF 2026-06-24, carried forward from
