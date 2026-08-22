@@ -1,0 +1,37 @@
+{
+ "pr": 28,
+ "round": 1,
+ "date": "2026-08-22",
+ "result": "REQUEST_CHANGES",
+ "gate": "[eval] suite 'invariant': 34/34 = 1.000 (+4 enumerated debt, unscored) | [eval] suite 'fast': 76/76 = 1.000 (+4 enumerated debt, unscored); .eval-baseline.json {\"fast\": 1.0} unchanged",
+ "routing_rule": "repair = HIGH/MEDIUM and (acceptance violated | gate red | published claim dishonest); everything else debt (pr-loop scope boundary)",
+ "findings": [
+  {
+   "id": "R1",
+   "severity": "MEDIUM",
+   "route": "repair",
+   "claim": "The published correction to T4-1's evidence says ibm-1997's only 'annual report to security holders' hit sits 'inside item 14', but in the pipeline's own output that text lies outside every item span, in the 15,205-char unattributed tail.",
+   "evidence": "tasks/TODO.md T4 row ('carries the term only in its exhibit index (item 14, raw line 931 ...)'), commit 24d203c message ('exhibit index (item 14, line 931)'), evals/adversarial/ibr-security-holders.json triage.note ('inside item 14 (raw line 931)'). Measured at HEAD on evals/fixtures/ibm-1997/filing.txt: the term occurs once at normalized offset 45796; item 14's span is [23948, 31727) (ends at the '8 <PAGE>' footer before signatures); no item span covers 45796, and the envelope's own warning reports '15,205 after the last'. Raw line 931 is correct; 'item 14' is not. The functional conclusion (the hit is not a pointer, no real fixture flips — confirmed by my 43-fixture old-vs-new sweep: only ibr-security-holders item 6 moves) is unaffected.",
+   "repro": "cd <worktree> && python3 -c \"import sys,re;sys.path.insert(0,'.');from src.sec10k.extract import extract_items as e;r=e('evals/fixtures/ibm-1997/filing.txt');t=r['normalized_text'];m=re.search('(?i)annual report to security holders',t);print(m.start(),[(i['item'],i['start'],i['end']) for i in r['items'] if i['item']=='14'],[i['item'] for i in r['items'] if i.get('start') is not None and i['start']<=m.start()<i['end']])\"  -> 45796 [('14', 23948, 31727)] []",
+   "acceptance": "The T4 row, commit/PR evidence and the case's triage note say where the hit actually is ('in the exhibit index after the last item span — unattributed tail, raw line 931'), or otherwise stop attributing it to item 14; no code change needed."
+  },
+  {
+   "id": "R2",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "evals/bench.py still says the dev corpus is 'skewed by nine synthetic derivatives' while this PR grows SYNTHETIC to ten members.",
+   "evidence": "evals/bench.py:222 (heldout_sizes docstring) reads 'skewed by nine synthetic derivatives (ADR-021 §b8)'; evals/bench.py:113-115 SYNTHETIC now has 10 names (the PR updated the sibling comment at :107-110 to 'Nine are marked SELF-CREATED ... Seven of the first nine' but not this one).",
+   "repro": "grep -n 'nine synthetic' evals/bench.py; python3 -c \"import sys;sys.path.insert(0,'.');from evals.bench import SYNTHETIC;print(len(SYNTHETIC))\" -> 10",
+   "acceptance": "Docstring count matches len(SYNTHETIC) (or says 'the SYNTHETIC set' without a number)."
+  },
+  {
+   "id": "R3",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "The 'Exhibit 13' debt row names 'wmt-2010 and tgt-2002, the corpus's exhibit-13 filers' but tgt-2002's fixture text never contains 'Exhibit 13' at all, and other corpus members do carry Exhibit 13 (ko-1997 ships EX-13.1 in the same submission; held-out pgr-2023 writes 'included as Exhibit 13 to this Form 10-K' three times).",
+   "evidence": "tasks/TODO.md debt row 'EXTERNAL_DOC_RE still does not know Exhibit 13', Why-not-fixed cell. Tag-stripped grep of evals/fixtures/tgt-2002/filing.htm for /exhibit\\W{0,5}13/ -> 0 hits (its pointers say 'Annual Report to Shareholders ... incorporated herein by reference' with no exhibit number); ko-1997 filing.txt line 3540 'EXHIBIT 13.1'; evals/heldout/fixtures/pgr-2023/filing.htm 'Annual Report to Shareholders ... included as Exhibit 13 to this Form 10-K, are incorporated by reference'. The load-bearing claim — no committed pointer whose ONLY external-document term is 'Exhibit 13' — still holds (wmt-2010 and pgr-2023 both name the Annual Report in the same sentence).",
+   "repro": "grep -ic 'exhibit 13' evals/fixtures/tgt-2002/filing.htm -> 0; grep -il 'exhibit 13' evals/fixtures/*/filing.* evals/heldout/fixtures/*/filing.* -> wmt-2010, ko-1997, pgr-2023",
+   "acceptance": "Row names the fixtures that actually contain 'Exhibit 13' (wmt-2010; ko-1997 as EX-13.1 header only; pgr-2023 held-out) or drops the 'the corpus's exhibit-13 filers' characterisation of tgt-2002."
+  }
+ ]
+}
