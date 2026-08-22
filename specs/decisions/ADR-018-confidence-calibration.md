@@ -1,6 +1,10 @@
 # ADR-018 — T10: confidence calibration — the measurement, and what it licenses
 
-Date: 2026-08-18. Status: accepted. Implements T10/A2 (layer 9,
+Date: 2026-08-18. Status: accepted. Amended by: ADR-019 (§d, the span-coverage
+sentence — marked in place 2026-08-22), ADR-027 (§h: the instrument re-run and
+the population of the table below; §a: an `ambiguous` document now caps every
+item, which moves 100 items the table's population counted at 0.95/0.85/0.80).
+Implements T10/A2 (layer 9,
 `src/sec10k/validate.py`). Instrument and measured table landed first in
 `d3a28df` (metric 8 v2 + report `20260818-123114-all.json`), per T10's gate:
 the table exists in history before any remap does.
@@ -113,8 +117,13 @@ Two findings, neither visible before the instrument:
   v2, per T10's validation gate.
 - T11 inherits the real question this measurement isolated: the *rate* of
   confident-wrong items, sampled rather than enumerated — ba-2003's
-  trivial-body shape is its first target. The span-coverage validator remains
-  the named post-freeze candidate for catching it label-free.
+  trivial-body shape is its first target. ~~The span-coverage validator remains
+  the named post-freeze candidate for catching it label-free.~~ *Struck
+  2026-08-22 (ADR-027 §g, gates-2026-08-22 SD-3): retired by ADR-019 §d the
+  day after this ADR — coverage is already measured exactly as
+  1 − `unattributed_content`'s own fraction, and the interior-gap half would
+  fire 7/7 on `EXEC_OFFICERS_RE`'s intentional exclusion; the live successor is
+  the "non-last span dominating the document" debt row in `tasks/TODO.md`.*
 
 ## Audit dispositions (2026-08-18, cold-reviewer + extraction-auditor)
 

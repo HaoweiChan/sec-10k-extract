@@ -1,7 +1,9 @@
 # ADR-019 — T11: the silent-failure rate, measured, and three rulings it forced
 
 Date: 2026-08-19. Status: accepted. Implements T11/A3. Amends ADR-015 §5 (the
-mis-specified span-coverage debt row) and ADR-004 (records, does not resolve,
+mis-specified span-coverage debt row), ADR-018 (its consequences still named
+the span-coverage validator as the live post-freeze candidate — marked in place
+2026-08-22, ADR-027 §g) and ADR-004 (records, does not resolve,
 a standing disagreement over `cvx-2015` item 6). Ships the Executive-Officers
 boundary fix (`src/sec10k/segment.py`, `EXEC_OFFICERS_RE`).
 
