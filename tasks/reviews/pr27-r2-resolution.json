@@ -1,0 +1,65 @@
+{
+  "pr": 27,
+  "task": "S8",
+  "round": 2,
+  "date": "2026-08-22",
+  "implementer": "task/S8 round-2 repair",
+  "gate_after_repair": {
+    "invariant": "37/37 = 1.000",
+    "fast": "79/79 = 1.000",
+    "baseline": "1.000, not moved",
+    "unit_self_checks": "src.sec10k.web.view, src.sec10k.boilerplate, src.sec10k.web.anchor, src.sec10k.test_eval_adapter, normalize, segment, validate, evals.metrics all green"
+  },
+  "scope_note": "No shipped code changed this round. src/sec10k/ is byte-identical to 39dfa2c — both findings were about coverage, not behaviour — so the round-1 live browser verification of the feature still stands unamended and was not re-run.",
+  "resolutions": [
+    {
+      "id": "R5",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "reproduced": "Yes, exactly as reported. With `${esc(it.display_text ?? it.text)}` replaced by `${esc(it.text)}` in index.html — the pane showing UN-stripped text under a 'boilerplate hidden' header — invariant = 36/36 = 1.000 and fast = 78/78 = 1.000. Fully green.",
+      "diagnosis_accepted": "The R1 repair relocated the feature's headline behaviour rather than covering it: before it, `text` carried the stripped string and check_boilerplate_exclusion pinned the rendered string as a side effect; after it, the check pinned a payload field the pane was free to ignore. The finding's quoting of this repair's own prompts/012 note ('a payload key is a function signature', 'grep every caller') is fair — the new key's only caller was unchecked.",
+      "fix": "Both index.html consumers are now pinned expressions in check_boilerplate_plumbing's allow-list: `<pre class=\"text\">${esc(it.display_text ?? it.text)}</pre>` and `${(it.display_text ?? it.text).length.toLocaleString()}`.",
+      "covered_by": "ui-boilerplate-exclusion-regression (pair A) shapes 4 and 5, at the new exact count of 9. Verified end-to-end: re-applying the finding's own sed to the real index.html now takes the invariant suite to 36/37 = 0.973 with ui-boilerplate-exclusion FAIL, and restoring returns it to 37/37 = 1.000."
+    },
+    {
+      "id": "R6",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "reproduced": "Yes, all five, against copies of the real app.py + index.html at 39dfa2c, control 0: M1 fixture handler `not bool(...)` -> 0 failures; M2 upload handler `!= \"1\"` -> 0; M3 `False and bool(...)` -> 0; M4 `excludeBp(){ return true; }` -> 0; M5 `$(\"#exclude-bp-OLD\")` -> 0.",
+      "fix": "check_boilerplate_plumbing was rewritten from a question-asking check into an ALLOW-LIST, and came out shorter than what it replaced. WIRE_UI (6 expressions), WIRE_HANDLER (3, one per endpoint, matched inside that handler's own slice) and WIRE_API (1) pin every expression that carries the checkbox's value from the DOM to extract_items; each must appear exactly once. Matching is whitespace-insensitive (the same argument as anchor.py's core_of) but token-exact, so reformatting survives and a semantic edit does not. The reviewer's acceptance asked for 'no `not`/`!=`/constant between the read and the kwarg'; an allow-list was chosen over that block-list deliberately, because a block-list only ever bans the inversions somebody already thought of, and this is the third round in which the next unbanned one was found.",
+      "covered_by": "M1, M2, M3 and the unwired-fourth-mode shape in ui-boilerplate-wire-values (pair B, exact count 7); M4 in ui-boilerplate-exclusion-regression (pair A) shape 3; M5 in pair B via the shadowing shape. Each observed red individually against real-file copies before being claimed covered: M1 1, M2 1, M3 1, M4 1, M5 1, control 0. R2's original four shapes were re-run against the rewritten check and are still red (2, 1, 1, 1).",
+      "two_pairs_because": "The shapes conflict per slot — one handler cannot be both renamed and inverted, one file holds one excludeBp definition — so sixteen shapes do not fit in one pair without giving up the exact count that makes a regressed over-fire visible."
+    },
+    {
+      "id": "self-audit",
+      "note": "The coordinator asked where the property had relocated after this repair, so four attacks were written against the ALLOW-LIST itself rather than against the hops it pins. Three passed it and were then closed: (A) a second `function excludeBp(){ return true; }` after the pinned one — the pin is satisfied and the shadow binds at runtime, closed by UNIQUE_UI requiring the definition sites themselves to be unique; (D) `<input type=\"checkbox\" id=\"exclude-bp\" disabled>` — every hop intact, capability unreachable, closed by a `disabled` check beside the existing `checked` one; (E) a call site commented out with its pinned expression left in the file as dead text, closed by matching against the file's LIVE text (whole-line `//`, HTML `<!-- -->`, and `#` for Python only — `#` is not stripped from the UI because the stylesheet is full of `#id{...}` selectors that start a line with it). The fourth, (F) a fourth `/api/extract/paste` mode that never wires the flag, was already caught by the route-set pin added in the same rewrite. All four are now committed shapes in pair A or pair B rather than notes. The level ABOVE this one — a pinned expression that is present, live, and never REACHED, e.g. its `$(\"#go-fx\").onclick` binding deleted — is not closed, is named in the debt row, and is the honest ceiling of a textual check. A fifth hole was then closed on the same reasoning, unprompted: nothing pinned the header label, so the INVERSE of R5 — text stripped silently, with no 'boilerplate hidden' on screen — was as invisible as R5 itself. That expression is now pinned too (shape 9 of pair A), and deleting it from the real index.html goes red."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "status": "debt",
+      "note": "Routed to debt; the coordinator is writing the row. Not addressed here. Note for whoever picks it up: the triage note this finding criticises was rewritten wholesale this round, since the pair-A note now has to describe nine shapes and explicitly says which half of the pair carries which."
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "status": "debt",
+      "note": "Routed to debt; the coordinator is writing the row. Not addressed here. The measurement is accepted as correct and was flagged as unmeasured in this implementer's own round-1 report ('payload cost of display_text is unmeasured')."
+    },
+    {
+      "id": "R9",
+      "severity": "LOW",
+      "status": "debt",
+      "note": "Routed to debt; the coordinator is writing the row. The correction is accepted: the claim that `evals/run.py` has no unscored state was wrong — the `debt` suite is exactly that. The sentence has been corrected in the debt row this round rather than left standing, since that row is where the reasoning lives, and the corrected row now gives the reasons that actually hold (the three CI jobs install nothing, so `import fastapi` fails outright; and `debt` misreports a dependency-conditional case in both directions)."
+    }
+  ],
+  "shape_inventory": {
+    "pair_A_exact": 9,
+    "pair_B_exact": 7,
+    "individually_watched_red_against_real_file_copies": {
+      "R6 M1-M7 plus the header label M8": "1 failure each, control 0",
+      "attacks on the allow-list itself (shadowing, disabled, commented-out, unwired route)": "1 failure each, control 0",
+      "R2's original four shapes plus the sanity mutation, re-run against the rewritten check": "2, 1, 1, 1, 1; control 0"
+    }
+  }
+}

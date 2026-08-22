@@ -97,3 +97,41 @@ all — it was a correct one colliding with a different feature's contract.
   install nothing by ADR-003. The debt row was corrected instead — it had named
   three failure shapes and missed four measured ones, which is its own small
   version of the same sin the checks keep being caught for.
+
+## Round 2: asking a question versus pinning an answer
+
+Round 1's lesson was "grep every caller". Round 2 found that lesson applied to
+the code and not to the check, twice in the same PR, and the second time it
+was the round-1 repair that caused it.
+
+- **A repair can relocate a property instead of covering it.** Before round 1,
+  `item.text` carried the stripped string, so the eval that pinned `text`
+  pinned the rendered string as a side effect. Splitting out `display_text`
+  fixed the anchor bug and, in the same stroke, moved the feature's headline
+  behaviour into a client-side expression nothing read: deleting
+  `it.display_text ?? ` left both suites at 1.000 while the pane showed
+  un-stripped text under a header saying "boilerplate hidden". The rule worth
+  keeping: after any repair, ask what the pre-repair check was pinning *by
+  accident*, because that is what the repair just released.
+
+- **Allow-list, not block-list, for a wire made of strings.** The reviewer's
+  acceptance for the second finding was phrased as a ban — no `not`, no `!=`,
+  no constant between the request read and the kwarg. Banning is the wrong
+  shape: it only ever excludes the inversions somebody already thought of, and
+  three rounds running the next unbanned one was found (`not bool(...)`,
+  `!= "1"`, `False and bool(...)`, `return true`, a wrong element id). Pinning
+  the *permitted* expression whole makes everything else red by default,
+  including the inversion nobody has thought of yet. It also made the check
+  shorter than the "binding" version it replaced, which is the usual sign the
+  shape was wrong before.
+
+- **Then attack the new check, before the reviewer does.** Four attacks were
+  written against the allow-list itself rather than against the hops it pins.
+  Three passed it: a second `excludeBp` definition shadowing the pinned one
+  (declarations hoist, the last binds), a `disabled` checkbox that leaves every
+  hop intact and the capability unreachable, and a call site commented out with
+  its pinned text still in the file. All three are now closed and committed as
+  fixture shapes. The one above them — an expression that is present, live, and
+  never reached — is not closed, and is written into the debt row as the
+  ceiling of what reading two files as text can ever prove. Naming the ceiling
+  is the part that stops the next round rediscovering it.

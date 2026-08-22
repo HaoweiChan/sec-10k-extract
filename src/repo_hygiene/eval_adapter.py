@@ -638,42 +638,125 @@ def check_boilerplate_exclusion(case):
     return bad, {"items_stripped": stripped_items}
 
 
+JS_COMMENT_RE = re.compile(r"^[ \t]*//.*$", re.M)
+HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.S)
+PY_COMMENT_RE = re.compile(r"^[ \t]*#.*$", re.M)
+
+
+def _live(src, lang):
+    """`src` with commented-out code removed. A pin has to be satisfied by
+    code that RUNS: commenting a call site out and leaving it in the file is
+    a realistic way to sever the wire while every pin still finds its text
+    (measured — it passed the first version of the allow-list, and so did an
+    `<!-- -->`-ed checkbox).
+
+    Per language, deliberately. Only FULL-line `//` goes, so the `https://`
+    inside a URL survives; and `#` is stripped ONLY from Python, because the
+    inspector's stylesheet is full of id selectors like `#banner{...}` that
+    start a line with `#` and are not comments at all."""
+    if lang == "py":
+        return PY_COMMENT_RE.sub("", src)
+    return JS_COMMENT_RE.sub("", HTML_COMMENT_RE.sub("", src))
+
+
+def _squash(s):
+    """Whitespace-free form. Same argument as `anchor.py`'s `core_of`: how a
+    line happens to be wrapped or indented carries no information about what
+    it does, so it is not part of what "the same expression" means here."""
+    return "".join(s.split())
+
+
+# Every expression that carries the checkbox's value from the DOM to
+# extract_items, pinned WHOLE, plus what each one is for.
+#
+# PR #27 R5 and R6 are why this is an allow-list. Two rounds of asking each
+# hop a QUESTION about itself — does it mention the flag? do the two ends use
+# the same key? — left the VALUE unchecked at every hop but one, and `not
+# bool(...)`, `!= "1"`, `False and bool(...)`, `return true`, `$("#exclude-bp
+# -OLD")` and a deleted `display_text ??` all answered the questions
+# correctly while severing the wire. A question can always be answered by a
+# broken hop, and a list of FORBIDDEN operators only ever bans the inversions
+# somebody already thought of. Pinning the permitted expression makes
+# everything else red by default, including the next inversion nobody
+# thought of.
+#
+# ponytail: whitespace-insensitive but token-exact, so reformatting survives
+# and a semantic edit does not. A DELIBERATE change to any of these must
+# update the pin — the friction is the point, because editing the wire is
+# exactly the moment to re-check that it still carries the checkbox.
+WIRE_UI = [
+    ("the excludeBp() helper reads the checkbox's own .checked",
+     'function excludeBp(){ const c = $("#exclude-bp"); return !!(c && c.checked); }'),
+    ("the fixture mode puts the checkbox value on the wire",
+     'JSON.stringify({fixture: $("#fx").value, exclude_boilerplate: excludeBp()})'),
+    ("the url mode puts the checkbox value on the wire",
+     'JSON.stringify({url: $("#url").value, exclude_boilerplate: excludeBp()})'),
+    ("the upload mode appends the checkbox value to its query string",
+     '(excludeBp() ? "&exclude_boilerplate=1" : "")'),
+    ("the pane SAYS it is hiding text — R5's defect was un-stripped text "
+     "under this label, and the inverse, a silent strip, is the same lie",
+     '(VIEW.boilerplate_excluded ? "boilerplate hidden · " : "")'),
+    ("the extracted-item pane renders the STRIPPED string",
+     '<pre class="text">${esc(it.display_text ?? it.text)}</pre>'),
+    ("the truncation notice counts the STRIPPED string",
+     '${(it.display_text ?? it.text).length.toLocaleString()}'),
+]
+
+# per handler, sliced out of app.py so each is unique without more context
+WIRE_HANDLER = {
+    "/api/extract/fixture":
+        'exclude_boilerplate=bool((body or {}).get("exclude_boilerplate"))',
+    "/api/extract/url":
+        'exclude_boilerplate=bool((body or {}).get("exclude_boilerplate"))',
+    "/api/extract/upload":
+        'exclude_boilerplate=request.query_params.get("exclude_boilerplate") == "1"',
+}
+
+# A pin proves its expression is present; it cannot prove nothing SHADOWS it.
+# A second `function excludeBp(){ return true; }` after the pinned one leaves
+# the pin satisfied and wins at runtime (declarations hoist, last one binds),
+# and a second `pre.text` render makes `$("#pane pre.text")` ambiguous. So the
+# definition sites themselves must be unique — measured: the shadowing attack
+# passed the allow-list until this was added.
+UNIQUE_UI = [
+    ("nothing may shadow the excludeBp() helper", "function excludeBp"),
+    ("nothing may shadow the extracted-item render", '<pre class="text">'),
+]
+
+WIRE_API = [
+    ("_run forwards the flag into extract_items unmodified",
+     "extract_items(path, exclude_boilerplate=exclude_boilerplate)"),
+]
+
+ROUTE_RE = re.compile(r'@app\.post\("(/api/extract/[^"]+)"\)')
+
+
 def check_boilerplate_plumbing(case):
-    """S8. The ADR-026 flag has to survive the whole trip — checkbox, request,
-    `_run`, `extract_items` — and the checkbox has to start OFF. Neither end
-    is reachable from the eval harness (no browser, and importing app.py
-    would drag fastapi into the dependency-free unit job), so this is a
-    structural check on the two files that carry the wire, the shape the ui-*
-    checks have used since S3.
+    """S8. The ADR-026 flag has to survive the whole trip — checkbox,
+    excludeBp(), request, handler, `_run`, `extract_items` — the checkbox has
+    to start OFF, and the pane has to render the string the exclusion
+    produced. None of that is reachable from the eval harness (no browser,
+    and importing app.py would drag fastapi into the dependency-free unit
+    job), so it is checked in the two files that carry the wire, the shape
+    the ui-* checks have used since S3.
 
-    PR #27 R2 rewrote it. The first version asked each END whether it
-    mentioned the flag, which four realistic breakages satisfied while the
-    wire was severed: a server reading `excludeBoilerplate` while the client
-    sends `exclude_boilerplate`; a call site hardcoding `true` instead of
-    reading the checkbox; an upload handler comparing `== "true"` while the
-    JS appends `=1`; and `exclude_boilerplate=not exclude_boilerplate` at the
-    last hop. Two of those defeat the task's headline requirement that the
-    default-OFF path is byte-identical to before S8.
+    It works by ALLOW-LIST: `WIRE_UI`, `WIRE_HANDLER` and `WIRE_API` above
+    hold every expression on the path, each of which must appear exactly once
+    in the file's LIVE text — commented-out code stripped, so a dead call site
+    cannot satisfy its own pin. `UNIQUE_UI` additionally forbids a second
+    definition shadowing a pinned one, the routes are pinned as a set so a
+    fourth input mode cannot be added without wiring it, and the checkbox may
+    be neither `checked` nor `disabled`. Those four are not hypotheticals:
+    each was written as an attack on the allow-list and passed it before it
+    was closed (`ui-boilerplate-wire-values` pins them).
 
-    So it now BINDS the two ends to each other instead of inspecting them
-    separately. Per input mode it derives the literals the UI actually puts
-    on the wire (the JSON key paired with `excludeBp()`, or the `&key=value`
-    it appends) and the literals the handler actually reads out of the
-    request, and requires the two sets to be equal — a rename on either side
-    is then a disagreement, not a matching pair of mentions. It also requires
-    every call site to read `excludeBp()` rather than a constant, and the
-    final hop to forward the parameter UNMODIFIED.
-
-    Still textual, and the debt row says what that leaves: it cannot prove
-    FastAPI binds any of it. An HTTP case was considered and rejected —
-    `run_case` has no skip state (`score = passed / len(results)`), so a case
-    needing fastapi is either silently green when it is absent or red in
-    three CI jobs that install nothing by ADR-003, i.e. a hard dependency in
-    the gate. `ui-boilerplate-exclusion-regression` pins all five shapes.
+    What it still cannot do is in the debt row: it cannot prove FastAPI
+    BINDS any of this. An HTTP case was considered and rejected — see the
+    row for the reason and for the correction to what that row first claimed.
     """
     inp = case.get("input", {})
-    ui = (ROOT / inp.get("ui_file", UI_STYLESHEET)).read_text()
-    api = (ROOT / inp.get("api_file", API_FILE)).read_text()
+    ui = _live((ROOT / inp.get("ui_file", UI_STYLESHEET)).read_text(), "js")
+    api = _live((ROOT / inp.get("api_file", API_FILE)).read_text(), "py")
     bad = []
     boxes = re.findall(r'<input[^>]*id="exclude-bp"[^>]*>', ui)
     if len(boxes) != 1:
@@ -685,57 +768,41 @@ def check_boilerplate_plumbing(case):
         if re.search(r"\bchecked\b", box):
             bad.append(f"#exclude-bp defaults to CHECKED — ADR-026 is opt-in "
                        f"and OFF must stay today's behaviour: {box}")
-    for ep in EXTRACT_ENDPOINTS:
-        sent = None
-        i = ui.find('"' + ep)
-        if i < 0:
-            bad.append(f"UI has no fetch call to {ep}")
-        else:
-            # bound the window to THIS call: a flat i+400 slice ran into the
-            # next `$("#go-…")` handler, so a call site that hardcoded the
-            # value still found a neighbour's excludeBp() and passed (found
-            # by re-applying R2's own mutation (b) to the rewritten check)
-            ends = [x for x in (ui.find('$("#go-', i + 1),
-                                ui.find('"/api/extract/', i + 1)) if x > 0]
-            call = ui[i:min(ends + [i + 400])]
-            if "excludeBp()" not in call:
-                bad.append(f"UI call to {ep} does not read the checkbox — the "
-                           f"flag must come from excludeBp(), never a constant")
-            else:
-                # what this mode actually puts on the wire: a JSON key, or a
-                # `&key=value` pair for the mode whose body is the filing
-                m = re.search(r"(\w+)\s*:\s*excludeBp\(\)", call)
-                q = re.search(r'"&(\w+)=([^"&]*)"', call)
-                if m:
-                    sent = {m.group(1)}
-                elif q:
-                    sent = {q.group(1), q.group(2)}
-                else:
-                    bad.append(f"UI call to {ep} reads excludeBp() but sends it "
-                               f"under no literal this check can identify")
-        j = api.find('"' + ep + '"')
-        if j < 0:
-            bad.append(f"app.py has no handler for {ep}")
-            continue
+        # a box that cannot be ticked is OFF forever, which passes every
+        # other check here and makes the whole feature unreachable
+        if re.search(r"\bdisabled\b", box):
+            bad.append(f"#exclude-bp is DISABLED — the wire is intact and the "
+                       f"capability is still unreachable: {box}")
+
+    def pin(haystack, where, why, expr):
+        n = _squash(haystack).count(_squash(expr))
+        if n != 1:
+            bad.append(f"{where}: {why} — expected exactly one "
+                       f"`{expr}`, found {n}. If this expression changed on "
+                       f"purpose, update its pin AND re-check that the wire "
+                       f"still carries the checkbox's value unmodified.")
+
+    for why, expr in WIRE_UI:
+        pin(ui, "index.html", why, expr)
+    for why, token in UNIQUE_UI:
+        n = _squash(ui).count(_squash(token))
+        if n != 1:
+            bad.append(f"index.html: {why} — `{token}` occurs {n} times, "
+                       f"expected 1")
+    for why, expr in WIRE_API:
+        pin(api, "app.py", why, expr)
+
+    routes = set(ROUTE_RE.findall(api))
+    if routes != set(EXTRACT_ENDPOINTS):
+        bad.append(f"app.py's /api/extract routes are {sorted(routes)}, not the "
+                   f"{sorted(EXTRACT_ENDPOINTS)} this check knows how to pin — "
+                   f"an input mode was added or removed without wiring it")
+    for ep in sorted(routes & set(EXTRACT_ENDPOINTS)):
+        j = api.index(f'"{ep}"')
         k = api.find("\n@app.", j + 1)
-        handler = api[j:k if k > 0 else len(api)]
-        if "exclude_boilerplate=" not in handler:
-            bad.append(f"the {ep} handler does not pass exclude_boilerplate "
-                       f"into _run")
-            continue
-        # everything from the kwarg to the end of the handler is the flag
-        # expression — the flag is the last argument in all three calls
-        expr = handler[handler.index("exclude_boilerplate="):]
-        read = set(re.findall(r'"([^"]*)"', expr))
-        if sent is not None and sent != read:
-            bad.append(f"{ep}: the UI puts {sorted(sent)} on the wire but the "
-                       f"handler reads {sorted(read)} — the two ends disagree")
-    # unmodified: `not exclude_boilerplate` here inverts the checkbox for all
-    # three modes at once and mentions every right name doing it
-    if not re.search(r"extract_items\(\s*path,\s*exclude_boilerplate\s*=\s*"
-                     r"exclude_boilerplate\s*\)", api):
-        bad.append("_run does not forward exclude_boilerplate into "
-                   "extract_items unmodified")
+        pin(api[j:k if k > 0 else len(api)], f"app.py {ep}",
+            "the handler reads the flag off the request and forwards it "
+            "unmodified", WIRE_HANDLER[ep])
     return bad
 
 
