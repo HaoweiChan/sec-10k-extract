@@ -35,6 +35,8 @@ jobs:
       # nothing automated ran _demo. A self-check no job runs is a claim, not
       # enforcement.
       - run: python3 -m src.sec10k.boilerplate
+      # ADR-029 names this one the same way (the derived grid/Markdown views)
+      - run: python3 -m src.sec10k.tables
       # the view layer imports no fastapi, precisely so it can run here
       - run: python3 -m src.sec10k.web.view
       - run: python3 -m evals.metrics --self-check

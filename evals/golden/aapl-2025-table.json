@@ -1,0 +1,31 @@
+{
+  "id": "aapl-2025-table",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {"path": "evals/fixtures/aapl-2025/filing.htm", "tables": true},
+  "expect": {
+    "checks": [
+      {"type": "envelope_shape"},
+      {"type": "tables_sane", "min": 40, "max": 70},
+      {"type": "table", "anchor": "Income tax benefit related to share-based compensation expense", "header": 0,
+       "rows": [
+         ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+         ["", "", "", "2025", "", "", "", "", "", "2024", "", "", "", "", "", "2023", "", ""],
+         ["Share-based compensation expense", "", "", "$", "12,863", "", "", "", "", "$", "11,688", "", "", "", "", "$", "10,833", ""],
+         ["Income tax benefit related to share-based compensation expense", "", "", "$", "(3,602)", "", "", "", "", "$", "(3,350)", "", "", "", "", "$", "(3,421)", ""]
+       ]},
+      {"type": "table_markdown", "anchor": "Income tax benefit related to share-based compensation expense",
+       "value": "|  | 2025 |  | 2024 |  | 2023 |  |\n|---|---|---|---|---|---|---|\n| Share-based compensation expense | $ | 12,863 | $ | 11,688 | $ | 10,833 |\n| Income tax benefit related to share-based compensation expense | $ | (3,602) | $ | (3,350) | $ | (3,421) |"},
+      {"type": "table", "anchor": "Large accelerated filer", "header": 0,
+       "rows": [
+         ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+         ["Large accelerated filer", "", "", "", "", "", "☒", "", "", "", "", "", "Accelerated filer", "", "", "", "", "", "☐", "", ""],
+         ["Non-accelerated filer", "", "", "", "", "", "☐", "", "", "", "", "", "Smaller reporting company", "", "", "", "", "", "☐", "", ""],
+         ["", "", "", "", "", "", "", "", "", "", "", "", "Emerging growth company", "", "", "", "", "", "☐", "", ""]
+       ]},
+      {"type": "verbatim"},
+      {"type": "no_overlap_ordered"}
+    ]
+  },
+  "provenance": "ADR-029 §g, the modern-iXBRL numeric table. AAPL FY2025 10-K (iXBRL, Workiva), EDGAR accession 0000320193-25-000079 (evals/fixtures/README.md). Two tables, both transcribed BY HAND from the raw HTML on 2026-08-23, cell by cell, BEFORE the parser's output was compared to them; the labels are the raw <td>s in source order with a colspan=n cell written as its text followed by n-1 empty strings (the grid tables.grid derives), entities decoded (&#160; is a space and collapses; &#9746;/&#9744; are U+2612/U+2610), and <br/> inside a cell collapsed to a space.\n\nTable 1 -- Note 11 share-based compensation expense, raw bytes [1207289, 1213835) of filing.htm (the <table ...> through </table>; 6,546 bytes; the 27th <table in the file, 0-based 26). Raw structure: row 0 = 18 width-defining <td style=width/> (all empty); row 1 = <td colspan=3/> <td colspan=3>2025</td> <td colspan=3/> <td colspan=3>2024</td> <td colspan=3/> <td colspan=3>2023</td>; rows 2-3 = <td colspan=3>label</td> then, three times, <td>$</td> <td>number&#160;</td> <td/> with <td colspan=3/> between year groups. 18 columns per row, 72 cells. Anchor 'Income tax benefit related to share-based compensation expense' occurs exactly once in the raw file and once in normalized_text; it is the anchor rather than 'Share-based compensation expense' because THAT string occurs twice (raw 2, normalized 2; raw offsets 665929 and 1208803), the first inside the consolidated statement of cash flows, so the shorter anchor would locate the cash-flow statement. Measured at HEAD: the record is table #38 of 54, normalized_text[169621:169790], rows=4, header=0.\n\nThe table_markdown value is derived by hand from the SAME labeled grid under ADR-029 §b's rules (drop rows empty in every cell -> row 0 goes; drop columns empty in every row -> columns 0,3,4,9,10,15,16 survive; first surviving row is the header; '|' escaped): a no-op or wrong renderer is red on this content, which no check over the record alone could see (PR #25 R2).\n\nTable 2 -- the cover-page filer-status checkbox grid, raw bytes [113265, 116920) (3,655 bytes). Row 0 = 21 empty width <td/>; rows 1-3 = seven <td colspan=3> cells each (text or empty), i.e. 21 columns, 84 cells. Anchor 'Large accelerated filer' occurs once raw, once normalized; record #2, normalized_text[2721:2846]. Kept in the GOLDEN rather than as an adversarial case on purpose: it is a layout/checkbox table, not a data table, and ADR-029 §e rules that the extractor does not classify -- every <table> with visible text is recorded faithfully and the consumer decides; this is that rule under test on the one shape where the temptation to drop is strongest.\n\nBands: tables_sane 40-70 around the measured 54 records (62 <table tags in the raw file, 8 of them empty spacer tables that ADR-029 §b drops); a band, not the exact count, because the assertion is 'tables are found and sane', and the exact count belongs to the annotation's own rules, not to this case."
+}

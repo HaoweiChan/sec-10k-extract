@@ -1,0 +1,17 @@
+{
+  "id": "tables-offsets-invariant",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/jpm-2024/filing.htm", "tables": true},
+  "expect": {
+    "checks": [
+      {"type": "offsets_invariant_under_tables"},
+      {"type": "envelope_shape"},
+      {"type": "tables_sane", "min": 600, "max": 760},
+      {"type": "verbatim"},
+      {"type": "no_overlap_ordered"},
+      {"type": "known_items_only"}
+    ]
+  },
+  "provenance": "ADR-029 §d, the invariant-suite half of S7's acceptance, stated the way boilerplate-offsets-invariant states ADR-026's: INV-S2 says item text is a verbatim slice of normalized_text and that offsets index normalized_text; ADR-029 rules that tables are reported as offsets INTO that text and the text is never edited to carry them, which makes 'every published figure is byte-identical with the capability on and off' an EQUALITY, so the check asserts the equality directly -- extract_items(path, tables=True) and extract_items(path, tables=False) on the same file, normalized_text / items / warnings / doc_status (DETERMINISM_FIELDS) compared field by field, plus the default-off half in both directions (no `tables` key without the flag, a list with it). envelope_shape here also runs _tables_shape over every record -- 680 tables, 59,347 cells at HEAD -- so a record that is not in the contract shape is red on the largest input, not only on a labeled one.\n\njpm-2024 is the fixture because it is the largest committed filing (12,849,180 raw bytes, 1,213,284 normalized chars) and the one with the most tables (681 <table tags raw, 680 recorded -- the one dropped is the empty spacer ADR-029 §b drops), so it is where a rewriting implementation would displace the most offsets and where the cost ADR-029 §f names was measured: tables=True costs +0.12 s on a 0.58 s extraction (+20%) and adds 1,237,818 bytes of annotation JSON to a 1,267,199-byte envelope (+98%). That cost is the reason the capability is opt-in, and this case pays it on every invariant run: measured 2026-08-23 at 0.58 s off + 0.70 s on, roughly 1.3 s added to a suite that ran 44 cases in ~20 s. Band 600-760 around the measured 680 records: the assertion is 'the annotation is present and sane at scale', the exact count belongs to ADR-029 §b's rules."
+}
