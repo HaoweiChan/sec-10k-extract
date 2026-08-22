@@ -37,7 +37,7 @@ the value has to be carried into the image rather than read from the
 environment:
 
 ```json
-"build_command": "printf %s \"$ZEABUR_GIT_COMMIT_SHA\" > BUILD_SHA"
+"build_command": "printf %s \"${ZEABUR_GIT_COMMIT_SHA:-}\" > BUILD_SHA || true"
 ```
 
 `printf %s`, not `echo`: `echo` appends a newline that only happens to be
@@ -45,6 +45,18 @@ harmless here, and `printf` with no format string cannot be handed a value
 starting with `-`. `start_command` is deliberately untouched — the committed
 one already serves a live deployment, and changing it risks that for no gain
 in this task.
+
+**The command must not be able to fail the build**, which the first version
+could (PR #31 R5). Measured: `sh -uc 'printf %s "$ZEABUR_GIT_COMMIT_SHA" >
+BUILD_SHA'` exits **127** and writes nothing — a builder that runs the step
+under `set -u` — and in a non-writable working directory the same command
+exits **1**. A container builder runs such a step as a layer whose non-zero
+exit aborts the image build, and a deploy that does not exist is not "worse
+than `build unknown`" on any axis this ADR reasons about; it is a different
+and larger failure. `${VAR:-}` covers the first, `|| true` the second, and
+both were re-measured at exit 0 with an empty `BUILD_SHA` — which the resolver
+then rejects, landing on `unknown`. The failure stays inside the status line,
+where this ADR can reason about it.
 
 The file is gitignored. A committed `BUILD_SHA` **is** the stale hand-set label
 this ADR refuses, one directory over, so its absence has to resolve to the
@@ -85,15 +97,24 @@ to twelve characters and served as if they identified a build.
 `git rev-parse` honours `GIT_DIR` from the environment and will answer from a
 repository that is not the directory it was pointed at. This was not
 theoretical: `build-identity`'s first run inside the pre-commit hook — which
-git runs with `GIT_DIR` set — reported 16 failures on an implementation that
-was green everywhere else, because the resolver returned the repo's HEAD while
-pointed at a temp directory that is not a repository at all.
+git runs with `GIT_DIR` set — reported **18** failures on an implementation
+that was green everywhere else (16 temp-directory assertions plus the two
+blank-`GIT_SHA` ones; `evals/report/20260822-161040-fast.json`, score 80/81),
+because the resolver returned the repo's HEAD while pointed at a temp
+directory that is not a repository at all.
 
 The same leak reaches production: a `GIT_DIR` inherited by the container makes
-`/api/meta` report a sha from whatever repository that variable names. So
-`git_sha(root, environ)` resolves *entirely* within `environ`, the git call
-included. The check that caught it is the eval gate itself, on the commit that
-introduced it.
+`/api/meta` report a sha from whatever repository that variable names.
+
+The first fix was half of one, and PR #31 R2 caught it: passing `environ`
+through to the subprocess closes the leak only for callers that pass an
+explicit `environ`, and `/api/meta` passes none — it calls `git_sha(ROOT)`,
+falls back to `os.environ`, and inherited exactly what the deleted
+`app.py::_git_sha` had. The deployed path was byte-for-byte as leaky as the
+code it replaced, and no case could go red on it. So the strip happens inside
+the resolver, on every path including the default one, and `build-identity`
+asserts it with `GIT_DIR` set both in a handed-in environ and in the ambient
+one — the second being `/api/meta`'s exact call shape.
 
 ## f. Why the resolver moved out of `app.py`
 
@@ -117,9 +138,26 @@ and `/api/meta` calling the shared resolver rather than growing a second copy.
 That Zeabur's builder sets `ZEABUR_GIT_COMMIT_SHA`, runs `build_command` in
 the directory the runtime later serves from, and carries the written file into
 the run image. No agent can run a Zeabur build, and none of that is claimed
-here. The failure mode if any of it is false is the honest one and not a
-regression: `BUILD_SHA` is absent or empty, the resolver rejects it, and
-`/api/meta` reports `unknown` exactly as it does today. The S2 gate —
-"`/api/meta` reports a real sha **that tracks redeploys**" — is confirmed by
-curling `/api/meta` after the merge and again after a second redeploy, and
-stays `UNRUN` in the ledger until then.
+here. Those three all fail **closed**: `BUILD_SHA` is absent or empty, the
+resolver rejects it, and `/api/meta` reports `unknown` exactly as it does
+today.
+
+Two more failure modes do not fail closed, and the earlier version of this
+section generalised over them (PR #31 R5, R9):
+
+1. **The build step aborts the build.** Addressed in §b rather than tolerated —
+   the command is now unable to exit non-zero.
+2. **The builder caches the `build_command` layer across commits.** Then
+   `BUILD_SHA` holds a valid 7–40 hex sha *from the previous build*, `SHA_RE`
+   accepts it because it is a real sha, and `/api/meta` serves a stale label
+   indistinguishable from a current one. That is the "real but frozen" outcome
+   the S2 row calls worse than `build unknown`, and **no validation can detect
+   it** — a sha cannot be interrogated about which build wrote it. It is not
+   reproducible offline and is not claimed either way here.
+
+Which is exactly why the S2 gate is worded as it is — "`/api/meta` reports a
+real sha **that tracks redeploys**". A sha that merely *exists* would pass a
+weaker reading of that gate while frozen by a cached layer. The check is
+`curl -s .../api/meta` after the merge **and again after a second redeploy**,
+with the requirement that the value **MOVE**; it stays `UNRUN` in the ledger
+until both observations exist.

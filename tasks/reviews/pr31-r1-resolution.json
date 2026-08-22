@@ -1,0 +1,76 @@
+{
+  "round": 1,
+  "pr": 31,
+  "task": "S2",
+  "branch": "task/S2",
+  "responds_to": "tasks/reviews/pr31-r1.json (head ff4e041, REQUEST_CHANGES, 1 HIGH / 4 MEDIUM / 4 LOW)",
+  "gate": "pass -- invariant 39/39 = 1.000, fast 81/81 = 1.000, baseline {\"fast\": 1.0} untouched",
+  "red_first": "R1, R2 and R4's assertions were added to check_build_identity BEFORE any resolver change and watched red: 13 failures (10 x GIT_SHA passthrough, 2 x GIT_DIR leak on the explicit AND default environ, 1 x the build_command pin against the unguarded command). R4's assertions pass against correct code by construction -- their red is the git-first mutation M6, which returned 0 failures before this repair and 2 after.",
+  "refalsified": "10 mutations, each applied to the repaired tree, watched red, restored green (BASELINE green, RESTORED green in the same run): M1 build_command deleted (1), M2 build_command drops the ${:-} guard (1), M3 .gitignore entry removed (1), M4 SHA_RE relaxed to `.+` (20), M5 GIT_SHA branch skips validation (10), M6 git rev-parse promoted above BUILD_SHA and GIT_SHA (2), M7 GIT_SHA promoted above BUILD_SHA (2), M8 _rev_parse stops scrubbing the location vars (2), M9 build_sha ignores the file (7), M10 /api/meta grows a private resolver (2).",
+  "resolutions": [
+    {
+      "id": "R1",
+      "severity": "HIGH",
+      "disposition": "fixed",
+      "covered_by": "evals/adversarial/build-identity.json -- GIT_SHA=<every NOT_A_SHA value> -> 'unknown', 15 assertions",
+      "note": "Validation is now one rule, `_sha()`, applied at EVERY source rather than only to the file: the ruling is about the value, not its provenance, which is what ADR-027:5 already said and the code contradicted. Watched red first at 10 failures (latest, main, HEAD, $ZEABUR_GIT_COMMIT_SHA, ${ZEABUR_GIT_COMMIT_SHA}, a1b2c3, zzzzzzz, a1b2c3d4-dirty, 'a1b2 c3d4e5f6', and the 41-hex near-miss, all served as labels). The assertion that pinned the unvalidated passthrough as correct was deleted; the positive case (GIT_SHA=deadbeefcafe -> label) is kept, so the documented override is not silently dropped. Re-falsified by M5. Also confirmed through the real FastAPI app: GIT_SHA in {latest, main, $ZEABUR_GIT_COMMIT_SHA, a1b2c3d4-dirty} no longer reaches /api/meta, while 7f3a91c2e8d4 does."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "covered_by": "evals/adversarial/build-identity.json -- GIT_DIR/GIT_WORK_TREE/GIT_COMMON_DIR in a handed-in environ, AND an ambient GIT_DIR with git_sha(root) called exactly as app.py calls it",
+      "note": "Took the first branch of the acceptance: the leak is closed on the default path, not documented as open. `_rev_parse` strips GIT_LOCATION_VARS from the subprocess environment on every path, so the fix no longer depends on a caller remembering to scrub. Watched red first at 2 failures, both reporting another repository's sha (f63c245) from a directory that is not a repository -- one on the explicit environ, one on the default environ /api/meta uses. Re-falsified by M8. Verified through the real app with GIT_DIR pointing at a DIFFERENT temp repository (stranger HEAD c391191): /api/meta reports f63c245, this repo's own, never the stranger's. ADR-027 §e and prompts/013 were ALSO corrected rather than left standing -- both now say the first fix was half-done and why, since 'fixed on the path the test drives' was the more expensive half of this finding."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "covered_by": "prose correction -- no eval case (documents of record)",
+      "note": "All three occurrences now read 18, with the composition spelled out (16 temp-directory assertions plus the two blank-GIT_SHA ones) and the artifact and score cited alongside: specs/decisions/ADR-027-build-identity.md §e, evals/adversarial/build-identity.json triage.red_first, prompts/013-s2-build-identity.md. Re-measured from the cited artifact: len(failures) == 18, score 0.9876543 = 80/81, matching evals/report/history.jsonl at 20260822-161040. No occurrence of '16 failures' remains in the tree."
+    },
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "covered_by": "evals/adversarial/build-identity.json -- `_temp_repo()` builds a real `git init` + empty-commit checkout; three assertions inside it",
+      "note": "Source 3 is now exercised where it can actually answer, so the ordering is asserted rather than merely observed: (a) a real checkout reports its own short HEAD, (b) GIT_SHA outranks it, (c) BUILD_SHA outranks both. The reviewer's own demonstration is the acceptance test and it now passes: the git-first resolver (M6) returned 0 failures before this repair and returns 2 now. M7 (GIT_SHA above BUILD_SHA) returns 2. `_temp_repo` returns None rather than faking a result if git cannot build a checkout, so the assertions skip loudly instead of passing vacuously; verified it actually builds one here (HEAD a4a4295 on the run that checked)."
+    },
+    {
+      "id": "R5",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "covered_by": "evals/adversarial/build-identity.json -- the BUILD_COMMAND pin, now `printf %s \"${ZEABUR_GIT_COMMIT_SHA:-}\" > BUILD_SHA || true`",
+      "note": "Took the first branch: the command is made unable to fail rather than the failure documented as acceptable, because a build that aborts is not a worse status line, it is a missing deploy. Both of the reviewer's exits reproduced (127 under `sh -u` with no file written; 1 in a chmod 500 directory) and both re-measured at exit 0 with the guarded form, writing an empty BUILD_SHA that the resolver then rejects -> `unknown`. Pinned string in eval_adapter.py updated to match, and M2 (dropping the ${:-} guard) is red. ADR-027 §b carries the measurement. Not overclaimed in the other direction: the ADR says a container builder runs such a step as a layer whose non-zero exit aborts the build, and does NOT claim to have observed Zeabur's builder doing so -- that half remains undemonstrable from here, exactly as the reviewer framed it."
+    },
+    {
+      "id": "R6",
+      "severity": "LOW",
+      "disposition": "fixed",
+      "covered_by": "prose correction -- no eval case (comment of record)",
+      "note": "Confirmed the reviewer's measurement independently: edgar_chrome reaches 127 chars (ge-1994 and ibr-pointer-first), 123 (ksb-2007), 113 (ibm-1997, ibr-security-holders), 88 (ko-1997); running_head tops out at 35 (jpm-2024) and page_number at 3. The 35/17 figures are true only for the repeat-gated kinds, so the trigger worded over 'detected chrome' was already satisfied by six committed fixtures and could never fire as news. Both halves now name the same population -- 'a line that passes THE THREE REPEAT GATES above at more than 35 chars' -- and the comment states explicitly that it says nothing about edgar_chrome, which is matched by SGML shape rather than repetition. The '39 fixtures' figure in prompts/013 is corrected to 38 measurable (repo_hygiene is not a filing). No detector behaviour changed; MAX_GAP_CV / MIN_SPREAD / MIN_REPEATS / PAGE_DIGITS untouched."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "disposition": "fixed",
+      "covered_by": "prose correction -- no eval case (documents of record)",
+      "note": "tasks/TODO.md:86 and prompts/013-s2-build-identity.md now both read `src/repo_hygiene/eval_adapter.py:699`. Re-measured after this round's edits to that same file, which moved the marker again: `grep -n 'ponytail:' src/repo_hygiene/eval_adapter.py` -> 699 at the time of writing. The other three refs re-checked and still correct (boilerplate.py:56, web/app.py:47, css_contrast.py:9)."
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "disposition": "debt",
+      "covered_by": "tasks/TODO.md `## Debt`, row 'BUILD_SHA holding non-UTF-8 bytes raises out of /api/meta as a 500', Origin: PR #31 R8",
+      "note": "Not fixed, per the orchestrator's routing. The row carries the finding's claim, evidence, repro and acceptance verbatim from tasks/reviews/pr31-r1.json, and records the overclaim as part of the debt: NOT_A_SHA's comment said it covered everything a build can hand the runtime that is not a build identity, and it did not. That comment now says so in the code and names this row, so the list no longer claims exhaustiveness it does not have. `build_sha`'s `except OSError` is deliberately left as-is."
+    },
+    {
+      "id": "R9",
+      "severity": "LOW",
+      "disposition": "fixed",
+      "covered_by": "prose correction -- no eval case; the post-merge UNRUN gate in tasks/TODO.md is the only check that can catch it",
+      "note": "ADR-027 §g no longer generalises. It now splits the assumptions: three fail CLOSED to `unknown`, and two do not -- the build-abort R5 addressed, and build-cache staleness, where BUILD_SHA holds a valid 7-40 hex sha from the previous build, SHA_RE accepts it because it IS a real sha, and no validation can ever detect it (a sha cannot be interrogated about which build wrote it). Stated as not reproducible offline and not claimed either way, matching the reviewer's own framing. The S2 row's gate wording is kept and strengthened to 'the sha must MOVE across two redeploys, not merely exist', with the reason attached, because that is the only observation that catches a frozen layer."
+    }
+  ],
+  "not_repaired_beyond_findings": "No changes outside R1-R9. One transient observed and chased down rather than reported as a finding: a mutation-harness run printed a red BASELINE, traced to a scratchpad debug script's restore racing the next process, not to the repo -- re-run from a verified tree gives BASELINE green, all 10 mutations red, RESTORED green, and `git status` shows only the three intended source files modified."
+}

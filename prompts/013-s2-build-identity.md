@@ -71,25 +71,60 @@ actually use could tell which build they were looking at. Ruling:
 
 - **Assumed:** with the resolver green under `--suite invariant` and `--suite
   fast`, and six mutations re-falsifying it, the implementation was done.
-- **Eval said:** the pre-commit gate blocked the commit — `build-identity`, 16
-  failures, on code that was green in every run before it. `git rev-parse`
+- **Eval said:** the pre-commit gate blocked the commit — `build-identity`, 18
+  failures (16 temp-directory assertions plus the two blank-`GIT_SHA` ones;
+  `evals/report/20260822-161040-fast.json`, score 80/81), on code that was green
+  in every run before it. `git rev-parse`
   honours `GIT_DIR` from the environment, git *sets* `GIT_DIR` while running a
   hook, and the resolver had been handed an `environ` it only used to look up
   `GIT_SHA` — so the git subprocess still inherited the ambient one and answered
   with the repo's HEAD from a temp directory that is not a repository. Every
   `NOT_A_SHA` value "resolved" to `17d43fc`.
-- **Corrected:** the resolver, not the test. An inherited `GIT_DIR` in the
-  container would equally make `/api/meta` report a stranger repo's sha, so
-  `git_sha(root, environ)` now resolves entirely within `environ`, git call
-  included (ADR-027 §e). The case's temp-dir assertions run with `PATH` and
-  nothing else; only the local-dev assertion, the one that is *supposed* to find
-  a repository, uses the real environment. The gate caught this on the very
-  commit that introduced it, which is the whole argument for the hook.
+- **Corrected:** the resolver, not the test — but only halfway, and the review
+  caught the other half (PR #31 R2). Threading `environ` into the subprocess
+  closes the leak for callers that pass one; `/api/meta` passes none, so the
+  deployed path still inherited `GIT_DIR` byte-for-byte as the deleted
+  `_git_sha` had, and no case could go red on it. **A fix verified only on the
+  path the test drives is not a fix**, and the write-up saying otherwise was the
+  more expensive error: it would have closed the finding. The resolver now
+  strips `GIT_DIR`/`GIT_WORK_TREE`/`GIT_COMMON_DIR` inside `_rev_parse`, on
+  every path including the default, and `build-identity` asserts it with
+  `GIT_DIR` set in both a handed-in environ and the ambient one (ADR-027 §e).
+
+- **Assumed:** validation belongs on the injected file, because that is where a
+  build writes text nobody typed. `GIT_SHA` is a human override — if an operator
+  sets it, they meant it.
+- **Eval said:** PR #31 R1. `GIT_SHA=latest` → `latest`; `main` → `main`;
+  `a1b2c3d4-dirty` → `a1b2c3d4-dir`; `$ZEABUR_GIT_COMMIT_SHA` → `$ZEABUR_GIT_`.
+  The same ten strings the case already rejected from the file sailed through the
+  override, and the case *pinned that passthrough as correct*. Worse, the ADR's
+  own ruling sentence already said validation applies "at any of those steps" —
+  the code contradicted the decision it shipped with.
+- **Corrected:** one `_sha()` gate, applied at every source. The ruling is about
+  the **value**, not its provenance: where a lie enters from does not make it
+  true. And the override is not the exotic path — the ledger row is titled "Set
+  `GIT_SHA` on Zeabur", so it is precisely where an operator types `latest`.
+
+- **Assumed:** the worst case if a build-time assumption is wrong is `unknown`,
+  so §g could enumerate three assumptions and generalise.
+- **Eval said:** PR #31 R5 and R9, neither reproducible against Zeabur, both
+  demonstrable in what they claim. `sh -uc 'printf %s "$ZEABUR_GIT_COMMIT_SHA" >
+  BUILD_SHA'` exits **127** writing nothing, and **1** in a non-writable
+  directory — as a build layer that aborts the image build, which is not a
+  worse status line but a missing deploy. And a cached build layer freezes
+  `BUILD_SHA` at a *valid* previous sha, which `SHA_RE` accepts and no
+  validation can ever detect.
+- **Corrected:** the first is engineered out (`${VAR:-}` + `|| true`, re-measured
+  at exit 0); the second is named in §g as a failure mode that does **not** fail
+  closed, because it cannot be engineered out from this side. That is what makes
+  the gate's wording load-bearing rather than decorative: the sha must **MOVE**
+  across two redeploys, not merely exist. A generalisation ("the failure mode is
+  the honest one") is a claim about a set — it takes one member to be false.
 
 - **Assumed:** `tasks/TODO.md`'s `SOURCE_CACHE` debt row, that its `ponytail:`
   marker is "the only one in the repo".
 - **Eval said:** `grep -rn "ponytail:" src/` — four, in `boilerplate.py:56`,
-  `web/app.py:47`, `repo_hygiene/eval_adapter.py:698` and a docstring-form one
+  `web/app.py:47`, `repo_hygiene/eval_adapter.py:699` and a docstring-form one
   in `repo_hygiene/css_contrast.py:9`.
 - **Corrected:** the parenthetical, plus three line references in the same row
   that this task's own edit to `app.py` had just moved.
@@ -98,10 +133,18 @@ actually use could tell which build they were looking at. Ruling:
   corpus claim ("no line over 35 chars passes the other three gates anywhere in
   the corpus") that nothing re-opens when the corpus changes — the rot risk a
   debt audit flagged.
-- **Eval said:** re-measured over all 39 fixtures, the ceiling is still exactly
+- **Eval said:** re-measured over the 38 measurable fixtures (39 directories,
+  one of which — `repo_hygiene` — is not a filing), the ceiling is still exactly
   35 — `jpm-2024`'s `'JPMorgan Chase & Co./2024 Form 10-K'`, with every other
   fixture topping out at 17 (`'Table of Contents'`). The premise holds.
 - **Corrected:** the reasoning stays; a trigger clause was added naming what
-  re-opens it — a fixture whose detected chrome runs longer than 35 chars *and*
-  whose long run is a false positive, since a long TRUE chrome line is the case
-  the original comment already decided.
+  re-opens it — a line passing the three repeat gates at more than 35 chars
+  *and* turning out to be a false positive, since a long TRUE chrome line is the
+  case the original comment already decided.
+- **And corrected again, by review (PR #31 R6):** the first wording said
+  "detected chrome", which is a *wider* population than the one measured.
+  `edgar_chrome` is matched by SGML shape rather than repetition and reaches 127
+  chars on `ge-1994` and `ibr-pointer-first` — so the trigger's own condition was
+  already satisfied by six committed fixtures and could never fire as news. A
+  trigger is only worth writing if the corpus does not already trip it; the
+  measurement and the clause now name the same population.

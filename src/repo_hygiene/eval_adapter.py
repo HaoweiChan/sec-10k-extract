@@ -833,11 +833,18 @@ def check_boilerplate_plumbing(case):
     return bad
 
 
-# Everything a BUILD can hand the runtime that is NOT a build identity, and
-# must therefore read back as `unknown` (ADR-027). None of these is
-# hypothetical: `printf %s "$FOO" > f` with FOO unset writes the empty file,
-# a build step whose shell never expands writes the literal, and a
-# placeholder word is exactly the lie the S2 row says is worse than nothing.
+# Text a source can hand the resolver that is NOT a build identity, and must
+# therefore resolve to `unknown` (ADR-027) — fed through BOTH the file and the
+# `GIT_SHA` override, because the ruling is per-value, not per-source. None of
+# these is hypothetical: `printf %s "$FOO" > f` with FOO unset writes the empty
+# file, a build step whose shell never expands writes the literal, and an
+# operator acting on the S2 row's own title ("Set `GIT_SHA` on Zeabur") reaches
+# for `latest` or `main` or pastes a `${ZEABUR_GIT_COMMIT_SHA}` reference that
+# nothing expands at runtime (PR #31 R1: all four were build labels).
+#
+# NOT exhaustive, and the list does not claim to be: non-UTF-8 bytes are a
+# known gap (PR #31 R8, `## Debt` in tasks/TODO.md) — `build_sha` raises rather
+# than resolving on those.
 NOT_A_SHA = ["", "\n", "   ", "  \n\n ", "$ZEABUR_GIT_COMMIT_SHA",
              "${ZEABUR_GIT_COMMIT_SHA}", "unknown", "HEAD", "main", "latest",
              "a1b2c3", "0123456789abcdef0123456789abcdef012345678",
@@ -858,8 +865,31 @@ REAL_SHA = [
 # wrong thing. `printf %s` and not `echo`: `echo` appends a newline, which is
 # harmless here only by accident, and `printf` without a format string cannot
 # be handed a sha starting with `-`.
-BUILD_COMMAND = 'printf %s "$ZEABUR_GIT_COMMIT_SHA" > BUILD_SHA'
+BUILD_COMMAND = 'printf %s "${ZEABUR_GIT_COMMIT_SHA:-}" > BUILD_SHA || true'
 META_CALL = '"git_sha": git_sha(ROOT)'
+
+# Location variables exist to point git at a repository OTHER than the one you
+# are standing in, which is the opposite of the question this resolver asks.
+GIT_LOCATION_VARS = ["GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR"]
+
+
+def _temp_repo(td, env):
+    """`td` made into a real one-commit checkout; its short HEAD, or None if
+    git cannot build one here (then the source-3 assertions are skipped rather
+    than faked). Source 3 is the ONE branch a temp directory cannot exercise
+    by accident, and PR #31 R4 measured the cost of not exercising it: a
+    resolver reordered to try `git rev-parse` FIRST left this check at 0
+    failures, so the published precedence table was enforced by nothing."""
+    def run(*a):
+        return subprocess.run(["git", *a], cwd=td, env=env,
+                              capture_output=True, text=True)
+    if run("init", "-q").returncode:
+        return None
+    run("config", "user.email", "eval@example.invalid")
+    run("config", "user.name", "eval")
+    if run("commit", "--allow-empty", "-q", "-m", "build-identity").returncode:
+        return None
+    return run("rev-parse", "--short", "HEAD").stdout.strip() or None
 
 
 def check_build_identity(case):
@@ -871,9 +901,14 @@ def check_build_identity(case):
     1. the RESOLVER, exercised for real — `build_id.py` is stdlib-only and
        imports no fastapi, precisely so this case can call it (ADR-003: the
        CI jobs install nothing). Every value a build can plausibly write is
-       fed through it; only a hex sha may come back out.
-    2. the PRECEDENCE, also exercised — build-written file, then `GIT_SHA`,
-       then `git rev-parse`, then `unknown`.
+       fed through BOTH sources that carry text — the file and the `GIT_SHA`
+       override — and only a hex sha may come back out of either.
+    2. the PRECEDENCE, all four steps, and the ordering asserted rather than
+       merely observed: source 3 is exercised inside a real `git init`
+       checkout so that BUILD_SHA and GIT_SHA are seen to OUTRANK it, not
+       just to answer where it cannot (PR #31 R4). An ambient GIT_DIR must
+       not let source 3 answer about a different repository, on the explicit
+       environ AND on the default one `/api/meta` actually uses (R2).
     3. the DEPLOYMENT plumbing, pinned as text, because nothing here can run
        a Zeabur build: the `build_command` that writes the file, the
        `.gitignore` line that keeps it out of the repo (a committed sha is
@@ -886,9 +921,11 @@ def check_build_identity(case):
     # GIT_DIR from the environment and the pre-commit hook SETS it — which is
     # how this check first went red: the resolver answered with the repo's HEAD
     # while pointed at a temp directory that is not a repository at all. That
-    # was a defect in `git_sha`, not in the test (it could equally have made
-    # the deployed app report a stranger repo's sha), and the fix is in both:
-    # the resolver now runs git in the environment it was handed.
+    # was a defect in `git_sha`, not in the test, and PR #31 R2 found the first
+    # fix half-done — it closed the leak only for callers passing an explicit
+    # environ, while `/api/meta` passes none. The resolver now strips the git
+    # location variables on every path; `clean` here is belt-and-braces so a
+    # failure names the resolver rather than this check's own environment.
     clean = {"PATH": os.environ.get("PATH", "")}
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
@@ -916,13 +953,65 @@ def check_build_identity(case):
                        f"GIT_SHA — only the build knows it is current — "
                        f"got {got!r}")
         f.unlink()
-        for env, want in [(dict(clean, GIT_SHA="deadbeefcafe"), "deadbeefcafe"),
-                          (dict(clean, GIT_SHA="   "), "unknown"),
-                          (dict(clean, GIT_SHA=""), "unknown")]:
-            got = build_id.git_sha(root, env)
-            if got != want:
-                bad.append(f"with no injected file, GIT_SHA={env['GIT_SHA']!r} "
-                           f"must report {want!r}, got {got!r}")
+        got = build_id.git_sha(root, dict(clean, GIT_SHA="deadbeefcafe"))
+        if got != "deadbeefcafe":
+            bad.append("with no injected file the GIT_SHA override must still "
+                       f"answer, got {got!r}")
+        # PR #31 R1. The ruling is per-VALUE, not per-source: the override is
+        # the branch an operator actually reaches for (the row is titled "Set
+        # GIT_SHA on Zeabur"), so it is exactly where a placeholder gets typed.
+        for junk in NOT_A_SHA:
+            got = build_id.git_sha(root, dict(clean, GIT_SHA=junk))
+            if got != "unknown":
+                bad.append(f"GIT_SHA={junk!r} became the build label {got!r} — "
+                           f"the same value is rejected when it arrives in "
+                           f"{build_id.BUILD_SHA_FILE}, and where a lie enters "
+                           f"from does not make it true")
+        # PR #31 R2. `/api/meta` calls `git_sha(ROOT)` with no environ, so the
+        # DEFAULT path is the deployed path: an ambient GIT_DIR must not let
+        # `git rev-parse` answer about a repository that is not `root`.
+        for name in GIT_LOCATION_VARS:
+            got = build_id.git_sha(root, dict(clean, **{name: str(ROOT / ".git")}))
+            if got != "unknown":
+                bad.append(f"{name} in the environment made a non-repository "
+                           f"report {got!r} — that is another repo's sha, "
+                           f"served as this build's identity")
+        saved = {k: os.environ.get(k) for k in GIT_LOCATION_VARS}
+        try:
+            os.environ["GIT_DIR"] = str(ROOT / ".git")
+            got = build_id.git_sha(root)          # exactly app.py's call shape
+            if got != "unknown":
+                bad.append(f"on the DEFAULT environ — the one /api/meta uses — "
+                           f"an ambient GIT_DIR made a non-repository report "
+                           f"{got!r}. The deployed path is the one that has to "
+                           f"be closed, not just the one the eval passes.")
+        finally:
+            for k, v in saved.items():
+                os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v)
+
+    # PR #31 R4. Source 3, and the only place it can be exercised: a real
+    # checkout, so that BUILD_SHA and GIT_SHA are seen to OUTRANK it rather
+    # than merely to answer where it cannot.
+    clean_full = {k: v for k, v in os.environ.items()
+                  if k not in GIT_LOCATION_VARS and k != "GIT_SHA"}
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        head = _temp_repo(td, clean_full)
+        if head:
+            got = build_id.git_sha(root, clean_full)
+            if got != head:
+                bad.append(f"source 3: a real checkout must report its own "
+                           f"short sha {head!r}, got {got!r}")
+            got = build_id.git_sha(root, dict(clean_full, GIT_SHA="deadbeefcafe"))
+            if got != "deadbeefcafe":
+                bad.append(f"precedence: GIT_SHA must outrank `git rev-parse` "
+                           f"in a real checkout, got {got!r} (HEAD is {head!r})")
+            (root / build_id.BUILD_SHA_FILE).write_text("0f1e2d3c4b5a")
+            got = build_id.git_sha(root, dict(clean_full, GIT_SHA="deadbeefcafe"))
+            if got != "0f1e2d3c4b5a":
+                bad.append(f"precedence: the build-injected sha must outrank "
+                           f"BOTH GIT_SHA and `git rev-parse` in a real "
+                           f"checkout, got {got!r} (HEAD is {head!r})")
 
     # local dev: a working checkout still reports its own short sha. The real
     # ambient environment here, with only the override cleared — this is the

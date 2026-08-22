@@ -27,14 +27,33 @@ BUILD_SHA_FILE = "BUILD_SHA"
 # ruling: a lying build label is worse than `build unknown`.
 SHA_RE = re.compile(r"[0-9a-f]{7,40}")
 
+# Location variables exist to point git at a repository OTHER than the one you
+# are standing in — the opposite of the question this module asks. Scrubbed on
+# every path, not just the ones a caller remembers to scrub: `/api/meta` calls
+# `git_sha(ROOT)` with no environ at all (PR #31 R2), and an inherited GIT_DIR
+# there would serve a stranger repository's sha as this build's identity.
+GIT_LOCATION_VARS = ("GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR")
+
+
+def _sha(value):
+    """`value` cut to 12 chars if it IS a build identity, else None.
+
+    One rule, applied at every source. The ruling is about the VALUE, not
+    about where it came from: `latest`, `main`, an unexpanded
+    `$ZEABUR_GIT_COMMIT_SHA` and a `-dirty` suffix are equally not a build
+    identity whether a build wrote them into the file or an operator typed
+    them into the `GIT_SHA` box (PR #31 R1 — all four were served as labels).
+    """
+    value = (value or "").strip()
+    return value[:12] if SHA_RE.fullmatch(value) else None
+
 
 def build_sha(root=ROOT):
     """The sha this build injected, or None if it did not inject a real one."""
     try:
-        text = (Path(root) / BUILD_SHA_FILE).read_text().strip()
+        return _sha((Path(root) / BUILD_SHA_FILE).read_text())
     except OSError:
         return None
-    return text[:12] if SHA_RE.fullmatch(text) else None
 
 
 def git_sha(root=ROOT, environ=None):
@@ -49,24 +68,30 @@ def git_sha(root=ROOT, environ=None):
        most direct answer there is.
     4. `"unknown"` — said out loud rather than guessed.
 
-    `environ` is the environment the whole resolution happens in, the git call
-    included. That is not pedantry: `git rev-parse` honours `GIT_DIR` from the
-    environment and will happily answer from a repo that is not `root` at all.
-    Measured — this function's own eval case went red the first time it ran
-    inside the pre-commit hook, which sets `GIT_DIR`, reporting the repo's HEAD
-    while pointed at a temp directory that was not a repository.
+    Every step is gated by `_sha`, so no source can promote a non-sha to a
+    build label; and `git rev-parse` is asked about `root` specifically, with
+    the git location variables stripped from its environment. That is not
+    pedantry: those variables answer about a DIFFERENT repository, and this
+    function's own eval case caught it the first time it ran inside the
+    pre-commit hook, which sets `GIT_DIR` — the resolver reported the repo's
+    HEAD while pointed at a temp directory that was not a repository at all.
+    An inherited `GIT_DIR` in a container does the same thing to `/api/meta`.
     """
     environ = os.environ if environ is None else environ
-    injected = build_sha(root)
-    if injected:
-        return injected
-    env = (environ.get("GIT_SHA") or "").strip()
-    if env:
-        return env[:12]
+    return (build_sha(root)
+            or _sha(environ.get("GIT_SHA"))
+            or _sha(_rev_parse(root, environ))
+            or "unknown")
+
+
+def _rev_parse(root, environ):
+    """`root`'s own short HEAD, or None. Never raises — an absent git, an
+    unreadable directory or a non-repository are all just "no answer"."""
     try:
         return subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"], cwd=root, env=dict(environ),
+            ["git", "rev-parse", "--short", "HEAD"], cwd=root,
+            env={k: v for k, v in environ.items() if k not in GIT_LOCATION_VARS},
             capture_output=True, text=True, timeout=5, check=True,
-        ).stdout.strip() or "unknown"
+        ).stdout
     except Exception:
-        return "unknown"
+        return None
