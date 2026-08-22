@@ -827,13 +827,17 @@ def check_boilerplate_plumbing(case):
 
 
 LINK_RE = re.compile(r"<link\b[^>]*>", re.I)
-ATTR_RE = re.compile(r"""([\w-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')""")
+# quoted OR unquoted values — PR #33 R1: `<link rel=stylesheet href=https://…>`
+# is valid HTML and the quoted-only form skipped it as "not a stylesheet"
+ATTR_RE = re.compile(r"""([\w-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))""")
 NOSCRIPT_RE = re.compile(r"<noscript>.*?</noscript>", re.S | re.I)
 EXTERNAL_HREF_RE = re.compile(r"^(?:https?:)?//", re.I)
-# media TYPES a screen never matches — a stylesheet scoped to one of these
+# media values a screen never matches — a stylesheet scoped to one of these
 # does not block first paint. Anything else (unset, `all`, `screen`, any
-# `(...)` query) is evaluated against the screen and blocks.
-NON_SCREEN_MEDIA = ("print", "speech")
+# `(...)` query) is evaluated against the screen and blocks. `not all` is the
+# other standard non-blocking idiom (PR #33 R2); values compare lowercased
+# because media types are case-insensitive.
+NON_SCREEN_MEDIA = ("print", "speech", "not all")
 
 
 def check_external_stylesheets_nonblocking(case):
@@ -867,7 +871,7 @@ def check_external_stylesheets_nonblocking(case):
     text = NOSCRIPT_RE.sub("", text)
     bad = []
     for tag in LINK_RE.findall(text):
-        attrs = {k.lower(): (v if v else w) for k, v, w in ATTR_RE.findall(tag)}
+        attrs = {k.lower(): (v or w or u) for k, v, w, u in ATTR_RE.findall(tag)}
         if ("stylesheet" not in attrs.get("rel", "").lower().split()
                 or not EXTERNAL_HREF_RE.match(attrs.get("href", ""))):
             continue
@@ -879,7 +883,7 @@ def check_external_stylesheets_nonblocking(case):
                        f"(media={media or 'unset'!r}) — a blackholed host stops "
                        f"first paint; want media=print + an onload promoting it "
                        f"to all")
-        elif not re.search(r"\bmedia\s*=\s*['\"]?(all|screen)\b", onload):
+        elif not re.search(r"\bmedia\s*=\s*['\"]?(all|screen)\b", onload, re.I):
             bad.append(f"{href}: media={media!r} but no onload promoting it to "
                        f"all/screen — the sheet never applies on screen")
     return bad
