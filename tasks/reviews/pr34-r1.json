@@ -1,0 +1,37 @@
+{
+ "pr": 34,
+ "round": 1,
+ "date": "2026-08-23",
+ "result": "APPROVED",
+ "gate": "[eval] suite 'invariant': 46/46 = 1.000 | [eval] suite 'fast': 94/94 = 1.000 | [eval] table fidelity: cells 1.0000 (400/400), rows 1.0000 (31/31) | self-checks ok, test_eval_adapter 18/18 | origin/main + the 7 cases: 87/94, all 7 FAIL on unknown check type | mutations M1-M4, M6 reproduced; metric-only baseline + M1 -> REGRESSION exit 1 | default-flag snapshot main vs HEAD identical on 11 fixtures; all 6 labeled grids match an independent raw-HTML transcription; 2,984 tables in 15 fixtures match cell-for-cell | reports stamped f95ce52, .eval-baseline.json diff exactly +2 keys",
+ "routing_rule": "repair = HIGH/MEDIUM and (acceptance violated | gate red | published claim dishonest); everything else debt (pr-loop scope boundary)",
+ "findings": [
+  {
+   "id": "R1",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "ADR-029 §h says the history.jsonl lines for the two recording runs carry the new keys, but neither line is in the PR — evals/report/history.jsonl is untouched by both commits and HEAD's file has no 20260823-002950/003020 entries, so the 'time series' half of the metric record is unverifiable from the commit.",
+   "evidence": "specs/decisions/ADR-029-structured-tables-annotation.md §h ('The history.jsonl lines for both runs carry the two new keys'); `git diff origin/main...HEAD --stat` lists no history.jsonl; `git show HEAD:evals/report/history.jsonl | grep 20260823` is empty. The runner mechanism itself is fine (my own fast run appended a line with table_cells_fidelity 1.0 / table_rows_fidelity 1.0; invariant line has null).",
+   "repro": "git show HEAD:evals/report/history.jsonl | grep -c 20260823-00",
+   "acceptance": "Either the two history lines ride the next consolidated commit (as prior pr-loop commits did), or §h says the lines exist only in the working tree that made the move."
+  },
+  {
+   "id": "R2",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "`envelope_shape`'s `_tables_shape` accepts records out of document order and cells outside their table's span, although specs/001 says 'every cell inside its table's span … document order … `envelope_shape` refuses any other shape'; only `tables_sane` catches those two.",
+   "evidence": "src/sec10k/eval_adapter.py `_tables_shape` (no order check, no cell-within-[start,end] check). Synthetic envelope with tables=[{start:4,end:7,rows:[[[4,5]]]},{start:0,end:7,rows:[[[0,1]]]}] -> envelope_shape None, tables_sane 'table 1 out of document order'; record end:3 with cell [4,5] -> envelope_shape None, tables_sane 'cell [4, 5] outside its table'. Every committed table case runs both checks, so nothing is uncovered today.",
+   "repro": "python3 -c \"from src.sec10k.eval_adapter import eval_check; ...\" with the two envelopes above",
+   "acceptance": "Either `_tables_shape` also asserts order + cell-in-span, or the contract sentence is narrowed to 'shape; order and containment are asserted by `tables_sane`'."
+  },
+  {
+   "id": "R3",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "A `<table>` left open at end of input (or an inner table whose `</table>` is missing) is silently dropped / mis-attributed: records are appended only on `</table>`, and `close()` does not flush `_open`.",
+   "evidence": "src/sec10k/normalize.py `_Plain.handle_endtag` is the only place `self.tables.append` runs. normalize('<p>x</p><table><tr><td>a</td><td>b</td></tr><p>after</p>', 'html', tables=True) -> 0 records though the table has visible text; '<table><tr><td>o1<table><tr><td>i1</td></tr></td><td>o2</td></tr><tr><td>o3</td></tr></table>' -> one record [['i1'],['o2'],['o3']] (outer table never recorded). All 38 committed HTML fixtures have balanced open/close counts and zero nesting, so no eval case can go red on it; truncated-download normalizes to 0 chars.",
+   "repro": "python3 -c \"from src.sec10k.normalize import normalize; print(normalize('<p>x</p><table><tr><td>a</td><td>b</td></tr><p>after</p>','html',tables=True)[1])\"",
+   "acceptance": "Either `close()` flushes still-open tables as records (a truncated download keeps its tables), or ADR-029 §e names 'unclosed `<table>` is not recorded' as a stated limit."
+  }
+ ]
+}
