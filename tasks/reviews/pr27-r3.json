@@ -1,0 +1,93 @@
+{
+  "pr": 27,
+  "task": "S8",
+  "round": 3,
+  "date": "2026-08-22",
+  "reviewer": "groundwork:pr-reviewer (fresh context; scoped to the repair diff 39dfa2c..HEAD plus the two standing findings)",
+  "result": "REQUEST_CHANGES - CIRCUIT BREAKER TRIPPED",
+  "counts": {
+    "HIGH": 0,
+    "MEDIUM": 2,
+    "LOW": 5
+  },
+  "standing_findings": "R5 and R6 both CLOSED - neither re-reported. The allow-list deviation from R6's stated acceptance was judged on merits and accepted.",
+  "breaker": "Three review rounds without approval. Per the pr-loop contract the orchestrator STOPS here rather than relaying a fourth repair. R10 and R11 are graded MEDIUM and would route to repair under the scope rule, but no repair is dispatched pending the human's decision. R12-R16 are LOW and would route to debt; their rows are deliberately NOT written yet, because a round-4 repair would make some of them stale and this session has already caught two stale debt rows filed too eagerly (PR #25 R7's g-half, PR #27 R7 in full).",
+  "orchestrator_note": "The product is correct and has been since round 1's repair. Every finding in rounds 2 and 3 is about the CHECKER's fidelity - whether the gate can catch a FUTURE regression - not about behaviour a user sees today. R10 and R11 matter because they re-admit exactly the two defects this PR spent three rounds closing. Both were re-run independently by the orchestrator before escalation; R10's first reproduction attempt was a bad mutation that broke the pinned string itself and correctly went red, and the finding was only confirmed on a faithful second attempt.",
+  "findings": [
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "route": "closed",
+      "claim": "CLOSED - not re-reported by round 3; both index.html consumers are pinned and the deletion turns ui-boilerplate-exclusion red (orchestrator-verified, invariant 36/37)."
+    },
+    {
+      "id": "R6",
+      "severity": "LOW",
+      "route": "closed",
+      "claim": "CLOSED for the five named shapes - not re-reported by round 3; the upload typo now gives 1 failure (orchestrator-verified). The allow-list deviation from the stated acceptance was judged on merits and not reported as non-compliance."
+    },
+    {
+      "id": "R10",
+      "severity": "MEDIUM",
+      "route": "repair-blocked-by-breaker",
+      "claim": "`_live()` strips `//` and `<!-- -->` but not `/* */`, so a call site commented out with a JS block comment still satisfies its pin - which re-admits both standing findings' own defects with the whole gate green.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:641-656 (`JS_COMMENT_RE = ^[ \\t]*//.*$`, `HTML_COMMENT_RE`, no `/* */`); the docstring at :758-762 claims 'each of which must appear exactly once in the file's LIVE text - commented-out code stripped, so a dead call site cannot satisfy its own pin', and pair B triage shape 3 commits only the `//` spelling. Trigger 1 (R6 class): block-comment the url call site's live line in index.html and follow it with a body that omits the flag - the URL mode stops sending it, ticking the checkbox does nothing for that mode. Trigger 2 (R5 class): block-comment the pinned truncation expression and follow it with `${it.text.length.toLocaleString()}` - the truncation notice counts the UN-stripped string under a 'boilerplate hidden' header, exactly R5.",
+      "repro": "ORCHESTRATOR RE-RAN TRIGGER 1 INDEPENDENTLY (second attempt; the first was a bad reproduction that broke the pinned string itself and correctly went red): block-comment the url `body: JSON.stringify({... exclude_boilerplate: excludeBp()})});` line, add a replacement without the flag -> check_boilerplate_plumbing 0 failures, invariant 37/37 = 1.000 fully green.",
+      "acceptance": "`_live` also strips `/* ... */` for js/html (one regex), and pair B carries a shape that commented a call site out with a block comment, watched red before the fix."
+    },
+    {
+      "id": "R11",
+      "severity": "MEDIUM",
+      "route": "repair-blocked-by-breaker",
+      "claim": "The route-set pin - the defense the diff added for attack (F), a new input mode added without wiring the flag - is defeated by writing the decorator with any keyword argument, which is the style app.py already uses.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:735 `ROUTE_RE = re.compile(r'@app\\.post\\(\"(/api/extract/[^\"]+)\"\\)')` requires the closing paren immediately after the path literal. src/sec10k/web/app.py:137 already writes `@app.get(\"/\", response_class=HTMLResponse)`, so the kwarg form is this file's own convention. The docstring at :763-765 claims 'the routes are pinned as a set so a fourth input mode cannot be added without wiring it' and pair B triage shape F claims coverage.",
+      "repro": "ORCHESTRATOR RE-RAN INDEPENDENTLY: inserting `@app.post(\"/api/extract/paste\", response_model=None)` with a handler calling `_run(...)` without the flag -> check_boilerplate_plumbing 0 failures. The fixture's kwarg-less spelling yields 1.",
+      "acceptance": "ROUTE_RE matches `@app.post(\"/api/extract/...\"` regardless of what follows the literal (drop the trailing `\\)`), and pair B's paste route carries a decorator kwarg so the kwarg spelling is the one watched red."
+    },
+    {
+      "id": "R12",
+      "severity": "LOW",
+      "route": "debt-pending-decision",
+      "claim": "The `disabled` check closes one member of the wired-but-unreachable class; `hidden` on the same input is the identical defect and passes.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:771-776 tests only `\\bchecked\\b` and `\\bdisabled\\b`. `<input type=\"checkbox\" id=\"exclude-bp\" hidden>` gives 0 failures - every hop intact, the box can never be ticked. A stylesheet `.opt{display:none}` is the same shape.",
+      "repro": "Add `hidden` to the `#exclude-bp` input and call check_boilerplate_plumbing -> [].",
+      "acceptance": "Either the box regex also rejects `hidden` (and pair B carries the shape), or the debt row names `hidden`/CSS-hidden explicitly alongside `disabled` as a known-open member of the same class."
+    },
+    {
+      "id": "R13",
+      "severity": "LOW",
+      "route": "debt-pending-decision",
+      "claim": "The disclosed reachability ceiling is wider and quieter than the example the debt row gives: its stated example (delete the `$(\"#go-fx\").onclick =` binding) breaks a whole button loudly, but a value-hoisting refactor drops the flag for one mode only, silently.",
+      "evidence": "tasks/TODO.md debt row's example set. A quieter instance: hoist `const bpq = (excludeBp() ? \"&exclude_boilerplate=1\" : \"\");` and then call upload without ever using `bpq`. The pin is satisfied, upload silently ignores the checkbox while fixture and url still work; invariant 37/37 = 1.000.",
+      "repro": "Apply the hoist and run the invariant suite -> 37/37; check_boilerplate_plumbing -> [].",
+      "acceptance": "The debt row's example set includes the 'expression computed and never used' shape, so a reader knows the ceiling covers quiet single-mode losses, not just a dead button."
+    },
+    {
+      "id": "R14",
+      "severity": "LOW",
+      "route": "debt-pending-decision",
+      "claim": "The two exact counts (A=9, B=7) do not discriminate `exactly once` from `at least once`, so the pin's uniqueness half is asserted by no case.",
+      "evidence": "Mutating eval_adapter.py:779-781 `if n != 1:` to `if n < 1:` leaves real-file 0 failures, pair A 9, pair B 7 - the whole gate green. For contrast, `_live` -> identity, removing the `disabled` check, removing UNIQUE_UI and removing the route-set check each take pair B to 6, and `_squash` -> identity takes the real file to 1, so those four ARE covered. Only the two UNIQUE_UI tokens are protected against duplication; the other nine pinned expressions are not.",
+      "repro": "Apply the `n != 1` -> `n < 1` edit and evaluate against real files and both pairs -> 0 / 9 / 7.",
+      "acceptance": "One fixture shape duplicates a WIRE_* expression (not a UNIQUE_UI token) so the mutation moves a count."
+    },
+    {
+      "id": "R15",
+      "severity": "LOW",
+      "route": "debt-pending-decision",
+      "claim": "A behaviour-neutral markup edit turns the invariant gate red with a diagnostic that contradicts the file.",
+      "evidence": "Adding `tabindex=\"0\"` to `<pre class=\"text\">` at index.html:751 - a pure a11y edit touching no wire - gives 2 failures, the second reading 'nothing may shadow the extracted-item render - `<pre class=\"text\">` occurs 0 times, expected 1' while that exact text is on screen. The UNIQUE_UI branch at eval_adapter.py:783-787 does not carry `pin`'s 'update the pin' guidance.",
+      "repro": "Add `tabindex=\"0\"` to the pinned `<pre>` and call check_boilerplate_plumbing -> 2 failures.",
+      "acceptance": "The UNIQUE_UI message says the same thing `pin`'s does, so a maintainer reformatting the pane is not told a present token occurs 0 times."
+    },
+    {
+      "id": "R16",
+      "severity": "LOW",
+      "route": "debt-pending-decision",
+      "claim": "The pair A fixture's own header comment says 'five ways' and then enumerates six, a count left stale by the round-2 additions.",
+      "evidence": "evals/fixtures/repo_hygiene/boilerplate-checkbox-default-on.html:1-2 says 'five ways' followed by items 1-6; the UI half contributes 6 of the case's 9 failures, with 3 from the .py half.",
+      "repro": "head -25 the fixture; compare with the 9 messages from check_boilerplate_plumbing against pair A.",
+      "acceptance": "The comment says six, matching its own list and the 6+3=9 split the case asserts."
+    }
+  ]
+}
