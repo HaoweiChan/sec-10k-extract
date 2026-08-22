@@ -285,7 +285,26 @@ python3 -m evals.run --suite fast --update-baseline
 which rewrites `.eval-baseline.json` as `{"fast": 1.0, "table_cells_fidelity":
 1.0, "table_rows_fidelity": 1.0}` — `fast` unchanged, the two new keys
 appended — and writes its own full report (ADR-025: a baseline move is a
-decision, worth its evidence). The `--suite all` report of record and the
-exact report filenames are cited in the S7 row of `tasks/TODO.md` and in
-this section's addendum once the runner has written them on the committed
-code.
+decision, worth its evidence).
+
+**Addendum — the move as made, on the committed code (f95ce52, clean tree).**
+`python3 -m evals.run --suite all` → `evals/report/20260823-002950-all.json`
+(`git_sha` f95ce52…, score 94/94, `table_cells_fidelity` 1.0,
+`table_rows_fidelity` 1.0; per case: aapl-2025-table 156/156 cells 8/8 rows,
+msft-2013-table 78/78 · 6/6, tgt-2002-table-th 72/72 · 6/6, tables-cell-div
+90/90 · 10/10, tables-layout-bullet 4/4 · 1/1). Then
+`python3 -m evals.run --suite fast --update-baseline` →
+`evals/report/20260823-003020-fast.json` and the runner's own line
+`baseline['fast'] = 1.000 (recorded); baseline['table_cells_fidelity'] = 1.0;
+baseline['table_rows_fidelity'] = 1.0`. The committed `.eval-baseline.json`
+diff is exactly the runner's write: `"fast": 1.0` unchanged, two keys added.
+The `history.jsonl` lines for both runs carry the two new keys (ADR-025
+schema, additive).
+
+That the gate is real and not a printed number: with a baseline holding
+**only** the two metric keys (no `fast` key, so the score gate cannot be what
+fires) and mutation M1 applied, `python3 -m evals.run --suite fast --baseline
+<metric-only>` prints `table fidelity: cells 0.7850 (314/400), rows 0.4194
+(13/31)` and exits 1 with `REGRESSION: table_cells_fidelity 0.7850 < baseline
+1.0000, table_rows_fidelity 0.4194 < baseline 1.0000` (2026-08-23, restored
+after).
