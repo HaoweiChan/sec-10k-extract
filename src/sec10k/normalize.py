@@ -56,12 +56,47 @@ SKIP_TAGS = {"script", "style", "title", "ix:header", "ix:hidden"}
 
 
 class _Plain(HTMLParser):
-    """HTML -> plain text. Block tags break lines, inline tags vanish."""
+    """HTML -> plain text. Block tags break lines, inline tags vanish.
 
-    def __init__(self):
+    With `tables=True` it ALSO records, in the same pass, where every
+    <table>/<tr>/<td|th> starts and ends as offsets into the text it is
+    emitting (ADR-029). The text itself is byte-identical either way: the
+    recorder only reads `self.pos`, it never emits. Offsets are pre-_tidy
+    here; `_tidy` moves them along with the text it rewrites.
+    """
+
+    def __init__(self, tables=False):
         super().__init__(convert_charrefs=True)  # entities decode here, stay Unicode
         self.parts = []
+        self.pos = 0          # len("".join(parts)), kept incrementally
         self.skip_depth = 0
+        self.tables = [] if tables else None   # closed records, document order
+        self._open = []       # open <table> records, innermost last
+
+    def _emit(self, s):
+        self.parts.append(s)
+        self.pos += len(s)
+
+    # --- table recording (ADR-029 §b). One record per <table>: {start, end,
+    # header, rows}; row = [cell...]; cell = [start, end] or [start, end,
+    # colspan] when colspan > 1. html.parser synthesizes no end tags, so an
+    # open cell/row is closed by the next <td>/<tr>/</table> as browsers do.
+    def _cell_close(self):
+        t = self._open[-1] if self._open else None
+        if t and t["_cell"]:
+            t["_cell"][1] = self.pos
+            t["rows"][-1].append(t["_cell"])
+            t["_cell"] = None
+
+    def _row_close(self):
+        t = self._open[-1] if self._open else None
+        if t and t["rows"] and t["_row_open"]:
+            self._cell_close()
+            t["_row_open"] = False
+            if not t["rows"][-1]:
+                t["rows"].pop()          # <tr> with no cells: nothing to keep
+            elif t["_row_th"] and t["header"] == len(t["rows"]) - 1:
+                t["header"] += 1         # a leading run of all-<th> rows is the header
 
     def handle_starttag(self, tag, attrs):
         if tag in SKIP_TAGS:
@@ -69,28 +104,114 @@ class _Plain(HTMLParser):
         elif self.skip_depth:
             pass
         elif tag in BLOCK_TAGS:
-            self.parts.append("\n")
+            self._emit("\n")
+            if self.tables is not None:
+                if tag == "table":
+                    self._open.append({"start": self.pos, "end": None, "header": 0,
+                                       "rows": [], "_cell": None, "_row_open": False,
+                                       "_row_th": True})
+                elif tag == "tr" and self._open:
+                    self._row_close()
+                    t = self._open[-1]
+                    t["rows"].append([])
+                    t["_row_open"], t["_row_th"] = True, True
         elif tag in CELL_TAGS:
-            self.parts.append(" ")  # cells are separate words, never one word
+            if self.tables is not None and self._open:
+                self._cell_close()
+                t = self._open[-1]
+                if not t["_row_open"]:   # <td> outside any <tr>: browsers imply one
+                    t["rows"].append([])
+                    t["_row_open"], t["_row_th"] = True, True
+                t["_row_th"] &= tag == "th"
+                span = dict(attrs).get("colspan") or "1"
+                span = int(span) if span.strip().isdigit() else 1
+                t["_cell"] = [self.pos + 1, None] + ([span] if span > 1 else [])
+            self._emit(" ")  # cells are separate words, never one word
 
     def handle_endtag(self, tag):
         if tag in SKIP_TAGS:
             self.skip_depth = max(0, self.skip_depth - 1)
         elif not self.skip_depth and tag in BLOCK_TAGS:
-            self.parts.append("\n")
+            if self.tables is not None and self._open:
+                if tag == "table":
+                    self._row_close()
+                    t = self._open.pop()
+                    t["end"] = self.pos
+                    for k in ("_cell", "_row_open", "_row_th"):
+                        del t[k]
+                    if t["rows"]:
+                        self.tables.append(t)
+                elif tag == "tr":
+                    self._row_close()
+            self._emit("\n")
+        elif not self.skip_depth and tag in CELL_TAGS and self.tables is not None:
+            self._cell_close()
 
     def handle_data(self, data):
         if not self.skip_depth:
             # ADR-006 ruling 2: collapse WITHIN the chunk, while a source
             # line-wrap is still distinguishable from a block boundary
-            self.parts.append(re.sub(r"\s+", " ", data))
+            self._emit(re.sub(r"\s+", " ", data))
 
 
-def _tidy(text):
-    text = re.sub(r"[^\S\n]+", " ", text)  # incl. U+00A0 from &nbsp; (ADR-003 canon)
-    text = re.sub(r" ?\n ?", "\n", text)
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    return text.strip()
+def _sub_map(rx, repl, text, marks):
+    """rx.sub(repl, text), plus the same edit applied to the sorted offsets in
+    `marks`. An offset inside a replaced run lands on the run's replacement;
+    the text comes from the very same rx.sub call the marks-free path makes,
+    so it cannot differ from it (ADR-029 §d)."""
+    if not marks:
+        return rx.sub(repl, text), marks
+    out, i, delta = [], 0, 0
+    for m in rx.finditer(text):
+        s, e = m.span()
+        while i < len(marks) and marks[i] <= s:
+            out.append(marks[i] + delta)
+            i += 1
+        while i < len(marks) and marks[i] < e:
+            out.append(s + delta)
+            i += 1
+        delta += len(repl) - (e - s)
+    out.extend(m + delta for m in marks[i:])
+    return rx.sub(repl, text), out
+
+
+TIDY_RULES = ((re.compile(r"[^\S\n]+"), " "),   # incl. U+00A0 from &nbsp; (ADR-003 canon)
+              (re.compile(r" ?\n ?"), "\n"),
+              (re.compile(r"\n{3,}"), "\n\n"))
+
+
+def _tidy(text, marks=()):
+    """Canonical whitespace. `marks` (sorted offsets into `text`) come back
+    moved to where the same characters now sit; the text is unchanged by
+    their presence."""
+    marks = list(marks)
+    for rx, repl in TIDY_RULES:
+        text, marks = _sub_map(rx, repl, text, marks)
+    lead = len(text) - len(text.lstrip())
+    text = text.strip()
+    return text, [min(max(m - lead, 0), len(text)) for m in marks]
+
+
+def _place_tables(tables, marks, text):
+    """Rewrite the pre-_tidy offsets in `tables` through the old->new `marks`
+    map, then pull every span in to its first/last non-space character, so a
+    cell slice never carries the separator `_Plain` emitted around it."""
+    def tight(s, e):
+        while s < e and text[s].isspace():
+            s += 1
+        while e > s and text[e - 1].isspace():
+            e -= 1
+        return s, e
+    for t in tables:
+        ts, te = t["start"], t["end"] = tight(marks[t["start"]], marks[t["end"]])
+        for row in t["rows"]:
+            for c in row:
+                s, e = tight(marks[c[0]], marks[c[1]])
+                # an EMPTY cell in a leading/trailing spacer row sits in the
+                # whitespace the table span was just pulled in from; keep it
+                # inside [start, end] so every cell lies within its table
+                c[0], c[1] = min(max(s, ts), te), min(max(e, ts), te)
+    return tables
 
 
 def split_documents(raw):
@@ -119,16 +240,37 @@ def format_era(body):
     return "txt"  # 1993-2001 submissions carry <PAGE>/<TABLE>/<S>/<C> only
 
 
-def normalize(body, era):
-    """Deterministic plain text. Offsets in the contract are into this."""
+def normalize(body, era, tables=False):
+    """Deterministic plain text. Offsets in the contract are into this.
+
+    Returns `(text, tables)`: `tables` is None unless asked for, else the
+    ADR-029 records — `{start, end, header, rows}` with offsets into `text`,
+    document order. The txt era has no HTML tables (its SGML <TABLE>/<S>/<C>
+    layout is ruled out, ADR-029 §e) so it answers `[]`. `text` is the same
+    string whether or not tables are asked for — by construction, not by care:
+    the recorder never emits, and `_tidy` edits the text with or without
+    offsets to carry.
+    """
     if era == "txt":
         # newlines ARE the document here: fixed-width layout, line-anchored
         # headings, page furniture that stays in the text (ADR-006 ruling 2)
-        return body.replace("\r\n", "\n").replace("\r", "\n").strip()
-    p = _Plain()
+        text = body.replace("\r\n", "\n").replace("\r", "\n").strip()
+        return text, ([] if tables else None)
+    p = _Plain(tables=tables)
     p.feed(body)
     p.close()
-    return _tidy("".join(p.parts))
+    if not tables:
+        return _tidy("".join(p.parts))[0], None
+    olds = sorted({m for t in p.tables for m in (t["start"], t["end"])}
+                  | {m for t in p.tables for r in t["rows"] for c in r for m in c[:2]})
+    text, news = _tidy("".join(p.parts), olds)
+    found = _place_tables(p.tables, dict(zip(olds, news)), text)
+    # drop a table with no visible text at all (spacer/rule tables): there is
+    # no structure there for a reader to lose. Sort: a nested table closes
+    # before its parent, so `p.tables` is in end order, not start order.
+    found = [t for t in found if any(c[0] < c[1] for r in t["rows"] for c in r)]
+    found.sort(key=lambda t: (t["start"], t["end"]))
+    return text, found
 
 
 # period of report, best signal first: EDGAR's own SGML header, the iXBRL
@@ -202,11 +344,13 @@ def sniff_form(text):
     return form
 
 
-def select_and_normalize(raw):
-    """Layers 2+3. Returns (normalized_text, meta, warnings).
+def select_and_normalize(raw, tables=False):
+    """Layers 2+3. Returns (normalized_text, meta, warnings, tables).
 
     meta.form_type is None when nothing identified the form — the caller
     turns that into `unsupported`; this function never decides doc_status.
+    `tables` is None unless asked for (ADR-029, opt-in): asking changes
+    nothing else in the return value.
     """
     warnings = []
     blocks = split_documents(raw)
@@ -224,7 +368,7 @@ def select_and_normalize(raw):
     # collapses first, which is the ordering doing its job.
     body = chosen["body"] if chosen else raw
     era = format_era(body)
-    text = normalize(body, era)
+    text, found = normalize(body, era, tables)
 
     declared = chosen["type"] if chosen else (blocks[0]["type"] or None if blocks else None)
     if blocks and chosen is None:
@@ -271,7 +415,7 @@ def select_and_normalize(raw):
         "raw_chars": len(raw),
         "norm_chars": len(text),
     }
-    return text, meta, warnings
+    return text, meta, warnings, found
 
 
 def _demo():
@@ -282,7 +426,7 @@ def _demo():
                 "<p>FORM 10-K</p><p>Microsoft was\nfounded in 1975. "
                 "AT&amp;T&#160;paid.</p><table><tr><td>12</td><td>34</td></tr>"
                 "</table><script>var x=1;</script></body></html>")
-    text, meta, warns = select_and_normalize(html_doc)
+    text, meta, warns, _ = select_and_normalize(html_doc)
     assert "us-gaap:" not in text, text                      # INV-S5
     assert "OperatingSegmentsMember" not in text, text
     assert "var x" not in text, text
@@ -290,11 +434,16 @@ def _demo():
     assert "AT&T paid." in text, text                        # entity + nbsp canon
     assert "12 34" in text, text                             # cells stay separate words
     assert meta["form_type"] == "10-K" and meta["format_era"] == "ixbrl", meta
+    # ADR-029: asking for tables changes nothing but the fourth value, and the
+    # one table's cells are slices of the SAME text
+    t_on, m_on, w_on, tabs = select_and_normalize(html_doc, tables=True)
+    assert (t_on, m_on, w_on) == (text, meta, warns)
+    assert len(tabs) == 1 and [text[c[0]:c[1]] for c in tabs[0]["rows"][0]] == ["12", "34"], tabs
 
     txt_doc = ("<DOCUMENT>\n<TYPE>10-K405\n<SEQUENCE>1\n<TEXT>\nFORM 10-K\n"
                "Item 1.  Business\n   fixed   width\n   lines\n</TEXT>\n</DOCUMENT>\n"
                "<DOCUMENT>\n<TYPE>EX-13\n<TEXT>\nItem 1.  Not this one\n</TEXT>\n</DOCUMENT>")
-    text, meta, warns = select_and_normalize(txt_doc)
+    text, meta, warns, _ = select_and_normalize(txt_doc)
     assert "Not this one" not in text, text                  # trap 5: exhibits dropped
     assert "\n   fixed   width\n" in text, repr(text)        # txt layout survives
     assert meta["format_era"] == "txt" and meta["form_type"] == "10-K405", meta
@@ -315,7 +464,7 @@ def _demo():
     # caller's collapse test fire and report `failed` on a readable file
     # (ksb-unsupported).
     ex = "<DOCUMENT>\n<TYPE>EX-21\n<TEXT>\nsubsidiaries\n</TEXT>\n</DOCUMENT>"
-    t, m, w = select_and_normalize(ex)
+    t, m, w, _ = select_and_normalize(ex)
     assert m["form_type"] == "EX-21" and m["form_type"] not in ACCEPTED_FORMS, m
     assert "subsidiaries" in t, t   # readable, therefore not a collapse
     assert [x["code"] for x in w] == ["whole_submission_fallback"], w
@@ -324,7 +473,7 @@ def _demo():
     # inside the span universe. It may proceed — but not in silence.
     untyped = ("<DOCUMENT>\n<TEXT>\nFORM 10-K\nItem 1. Business\nprose\n</TEXT>\n</DOCUMENT>\n"
                "<DOCUMENT>\n<TYPE>EX-13\n<TEXT>\nItem 1. Business\nexhibit\n</TEXT>\n</DOCUMENT>")
-    t2, m2, w2 = select_and_normalize(untyped)
+    t2, m2, w2, _ = select_and_normalize(untyped)
     assert m2["form_type"] == "10-K" and m2["form_type_declared"] is None, m2
     assert "exhibit" in t2, t2
     assert "whole_submission_fallback" in [x["code"] for x in w2], w2

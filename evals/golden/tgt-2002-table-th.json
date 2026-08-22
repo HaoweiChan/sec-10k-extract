@@ -1,0 +1,26 @@
+{
+  "id": "tgt-2002-table-th",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {"path": "evals/fixtures/tgt-2002/filing.htm", "tables": true},
+  "expect": {
+    "checks": [
+      {"type": "envelope_shape"},
+      {"type": "tables_sane", "min": 10, "max": 20},
+      {"type": "table", "anchor": "Column A", "header": 2,
+       "rows": [
+         ["Column A", "", "Column B", "", "", "Column C", "", "", "Column D", "", "Column E", ""],
+         ["Description", "", "Balance at beginning of Period", "", "", "Additions charged to cost, expenses, revenues", "", "", "Deductions", "", "Balance at end of period", ""],
+         ["Accounts receivable reserves:", "", "", "", "", "", "", "", "", "", "", ""],
+         ["2002", "", "$", "261", "", "$", "460", "", "($322", ")", "$", "399"],
+         ["2001(a)", "", "$", "0", "", "$", "352", "", "($91", ")", "$", "261"],
+         ["2000", "", "", "—", "", "", "—", "", "—", "", "", "—"]
+       ]},
+      {"type": "table_markdown", "anchor": "Column A",
+       "value": "| Column A | Column B |  | Column C |  | Column D |  | Column E |  |\n|---|---|---|---|---|---|---|---|---|\n| Description | Balance at beginning of Period |  | Additions charged to cost, expenses, revenues |  | Deductions |  | Balance at end of period |  |\n| Accounts receivable reserves: |  |  |  |  |  |  |  |  |\n| 2002 | $ | 261 | $ | 460 | ($322 | ) | $ | 399 |\n| 2001(a) | $ | 0 | $ | 352 | ($91 | ) | $ | 261 |\n| 2000 |  | — |  | — | — |  |  | — |"},
+      {"type": "verbatim"},
+      {"type": "no_overlap_ordered"}
+    ]
+  },
+  "provenance": "ADR-029 §g, the <th> header table. Target FY2002 10-K (legacy HTML, 2003 filing; evals/golden/tgt-2002-shallow.json carries the fixture's item labels). The committed corpus has NO <thead> anywhere and <th> in exactly two fixtures, tgt-2002 (45 <TH>) and intc-2002 (682), so the header-detection half of ADR-029 §b can only be pinned here or on intc-2002; tgt is the smaller file. Transcribed by hand from the raw HTML on 2026-08-23 before comparison: Schedule II (valuation and qualifying accounts), raw bytes [71129, 75122) of filing.htm (<TABLE ...> through </TABLE>, 3,993 bytes; the 15th <table in the file, 0-based 14). Rows 0 and 1 are ALL <TH> (uppercase tags -- html.parser lowercases), every other row is <TD>: header = 2 is the labeled count, and a parser that only knows <thead> reports 0 here. Raw row 0: <TH>Column A<BR><HR NOSHADE></TH> | <TH>&nbsp;</TH> | <TH COLSPAN=2>Column B<HR></TH> | <TH>&nbsp;</TH> | <TH COLSPAN=2>Column C<HR></TH> | <TH>&nbsp;</TH> | <TH>Column D<HR></TH> | <TH>&nbsp;</TH> | <TH COLSPAN=2>Column E<HR></TH> -- 12 columns once colspans are expanded; the <BR> and <HR NOSHADE> inside the cells are block tags (a line break in normalized_text) and contribute no text, so the cell is 'Column A'. Row 1 same shape with 'Description' | 'Balance at<BR> beginning of<BR> Period' (line breaks inside the cell collapse to single spaces in the grid) | 'Additions<BR> charged to<BR> cost, expenses,<BR> revenues' | 'Deductions' | 'Balance at<BR> end of<BR> period'. Row 2: 'Accounts receivable reserves:' then eleven <TD>&nbsp;</TD>. Rows 3-4: year | &nbsp; | $ | number | &nbsp; | $ | number | &nbsp; | '($322' | ')' | $ | number -- the filer typeset the parenthesised deduction across TWO cells, '($322' and ')', and the grid must keep them as two cells, not merge them. Row 5: '2000' with &#151; (cp1252 em dash; html.unescape maps the 128-159 range per the HTML5 spec, so the cell is U+2014 '—') in columns 3, 6, 8 and 11. 6 rows x 12 columns = 72 cells. Anchor 'Column A' occurs once in the raw file and once in normalized_text. Measured at HEAD: record #14 of 16, normalized_text[28836:29116], header=2.\n\nThe table_markdown value is derived by hand from the labeled grid under ADR-029 §b: no row is empty; columns 1, 4 and 7 are empty in every row and are not shown (9 columns survive: 0,2,3,5,6,8,9,10,11); row 0 is the Markdown header row and row 1 -- the second <th> row -- is rendered as an ordinary body row, which is ADR-029 §b's stated limit (Markdown has one header row). Band 10-20 around the measured 16 records."
+}

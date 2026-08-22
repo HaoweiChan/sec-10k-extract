@@ -95,6 +95,25 @@ them all); the example once showed `lenient_match`, which nothing emits.
   different answer from the key being absent. The stripped view is derived by
   `src/sec10k/boilerplate.strip_chrome()` and is deliberately not a field —
   same reason item text is not one.
+- **`tables` (optional, ADR-029)**: present *only* when the caller passes
+  `extract_items(path, tables=True)`. A list, in document order, of one
+  record per HTML `<table>` that carries visible text:
+  `{"start", "end", "header", "rows"}` — `start`/`end` are offsets into
+  `normalized_text` bounding the table's text; `header` is the number of
+  leading rows that are all-`<th>` (0 when none); `rows` is a list of rows,
+  each a list of cells, each cell `[start, end]` or `[start, end, colspan]`
+  (the third element only when `colspan > 1`), offsets into
+  `normalized_text`, every cell inside its table's span, cell text tight
+  (no leading/trailing whitespace). A cell's text **is**
+  `normalized_text[start:end]` — there is no cell string to drift from it,
+  exactly as there is no item `text` field. Same rule as `boilerplate`: an
+  annotation, never an edit — `normalized_text`, every item offset and
+  every published figure are byte-identical with the flag on and off.
+  Carried on refusal envelopes too when asked for. The row-of-strings grid
+  (`colspan` expanded to empty cells) and the Markdown rendering are derived
+  by `src/sec10k/tables.grid()` / `to_markdown()` and are deliberately not
+  fields. `rowspan`, nested tables and txt-era SGML `<TABLE>` layout are not
+  interpreted (ADR-029 §e). `envelope_shape` refuses any other shape.
 
 ## Envelope rules (v2, normative)
 

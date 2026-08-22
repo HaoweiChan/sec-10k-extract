@@ -469,6 +469,60 @@ def test_boilerplate_checks():
 
 
 
+def test_table_checks():
+    # ADR-029 vocabulary on a synthetic envelope: text "a b\nc d" is one
+    # 2x2 table; cells are slices, the second row's first cell carries colspan 2
+    text = "a b\nc d"
+    tab = {"start": 0, "end": 7, "header": 1,
+           "rows": [[[0, 1], [2, 3]], [[4, 5, 2], [6, 7]]]}
+    r = {"normalized_text": text, "doc_status": "success", "warnings": [], "items": [],
+         "meta": {"extractor_version": "x", "input_sha256": "x", "format_era": "html",
+                  "document_selected": "x", "taxonomy_era": "modern", "toc_manifest": []},
+         "trace": [], "timings": {"total_ms": 0}, "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0},
+         "tables": [tab]}
+    good = {"type": "table", "anchor": "a b", "header": 1,
+            "rows": [["a", "b", ""], ["c", "", "d"]]}   # rows pad to the table width
+    assert eval_check(r, good) is None, eval_check(r, good)
+    assert eval_check(r, {"type": "envelope_shape"}) is None, eval_check(r, {"type": "envelope_shape"})
+    assert eval_check(r, {"type": "tables_sane", "min": 1, "max": 1}) is None
+    # content: one wrong cell, wrong header count, a row too many, wrong anchor
+    for bad, why in [
+        ({**good, "rows": [["a", "b", ""], ["c", "", "X"]]}, "first mismatch at (1, 2)"),
+        ({**good, "header": 0}, "header rows 1 != 0"),
+        ({**good, "rows": [["a", "b", ""], ["c", "", "d"], ["e"]]}, "grid differs"),
+        ({**good, "anchor": "zzz"}, "0 table(s) contain it"),
+        ({**good, "index": 1}, "wanted #1"),
+    ]:
+        reason = eval_check(r, bad)
+        assert reason is not None and why in reason, (why, reason)
+    # and the fidelity fractions the metric reads: 6 of 6 cells / 2 of 2 rows
+    # on the good label, 5 of 6 / 1 of 2 on the one-wrong-cell label, 0 on a
+    # table that cannot be located
+    from src.sec10k.eval_adapter import table_fidelity
+    assert table_fidelity(r, good)["cells"] == (6, 6) and table_fidelity(r, good)["rows"] == (2, 2)
+    f = table_fidelity(r, {**good, "rows": [["a", "b", ""], ["c", "", "X"]]})
+    assert f["cells"] == (5, 6) and f["rows"] == (1, 2), f
+    f = table_fidelity(r, {**good, "anchor": "zzz"})
+    assert f["cells"] == (0, 6) and f["rows"] == (0, 2), f
+    # markdown: the colspan pads, the header row is the first row
+    md = {"type": "table_markdown", "anchor": "a b", "value": "| a | b |  |\n|---|---|---|\n| c |  | d |"}
+    assert eval_check(r, md) is None, eval_check(r, md)
+    assert eval_check(r, {**md, "value": "nope"}) is not None
+    # shape: a string, a record with a cell outside the text, a colspan of 1
+    # written out, a cell outside its table, a loose slice -- all red
+    for tables, via in [("10-Q", "envelope_shape"), ("10-Q", "tables_sane"),
+                        ([{**tab, "rows": [[[0, 99]]]}], "envelope_shape"),
+                        ([{**tab, "rows": [[[0, 1, 1]]]}], "envelope_shape"),
+                        ([{**tab, "end": 3, "rows": [[[0, 1]], [[4, 5]]]}], "tables_sane"),
+                        ([{**tab, "rows": [[[0, 2]]]}], "tables_sane")]:
+        assert eval_check({**r, "tables": tables}, {"type": via}) is not None, (tables, via)
+    # a missing key is the default (no flag): every table check says so
+    no = {k: v for k, v in r.items() if k != "tables"}
+    assert eval_check(no, {"type": "envelope_shape"}) is None
+    for chk in (good, md, {"type": "tables_sane"}):
+        assert eval_check(no, chk) is not None
+
+
 TESTS = [
     test_item_field,
     test_ibr_spans_are_checked,
@@ -487,6 +541,7 @@ TESTS = [
     test_item_absent_any_status,
     test_no_empty_success,
     test_boilerplate_checks,
+    test_table_checks,
 ]
 
 
