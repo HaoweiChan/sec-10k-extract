@@ -480,6 +480,11 @@ def check_anchor_contract(case):
     """
     inp = case.get("input", {})
     fixtures_dir = ROOT / inp.get("fixtures_dir", FIXTURES)
+    # S8/PR#27 R1: the anchor oracle is the item's own `text`, so it is only
+    # a real contract if it holds with ADR-026's exclusion ON as well. It did
+    # not — the stripped body scored below AGREEMENT_MIN on six items — and
+    # the case that runs this with the flag set is what says so.
+    exclude = bool(inp.get("exclude_boilerplate"))
     bad = []
     checked_items = 0
     for d in sorted(p for p in fixtures_dir.iterdir() if p.is_dir()):
@@ -488,7 +493,7 @@ def check_anchor_contract(case):
             continue  # not a single-file filing fixture (e.g. repo_hygiene/)
         is_html = f.suffix.lower() in (".htm", ".html")
         try:
-            result = extract_items(str(f))
+            result = extract_items(str(f), exclude_boilerplate=exclude)
         except Exception as e:
             bad.append(f"{d.name}: extract_items raised {type(e).__name__}: {e}")
             continue
@@ -533,11 +538,17 @@ def check_boilerplate_exclusion(case):
     would agree with any window or off-by-one bug the implementation has.
 
     Pinned, per item:
-      OFF  `text` == `normalized_text[start:end][:DISPLAY_MAX]` — verbatim,
-           the INV-S2 slice, unchanged from before S8.
-      ON   `text` == that same slice with exactly the chrome characters that
-           fall inside `[start, end)` dropped. So a strip that ignores the
-           item window, or is off by one, disagrees.
+      both `text` == `normalized_text[start:end][:DISPLAY_MAX]` — verbatim,
+           the INV-S2 slice, in BOTH modes. PR #27 R1: `text` is also the
+           oracle `findAnchor` matches against the original filing, so it is
+           not the pane's to restyle. Pinning it identical across the two
+           runs is what makes `ui-anchor-contract-boilerplate` true by
+           construction rather than by luck.
+      ON   `display_text` == that same slice with exactly the chrome
+           characters inside `[start, end)` dropped, and ABSENT when it
+           would equal `text`. So a strip that ignores the item window, or
+           is off by one, disagrees.
+      OFF  no `display_text` at all.
       both `start`, `end`, `chars`, `status`, `method`, `confidence`
            identical between the runs, and `normalized_text` identical too —
            exclusion is display-only (ADR-026 s.d, INV-S2).
@@ -547,8 +558,11 @@ def check_boilerplate_exclusion(case):
     rather than passing vacuously.
     """
     inp = case.get("input", {})
+    # "text" is in here deliberately (PR #27 R1): the anchor oracle must be
+    # the same string with the flag on and off, so the two runs must agree on
+    # it, not merely each be self-consistent.
     pinned = ("item", "part", "start", "end", "chars", "status", "method",
-              "confidence", "heading_text")
+              "confidence", "heading_text", "text")
     bad, stripped_items = [], 0
     for rel in inp.get("fixtures", []):
         off = extract_items(str(ROOT / rel))
@@ -579,26 +593,37 @@ def check_boilerplate_exclusion(case):
             code = a.get("item")
             for k in pinned:
                 if a.get(k) != b.get(k):
+                    # truncated: `text` is up to DISPLAY_MAX chars and an
+                    # unreadable failure is a failure nobody acts on
                     bad.append(f"{rel} item {code}: {k} moved under exclusion "
-                               f"({a.get(k)!r} -> {b.get(k)!r})")
+                               f"({a.get(k)!r:.90} -> {b.get(k)!r:.90})")
             s, e = a.get("start"), a.get("end")
             if s is None or e is None:
                 if a["text"] or b["text"]:
                     bad.append(f"{rel} item {code}: null span but non-empty text")
                 continue
             raw = text[s:e]
-            if a["text"] != raw[:DISPLAY_MAX]:
-                bad.append(f"{rel} item {code}: un-flagged text is no longer the "
-                           f"verbatim slice (INV-S2)")
+            for label, got in (("un-flagged", a["text"]), ("excluded", b["text"])):
+                if got != raw[:DISPLAY_MAX]:
+                    bad.append(f"{rel} item {code}: {label} `text` is no longer "
+                               f"the verbatim slice — findAnchor matches this "
+                               f"string against the original filing (INV-S2, R1)")
+            if "display_text" in a:
+                bad.append(f"{rel} item {code}: un-flagged run carries a "
+                           f"display_text — nothing is hidden with the flag off")
             want = "".join(c for k, c in enumerate(raw, s) if not hidden[k])
-            if b["text"] != want[:DISPLAY_MAX]:
+            pane = b.get("display_text", b["text"])
+            if pane != want[:DISPLAY_MAX]:
                 bad.append(
                     f"{rel} item {code}: excluded pane is identical to the "
                     f"un-flagged one — nothing was stripped"
-                    if b["text"] == a["text"] else
+                    if pane == a["text"] else
                     f"{rel} item {code}: excluded pane != the item slice minus "
-                    f"its own chrome runs ({len(b['text'])} chars shown, "
+                    f"its own chrome runs ({len(pane)} chars shown, "
                     f"expected {len(want[:DISPLAY_MAX])})")
+            if want == raw and "display_text" in b:
+                bad.append(f"{rel} item {code}: display_text emitted although it "
+                           f"is identical to text — dead payload")
             # not redundant with the `chars` pairing above: that one only says
             # the two runs AGREE, and they would agree if both reported the
             # shown length. This says WHICH length is right.
@@ -619,8 +644,32 @@ def check_boilerplate_plumbing(case):
     is reachable from the eval harness (no browser, and importing app.py
     would drag fastapi into the dependency-free unit job), so this is a
     structural check on the two files that carry the wire, the shape the ui-*
-    checks have used since S3. `ui-boilerplate-exclusion-regression` pins
-    that it actually catches a default-on checkbox and a dropped flag.
+    checks have used since S3.
+
+    PR #27 R2 rewrote it. The first version asked each END whether it
+    mentioned the flag, which four realistic breakages satisfied while the
+    wire was severed: a server reading `excludeBoilerplate` while the client
+    sends `exclude_boilerplate`; a call site hardcoding `true` instead of
+    reading the checkbox; an upload handler comparing `== "true"` while the
+    JS appends `=1`; and `exclude_boilerplate=not exclude_boilerplate` at the
+    last hop. Two of those defeat the task's headline requirement that the
+    default-OFF path is byte-identical to before S8.
+
+    So it now BINDS the two ends to each other instead of inspecting them
+    separately. Per input mode it derives the literals the UI actually puts
+    on the wire (the JSON key paired with `excludeBp()`, or the `&key=value`
+    it appends) and the literals the handler actually reads out of the
+    request, and requires the two sets to be equal — a rename on either side
+    is then a disagreement, not a matching pair of mentions. It also requires
+    every call site to read `excludeBp()` rather than a constant, and the
+    final hop to forward the parameter UNMODIFIED.
+
+    Still textual, and the debt row says what that leaves: it cannot prove
+    FastAPI binds any of it. An HTTP case was considered and rejected —
+    `run_case` has no skip state (`score = passed / len(results)`), so a case
+    needing fastapi is either silently green when it is absent or red in
+    three CI jobs that install nothing by ADR-003, i.e. a hard dependency in
+    the gate. `ui-boilerplate-exclusion-regression` pins all five shapes.
     """
     inp = case.get("input", {})
     ui = (ROOT / inp.get("ui_file", UI_STYLESHEET)).read_text()
@@ -637,21 +686,56 @@ def check_boilerplate_plumbing(case):
             bad.append(f"#exclude-bp defaults to CHECKED — ADR-026 is opt-in "
                        f"and OFF must stay today's behaviour: {box}")
     for ep in EXTRACT_ENDPOINTS:
+        sent = None
         i = ui.find('"' + ep)
         if i < 0:
             bad.append(f"UI has no fetch call to {ep}")
-        elif "exclude_boilerplate" not in ui[i:i + 400]:
-            bad.append(f"UI call to {ep} does not send exclude_boilerplate")
+        else:
+            # bound the window to THIS call: a flat i+400 slice ran into the
+            # next `$("#go-…")` handler, so a call site that hardcoded the
+            # value still found a neighbour's excludeBp() and passed (found
+            # by re-applying R2's own mutation (b) to the rewritten check)
+            ends = [x for x in (ui.find('$("#go-', i + 1),
+                                ui.find('"/api/extract/', i + 1)) if x > 0]
+            call = ui[i:min(ends + [i + 400])]
+            if "excludeBp()" not in call:
+                bad.append(f"UI call to {ep} does not read the checkbox — the "
+                           f"flag must come from excludeBp(), never a constant")
+            else:
+                # what this mode actually puts on the wire: a JSON key, or a
+                # `&key=value` pair for the mode whose body is the filing
+                m = re.search(r"(\w+)\s*:\s*excludeBp\(\)", call)
+                q = re.search(r'"&(\w+)=([^"&]*)"', call)
+                if m:
+                    sent = {m.group(1)}
+                elif q:
+                    sent = {q.group(1), q.group(2)}
+                else:
+                    bad.append(f"UI call to {ep} reads excludeBp() but sends it "
+                               f"under no literal this check can identify")
         j = api.find('"' + ep + '"')
         if j < 0:
             bad.append(f"app.py has no handler for {ep}")
-        else:
-            k = api.find("\n@app.", j + 1)
-            if "exclude_boilerplate" not in api[j:k if k > 0 else len(api)]:
-                bad.append(f"the {ep} handler does not pass exclude_boilerplate "
-                           f"into _run")
-    if not re.search(r"extract_items\(\s*path,\s*exclude_boilerplate=", api):
-        bad.append("_run does not pass exclude_boilerplate into extract_items")
+            continue
+        k = api.find("\n@app.", j + 1)
+        handler = api[j:k if k > 0 else len(api)]
+        if "exclude_boilerplate=" not in handler:
+            bad.append(f"the {ep} handler does not pass exclude_boilerplate "
+                       f"into _run")
+            continue
+        # everything from the kwarg to the end of the handler is the flag
+        # expression — the flag is the last argument in all three calls
+        expr = handler[handler.index("exclude_boilerplate="):]
+        read = set(re.findall(r'"([^"]*)"', expr))
+        if sent is not None and sent != read:
+            bad.append(f"{ep}: the UI puts {sorted(sent)} on the wire but the "
+                       f"handler reads {sorted(read)} — the two ends disagree")
+    # unmodified: `not exclude_boilerplate` here inverts the checkbox for all
+    # three modes at once and mentions every right name doing it
+    if not re.search(r"extract_items\(\s*path,\s*exclude_boilerplate\s*=\s*"
+                     r"exclude_boilerplate\s*\)", api):
+        bad.append("_run does not forward exclude_boilerplate into "
+                   "extract_items unmodified")
     return bad
 
 

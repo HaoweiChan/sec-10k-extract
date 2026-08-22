@@ -1,0 +1,48 @@
+{
+  "pr": 27,
+  "task": "S8",
+  "round": 1,
+  "date": "2026-08-22",
+  "implementer": "task/S8 round-1 repair",
+  "gate_after_repair": {
+    "invariant": "36/36 = 1.000",
+    "fast": "78/78 = 1.000",
+    "baseline": "1.000, not moved",
+    "unit_self_checks": "src.sec10k.web.view, src.sec10k.boilerplate, src.sec10k.web.anchor, src.sec10k.test_eval_adapter all green"
+  },
+  "resolutions": [
+    {
+      "id": "R1",
+      "severity": "HIGH",
+      "status": "fixed",
+      "reproduced": "Yes, exactly as reported and as the orchestrator re-measured: check_anchor_contract gives 0 failures with the flag off and 6 with it on — caps-cover-2016 item 4, items-stripped item 4, malformed-html item 4, premier-pacific-2016 item 4, toc-titled item 4 (all 'ITEM 4. MINE SAFETY DISCLOSURES.') and wfc-2008 item 9B ('ITEM 9B. OTHER INFORMATION'), each 'not anchorable in source'.",
+      "covered_by": "evals/adversarial/ui-anchor-contract-boilerplate.json (invariant + fast) — check_anchor_contract over the whole fixture set with exclude_boilerplate: true, via a new case-declared `exclude_boilerplate` input on the check. Watched red at exactly 6 on the unfixed code, with the un-flagged ui-anchor-contract green beside it as the control.",
+      "fix": "Root cause was one field with two jobs, not the anchor algorithm. `item.text` is both what the pane displays and the body-agreement oracle findAnchor matches against the ORIGINAL filing; S8 had made it the stripped string. `text` is now the verbatim INV-S2 slice in BOTH modes and the stripped string moved to a second field, `display_text`, emitted only when it differs from `text` (src/sec10k/web/view.py build_view; src/sec10k/web/static/index.html `pre.text` render and the truncation notice, the only two consumers of it). AGREEMENT_MIN was NOT touched. Both remaining consumers of `text` — index.html's findAnchor call and the Python mirror in check_anchor_contract — were re-grepped and now receive the verbatim slice.",
+      "regression_pinned": "check_boilerplate_exclusion now carries `text` in its `pinned` tuple, so the two runs must AGREE on the anchor oracle rather than each be self-consistent, and asserts `display_text` is absent on the OFF run and absent when identical to `text`. Re-introducing the defect (`\"text\": body[:display_max]`) turns ui-boilerplate-exclusion red at 32 and ui-anchor-contract-boilerplate red at exactly the original 6.",
+      "verified_live": "Browser, 1280px viewport, caps-cover-2016, the fixture the finding names. Item 4 anchors in BOTH modes; ITEM_START_ANCHORS and the compare pane's scrollTop (5746) are identical with the flag on and off; the anchored region is confirmed to be the real 'ITEM 4. MINE SAFETY DISCLOSURES.' body, not a TOC entry; `text` is the verbatim string the finding quotes and `display_text` the stripped one; the pane renders the stripped string and the header reads 'BOILERPLATE HIDDEN'."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "reproduced": "Yes, all four, against copies of the real app.py/index.html: (a) server reads excludeBoilerplate -> 0 failures; (b) UI hardcodes exclude_boilerplate: true -> 0; (c) upload handler compares == \"true\" -> 0; (d) extract_items(path, exclude_boilerplate=not exclude_boilerplate) -> 0. Control 0, sanity mutation upload_no_send 1.",
+      "option_taken": "BINDING, not HTTP. The HTTP alternative was reconsidered on the orchestrator's guidance and rejected on a mechanical fact rather than a preference: evals/run.py has no skip state — `score = passed / len(results)` over a bool — so a fastapi-dependent case is either silently green when the dependency is absent (forbidden, and the ADR-010 sin again) or red in three CI jobs that install nothing by ADR-003, which is a hard dependency in the gate. Giving the harness a skip state is a change to the gate mechanism for one case.",
+      "fix": "src/repo_hygiene/eval_adapter.py::check_boilerplate_plumbing rewritten to bind the two ends to each other instead of asking each end whether it mentions the flag. Per input mode it derives the literals the UI puts on the wire (the JSON key paired with excludeBp(), or the `&key=value` it appends) and the literals the handler reads out of the request, and requires the two sets to be EQUAL; it requires every call site to read excludeBp() rather than a constant; and it requires the final hop to forward the parameter unmodified (`extract_items(path, exclude_boilerplate=exclude_boilerplate)`, which also rejects the older `extract_items(path)`).",
+      "second_defect_found": "Re-applying shape (b) to the REWRITTEN check found a second defect in the check itself: the flat 400-character call-site window ran into the next `$(\"#go-…\")` handler, so a call site that hardcoded the value still found a neighbour's excludeBp() and passed. The window is now bounded by the next handler or endpoint literal. Found only because every shape was re-run after the rewrite instead of being assumed covered.",
+      "covered_by": "evals/adversarial/ui-boilerplate-exclusion-regression.json, now 5 shapes at an exact count (min=max=5), against evals/fixtures/repo_hygiene/boilerplate-checkbox-default-on.html and boilerplate-wire-broken.py (renamed from boilerplate-flag-dropped.py — it now carries three server-side shapes, not one). Between the two fixtures each end of the wire is wrong exactly once and correct elsewhere, so a check that blanket-failed would exceed the pinned count rather than reach it. Each shape observed red individually against real-file copies before being claimed covered: (a) 2 failures, (b) 1, (c) 1, (d) 1, control 0.",
+      "debt_row_corrected": "tasks/TODO.md's 'No test in the harness ever issues an HTTP request' row. It named only 'a wrong parameter name, a wrong body shape or a 422'; it now records that the first version of the check missed four measured shapes, states what the bound version still cannot prove (that FastAPI BINDS any of it — a decorator typo, body-model mismatch, 422, or unregistered route), and records why the HTTP case was rejected."
+    },
+    {
+      "id": "R3",
+      "severity": "LOW",
+      "status": "debt",
+      "row": "tasks/TODO.md, '`truncated` is the one item field whose meaning moves under exclusion, and nothing pins it' (Origin: PR #27 R3). Routed to debt by the orchestrator; not fixed here. The row carries the reviewer's own measurement (the `len(raw)` mutation leaves the check at 0 failures / items_stripped 16) and its ready-made acceptance, and notes the overlap with the existing S8 row about the `shown` notice comparing two different quantities."
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "status": "debt",
+      "row": "tasks/TODO.md, '\"OFF is unchanged\" rests on per-item assertions over two fixtures, not on a whole-payload snapshot' (Origin: PR #27 R4). R4 is a verdict, and the verdict — that the additive `boilerplate_excluded` key breaks no contract — is accepted with no code change. The row carries only the residue the reviewer named, plus the reason it is not taken now: the four unpinned keys are copied straight off an envelope already proven identical with the flag on and off by boilerplate-offsets-invariant."
+    }
+  ]
+}

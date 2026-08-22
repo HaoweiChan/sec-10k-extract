@@ -745,11 +745,14 @@ function show(i){
     <div class="src-hdr"><span class="lbl">Item ${esc(it.item)} — ${esc(it.title || "")}</span>
       <span class="lbl">${hdrRight}</span></div>
     ${body
-      ? `<pre class="text">${esc(it.text)}</pre>`
+      // PR #27 R1: the ONLY consumer of the stripped string. `it.text`
+      // stays the verbatim slice because findAnchor above matches it
+      // against the original filing, which still contains the chrome.
+      ? `<pre class="text">${esc(it.display_text ?? it.text)}</pre>`
       : `<div class="none" style="padding:12px">Status <b>${esc(it.status)}</b> carries no span: the item is reported as absent rather than silently dropped (INV-S4).</div>`}
     <details class="pane-meta"><summary>where this text came from</summary>
       <dl class="ev">
-        ${it.truncated ? `<dt>shown</dt><dd>first ${it.text.length.toLocaleString()} of ${it.chars.toLocaleString()} characters</dd>` : ""}
+        ${it.truncated ? `<dt>shown</dt><dd>first ${(it.display_text ?? it.text).length.toLocaleString()} of ${it.chars.toLocaleString()} characters</dd>` : ""}
         ${VIEW.boilerplate_excluded ? `<dt>boilerplate</dt><dd>detected chrome is hidden from the text above; the offsets and character count below are still those of the full span (ADR-026)</dd>` : ""}
         <dt>heading matched</dt><dd>${it.heading_text ? esc(it.heading_text) : "— (no heading found)"}</dd>
         <dt>offsets</dt><dd>${it.start != null ? `[${it.start.toLocaleString()}, ${it.end.toLocaleString()})` : "null — no span for this status"}</dd>

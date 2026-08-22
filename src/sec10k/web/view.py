@@ -33,6 +33,16 @@ def build_view(result, display_max=DISPLAY_MAX):
     derived here, never stored. `start`, `end` and `chars` keep reporting the
     SPAN, identical with the flag on and off — INV-S2 offsets do not move
     because a reader chose to hide the furniture between them.
+
+    The stripped string is a SECOND field, `display_text`, and `text` stays
+    the verbatim slice in both modes. PR #27 R1: `text` has two consumers,
+    not one. Besides the pane it is the body-agreement oracle `findAnchor`
+    uses to tell an item's real heading from its table-of-contents entry —
+    against the ORIGINAL filing, which still contains the chrome. Handing
+    that consumer the stripped string cost six items their source anchor.
+    Only the render point may see a string that is not `normalized_text
+    [start:end]`, so only the render point gets one; `display_text` is
+    absent whenever it would be identical to `text`.
     """
     text = result.get("normalized_text") or ""
     spans = result.get("boilerplate")     # present iff exclusion was asked for
@@ -42,16 +52,19 @@ def build_view(result, display_max=DISPLAY_MAX):
         has_span = s is not None and e is not None
         raw = text[s:e] if has_span else ""
         body = strip_chrome(text, spans, s, e) if has_span and spans is not None else raw
-        items.append({
+        item = {
             "item": i.get("item"), "part": i.get("part"), "title": i.get("title"),
             "status": i.get("status"), "confidence": i.get("confidence"),
             "method": i.get("method"), "heading_text": i.get("heading_text"),
             "start": s, "end": e,
             "chars": len(raw) if has_span else None,
-            "text": body[:display_max],
+            "text": raw[:display_max],
             "truncated": len(body) > display_max,
             "evidence": i.get("evidence") or {},
-        })
+        }
+        if body != raw:
+            item["display_text"] = body[:display_max]
+        items.append(item)
     return {
         "doc_status": result.get("doc_status"),
         "warnings": result.get("warnings", []),
@@ -154,18 +167,29 @@ def _demo():
              {"start": h2, "end": h2 + len(head), "kind": "running_head"}]
     off, on = build_view(plain), build_view(dict(plain, boilerplate=spans))
     assert off["boilerplate_excluded"] is False and on["boilerplate_excluded"] is True
-    assert off["items"][0]["text"] == doc[:h2]            # OFF is verbatim
-    assert on["items"][0]["text"] == "Item 1. Business\nreal prose\n"
+    # `text` is VERBATIM in both modes (PR #27 R1). It is not only what the
+    # pane shows: findAnchor matches it against the ORIGINAL filing, which
+    # still has the chrome in it, so handing that consumer a stripped string
+    # cost six fixtures their source anchor.
+    assert off["items"][0]["text"] == doc[:h2] == on["items"][0]["text"]
+    assert "display_text" not in off["items"][0]         # flag off hides nothing
+    assert on["items"][0]["display_text"] == "Item 1. Business\nreal prose\n"
     # windowed: item 7 loses its OWN head, not item 1's, and keeps its prose
-    assert on["items"][1]["text"] == "Item 7. MD&A\nmore prose\n"
+    assert on["items"][1]["display_text"] == "Item 7. MD&A\nmore prose\n"
     for a, b in zip(off["items"], on["items"]):           # offsets never move
         assert (a["start"], a["end"], a["chars"]) == (b["start"], b["end"], b["chars"])
     assert on["items"][0]["chars"] == h2                  # the SPAN, not the shown text
     # flag on, nothing detected: exclusion was still asked for, and asked-for
-    # with an empty answer must not fall back to the un-flagged path
+    # with an empty answer must not fall back to the un-flagged path — but it
+    # must not pay for a display_text identical to `text` either
     none = build_view(dict(plain, boilerplate=[]))
     assert none["boilerplate_excluded"] is True
     assert none["items"][0]["text"] == doc[:h2]
+    assert "display_text" not in none["items"][0]
+    # an item with no chrome inside its own span, on a run that HAS chrome
+    # elsewhere, is the same case and must also stay lean
+    one = build_view(dict(plain, boilerplate=spans[:1]))
+    assert "display_text" in one["items"][0] and "display_text" not in one["items"][1]
     print("[view self-check] ok")
 
 

@@ -56,3 +56,44 @@ changed what shipped.
   venv and recorded as a one-off, not a gate, in its own debt row. The
   alternative — three CI jobs growing a web dependency to gate two keyword
   arguments — was the more expensive lie.
+
+## Round 1: what the falsification discipline did NOT catch
+
+The round-1 mutation battery was ten wrong implementations of the thing being
+built, and every one went red. The reviewer then found a HIGH the battery could
+not have found, because it was not a wrong implementation of this feature at
+all — it was a correct one colliding with a different feature's contract.
+
+- **`item.text` had two consumers, and the diff only looked at one.** Besides
+  the pane, `text` is the body-agreement oracle `findAnchor` matches against the
+  ORIGINAL filing to tell an item's real heading from its table-of-contents
+  entry (PR #21 spent three rounds on that). The original filing still contains
+  the chrome, so feeding that consumer the stripped string cost six items their
+  source anchor — silently, on fixtures reachable from the dropdown. Every
+  mutation in the battery asked "is the stripped string right?"; none asked
+  "who else reads this field?". The generalisable rule is the ponytail one
+  already in the toolchain and not applied hard enough here: *before you change
+  a function, grep every caller* — and a payload key is a function signature.
+  The fix is the same shape as the rule: `text` keeps its single meaning for
+  every consumer and the render point gets its own `display_text`, rather than
+  the anchor path getting a special case.
+
+- **A check written to bind two things can still be checking one.** R2 showed
+  four ways to sever the wire that the plumbing check called green, because it
+  asked each END whether it mentioned the flag rather than asking whether the
+  two ends AGREED. Two of them defeated the feature's headline requirement. The
+  rewrite derives what the client puts on the wire and what the server reads off
+  it and compares the two sets — and re-running R2's own mutation (b) against
+  the *rewritten* check immediately found a second defect in it (a 400-character
+  window that ran into the next call site, so a hardcoded call site borrowed its
+  neighbour's `excludeBp()`). Re-running the mutations after the repair, rather
+  than assuming the repair covered them, is what turned that up.
+
+- **An honest "cannot" beats a green that needs a dependency.** The reviewer
+  offered an HTTP TestClient case as the alternative, and it was rejected on a
+  mechanical fact rather than taste: `evals/run.py` scores `passed / len(results)`
+  over a bool and has no skip state, so a fastapi-dependent case is either
+  silently green where the dependency is absent or red in three CI jobs that
+  install nothing by ADR-003. The debt row was corrected instead — it had named
+  three failure shapes and missed four measured ones, which is its own small
+  version of the same sin the checks keep being caught for.

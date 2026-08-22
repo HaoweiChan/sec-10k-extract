@@ -1,0 +1,22 @@
+{
+  "id": "ui-anchor-contract-boilerplate",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "anchor_contract"
+    ],
+    "exclude_boilerplate": true
+  },
+  "expect": {},
+  "triage": {
+    "class": "cross-feature-regression",
+    "note": "PR #27 R1 (HIGH). S8 made `build_view` render the chrome-stripped body into `item.text`, and `item.text` is not only what the pane displays — `findAnchor` uses it as the body-agreement oracle that disambiguates a heading from its own table-of-contents entry (PR #21 rounds 2-3). The compare pane serves the ORIGINAL filing, which still contains the chrome, so on a short item the stripped body no longer agrees with the source past AGREEMENT_MIN and `find_anchor` returns None — the item loses its source anchor, and because `itemRegion` walks forward to the next non-null anchor for its `end`, the item BEFORE an unanchored one gets its highlighted source region silently widened. `ui-anchor-contract` could not see it: it ran the fixture set with the flag off, which is the only way S8 left it un-run. This case is the same check with `exclude_boilerplate: true`, which is the whole fix's acceptance condition — anchoring must resolve identically with the flag on and off.",
+    "red_first": "Watched red before the fix, exactly the 6 the reviewer and the orchestrator both measured independently (0 with the flag off): caps-cover-2016 item 4, items-stripped item 4, malformed-html item 4, premier-pacific-2016 item 4, toc-titled item 4 (all `ITEM 4. MINE SAFETY DISCLOSURES.`) and wfc-2008 item 9B (`ITEM 9B. OTHER INFORMATION`), each `not anchorable in source`. Every one is reachable from the inspector's own fixture dropdown.",
+    "not_fixed_by": "Lowering AGREEMENT_MIN. That would trade an honest miss for a confident guess, which is the defect PR #21 round 2 already shipped once (hard rule 4). The fix keeps `text` the verbatim INV-S2 slice for every consumer and gives the PANE its own `display_text`."
+  },
+  "provenance": "S8 round-1 repair, created 2026-08-22 before the fix, per hard rule 2."
+}
