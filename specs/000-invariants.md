@@ -35,8 +35,12 @@ Format per invariant:
 
 ## INV-S2: Every extracted item's text is a verbatim slice of normalized_text
 - Rationale: no paraphrase, no LLM rewriting, no dropped characters — offsets
-  must reproduce the item exactly, or provenance is lost.
-- Enforced by: evals/golden/aapl-2025-structure.json
+  must reproduce the item exactly, or provenance is lost. Optional boilerplate
+  exclusion (ADR-026) does not weaken this: it reports chrome as spans and
+  never edits the text, so the offsets are the same bytes with the flag on and
+  off. That equality is asserted, not assumed.
+- Enforced by: evals/golden/aapl-2025-structure.json,
+  evals/adversarial/boilerplate-offsets-invariant.json (exclusion on vs off)
 
 ## INV-S3: Only canonical item codes, valid for the filing's taxonomy era
 - Rationale: "Item 405 of Regulation S-K" and "Item 601" appear as prose in

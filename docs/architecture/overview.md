@@ -70,6 +70,24 @@ newline is era-dependent — collapsed inside HTML text chunks at parse time
 (where it is a filer's 80-column source wrap), preserved in txt-era filings
 (where it is the document's own layout). Measured: 13/13 fixtures
 deterministic, 40/40 eval anchors survive, 492 ms for the 12.8 MB JPM filing.
+**Amended (S6, ADR-026)**: page furniture still stays in the text — layer 3 is
+unchanged and this is the whole reason offsets are stable. What S6 adds is a
+way to *point at* it. See layer 3b.
+
+**3b. Boilerplate chrome detection** (`src/sec10k/boilerplate.py`) — OPTIONAL,
+off by default, and a pure read: `extract_items(path, exclude_boilerplate=True)`
+adds one envelope key, `boilerplate`, a list of `{start, end, kind}` line runs
+into `normalized_text`. Three kinds — `edgar_chrome` (a line that is only SGML
+`<PAGE>`/`<TABLE>`/`<S>`/`<C>` furniture, txt era only), `running_head` (exact
+line repeating ≥8× at regular gaps spanning ≥70% of the document),
+`page_number` (a 1–3 digit line adjacent to one of those). Nothing downstream
+reads it, so `normalized_text`, `items`, `warnings` and `doc_status` are
+byte-identical with the flag on and off — INV-S2 by construction, not by care.
+The stripped view is `boilerplate.strip_chrome()`, computed on demand and never
+stored. Thresholds measured over the 28 real fixtures, 0.607% of characters
+excluded, zero false positives (ADR-026 §c). Trace: none — the key IS the
+record. Eval: `boilerplate-chrome-detected`, `boilerplate-near-miss`,
+`boilerplate-txt-chrome`, `boilerplate-offsets-invariant` (invariant suite).
 
 **4. Candidate detection** — every plausible item heading, with features.
 Line-anchored, case-insensitive pattern on `Item <code>` where the code must be

@@ -73,6 +73,16 @@ unchanged; field rationale lives in `docs/product/task2-problem-definition.md`.
   probability.
 - Offsets are into `normalized_text`, NOT the raw file. Normalization is owned
   by the extractor but must be deterministic for a given input.
+- **`boilerplate` (optional, ADR-026)**: present *only* when the caller passes
+  `extract_items(path, exclude_boilerplate=True)`. A list of
+  `{"start", "end", "kind"}` line runs into `normalized_text`, `kind` ∈
+  `edgar_chrome` | `running_head` | `page_number`, non-overlapping and in
+  document order. It is an annotation, never an edit: `normalized_text` and
+  every item offset are byte-identical with the flag on and off, so the rules
+  above hold unchanged in both modes. `[]` means "asked, found none" and is a
+  different answer from the key being absent. The stripped view is derived by
+  `src/sec10k/boilerplate.strip_chrome()` and is deliberately not a field —
+  same reason item text is not one.
 
 ## Envelope rules (v2, normative)
 

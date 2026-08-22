@@ -28,6 +28,13 @@ jobs:
       - run: python3 -m src.sec10k.normalize
       - run: python3 -m src.sec10k.segment
       - run: python3 -m src.sec10k.validate
+      # ADR-026 names this self-check as an "Enforced by" artifact, and PR #25
+      # R1 measured what that was worth while it was absent here: MIN_REPEATS
+      # 8->20, MIN_SPREAD 0.70->0.95, PAGE_DIGITS 3->4 and a no-op strip_chrome
+      # all left the eval gate 33/33 and 74/74 green with only _demo red, and
+      # nothing automated ran _demo. A self-check no job runs is a claim, not
+      # enforcement.
+      - run: python3 -m src.sec10k.boilerplate
       # the view layer imports no fastapi, precisely so it can run here
       - run: python3 -m src.sec10k.web.view
       - run: python3 -m evals.metrics --self-check

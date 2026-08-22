@@ -1,0 +1,92 @@
+{
+  "pr": 25,
+  "round": 1,
+  "task": "S6",
+  "review": "tasks/reviews/pr25-r1.json",
+  "resolved_by": "implementer",
+  "date": "2026-08-22",
+  "protocol": "Every finding's repro was re-run before anything was edited; all six reproduced. For the four coverage findings (R1, R2, R4, R5) the reviewer's mutation was then re-applied AFTER the repair and the specific new check was observed red. Every mutation was reverted; `git diff` on src/ carries none of them.",
+  "gate_at_resolution": {
+    "invariant": "33/33 = 1.000",
+    "fast": "75/75 = 1.000",
+    "baseline": "1.000, not moved",
+    "self_checks": "python3 -m src.sec10k.boilerplate ok; python3 -m src.sec10k.test_eval_adapter 16/16 (test_boilerplate_checks extended to cover the new boilerplate_stripped branches)"
+  },
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "reproduced": true,
+      "repro_observed": "grep -n 'src.sec10k' .github/workflows/ci.yml -> lines 27,28,29,30,32 (test_eval_adapter, normalize, segment, validate, web.view); boilerplate absent. With PAGE_DIGITS = 4: invariant 33/33 = 1.000, fast 74/74 = 1.000, adapter self-check 16/16 -- all green -- while `python3 -m src.sec10k.boilerplate` exits 1.",
+      "fix": ".github/workflows/ci.yml:37 adds `- run: python3 -m src.sec10k.boilerplate` to the unit-tests job, with a comment recording the four mutations that were green without it. ADR-026's Enforced-by line now names the CI job rather than the bare module path.",
+      "covered_by": ".github/workflows/ci.yml unit-tests job",
+      "verified_red_after_fix": "Ran the unit-tests job's own command list with PAGE_DIGITS mutated 3 -> 4: test_eval_adapter exit 0, normalize exit 0, segment exit 0, validate exit 0, **boilerplate exit 1**, web.view exit 0, evals.metrics --self-check exit 0. The job now fails on a mutation that previously passed every automated gate."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "reproduced": true,
+      "repro_observed": "With `return text[start:len(text) if end is None else end]` inserted as strip_chrome's first statement: invariant 33/33 = 1.000, fast 74/74 = 1.000, adapter self-check 16/16 -- all green. `grep -rn strip_chrome evals/` returned nothing at all.",
+      "fix": "New check type `boilerplate_stripped` (src/sec10k/eval_adapter.py:253). It derives the stripped view and asserts (a) removed == sum(end-start) over the spans -- the assertion a no-op fails first, and the one that also catches removing too much; (b) an optional exact `removed_chars`; (c) an optional `not_contains` list; (d) the reconstruction identity -- stripping a chrome run's OWN window yields '' while normalized_text[start:end] still returns its original characters, which is the `start`/`end` path a caller uses for one item's body. Wired into boilerplate-chrome-detected (removed_chars 2002) and the new boilerplate-section-heads (span-equality only, since jpm's character count is not what that case pins).",
+      "covered_by": "evals/adversarial/boilerplate-chrome-detected.json :: boilerplate_stripped; evals/adversarial/boilerplate-section-heads.json :: boilerplate_stripped",
+      "verified_red_after_fix": "Same no-op mutation, after the fix: fast 73/75 = 0.973, REGRESSION vs baseline 1.000. boilerplate-chrome-detected -> 'stripped view removed 0 chars, spans total 2002'; boilerplate-section-heads -> 'stripped view removed 0 chars, spans total 11388'."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "reproduced": true,
+      "repro_observed": "In ge-1994 normalized_text: '- ' + 69 dashes (the committed 70-char value, i.e. '- ' + 68 dashes) occurs **0** times; '- ' + 75 dashes (77 chars) occurs **37** times at CV 0.82, spread 0.66. The committed check selected zero runs unconditionally.",
+      "fix": "evals/adversarial/boilerplate-txt-chrome.json: the check's `value` is now the 77-character string that actually occurs. Provenance rewritten to state the real string and to record that the CV/spread figures had been measured on the real line and written next to the wrong one. ADR-026 f1's matching sentence corrected the same way.",
+      "covered_by": "evals/adversarial/boilerplate-txt-chrome.json :: {\"type\":\"boilerplate\",\"value\":\"- \"+75 dashes,\"max\":0}",
+      "verified_red_after_fix": "MAX_GAP_CV 0.60 -> 0.85 and MIN_SPREAD 0.70 -> 0.60 (the reviewer's acceptance condition, which reclassifies the dash line as running_head): fast 72/75 = 0.960, REGRESSION. boilerplate-txt-chrome -> \"boilerplate '- ---...---'/<any kind>: 37 runs > max 0\". Before the fix the same mutation left this case PASSING."
+    },
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "reproduced": true,
+      "repro_observed": "MIN_SPREAD 0.70 -> 0.40: invariant 33/33 = 1.000, fast 74/74 = 1.000, adapter self-check 16/16, `python3 -m src.sec10k.boilerplate` ok -- everything green, while jpm-2024 gains 81 false running_head spans (572 -> 653).",
+      "fix": "New case evals/adversarial/boilerplate-section-heads.json on jpm-2024, the only committed filing with section-level running heads. Seven max-0 probes, each with its measured count / CV / spread and the gate that rejects it recorded in provenance. Two of them are the spread-rejected ones that carry the finding: 'Notes to consolidated financial statements' (73x, CV 0.28, spread 0.42) and '2024' (8x, CV 0.57, spread 0.64). The other four are CV-rejected and are labelled as such rather than credited to spread.",
+      "covered_by": "evals/adversarial/boilerplate-section-heads.json",
+      "verified_red_after_fix": "MIN_SPREAD = 0.40: fast 74/75 = 0.987, REGRESSION. boilerplate-section-heads -> \"'Notes to consolidated financial statements': 73 runs > max 0\" and \"'2024': 8 runs > max 0\" (73 + 8 = 81, matching the reviewer's span delta). Green at 0.70.",
+      "note_on_the_MAX_GAP_CV_half": "The finding's evidence also observes that MAX_GAP_CV 0.60 -> 0.80 leaves everything green. Measured after this repair, that is true and is NOT a coverage hole: raising the CV gate to anything below 0.84 changes zero spans on msft-2013, cvx-2015, ge-1994 and jpm-2024, so there is no behaviour difference for a case to detect. 0.84 is the first value that admits a false positive (cvx-2015 gains 17 spans), and boilerplate-near-miss goes red at exactly 0.84. Recorded as a comment on the constant (src/sec10k/boilerplate.py:47-51) so the observation is not re-derived as a defect."
+    },
+    {
+      "id": "R5",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "reproduced": true,
+      "repro_observed": "Adjacency condition reduced to the below-only form: invariant 33/33 = 1.000, fast 74/74 = 1.000, adapter self-check 16/16, `python3 -m src.sec10k.boilerplate` ok -- everything green, including _demo.",
+      "fix": "Covered by the same new case as R4. jpm-2024 places its page number ABOVE the running head, so it is the fixture that exercises the neighbour(i, -1) branch; msft-2013 and ge-1994 are unchanged by dropping it. The case asserts {\"kind\": \"page_number\", \"min\": 280, \"max\": 290} against a measured 286.",
+      "covered_by": "evals/adversarial/boilerplate-section-heads.json :: {\"type\":\"boilerplate\",\"kind\":\"page_number\",\"min\":280,\"max\":290}",
+      "verified_red_after_fix": "Below-only mutation: fast 74/75 = 0.987, REGRESSION. boilerplate-section-heads -> \"boilerplate '<any>'/page_number: 143 runs < min 280\" -- the exact 286 -> 143 halving the reviewer measured."
+    },
+    {
+      "id": "R6",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "reproduced": true,
+      "repro_observed": "cvx-2015 normalized_text (417,523 chars / 21,845 lines, both of which do reproduce): lines where str.isdigit() = 2,045, not 2,063; distinct stripped line texts with count >= 3 = 521, not 518. Fixture count: 38 dirs - 9 synthetic - repo_hygiene = 28, not 24.",
+      "fix": "All three corrected to the values the ADR-026 c6 audit prints, each with its definition named: '2,045 of them (lines where str.isdigit() is true)' and '521 distinct stripped line texts repeating 3 or more times'. Root cause recorded in the near-miss case provenance rather than silently patched -- both figures came from a filtered exploration script (518 additionally required len <= 80; 2,063 counted a decorated 1-4 digit regex) and the filters were dropped when the numbers were moved into prose. The corpus size was not corrected but DELETED: src/sec10k/boilerplate.py:40-43 no longer restates it and cites ADR-026 c, which owns it -- a second copy of a number is what drifted, so there is now one copy. Sites touched: src/sec10k/boilerplate.py:31-32 and :40-43, ADR-026 b and f3, evals/adversarial/boilerplate-near-miss.json provenance (two places).",
+      "covered_by": "not a check -- these are prose figures. The durable fix is the deletion of the duplicated corpus size; the two cvx figures now carry their definition inline so the count is reproducible from the sentence itself.",
+      "verified": "`grep -rn '2,063\\|518 distinct\\|24 real' src/ specs/ evals/adversarial/ docs/ tasks/` returns only the correction notes recording the old values and tasks/reviews/pr25-r1.json. Separately re-verified two figures the finding did not challenge and that survive unchanged: cvx-2015 '$' = 1,058 and msft-2013 'Total' = 39."
+    }
+  ],
+  "not_addressed": [
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "status": "debt",
+      "note": "Routed to debt by the orchestrator, not to this repair. R7 says ADR-026 d and the g table misdescribe which case asserts what. The g table was rewritten as part of this repair because R1/R2/R4/R5 made it stale (four of its five rows changed), and the rewrite states the two things R7 named -- boilerplate-offsets-invariant runs msft-2013 only, and the txt-era half is boilerplate-txt-chrome's. Section d was NOT touched, per the instruction not to widen the PR."
+    }
+  ],
+  "new_debt": [],
+  "unverified": [
+    "The CI change itself was not executed on GitHub Actions -- no runner is reachable from this branch. What was verified is the exact command list the unit-tests job declares, run locally, with and without the PAGE_DIGITS mutation.",
+    "evals/heldout/ was not run and not looked at, unchanged from the original S6 report: thresholds are implementation and the burn rule forbids tuning them there. The new jpm-2024 case does not change that.",
+    "boilerplate-section-heads pins MIN_SPREAD from below (0.40 is red). It does not pin it from above: raising MIN_SPREAD loses recall rather than gaining false positives, and no case asserts a running head that a HIGHER spread gate would drop. MIN_REPEATS is in the same position -- 8 -> 20 is caught only by _demo, which is now in CI (R1), but by no eval case."
+  ]
+}

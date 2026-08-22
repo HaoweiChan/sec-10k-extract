@@ -1,0 +1,44 @@
+{
+  "pr": 25,
+  "task": "S6",
+  "round": 2,
+  "date": "2026-08-22",
+  "reviewer": "groundwork:pr-reviewer (fresh context; scoped to the repair diff e70ee87..33712c4 plus the six standing findings)",
+  "result": "APPROVED",
+  "counts": {
+    "HIGH": 0,
+    "MEDIUM": 0,
+    "LOW": 3
+  },
+  "standing_findings": "R1-R6 all confirmed closed. R2 was attacked hardest: seven wrong `strip_chrome` implementations (total no-op, +1 shift, remove-head-N, remove-tail-N, window-relative spans, start/end ignored, end-1 off-by-one) were monkeypatched against msft-2013 and jpm-2024 and all seven turned the case red. R7 was out of scope (already debt) and the repair did not worsen it.",
+  "routing_note": "All three findings are LOW, so the pr-loop scope rule routes them to debt regardless of criteria, and with zero repair-routed findings the round result is APPROVED. The orchestrator AGREES with all three severities rather than merely deferring to them: every one of the three errs in the same direction - the committed checks cover MORE than their own prose claims (MIN_SPREAD is pinned on both sides, not one; the adjacency rule is pinned on both halves, not one; R2 is carried by four working sub-assertions and only the fifth is inert). None changes a number the ruling depends on, none turns the gate red, and none violates S6's acceptance criteria. R9 and R10 were re-measured independently by the orchestrator before routing; both reproduce exactly.",
+  "findings": [
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The `boilerplate_stripped` sub-assertion labelled \"the reconstruction identity\" cannot fail - it only tests that the first span's slice is non-blank, which `find_chrome` guarantees by construction, so the R2 acceptance clause \"normalized_text[start:end] still reconstructs the original run\" is claimed but not actually asserted.",
+      "evidence": "src/sec10k/eval_adapter.py:281-282 `if not text[b[\"start\"]:b[\"end\"]].strip(): return \"chrome run does not reconstruct to its original text\"`. `text` is `result[\"normalized_text\"]` and is never passed through `strip_chrome`, so the branch is independent of the function under test; and every kind in `find_chrome` requires a non-blank stripped line, so no span the envelope can publish makes the slice blank. Monkeypatched `strip_chrome` with 7 wrong implementations (total no-op, +1 shift, remove-head-N, remove-tail-N, spans-treated-as-window-relative, start/end ignored, end-1 off-by-one) against msft-2013 and jpm-2024: all 7 went red, none of them via this branch. `tasks/reviews/pr25-r1-resolution.json` R2 fix item (d) states it verifies that \"normalized_text[start:end] still returns its original characters\" - it does not.",
+      "repro": "Check every published span reconstructs non-blank on msft-2013 -> True for all; and grep the branch: no `strip_chrome` result is compared against an expected string anywhere in the check.",
+      "acceptance": "Either the branch compares the reconstructed slice against something the case declares (as `boilerplate._demo`:173 does with a literal), or it is deleted and the resolution/ADR stop crediting `boilerplate_stripped` with a reconstruction assertion. The other four sub-assertions already carry R2 and should stay."
+    },
+    {
+      "id": "R9",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The resolution artifact's residual-risk statement that `boilerplate-section-heads` \"does not pin [MIN_SPREAD] from above\" and that \"no case asserts a running head that a HIGHER spread gate would drop\" is false - the case is pinned from above and goes red at MIN_SPREAD = 0.83.",
+      "evidence": "tasks/reviews/pr25-r1-resolution.json, `unverified[2]`. jpm-2024's real running head `JPMorgan Chase & Co./2024 Form 10-K` has measured spread 0.8202 (286 occurrences, CV 0.368), and evals/adversarial/boilerplate-section-heads.json asserts `{\"kind\":\"running_head\",\"min\":280}` plus `{\"kind\":\"page_number\",\"min\":280}`. Raising MIN_SPREAD past 0.8202 drops jpm-2024 from 572 spans to 0, so the case is red. Measured sweep: MIN_SPREAD 0.65-0.82 changes nothing on any of the 37 fixtures; 0.83, 0.90, 0.95 all take jpm-2024 to 0 spans; 0.50/0.60 take it to 580 and 0.40 to 653.",
+      "repro": "Set MIN_SPREAD = 0.83 and run `python3 -m evals.run --suite fast --no-report` -> [FAIL] boilerplate-section-heads, 74/75 = 0.987. ORCHESTRATOR RE-RAN THIS INDEPENDENTLY: reproduces exactly.",
+      "acceptance": "The `unverified` bullet is corrected to state that MIN_SPREAD is now pinned on both sides (red at 0.40 and at 0.83, green in 0.65-0.82), leaving only the MIN_REPEATS half - which the reviewer re-ran and which is accurate: MIN_REPEATS 8->20 leaves fast at 75/75 with only `_demo` red."
+    },
+    {
+      "id": "R10",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "`boilerplate-section-heads`' provenance (and the matching resolution text) states the wrong mechanism for R5: it says jpm-2024 \"puts its page number ABOVE the running head\" and therefore exercises the `neighbour(i, -1)` branch, but jpm-2024 splits exactly 143/143 between the two directions, and a number placed above its head is found by the *below* branch, not the above one.",
+      "evidence": "evals/adversarial/boilerplate-section-heads.json provenance, R5 paragraph; tasks/reviews/pr25-r1-resolution.json R5 `fix`. Measured on jpm-2024 normalized_text: of the 286 detected `page_number` lines, 143 have their chrome neighbour ABOVE only (line index 2590, text `49`, preceded by `JPMorgan Chase & Co./2024 Form 10-K`) and 143 have it BELOW only (line index 2722, text `50`, followed by the same head). Consequently both single-direction mutations give 143, not just the below-only one - the coverage is better than the provenance claims, but the stated fixture property is not what the fixture does.",
+      "repro": "Both single-direction mutations of the adjacency condition give jpm-2024 143 page numbers and both turn the case red (fast 74/75). ORCHESTRATOR RE-RAN THIS INDEPENDENTLY: above-only -> 143, below-only -> 143.",
+      "acceptance": "The provenance says jpm-2024 alternates (143 numbers above their head, 143 below) and that the case therefore pins BOTH halves of the adjacency rule - which is what it actually does - instead of naming one direction."
+    }
+  ]
+}

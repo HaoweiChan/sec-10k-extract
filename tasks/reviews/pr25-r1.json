@@ -1,0 +1,79 @@
+{
+  "pr": 25,
+  "task": "S6",
+  "round": 1,
+  "date": "2026-08-22",
+  "reviewer": "groundwork:pr-reviewer (fresh context, full-diff sweep of main...task/S6 @ e70ee87)",
+  "result": "REQUEST_CHANGES",
+  "counts": {
+    "HIGH": 0,
+    "MEDIUM": 6,
+    "LOW": 1
+  },
+  "routing_note": "R1-R6 are MEDIUM and each meets the pr-loop scope test: R2/R3/R4/R5 are checks that cannot fail, which is the acceptance criterion itself ('red cases first ... where it must fire and ... where it must not') not being met by the committed eval set; R1 and R6 make claims in committed documents of record dishonest. R7 is LOW and routed to debt regardless of severity, per the scope rule. Orchestrator note on R7: it is the same family as R1/R6 (a false claim in ADR-026) and sits in the very section R1's repair touches, so the orchestrator would not object if the R1 fix happens to make d/g true - but the implementer is not to go chasing it.",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-026 names `src/sec10k/boilerplate.py::_demo` as an \"Enforced by\" artifact, but the new module is the only sec10k module with a `_demo` that was not added to the CI unit-tests job, so nothing ever runs it.",
+      "evidence": ".github/workflows/ci.yml:28-32 runs `python3 -m src.sec10k.{test_eval_adapter,normalize,segment,validate,web.view}` and `evals.metrics --self-check`; `src.sec10k.boilerplate` is absent. `.githooks/pre-commit` runs only `evals.run --suite fast`, and `.claude/hooks/post-edit-invariant.sh` only `--suite invariant`. ADR-026 line 9 and specs/decisions/INDEX.md:33 both cite the self-check as enforcement. Measured consequence: four mutations are caught ONLY by `_demo` and are green on the whole gate - MIN_REPEATS 8->20, MIN_SPREAD 0.70->0.95, PAGE_DIGITS 3->4, and strip_chrome no-op (see R2).",
+      "repro": "grep -n 'src.sec10k' .github/workflows/ci.yml   # boilerplate missing; then `sed -i '' 's/PAGE_DIGITS = 3/PAGE_DIGITS = 4/' src/sec10k/boilerplate.py && python3 -m evals.run --suite invariant && python3 -m evals.run --suite fast` -> 33/33 and 74/74 green, while `python3 -m src.sec10k.boilerplate` exits 1",
+      "acceptance": "`- run: python3 -m src.sec10k.boilerplate` added to the ci.yml unit-tests job (or the ADR's \"Enforced by\" line stops claiming the self-check), so at least one automated gate goes red when `_demo` does."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "`strip_chrome()` - the \"stripped run is reconstructible\" half of the S6 acceptance criterion - has zero eval-case coverage: replacing its whole body with `return text[start:end]` (a total no-op that strips nothing) leaves invariant 33/33, fast 74/74 and the adapter self-check 16/16 green.",
+      "evidence": "src/sec10k/boilerplate.py:124-142. No committed case calls `strip_chrome`: `grep -rn strip_chrome evals/` returns only provenance prose in evals/adversarial/*.json. The adapter's three new check types (`boilerplate`, `boilerplate_spans_sane`, `offsets_invariant_under_exclusion`, src/sec10k/eval_adapter.py:205-266) all read `result[\"boilerplate\"]` spans and never derive the stripped view. Combined with R1, the function is unguarded by anything that runs.",
+      "repro": "Insert `return text[start:len(text) if end is None else end]` as the first line of `strip_chrome` in src/sec10k/boilerplate.py, then `python3 -m evals.run --suite invariant --no-report; python3 -m evals.run --suite fast --no-report; python3 -m src.sec10k.test_eval_adapter` -> 33/33, 74/74, 16/16 all green (only `python3 -m src.sec10k.boilerplate` goes red).",
+      "acceptance": "A committed case (fast or invariant) that asserts the stripped view on a real fixture - e.g. that `strip_chrome(normalized_text, boilerplate)` on msft-2013 no longer contains 'Table of Contents', is exactly 2,002 chars shorter, and that `normalized_text[start:end]` still reconstructs the original run - and that goes red under the no-op mutation."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "`boilerplate-txt-chrome`'s dash-rule `max: 0` check is vacuous - its `value` string does not exist in ge-1994's normalized_text, so it selects zero runs no matter what the detector does, and the provenance's \"measured\" CV/spread for it belong to a different string.",
+      "evidence": "evals/adversarial/boilerplate-txt-chrome.json:79-82 asserts `{\"value\": \"- \" + 69 dashes (len 70), \"max\": 0}` and its provenance says \"The 70-dash rule line occurs 37x at CV 0.82, spread 0.66: it is arguably chrome and is deliberately NOT detected (ADR-026 f1), and this check pins that as a decision\". Measured on ge-1994 normalized_text: that exact 70-char line occurs **0** times; the real rule line is `'- ' + 75 dashes` (77 chars), occurs 37x, CV 0.82, spread 0.66. ADR-026 f1:248 repeats the same figures. The check therefore pins nothing.",
+      "repro": "python3 -c \"import sys,os;sys.path.insert(0,os.getcwd());from src.sec10k.normalize import select_and_normalize;from src.sec10k.boilerplate import _lines;from pathlib import Path;t=select_and_normalize(Path('evals/fixtures/ge-1994/filing.txt').read_bytes().decode())[0];v='- '+'-'*69;print(sum(1 for x in _lines(t) if x[2]==v), sum(1 for x in _lines(t) if x[2]=='- '+'-'*75))\" -> `0 37`. Then set `MAX_GAP_CV = 0.85` and `MIN_SPREAD = 0.60`: ge-1994 chrome goes 392 -> 429 spans (the 37 dash lines become `running_head`) and `boilerplate-txt-chrome` still PASSES.",
+      "acceptance": "The check's `value` is the string that actually occurs (`'- ' + 75*'-'`), and loosening MAX_GAP_CV/MIN_SPREAD until that line is classified as chrome turns `boilerplate-txt-chrome` red."
+    },
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The MIN_SPREAD threshold's value is not pinned by any eval case: lowering it 0.70 -> 0.40 keeps every suite green while adding 73 false `running_head` spans on jpm-2024 - exactly the section-level heads ADR-026 c3/f1 say the gate exists to reject and that c6's \"zero false positives\" depends on.",
+      "evidence": "src/sec10k/boilerplate.py:47. With `MIN_SPREAD = 0.40`, jpm-2024 `find_chrome` returns 653 spans instead of 572, including 73x `'Notes to consolidated financial statements'` (CV 0.28, spread 0.42) and 8x `'2024'` (spread 0.64, the ADR's own nearest non-chrome data point). No committed case runs jpm-2024 (or any fixture with a section-level running head) with `exclude_boilerplate`; the near-miss corpus is msft-2013 + cvx-2015 only, whose worst near-miss spreads are 0.35/0.26. MAX_GAP_CV has the same hole: 0.60 -> 0.80 leaves all four cases and `_demo` green.",
+      "repro": "sed -i '' 's/MIN_SPREAD = 0.70/MIN_SPREAD = 0.40/' src/sec10k/boilerplate.py && python3 -m evals.run --suite invariant --no-report && python3 -m evals.run --suite fast --no-report && python3 -m src.sec10k.boilerplate  -> 33/33, 74/74, self-check ok (all green)",
+      "acceptance": "A case running jpm-2024 (or nvda-2024) with `exclude_boilerplate: true` and `{\"value\": \"Notes to consolidated financial statements\", \"max\": 0}` / `{\"value\": \"NVIDIA Corporation and Subsidiaries\", \"max\": 0}`, which goes red at MIN_SPREAD 0.40 and green at 0.70."
+    },
+    {
+      "id": "R5",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The \"above\" half of the page-number adjacency rule is unexercised: dropping it silently halves detected page numbers on jpm-2024 (286 -> 143) with every suite and the module self-check still green.",
+      "evidence": "src/sec10k/boilerplate.py:117 `if kinds.get(neighbour(i, -1)) or kinds.get(neighbour(i, 1)):` implements ADR-026 b's \"the nearest non-blank line above **or** below\". Mutating it to `if kinds.get(neighbour(i, 1)):` (below only) changes nothing on msft-2013 (94) or ge-1994 (392) - the only two fixtures the new cases run - but jpm-2024's `page_number` count drops from 286 to 143, i.e. every page whose footer number sits *under* the running head is lost. `boilerplate._demo` is also blind to it (its synthetic pages happen to have a head below every number), so it stays green too.",
+      "repro": "Replace `if kinds.get(neighbour(i, -1)) or kinds.get(neighbour(i, 1)):` with `if kinds.get(neighbour(i, 1)):` in src/sec10k/boilerplate.py, then `python3 -m evals.run --suite invariant --no-report; python3 -m evals.run --suite fast --no-report; python3 -m src.sec10k.boilerplate`   # 33/33, 74/74, self-check ok",
+      "acceptance": "A case (fixture or `_demo`) whose page numbers are adjacent to chrome only from above - e.g. a jpm-2024 `{\"kind\":\"page_number\",\"min\":280}` check, or a `_demo` block with a trailing footer under the head - which goes red under the below-only mutation."
+    },
+    {
+      "id": "R6",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "Three figures written in the voice of a measurement do not reproduce: cvx-2015's \"2,063 bare-number lines\" (actual 2,045), \"518 distinct line texts repeating 3+ times\" (actual 521), and the shipped code's \"24 real EDGAR filings\" corpus size (actual 28, as ADR-026 c itself says).",
+      "evidence": "src/sec10k/boilerplate.py:31 and :39-41; specs/decisions/ADR-026-boilerplate-chrome-exclusion.md:62, :266; evals/adversarial/boilerplate-near-miss.json provenance (\"measured 2026-08-22 ... 518 distinct line texts repeating 3+ times ... 2,063 lines that consist of nothing but a bare number\"). Measured on cvx-2015 normalized_text (417,523 chars, 21,845 lines, which do reproduce): lines whose stripped text `.isdigit()` = **2,045**; distinct stripped line texts with count >= 3 = **521**. No alternate definition reaches 2,063 or 518 (1-3 digits: 1,795; digits with parens: 2,550; count>=2: 1,122; count>=4: 279). Fixture count: 38 dirs - 9 self-created mutants - `repo_hygiene` = **28**, contradicting boilerplate.py's \"24\".",
+      "repro": "python3 -c \"import sys,os;sys.path.insert(0,os.getcwd());from src.sec10k.normalize import select_and_normalize;from pathlib import Path;import collections;t=select_and_normalize(Path('evals/fixtures/cvx-2015/filing.htm').read_bytes().decode())[0];L=[l.strip() for l in t.split(chr(10))];c=collections.Counter(x for x in L if x);print(sum(1 for x in L if x.isdigit()), sum(1 for v,n in c.items() if n>=3))\" -> `2045 521`",
+      "acceptance": "The three numbers are corrected to what the audit script in ADR-026 c6 prints (2,045 / 521 / 28), or each is relabelled with the definition under which it reproduces."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "ADR-026's enforcement map (d and the g table) misstates which case asserts what: it claims the invariant-suite case covers both an HTML and a txt fixture, and credits `boilerplate-chrome-detected` with a flag-OFF assertion it does not contain.",
+      "evidence": "ADR-026 d:188-190 \"asserts it as an **invariant-suite** case on both an HTML fixture that fires and a txt fixture that fires\" and g:279 \"`boilerplate-offsets-invariant` | **invariant** | msft-2013 **and ge-1994**\". The committed evals/adversarial/boilerplate-offsets-invariant.json runs msft-2013 only, and its own provenance says the opposite: \"The txt-era counterpart runs in the fast suite as boilerplate-txt-chrome's offsets_invariant_under_exclusion check.\" So the invariant suite has no txt-era offset-invariance coverage. g:276 also credits `boilerplate-chrome-detected` with \"with the flag OFF the envelope carries no `boilerplate` key at all\" - that case runs with `exclude_boilerplate: true` and has no such check (the OFF assertion lives only in `offsets_invariant_under_exclusion`, eval_adapter.py:263), and g:277 attributes msft-2013's `Total`/`PART II`/`Item 8` near-miss checks to `boilerplate-near-miss`, where they do not live.",
+      "repro": "python3 -c \"import json;c=json.load(open('evals/adversarial/boilerplate-offsets-invariant.json'));print(c['input'],c['suites'])\" -> msft-2013 only; python3 -c \"import json;print(json.load(open('evals/adversarial/boilerplate-txt-chrome.json'))['suites'])\" -> ['fast']",
+      "acceptance": "Either the ge-1994 offsets-invariance check is added to the invariant suite so d/g are true as written, or d/g are corrected to describe the four committed cases exactly."
+    }
+  ]
+}

@@ -1,7 +1,8 @@
 """Eval adapter for sec10k — owns the check vocabulary and item registry.
 
 Case shape:
-    "input":  {"path": "evals/fixtures/<name>/<file>"}
+    "input":  {"path": "evals/fixtures/<name>/<file>",
+               "exclude_boilerplate": false}   # optional, ADR-026
     "expect": {"checks": [{"type": ..., ...}, ...]}
 """
 from pathlib import Path
@@ -201,6 +202,97 @@ def eval_check(result, chk, path=None):
         if {k: result.get(k) for k in DETERMINISM_FIELDS} \
                 != {k: r2.get(k) for k in DETERMINISM_FIELDS}:
             return "non-deterministic output"
+    elif t == "boilerplate":
+        # ADR-026. `enabled` asserts only whether the envelope carries the key
+        # at all; `value` (exact stripped line text) and/or `kind` select runs,
+        # and `min`/`max` bound how many were selected. A bare `max: 0` is how
+        # a case says "this line must never be treated as chrome".
+        if "enabled" in chk:
+            if chk["enabled"] != ("boilerplate" in result):
+                return (f"boilerplate key {'absent' if chk['enabled'] else 'present'}, "
+                        f"expected {'present' if chk['enabled'] else 'absent'}")
+            if len(chk) == 2:  # type + enabled: nothing else to select on
+                return None
+        if "boilerplate" not in result:
+            return "no boilerplate in result (was exclude_boilerplate set?)"
+        runs = result["boilerplate"]
+        if "kind" in chk:
+            runs = [b for b in runs if b["kind"] == chk["kind"]]
+        if "value" in chk:
+            runs = [b for b in runs
+                    if result["normalized_text"][b["start"]:b["end"]].strip() == chk["value"]]
+        n = len(runs)
+        sel = f"{chk.get('value', '<any>')!r}/{chk.get('kind', '<any kind>')}"
+        # a selector with NO bound at all asserts presence — otherwise a typo in
+        # `value` would pass silently. `max` alone means the case is asserting
+        # absence, so it must not also demand one.
+        lo = chk.get("min", 0 if "max" in chk else 1)
+        if n < lo:
+            return f"boilerplate {sel}: {n} runs < min {lo}"
+        if "max" in chk and n > chk["max"]:
+            return f"boilerplate {sel}: {n} runs > max {chk['max']}"
+    elif t == "boilerplate_spans_sane":
+        # the off-by-one guard: a chrome run must be whole lines and nothing
+        # else, or "exclusion" silently eats a character of filing prose.
+        if "boilerplate" not in result:
+            return "no boilerplate in result (was exclude_boilerplate set?)"
+        text = result["normalized_text"]
+        prev = 0
+        for b in result["boilerplate"]:
+            if not (0 <= b["start"] < b["end"] <= len(text)):
+                return f"boilerplate run {b} outside normalized_text"
+            if b["start"] < prev:
+                return f"boilerplate run {b} overlaps or is out of order"
+            prev = b["end"]
+            if b["start"] and text[b["start"] - 1] != "\n":
+                return f"boilerplate run {b} does not start at a line start"
+            if b["end"] < len(text) and text[b["end"] - 1] != "\n":
+                return f"boilerplate run {b} does not end at a line end"
+            if "\n" in text[b["start"]:b["end"] - 1]:
+                return f"boilerplate run {b} spans more than one line"
+    elif t == "boilerplate_stripped":
+        # PR #25 R2: the three checks above all read the SPANS, so replacing
+        # strip_chrome's body with `return text[start:end]` — a total no-op —
+        # left every suite green. This one derives the stripped view, which is
+        # the "a stripped run is reconstructible" half of S6's acceptance.
+        if "boilerplate" not in result:
+            return "no boilerplate in result (was exclude_boilerplate set?)"
+        from src.sec10k.boilerplate import strip_chrome
+        text, spans = result["normalized_text"], result["boilerplate"]
+        stripped = strip_chrome(text, spans)
+        removed = len(text) - len(stripped)
+        # the spans and the removal are the same set of characters: nothing
+        # extra came out, and nothing the envelope named stayed in
+        want = sum(b["end"] - b["start"] for b in spans)
+        if removed != want:
+            return f"stripped view removed {removed} chars, spans total {want}"
+        if "removed_chars" in chk and removed != chk["removed_chars"]:
+            return f"stripped view removed {removed} chars != {chk['removed_chars']}"
+        for v in chk.get("not_contains", []):
+            if v in stripped:
+                return f"stripped view still contains {v!r}"
+        if spans:
+            b = spans[0]
+            # the window form — how a caller strips ONE item's body — and the
+            # reconstruction identity: the original run is still addressable
+            if strip_chrome(text, spans, start=b["start"], end=b["end"]) != "":
+                return "a chrome run is not fully removed from its own window"
+            if not text[b["start"]:b["end"]].strip():
+                return "chrome run does not reconstruct to its original text"
+    elif t == "offsets_invariant_under_exclusion":
+        # S6's acceptance criterion, asserted as the equality ADR-026 §d claims
+        # it is: run the same file both ways and compare. Self-contained — it
+        # does not care which way the case itself ran.
+        from src.sec10k.extract import extract_items
+        on = extract_items(path, exclude_boilerplate=True)
+        off = extract_items(path, exclude_boilerplate=False)
+        for k in DETERMINISM_FIELDS:
+            if on.get(k) != off.get(k):
+                return f"{k} differs with exclusion on vs off — INV-S2 offsets moved"
+        if "boilerplate" in off:
+            return "exclusion OFF emitted a boilerplate key; default must change nothing"
+        if "boilerplate" not in on:
+            return "exclusion ON emitted no boilerplate key"
     else:
         return f"unknown check type {t!r}"
     return None
@@ -209,7 +301,8 @@ def eval_check(result, chk, path=None):
 def run_case(case):
     from src.sec10k.extract import extract_items
     path = str(ROOT / case["input"]["path"])
-    result = extract_items(path)
+    result = extract_items(
+        path, exclude_boilerplate=case["input"].get("exclude_boilerplate", False))
     extracted = [i for i in result["items"] if i["status"] == "extracted"]
 
     failures = []
