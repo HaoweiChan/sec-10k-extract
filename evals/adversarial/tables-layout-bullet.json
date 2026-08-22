@@ -1,0 +1,16 @@
+{
+  "id": "tables-layout-bullet",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {"path": "evals/fixtures/msft-2013/filing.htm", "tables": true},
+  "expect": {
+    "checks": [
+      {"type": "table", "anchor": "the proliferation of new computing devices", "header": 0,
+       "rows": [["", "•", "", "the proliferation of new computing devices that emphasize touch and mobility functionality;"]]},
+      {"type": "table_markdown", "anchor": "the proliferation of new computing devices",
+       "value": "| • | the proliferation of new computing devices that emphasize touch and mobility functionality; |\n|---|---|"},
+      {"type": "tables_sane"}
+    ]
+  },
+  "provenance": "ADR-029 §e's classification ruling under test: a LAYOUT table -- a bullet typeset as a 4-cell <TABLE> -- is recorded faithfully and is NOT filtered out as 'not a data table'. MSFT FY2013 10-K, the first bullet of Item 1's 'Windows Division' risk list, raw bytes [50620, 51146) of filing.htm (526 bytes; the 6th <table in the file, 0-based 5). Transcribed by hand from the raw HTML on 2026-08-23 before comparison: one <TR> of <TD>&nbsp;</TD> | <TD>&#149;</TD> | <TD>&nbsp;</TD> | <TD><P>the proliferation of new computing devices that emphasize touch and mobility functionality; </P></TD>. &#149; is the cp1252 bullet, html.unescape maps it to U+2022 '•' per the HTML5 spec; the two &nbsp;-only cells are ''. One row, four cells.\n\nWhy this is the ruling and not an accident: msft-2013 has 178 recorded tables, 88 of them one row long; measured 2026-08-23 over the derived grids, 57 of those 88 are exactly this four-cell bullet shape (cell 1 is '•'), 29 are two-cell '(a)'/'(b)'/'*' footnote rows and the remaining 2 are the cover page's check-box rows -- so a third of this filing's tables are layout tables. A heuristic that dropped them would need a definition of 'data table' that no committed case could pin without a second, larger label set, and a false negative there is a silently missing table -- the silent-failure class this repo exists to refuse (INV-0, ADR-019). So the extractor does not classify: every <table> that carries visible text is a record; 'is it data?' is a consumer question answerable from the record itself (row count, numeric density) and the Markdown view renders it as the two-cell row it is. Anchor occurs once in the raw file and once in normalized_text. Measured at HEAD: record #5 of 178, normalized_text[11032:11125]. The table_markdown value is derived by hand from the labeled row under ADR-029 §b: columns 0 and 2 are empty and are not shown; a one-row table is a header row plus its separator and nothing else."
+}

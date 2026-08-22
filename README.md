@@ -68,6 +68,13 @@ At the document level, `doc_status` ∈ `success` / `success_with_warning` /
 pipeline refused**; it never emits a best-effort parse of a document it could
 not identify.
 
+Two opt-in annotations add one key each and move nothing else:
+`extract_items(path, exclude_boilerplate=True)` reports page-chrome runs as
+offsets (ADR-026), and `extract_items(path, tables=True)` reports every HTML
+`<table>` as `{start, end, header, rows}` offset records into the same
+`normalized_text` (ADR-029) — a cell's text is a slice, exactly like an item's,
+and the Markdown rendering is derived on demand by `src/sec10k/tables.py`.
+
 ## Key design decisions
 
 Full rationale in `specs/decisions/` (18 ADRs). The ones that shaped the system:

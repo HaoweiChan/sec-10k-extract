@@ -1,0 +1,15 @@
+{
+  "id": "tables-refusal-path",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {"path": "evals/fixtures/aapl-2026-10q/filing.htm", "tables": true},
+  "expect": {
+    "checks": [
+      {"type": "doc_status", "value": "unsupported"},
+      {"type": "envelope_shape"},
+      {"type": "offsets_invariant_under_tables"},
+      {"type": "tables_sane", "min": 1}
+    ]
+  },
+  "provenance": "ADR-029 §d on the REFUSAL path, and hard rule 2's record of a defect found while building S7. The 10-Q fixture (aapl-2026-10q, EDGAR accession 0000320193-26-000020) is refused as `unsupported` (10q-unsupported); like ADR-026's chrome, the table annotation is computed in normalization, before the refusal is decided, and is carried on the refusal envelope when asked for -- a caller who asked for tables on a document the pipeline then declined still gets the readable text's tables (32 records at HEAD) -- and is absent when not asked for. Why a case on this path specifically: the first working build of S7 named its normalization result `found` inside extract.py, where the unsupported branch already had a local `found = meta['form_type'] or 'none'` for its warning message -- so on THIS path, with the flag OFF, every envelope carried `tables: \"10-Q\"` (a string, the detected form) and with the flag ON the real list was overwritten by it. The off-path half was visible to 10q-unsupported's envelope_shape as an undeclared key once `tables` was not yet declared; once it IS declared (this PR), only a shape check on the key's VALUE and an on/off comparison can see it, which is what this case pins: offsets_invariant_under_tables asserts no key when off and a list when on, envelope_shape runs _tables_shape over the value, tables_sane min 1 asserts the refusal still reports the tables it normalized. The defect never reached a commit; the case is the record that it existed."
+}

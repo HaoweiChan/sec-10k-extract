@@ -2,10 +2,13 @@
 
 Case shape:
     "input":  {"path": "evals/fixtures/<name>/<file>",
-               "exclude_boilerplate": false}   # optional, ADR-026
+               "exclude_boilerplate": false,   # optional, ADR-026
+               "tables": false}                # optional, ADR-029
     "expect": {"checks": [{"type": ..., ...}, ...]}
 """
 from pathlib import Path
+
+from src.sec10k.tables import grid, to_markdown
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -161,9 +164,18 @@ def eval_check(result, chk, path=None):
         # normative enums are asserted here; no value is fabricated or compared.
         top = {"normalized_text", "doc_status", "warnings", "meta", "trace",
                "timings", "cost", "items"}
-        extra = set(result) - top - {"boilerplate"}  # ADR-026's one optional key
+        # the two optional keys: ADR-026's `boilerplate`, ADR-029's `tables`
+        extra = set(result) - top - {"boilerplate", "tables"}
         if not top <= set(result) or extra:
             return f"envelope keys: missing {sorted(top - set(result))}, undeclared {sorted(extra)}"
+        if "tables" in result:
+            # ADR-029 contract shape: [{start, end, header, rows: [[[s, e] |
+            # [s, e, colspan>1], ...], ...]}], offsets into normalized_text,
+            # document order. Checked here so a wrong SHAPE is red on any
+            # case that asks for tables, not only on one that labels a table.
+            why = _tables_shape(result)
+            if why:
+                return f"tables not in contract shape: {why}"
         ds = result["doc_status"]
         if ds not in DOC_STATUSES:
             return f"doc_status {ds!r} not in contract enum"
@@ -348,21 +360,162 @@ def eval_check(result, chk, path=None):
             return "exclusion OFF emitted a boilerplate key; default must change nothing"
         if "boilerplate" not in on:
             return "exclusion ON emitted no boilerplate key"
+    elif t == "table":
+        # ADR-029 §c. A hand-labeled grid: `rows` is what `tables.grid` must
+        # derive for the table located by `anchor` (first record whose slice
+        # contains it; `index` picks a later one). Exact match, every cell,
+        # in order; `header` pins the <th> row count when given. The same
+        # comparison feeds the per-run table-fidelity metric (`table_fidelity`).
+        f = table_fidelity(result, chk)
+        if f["why"]:
+            return f["why"]
+    elif t == "table_markdown":
+        # the derived view itself (PR #25 R2's lesson: a check that reads only
+        # the record cannot see a no-op renderer). `value` is the exact
+        # Markdown `tables.to_markdown` must produce for the anchored table.
+        tab, why = _locate_table(result, chk)
+        if why:
+            return why
+        md = to_markdown(result["normalized_text"], tab)
+        if md != chk["value"]:
+            return f"markdown differs; got:\n{md}"
+    elif t == "tables_sane":
+        # ADR-029 §d: offsets in bounds, records in document order, every
+        # cell inside its own table, every cell slice tight (no separator
+        # whitespace leaked in). The shape itself is `envelope_shape`'s job.
+        if not isinstance(result.get("tables"), list):
+            return (f"tables is {type(result['tables']).__name__}, not a list" if "tables" in result
+                    else "no tables in result (was tables set?)")
+        text, prev = result["normalized_text"], 0
+        for n, tab in enumerate(result["tables"]):
+            if not (0 <= tab["start"] <= tab["end"] <= len(text)):
+                return f"table {n} outside normalized_text"
+            if tab["start"] < prev:
+                return f"table {n} out of document order"
+            prev = tab["start"]
+            for row in tab["rows"]:
+                for c in row:
+                    if not (tab["start"] <= c[0] <= c[1] <= tab["end"]):
+                        return f"table {n} cell {c} outside its table"
+                    if text[c[0]:c[1]] != text[c[0]:c[1]].strip():
+                        return f"table {n} cell {c} slice is not tight: {text[c[0]:c[1]]!r}"
+        if "min" in chk and len(result["tables"]) < chk["min"]:
+            return f"{len(result['tables'])} tables < min {chk['min']}"
+        if "max" in chk and len(result["tables"]) > chk["max"]:
+            return f"{len(result['tables'])} tables > max {chk['max']}"
+    elif t == "offsets_invariant_under_tables":
+        # ADR-029's equality, stated as ADR-026's was: the same file both
+        # ways, DETERMINISM_FIELDS identical, the key on exactly one side.
+        from src.sec10k.extract import extract_items
+        on = extract_items(path, tables=True)
+        off = extract_items(path, tables=False)
+        for k in DETERMINISM_FIELDS:
+            if on.get(k) != off.get(k):
+                return f"{k} differs with tables on vs off — INV-S2 offsets moved"
+        if "tables" in off:
+            return "tables OFF emitted a tables key; default must change nothing"
+        if not isinstance(on.get("tables"), list):
+            return "tables ON emitted no tables list"
     else:
         return f"unknown check type {t!r}"
     return None
+
+
+def _tables_shape(result):
+    """None if `result['tables']` is in ADR-029's contract shape, else why."""
+    tabs = result["tables"]
+    if not isinstance(tabs, list):
+        return f"tables is {type(tabs).__name__}, not a list"
+    n = len(result["normalized_text"])
+    for i, tab in enumerate(tabs):
+        if not isinstance(tab, dict) or set(tab) != {"start", "end", "header", "rows"}:
+            return f"record {i} keys {sorted(tab) if isinstance(tab, dict) else tab!r}"
+        if not (isinstance(tab["start"], int) and isinstance(tab["end"], int)
+                and 0 <= tab["start"] <= tab["end"] <= n):
+            return f"record {i} start/end {tab['start']},{tab['end']} not offsets into normalized_text"
+        if not (isinstance(tab["header"], int) and 0 <= tab["header"] <= len(tab["rows"])):
+            return f"record {i} header {tab['header']!r}"
+        if not tab["rows"] or not all(isinstance(r, list) and r for r in tab["rows"]):
+            return f"record {i} has an empty row or no rows"
+        for r in tab["rows"]:
+            for c in r:
+                if not (isinstance(c, list) and len(c) in (2, 3)
+                        and all(isinstance(x, int) for x in c)
+                        and 0 <= c[0] <= c[1] <= n and (len(c) == 2 or c[2] > 1)):
+                    return f"record {i} cell {c!r}"
+    return None
+
+
+def _locate_table(result, chk):
+    """(record, None) for the `index`-th record (default first) whose slice
+    holds `anchor`, else (None, reason)."""
+    if "tables" not in result:
+        return None, "no tables in result (was tables set?)"
+    text = result["normalized_text"]
+    hits = [t for t in result["tables"] if chk["anchor"] in text[t["start"]:t["end"]]]
+    k = chk.get("index", 0)
+    if len(hits) <= k:
+        return None, f"anchor {chk['anchor']!r}: {len(hits)} table(s) contain it, wanted #{k}"
+    return hits[k], None
+
+
+def table_fidelity(result, chk):
+    """Compare the derived grid of the anchored table with the labeled rows.
+
+    Returns {"cells": (ok, total), "rows": (ok, total), "why": reason|None}.
+    cells: positions (i, j) whose text matches exactly, over the LARGER of
+    the labeled and derived cell counts — extra or missing cells count
+    against, not for. rows: rows reproduced exactly, over the larger row
+    count. A table that cannot be located scores 0 over the labeled counts.
+    Exact match is the pass condition; the fractions are the per-run metric
+    (ADR-029 §c), so a partial miss is measured, not only declared.
+    """
+    want = chk["rows"]
+    n_want_cells = sum(len(r) for r in want)
+    tab, why = _locate_table(result, chk)
+    if why:
+        return {"cells": (0, n_want_cells), "rows": (0, len(want)), "why": why}
+    got = grid(result["normalized_text"], tab)
+    n_got_cells = sum(len(r) for r in got)
+    cells_ok = sum(1 for i in range(min(len(want), len(got)))
+                   for j in range(min(len(want[i]), len(got[i])))
+                   if want[i][j] == got[i][j])
+    rows_ok = sum(1 for i in range(min(len(want), len(got))) if want[i] == got[i])
+    out = {"cells": (cells_ok, max(n_want_cells, n_got_cells)),
+           "rows": (rows_ok, max(len(want), len(got))), "why": None}
+    if "header" in chk and tab["header"] != chk["header"]:
+        out["why"] = f"header rows {tab['header']} != {chk['header']}"
+    elif got != want:
+        bad = next(((i, j) for i in range(min(len(want), len(got)))
+                    for j in range(min(len(want[i]), len(got[i]))) if want[i][j] != got[i][j]),
+                   None)
+        out["why"] = (f"grid differs: {len(got)} rows x {len(got[0]) if got else 0} got vs "
+                      f"{len(want)} x {len(want[0]) if want else 0} labeled; "
+                      f"cells {cells_ok}/{out['cells'][1]}, rows {rows_ok}/{out['rows'][1]}"
+                      + (f"; first mismatch at {bad}: {got[bad[0]][bad[1]]!r} != "
+                         f"{want[bad[0]][bad[1]]!r}" if bad else ""))
+    return out
 
 
 def run_case(case):
     from src.sec10k.extract import extract_items
     path = str(ROOT / case["input"]["path"])
     result = extract_items(
-        path, exclude_boilerplate=case["input"].get("exclude_boilerplate", False))
+        path, exclude_boilerplate=case["input"].get("exclude_boilerplate", False),
+        tables=case["input"].get("tables", False))
     extracted = [i for i in result["items"] if i["status"] == "extracted"]
 
     failures = []
+    # ADR-029 §c: every `table` check's cell/row counts, summed for the run
+    cells, rows = [0, 0], [0, 0]
     for chk in case["expect"]["checks"]:
-        reason = eval_check(result, chk, path=path)
+        if chk["type"] == "table":
+            f = table_fidelity(result, chk)   # one comparison: the verdict AND the metric
+            reason = f["why"]
+            cells = [cells[0] + f["cells"][0], cells[1] + f["cells"][1]]
+            rows = [rows[0] + f["rows"][0], rows[1] + f["rows"][1]]
+        else:
+            reason = eval_check(result, chk, path=path)
         if reason:
             failures.append({"check": chk, "why": reason})
 
@@ -372,6 +525,10 @@ def run_case(case):
         "chars": (i["end"] - i["start"]) if i["status"] == "extracted" else None,
     } for i in result["items"]]
 
-    return {"passed": not failures, "failures": failures,
-            "n_items": len(result["items"]), "n_extracted": len(extracted),
-            "doc_status": result.get("doc_status"), "items_summary": items_summary}
+    out = {"passed": not failures, "failures": failures,
+           "n_items": len(result["items"]), "n_extracted": len(extracted),
+           "doc_status": result.get("doc_status"), "items_summary": items_summary}
+    if cells[1] or rows[1]:
+        # only a case that labels a table contributes to the run's fidelity
+        out["table_fidelity"] = {"cells": cells, "rows": rows}
+    return out

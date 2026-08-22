@@ -1,0 +1,26 @@
+{
+  "id": "tables-cell-div",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {"path": "evals/fixtures/aapl-2025/filing.htm", "tables": true},
+  "expect": {
+    "checks": [
+      {"type": "table", "anchor": "Trading symbol(s)", "header": 0,
+       "rows": [
+         ["", "", "", "", "", "", "", "", ""],
+         ["Title of each class", "", "", "Trading symbol(s)", "", "", "Name of each exchange on which registered", "", ""],
+         ["Common Stock, $0.00001 par value per share", "", "", "AAPL", "", "", "The Nasdaq Stock Market LLC", "", ""],
+         ["0.000% Notes due 2025", "", "", "—", "", "", "The Nasdaq Stock Market LLC", "", ""],
+         ["1.625% Notes due 2026", "", "", "—", "", "", "The Nasdaq Stock Market LLC", "", ""],
+         ["2.000% Notes due 2027", "", "", "—", "", "", "The Nasdaq Stock Market LLC", "", ""],
+         ["1.375% Notes due 2029", "", "", "—", "", "", "The Nasdaq Stock Market LLC", "", ""],
+         ["3.050% Notes due 2029", "", "", "—", "", "", "The Nasdaq Stock Market LLC", "", ""],
+         ["0.500% Notes due 2031", "", "", "—", "", "", "The Nasdaq Stock Market LLC", "", ""],
+         ["3.600% Notes due 2042", "", "", "—", "", "", "The Nasdaq Stock Market LLC", "", ""]
+       ]},
+      {"type": "norm_contains", "value": "Common Stock, $0.00001 par value per share\nAAPL The Nasdaq Stock Market LLC"},
+      {"type": "tables_sane"}
+    ]
+  },
+  "provenance": "ADR-029 §g, the nested-<div>-inside-a-cell shape: the one the flattened text run cannot represent and the annotation must. AAPL FY2025 cover page, 'Securities registered pursuant to Section 12(b)' table, raw bytes [98543, 107622) of filing.htm (9,079 bytes; the 2nd <table in the file, 0-based 1). Transcribed by hand from the raw HTML on 2026-08-23 before comparison: row 0 = 9 empty width <td/>; rows 1-9 = three <td colspan=3> each (9 columns); and in row 2 ONLY the first cell wraps its text in a <div>: <td colspan=3><div>Common Stock, $0.00001 par value per share</div></td>. The em dashes are &#8212;. 10 rows x 9 columns = 90 cells.\n\nWhy adversarial: <div> is a block tag, so normalization (ADR-006, untouched here) breaks the line INSIDE the cell -- the norm_contains check pins the flattened shape exactly as it is at main, 'Common Stock, $0.00001 par value per share' NEWLINE 'AAPL The Nasdaq Stock Market LLC' -- i.e. in the text run that row reads as two lines and the first line looks like a paragraph, which is what 'flattening tables into the text run' loses. The record must still say: one row, cells 'Common Stock...', 'AAPL', 'The Nasdaq Stock Market LLC'. A cell start/end that stopped at the <div> boundary, or a row that split at the newline, is red here and on no other case. Anchor 'Trading symbol(s)' occurs once in the raw file and once in normalized_text. Measured at HEAD: record #1 of 54, normalized_text[826:1353], header=0. Companion to aapl-2025-table on the same fixture; kept separate because this one asserts a failure SHAPE (a cell that contains a block boundary) rather than a table's values."
+}

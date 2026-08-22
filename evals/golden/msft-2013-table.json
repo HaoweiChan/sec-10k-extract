@@ -1,0 +1,26 @@
+{
+  "id": "msft-2013-table",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {"path": "evals/fixtures/msft-2013/filing.htm", "tables": true},
+  "expect": {
+    "checks": [
+      {"type": "envelope_shape"},
+      {"type": "tables_sane", "min": 150, "max": 200},
+      {"type": "table", "anchor": "Dividends per share (quarterly amounts)", "header": 0,
+       "rows": [
+         ["", "", "", "", "", "", "", "", "", "", "", "", ""],
+         ["", "", "", "", "", "", "", "", "", "", "", "", ""],
+         ["Year Ended June 30,", "", "2013", "", "", "", "2012", "", "", "", "2011", "", ""],
+         ["", "", "", "", "", "", "", "", "", "", "", "", ""],
+         ["Dividends per share (quarterly amounts)", "", "$", "0.20 - $ 0.23", "", "", "$", "0.16 - $ 0.20", "", "", "$", "0.13 - $ 0.16", ""],
+         ["Interest rates range", "", "", "0.6% - 1.1%", "", "", "", "0.7% - 1.7%", "", "", "", "1.1% - 2.4%", ""]
+       ]},
+      {"type": "table_markdown", "anchor": "Dividends per share (quarterly amounts)",
+       "value": "| Year Ended June 30, | 2013 |  | 2012 |  | 2011 |  |\n|---|---|---|---|---|---|---|\n| Dividends per share (quarterly amounts) | $ | 0.20 - $ 0.23 | $ | 0.16 - $ 0.20 | $ | 0.13 - $ 0.16 |\n| Interest rates range |  | 0.6% - 1.1% |  | 0.7% - 1.7% |  | 1.1% - 2.4% |"},
+      {"type": "verbatim"},
+      {"type": "no_overlap_ordered"}
+    ]
+  },
+  "provenance": "ADR-029 §g, the legacy-HTML table AND the &nbsp;-padding shape. MSFT FY2013 10-K (legacy HTML, EDGAR accession 0001193125-13-310206). Transcribed by hand from the raw HTML on 2026-08-23 before comparison: the Note 18 stock-plan assumptions table, raw bytes [1508504, 1512584) of filing.htm (<TABLE ...> through </TABLE>, 4,080 bytes; the 149th <table in the file, 0-based 148). Raw structure: row 0 = 13 empty <TD>; rows 1 and 3 = <TD></TD> then three <TD COLSPAN=4></TD> (13 columns, all empty); row 2 = 'Year Ended June&nbsp;30,' | '&nbsp;&nbsp;' | COLSPAN=2 '2013' | '&nbsp;' | '&nbsp;' | COLSPAN=2 '2012' | '&nbsp;' | '&nbsp;' | COLSPAN=2 '2011' | '&nbsp;'; row 4 = <P>Dividends per share (quarterly amounts)</P> | '&nbsp;&nbsp;' | '$' | '&nbsp;&nbsp;0.20&nbsp;-&nbsp;$&nbsp;&nbsp;0.23' | '&nbsp;&nbsp;' | '&nbsp;' | '$' | '&nbsp;&nbsp;0.16&nbsp;-&nbsp;$&nbsp;&nbsp;0.20' | '&nbsp;&nbsp;' | '&nbsp;' | '$' | '&nbsp;&nbsp;0.13&nbsp;-&nbsp;$&nbsp;&nbsp;0.16' | '&nbsp;&nbsp;'; row 5 = <P>Interest rates range</P> | '&nbsp;&nbsp;' | '&nbsp;' | '0.6%&nbsp;-&nbsp;1.1%' | '&nbsp;&nbsp;' | '&nbsp;' | '&nbsp;' | '0.7%&nbsp;-&nbsp;1.7%' | '&nbsp;&nbsp;' | '&nbsp;' | '&nbsp;' | '1.1%&nbsp;-&nbsp;2.4%' | '&nbsp;&nbsp;'. 6 rows x 13 columns = 78 cells. Under ADR-003's canon every &nbsp; is whitespace, so a cell that is only &nbsp; is the empty string and a run like '&nbsp;&nbsp;0.20&nbsp;-&nbsp;$&nbsp;&nbsp;0.23' is '0.20 - $ 0.23' -- 21 of the 78 cells are &nbsp;-only padding (6 in row 2, 6 in row 4, 9 in row 5) and every one must come back '' with its neighbours' text intact; that is the 'nbsp padding cells' shape of the S7 row's acceptance, on a real filing rather than a synthetic one. Anchor 'Dividends per share (quarterly amounts)' occurs once in the raw file and once in normalized_text. Measured at HEAD: record #148 of 178, normalized_text[280202:280383], header=0 (no <th> anywhere in this filing).\n\nThe table_markdown value is derived by hand from the labeled grid under ADR-029 §b (rows 0, 1 and 3 are empty in every cell and are not shown; columns 1, 4, 5, 8, 9 and 12 are empty in every row and are not shown; row 2 becomes the header row). Band 150-200 around the measured 178 records."
+}
