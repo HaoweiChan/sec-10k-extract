@@ -31,6 +31,7 @@ its ruling and what enforces it. Full context — Context/Decision/Consequences
 - ADR-024 — 10-K/A stays out of scope; the refusal is asserted on both detection routes, not left to `ACCEPTED_FORMS` — enforced by `src/sec10k/normalize.py::_demo`
 - ADR-025 — one `history.jsonl` line every run, a full report only for `--report`/`all`/`--dir`/red; 165 uncited gate dumps pruned, backfilled first — enforced by `evals/run.py`, `src/repo_hygiene/eval_adapter.py::check_report_citations`
 - ADR-026 — boilerplate chrome is reported as opt-in `{start,end,kind}` spans, never removed; `normalized_text` and every offset are byte-identical with exclusion on and off — enforced by `evals/adversarial/boilerplate-offsets-invariant.json`, `src/sec10k/boilerplate.py`
+- ADR-027 — build identity is injected at build time (`BUILD_SHA` from Zeabur's build-phase `ZEABUR_GIT_COMMIT_SHA`) and outranks the `GIT_SHA` override; anything that is not `[0-9a-f]{7,40}` reports `unknown` rather than a label — enforced by `evals/adversarial/build-identity.json`, `src/sec10k/web/build_id.py`
 
 Amended-by is also recorded on each amended ADR's own Status line — this
 index only cross-references it for scanning.

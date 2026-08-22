@@ -58,6 +58,13 @@ PAGE_DIGITS = 3    # judgment call, NOT measured — see ADR-026 §c4
 # constrained nothing any case could exercise (the ADR-010 sin). If a 200-char
 # line really does repeat 8 times at page intervals across a whole filing, it
 # is a repeated legal footer, and that is chrome.
+# Upgrade trigger: the argument is corpus-bound, so re-open it when a fixture
+# lands whose detected chrome runs LONGER than the 35-char observation and the
+# long run is a false positive — real body text, not a repeated footer. Only
+# that pair re-opens it; a long TRUE chrome line is the case above. Re-measured
+# 2026-08-22 (S2), still 35: the ceiling is jpm-2024's
+# 'JPMorgan Chase & Co./2024 Form 10-K', and every other fixture tops out at
+# 17 ('Table of Contents').
 
 SGML_FURNITURE = re.compile(r"(?:</?(?:PAGE|TABLE|CAPTION|S|C|FN)>\s*)+", re.I)
 PAGE_NUMBER = re.compile(r"(?:page\s+)?[-–—\s]*\d{1,%d}[-–—.\s]*" % PAGE_DIGITS, re.I)
