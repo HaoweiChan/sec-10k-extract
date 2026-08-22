@@ -1,0 +1,37 @@
+{
+ "pr": 30,
+ "round": 2,
+ "date": "2026-08-22",
+ "result": "REQUEST_CHANGES",
+ "scope": "repair diff 7c116bb..82906d6 + standing R1-R7",
+ "gate": "[eval] suite 'invariant': 41/41 = 1.000 (+4 enumerated debt, unscored); [eval] suite 'fast': 83/83 = 1.000 (+4 enumerated debt, unscored); .eval-baseline.json {\"fast\": 1.0} unchanged; [normalize self-check] ok; [bench self-check] ok",
+ "standing": {
+  "R1": "resolved (Debt rows 103-109 all 3 cells; pre-existing :84/:89/:96 byte-identical)",
+  "R2": "resolved as to the numbers (40/34 reproduce) — but the README wording reintroduces the R1 defect class, see R8",
+  "R3": "resolved — fixture = sandston-2021 + exactly 186 bytes at raw offset 20078; 3c2b8f4's normalize.py on it sniffs 10-K so refusal comes only from AMENDMENT_RE; case red under monkeypatch with the three claimed failures; no false positive on 45 committed+held-out fixtures; ADR-024 amended in place honestly; SYNTHETIC 12 / README 11 SELF-CREATED consistent",
+  "R4": "debt row present + in-place correction verified (cvx 9,731→9,725; wfc 7,423→7,416; truncated 13→0)",
+  "R5": "debt row present + 297/305 verified",
+  "R6": "debt row present",
+  "R7": "debt row present"
+ },
+ "findings": [
+  {
+   "id": "R8",
+   "severity": "MEDIUM",
+   "route": "repair",
+   "claim": "The R2 wording fix breaks the comma-cover-2016 row of the fixtures README table: the unescaped pipe inside the code span `grep -o | wc -l` is a GFM cell delimiter, so the row now has 7 cells in a 6-column table and renders garbled — the same defect class R1 was raised for, introduced by this repair commit.",
+   "evidence": "evals/fixtures/README.md:28 contains '`grep -o | wc -l` 40, `grep -c` 34'; awk cell count for line 28 is 6 at 7c116bb and 7 at HEAD (every other row in the table is 6); GFM treats pipes inside code spans as cell delimiters unless written as \\|. The same phrase in evals/adversarial/comma-cover-period.json is JSON and unaffected.",
+   "repro": "git show 7c116bb:evals/fixtures/README.md | awk 'NR==28{print gsub(/\\|/,\"|\")-1}'  # 6 ; awk 'NR==28{print gsub(/\\|/,\"|\")-1}' evals/fixtures/README.md  # 7",
+   "acceptance": "README.md:28 counts 6 cells like its neighbours (write `grep -o \\| wc -l`, or 'grep -o … piped to wc -l' outside a code span); the 40/34 numbers stay."
+  },
+  {
+   "id": "R9",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "ADR-024's header line does not flag the in-body amendment: every other amended ADR carries 'Amended by: ADR-0NN' in its Date/Status line, while ADR-024:3 still reads only 'Date: 2026-08-20. Status: accepted.' and the supersession of point 3 is discoverable only by reading to line 95.",
+   "evidence": "specs/decisions/ADR-024-10ka-out-of-scope.md:3 vs :95; grep 'Amended by:' specs/decisions/ADR-0*.md shows the header convention (ADR-004/007/008/009/014); ADR-024 is the only ADR amended in place with no header marker.",
+   "repro": "grep -n 'Status:' specs/decisions/ADR-024-10ka-out-of-scope.md; grep -n '^\\*\\*Amended' specs/decisions/ADR-024-10ka-out-of-scope.md",
+   "acceptance": "Header line reads e.g. 'Date: 2026-08-20. Status: accepted. Amended in place 2026-08-22 (point 3, see note).' — or a note that in-place amendments are the convention for same-ADR supersessions."
+  }
+ ]
+}
