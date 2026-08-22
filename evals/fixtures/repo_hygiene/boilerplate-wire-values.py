@@ -13,7 +13,9 @@ right request and then forwards something else.
   M3 the url handler forwards a constant (`False and bool(...)`), so that
      mode never excludes whatever the box says.
   F  a fourth `/api/extract/paste` mode exists and never passes the flag —
-     the check pins the ROUTE SET, so a mode cannot be added without wiring.
+     the check pins the ROUTE SET, so a mode cannot be added without
+     wiring. Its decorator carries a keyword argument, which is app.py's
+     own style and the spelling that defeated the route pin (PR #27 R11).
 
 `_run` is correct here on purpose: pair A is where that hop is broken.
 Caught by evals/adversarial/ui-boilerplate-wire-values.json. Not imported.
@@ -44,6 +46,6 @@ def extract_url(body: dict):
                 exclude_boilerplate=False and bool((body or {}).get("exclude_boilerplate")))
 
 
-@app.post("/api/extract/paste")
+@app.post("/api/extract/paste", response_model=None)
 def extract_paste(body: dict):
     return _run(str(p), {"mode": "paste"})

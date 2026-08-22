@@ -402,3 +402,10 @@
 {"ts": "20260822-113605", "suite": "fast", "sha": "baceb5f", "dirty": true, "passed": 79, "total": 79, "score": 1.0, "wall_s": 24.67, "cost_usd": 0.0, "report": null, "debt_count": 4}
 {"ts": "20260822-113803", "suite": "invariant", "sha": "baceb5f", "dirty": true, "passed": 37, "total": 37, "score": 1.0, "wall_s": 17.74, "cost_usd": 0.0, "report": null, "debt_count": 4}
 {"ts": "20260822-113828", "suite": "fast", "sha": "baceb5f", "dirty": true, "passed": 79, "total": 79, "score": 1.0, "wall_s": 24.55, "cost_usd": 0.0, "report": null, "debt_count": 4}
+{"ts": "20260822-115623", "suite": "invariant", "sha": "7cc8e88", "dirty": true, "passed": 36, "total": 37, "score": 0.973, "wall_s": 17.82, "cost_usd": 0.0, "report": null, "debt_count": 4}
+{"ts": "20260822-115709", "suite": "invariant", "sha": "7cc8e88", "dirty": true, "passed": 37, "total": 37, "score": 1.0, "wall_s": 17.84, "cost_usd": 0.0, "report": null, "debt_count": 4}
+{"ts": "20260822-115840", "suite": "fast", "sha": "7cc8e88", "dirty": true, "passed": 79, "total": 79, "score": 1.0, "wall_s": 24.52, "cost_usd": 0.0, "report": null, "debt_count": 4}
+{"ts": "20260822-142336", "suite": "invariant", "sha": "64b5fd0", "dirty": true, "passed": 37, "total": 37, "score": 1.0, "wall_s": 17.96, "cost_usd": 0.0, "report": null, "debt_count": 4}
+{"ts": "20260822-142401", "suite": "fast", "sha": "64b5fd0", "dirty": true, "passed": 79, "total": 79, "score": 1.0, "wall_s": 24.95, "cost_usd": 0.0, "report": null, "debt_count": 4}
+{"ts": "20260822-142617", "suite": "invariant", "sha": "64b5fd0", "dirty": true, "passed": 37, "total": 37, "score": 1.0, "wall_s": 18.16, "cost_usd": 0.0, "report": null, "debt_count": 4}
+{"ts": "20260822-142643", "suite": "fast", "sha": "64b5fd0", "dirty": true, "passed": 79, "total": 79, "score": 1.0, "wall_s": 25.57, "cost_usd": 0.0, "report": null, "debt_count": 4}

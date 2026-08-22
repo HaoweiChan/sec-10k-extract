@@ -1,0 +1,39 @@
+{
+  "pr": 27,
+  "task": "S8",
+  "round": 3,
+  "date": "2026-08-22",
+  "implementer": "task/S8 round-3 bounded repair (Option A — R10 and R11 only, no round-4 review)",
+  "scope": "Exactly two findings. R12-R16 were not touched; their debt rows are the coordinator's. No shipped code changed this round either — src/sec10k/ is byte-identical to 39dfa2c, so the round-1 live browser verification still stands and was not re-run.",
+  "gate_after_repair": {
+    "invariant": "37/37 = 1.000",
+    "fast": "79/79 = 1.000",
+    "baseline": "1.000, not moved"
+  },
+  "fixture_counts_moved": {
+    "pair_A": "9 -> 9, unchanged",
+    "pair_B": "7 -> 8 — the block-comment spelling of the dead-call-site shape is a new pinned shape (R10). R11 changed a spelling, not a count: the unwired paste route was and remains one failure."
+  },
+  "resolutions": [
+    {
+      "id": "R10",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "reproduced": "Yes, both triggers, with the PINNED TEXT LEFT INTACT inside the block comment so the red could not come from breaking the pin itself. Against copies of the real files, control 0: T1 (url call site wrapped in /* */ with a flagless line beside it, the R6 class) -> 0 failures; T2 (the truncation expression block-commented, followed by `${it.text.length.toLocaleString()}`, the R5 class) -> 0 failures. Both of the findings this check was rewritten for, re-admitted with the gate green.",
+      "fix": "One regex. `JS_BLOCK_COMMENT_RE = re.compile(r\"/\\*.*?\\*/\", re.S)`, applied in `_live`'s js/html branch alongside the `//` and `<!-- -->` strips. Checked first that none of index.html's 22 `/*` occurrences opens inside a string literal — all are genuine CSS comments — so nothing live is stripped. Python has no block comment form, so the py branch is unchanged.",
+      "covered_by": "ui-boilerplate-wire-values (pair B) shape 4, new, at the moved exact count of 8: the fixture mode's call site block-commented with its pinned expression left in the file as dead text. The url site keeps the `//` spelling, so both forms stay pinned. After the fix both of the finding's own triggers go red at 1."
+    },
+    {
+      "id": "R11",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "reproduced": "Yes. Inserting `@app.post(\"/api/extract/paste\", response_model=None)` with a handler that calls `_run(...)` without the flag into the real app.py -> 0 plumbing failures, while the kwarg-less spelling of the same route -> 1. app.py:137 already writes `@app.get(\"/\", response_class=HTMLResponse)`, so the evading spelling is this file's own convention.",
+      "fix": "Deleted the trailing `\\)` from ROUTE_RE, which now matches `@app.post(\"/api/extract/…\"` regardless of what follows the literal.",
+      "covered_by": "ui-boilerplate-wire-values (pair B): the paste route's decorator now carries `response_model=None`, so the spelling that defeated the pin is the one watched red. Count unchanged at one failure for that shape. After the fix both spellings go red."
+    },
+    {
+      "id": "docstring-claims",
+      "note": "Both sentences the findings quote were false as written and are now narrowed to what is literally true rather than left overclaiming. (1) 'a dead call site cannot satisfy its own pin' -> 'a call site commented out in any of those four forms cannot satisfy its own pin', with the residue named in the same sentence: dead code that is not COMMENTED — inside a string literal, or behind a condition that is never true — still satisfies its pin. (2) 'a fourth input mode cannot be added without wiring it' -> 'a fourth input mode declared with an `@app.post(\"/api/extract/…\"` decorator cannot be added without wiring it', with the residue named: any other way of registering a route, such as a single-quoted literal or `app.add_api_route`, is not seen."
+    }
+  ]
+}

@@ -639,6 +639,7 @@ def check_boilerplate_exclusion(case):
 
 
 JS_COMMENT_RE = re.compile(r"^[ \t]*//.*$", re.M)
+JS_BLOCK_COMMENT_RE = re.compile(r"/\*.*?\*/", re.S)
 HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.S)
 PY_COMMENT_RE = re.compile(r"^[ \t]*#.*$", re.M)
 
@@ -651,12 +652,20 @@ def _live(src, lang):
     `<!-- -->`-ed checkbox).
 
     Per language, deliberately. Only FULL-line `//` goes, so the `https://`
-    inside a URL survives; and `#` is stripped ONLY from Python, because the
+    inside a URL survives; `/* */` goes wherever it appears, since the
+    stylesheet's 22 comments are all genuine and nothing in this file opens
+    `/*` inside a string; and `#` is stripped ONLY from Python, because the
     inspector's stylesheet is full of id selectors like `#banner{...}` that
-    start a line with `#` and are not comments at all."""
+    start a line with `#` and are not comments at all.
+
+    The `/* */` form was missing until PR #27 R10, which is worth recording
+    because of WHAT it re-admitted: block-commenting a call site while
+    leaving the pinned text inside the comment reproduced both of the
+    findings this check was rewritten for, with the whole gate green."""
     if lang == "py":
         return PY_COMMENT_RE.sub("", src)
-    return JS_COMMENT_RE.sub("", HTML_COMMENT_RE.sub("", src))
+    return JS_COMMENT_RE.sub(
+        "", JS_BLOCK_COMMENT_RE.sub("", HTML_COMMENT_RE.sub("", src)))
 
 
 def _squash(s):
@@ -728,7 +737,11 @@ WIRE_API = [
      "extract_items(path, exclude_boilerplate=exclude_boilerplate)"),
 ]
 
-ROUTE_RE = re.compile(r'@app\.post\("(/api/extract/[^"]+)"\)')
+# no trailing `\)`: `@app.post("/api/extract/x", response_model=None)` is
+# app.py's own decorator style (see `@app.get("/", response_class=...)`),
+# and requiring the paren immediately after the literal let a fourth
+# unwired mode through in that spelling (PR #27 R11)
+ROUTE_RE = re.compile(r'@app\.post\("(/api/extract/[^"]+)"')
 
 
 def check_boilerplate_plumbing(case):
@@ -742,13 +755,20 @@ def check_boilerplate_plumbing(case):
 
     It works by ALLOW-LIST: `WIRE_UI`, `WIRE_HANDLER` and `WIRE_API` above
     hold every expression on the path, each of which must appear exactly once
-    in the file's LIVE text — commented-out code stripped, so a dead call site
-    cannot satisfy its own pin. `UNIQUE_UI` additionally forbids a second
-    definition shadowing a pinned one, the routes are pinned as a set so a
-    fourth input mode cannot be added without wiring it, and the checkbox may
-    be neither `checked` nor `disabled`. Those four are not hypotheticals:
-    each was written as an attack on the allow-list and passed it before it
-    was closed (`ui-boilerplate-wire-values` pins them).
+    in the file's LIVE text — `//`, `/* */`, `<!-- -->` and Python `#`
+    comments stripped, so a call site commented out in any of those four
+    forms cannot satisfy its own pin. (Narrowed deliberately: it once said
+    "a dead call site cannot satisfy its own pin", and PR #27 R10 was
+    precisely the fifth form. Dead code that is not COMMENTED — inside a
+    string literal, or behind a condition that is never true — still
+    satisfies its pin.) `UNIQUE_UI` additionally forbids a second definition
+    shadowing a pinned one; the routes are pinned as a set, so a fourth input
+    mode declared with an `@app.post("/api/extract/…"` decorator cannot be
+    added without wiring it — any OTHER way of registering a route, such as
+    a single-quoted literal or `app.add_api_route`, is not seen; and the
+    checkbox may be neither `checked` nor `disabled`. None of those is
+    hypothetical: each was written as an attack on the allow-list and passed
+    it before it was closed (`ui-boilerplate-wire-values` pins them).
 
     What it still cannot do is in the debt row: it cannot prove FastAPI
     BINDS any of this. An HTTP case was considered and rejected — see the
