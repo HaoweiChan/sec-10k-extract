@@ -10,9 +10,11 @@ describing it.
 Run:
     pip install playwright && playwright install chromium
     uvicorn src.sec10k.web.app:app --port 8001
-    python3 tasks/reviews/s3_browser_walk.py [--base http://localhost:8001]
+    python3 tasks/reviews/s3_browser_walk.py [--base http://localhost:8001] [--out NAME]
 
-Writes s3-browser-walk/*.png and prints a JSON record to stdout. Exit code is
+Writes NAME/*.png + NAME.json (default s3-browser-walk) and prints the JSON
+record to stdout — pass a fresh --out for a re-run so the record of the defect
+(2026-08-22: s3-browser-walk.json, blackholed = never painted) stays. Exit code is
 non-zero if any mode's rendered banner disagrees with what the row claims, so
 this is a check, not just a screenshotter.
 """
@@ -46,7 +48,7 @@ def shoot(page, name, timeout=30000):
     try:
         page.screenshot(path=str(SHOTS / f"{name}.png"), full_page=False,
                         timeout=timeout, animations="disabled")
-        return f"s3-browser-walk/{name}.png"
+        return f"{SHOTS.name}/{name}.png"
     except Exception as e:
         return f"CAPTURE FAILED: {type(e).__name__}: {str(e).splitlines()[0]}"
 
@@ -80,7 +82,14 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="http://localhost:8001")
     ap.add_argument("--fcp-budget-ms", type=int, default=8000)
+    # A re-run after a fix must not overwrite the record of the defect: --out
+    # names BOTH the JSON file and the screenshot directory, so each run's
+    # evidence stands on its own (2026-08-22 re-measurement after S3-FONT).
+    ap.add_argument("--out", default="s3-browser-walk",
+                    help="basename for <out>.json and <out>/*.png")
     a = ap.parse_args()
+    global SHOTS
+    SHOTS = HERE / a.out
     rec = {"base": a.base, "modes": {}, "fonts": {}}
     rec["upload_file"] = {
         "path": "tasks/reviews/s3-upload-4item.htm",
@@ -158,7 +167,7 @@ def main():
         "DEGRADES: the page paints without the webfont")
     rec["mode_failures"] = failures
     out = json.dumps(rec, indent=1)
-    (HERE / "s3-browser-walk.json").write_text(out + "\n")
+    (HERE / f"{a.out}.json").write_text(out + "\n")
     print(out)
     return 1 if failures else 0
 
