@@ -1,0 +1,46 @@
+{
+ "pr": 33,
+ "round": 1,
+ "date": "2026-08-22",
+ "result": "REQUEST_CHANGES",
+ "gate": "[eval] suite 'invariant': 44/44 = 1.000 (+4 enumerated debt, unscored) · [eval] suite 'fast': 86/86 = 1.000 (+4 enumerated debt, unscored) · .eval-baseline.json {\"fast\": 1.0} untouched · red-at-main reproduced (43/44, 85/86) · regression fixture exactly 2 failures · view self-check ok · 2026-08-22 walk record byte-identical to main · S3 row 7 cells, no UNRUN, no pipe in backticks; Debt row 3 cells",
+ "routing_rule": "repair = HIGH/MEDIUM and (acceptance violated | gate red | published claim dishonest); everything else debt (pr-loop scope boundary)",
+ "findings": [
+  {
+   "id": "R1",
+   "severity": "MEDIUM",
+   "route": "repair",
+   "claim": "The check passes green on a page whose external stylesheet link is render-blocking but written with unquoted attribute values, because ATTR_RE only matches quoted values, so `rel=stylesheet` (or `href=https://…`) is never seen and the tag is skipped as 'not a stylesheet / not external'.",
+   "evidence": "src/repo_hygiene/eval_adapter.py:834 `ATTR_RE = r\"([\\w-]+)\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)')\"` and :875-877 `continue` when rel/href are absent. Replacing the fixed link at index.html:10 with `<link rel=stylesheet href=\"https://fonts.googleapis.com/css2?family=X\">` (valid HTML, the same shorthand the case's own triage note uses: `<link rel=stylesheet>`) → 0 failures; `<link rel=\"stylesheet\" href=https://fonts.googleapis.com/css2?family=X>` → 0 failures; `<link rel=stylesheet href=https://…>` → 0 failures. All three are the exact S3-FONT defect (measured NEVER PAINTED when blackholed) and the case stays green.",
+   "repro": "python3 -c \"import sys,pathlib;sys.path.insert(0,'.');from src.repo_hygiene import eval_adapter as A;h=(A.ROOT/'src/sec10k/web/static/index.html').read_text();FIX=[l for l in h.splitlines() if 'onload=' in l][0];p=pathlib.Path('<scratch>/unq.html');p.write_text(h.replace(FIX,'<link rel=stylesheet href=https://fonts.googleapis.com/css2?family=X>'));print(A.run_case({'input':{'checks':['external_stylesheets_nonblocking'],'file':str(p)}}))\"  → {'passed': True, 'failures': []}",
+   "acceptance": "ATTR_RE (or the attribute parser) accepts unquoted values; the three mutations above each produce 1 failure; a link with an unquoted blocking `rel=stylesheet href=https://…` is added to evals/fixtures/repo_hygiene/font-link-blocking.html and the -regression case's exact count moves to 3 (watched red at the old parser first)."
+  },
+  {
+   "id": "R2",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "The onload regex is case-sensitive on the media value and rejects `this.media='ALL'` (CSS media types are case-insensitive, so that page is correctly non-blocking), and `media=\"not all\"` (another standard non-blocking idiom) is reported as render-blocking — both conservative false positives, neither present in index.html.",
+   "evidence": "src/repo_hygiene/eval_adapter.py:887 `re.search(r\"\\bmedia\\s*=\\s*['\\\"]?(all|screen)\\b\", onload)` and :881 `NON_SCREEN_MEDIA = (\"print\", \"speech\")`; mutation `onload=\"this.media='ALL'\"` → 1 failure 'no onload promoting it'; `media=\"not all\"` + onload → 1 failure 'render-blocking (media='not all')'.",
+   "repro": "same harness as R1 with those two substitutions on index.html:10",
+   "acceptance": "Either the docstring names the accepted idiom (print/speech + lowercase all/screen only) as the contract, or the regex gains re.I and `not all` joins NON_SCREEN_MEDIA."
+  },
+  {
+   "id": "R3",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "The after-fix control screenshot renders the fallback monospace glyphs, not JetBrains Mono, unlike the original control shot, so the committed evidence no longer shows the webfont ever applying on an online visitor after the fix; the record claims only FCP, so no published number is false, but the row's 'DEGRADES' framing implies the font still arrives and nothing committed demonstrates it.",
+   "evidence": "tasks/reviews/s3-browser-walk-after-font-fix/fonts-control.png (system monospace, slashed-zero absent, md5 3dd009f3…) vs tasks/reviews/s3-browser-walk/fonts-control.png (JetBrains Mono glyphs); fonts-control.png is also 97752 bytes vs refused/blackholed 97847 (identical md5 011a48f1…), i.e. the control shot differs from the no-font shots only trivially.",
+   "repro": "open the two fonts-control.png files side by side",
+   "acceptance": "Either the record states the webfont was not yet applied at shot time (expected for an async sheet) or the walk waits for document.fonts.ready / `link.media==='all'` in the control pass before shooting and the control shot shows JetBrains Mono."
+  },
+  {
+   "id": "R4",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "The 'same instrument' comparison is against a defect-run record taken on an older page: the 2026-08-22 fonts-control.png at main lacks the 'exclude boilerplate' checkbox row (ADR-026) that main's index.html already has and the new shots show, so the two walks did not render the same index.html beyond the one `<link>` (the ledger says the re-run differs 'in exactly one variable').",
+   "evidence": "tasks/reviews/s3-browser-walk/fonts-control.png has no checkbox row under the fieldset and its banner sits at y≈276; tasks/reviews/s3-browser-walk-after-font-fix/fonts-control.png has the checkbox row and banner at y≈309; `git diff origin/main...HEAD -- src/sec10k/web/static/index.html` is 2 lines, so main already had the checkbox when the defect run was recorded.",
+   "repro": "view the two fonts-control.png files; git diff origin/main...HEAD -- src/sec10k/web/static/index.html",
+   "acceptance": "The S3 Status/Debt text notes the defect run predates the checkbox row (or names the sha it ran on), so the 88ms→28ms control delta is not read as attributable solely to the link change."
+  }
+ ]
+}

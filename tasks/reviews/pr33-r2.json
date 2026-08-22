@@ -1,0 +1,34 @@
+{
+ "pr": 33,
+ "round": 2,
+ "date": "2026-08-22",
+ "result": "APPROVED",
+ "scope": "repair diff 460f739..7ac4af5 + standing R1-R4",
+ "gate": "[eval] suite 'invariant': 44/44 = 1.000 (+4 enumerated debt, unscored) · [eval] suite 'fast': 86/86 = 1.000 (+4 enumerated debt, unscored) · .eval-baseline.json {\"fast\": 1.0} unchanged · css_contrast / view self-checks ok",
+ "standing": {
+  "R1": "resolved — ATTR_RE private (hits :832/:874 only), all 24 other ui-* cases green and their pinned counts unchanged; fixture link 7 + pin 3; old adapter on fixture-minus-link-8 → 2; reviewer's three mutations → 1 each; round-0 list unchanged; over-accept probes sane",
+  "R2": "debt row present + in-place correction verified (re.I, 'not all'; probes ALL/not all+onload/PRINT+onload → 0, not all without onload → 1)",
+  "R3": "debt row present; S3 row states webfont arrival undemonstrated; no new artifacts",
+  "R4": "debt row present + in-place correction verified (b1b2c7c has no exclude-bp; d271547 has 2; both shas named; 'exactly one variable' withdrawn)"
+ },
+ "findings": [
+  {
+   "id": "R5",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "The committed regression fixture + exact pin of 3 is GREEN at the pre-repair (460f739) adapter, because R1's miss (link 7 unseen) and R2's over-fire (link 8 `not all`) cancel, so the committed case cannot go red on a revert of the round-1 repair as a whole — only the sequential watch (not reproducible from the commit) saw it red.",
+   "evidence": "460f739:src/repo_hygiene/eval_adapter.py run against HEAD's evals/fixtures/repo_hygiene/font-link-blocking.html → 3 failures (links 3, 4, 8: 'render-blocking (media='not all')'), exactly the pin; HEAD adapter → 3 (links 3, 4, 7). Fixture minus link 8 at old → 2 (so the red-first claim for R1 alone holds).",
+   "repro": "copy src/repo_hygiene/ to a scratch package, overwrite eval_adapter.py with `git show 460f739:src/repo_hygiene/eval_adapter.py`, run_case({'input':{'checks':['external_stylesheets_nonblocking'],'file':'evals/fixtures/repo_hygiene/font-link-blocking.html'}}) → len(failures)==3 == pin",
+   "acceptance": "The pinned count differs between 460f739 and HEAD (e.g. a second unquoted blocking link → pin 4, old parser 3), or the cancellation is stated in the case's provenance so the next reader does not take 'exact count' as proof against the round-0 code."
+  },
+  {
+   "id": "R6",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "pr33-r1-resolution.json R1.shared_state says `grep -rn ATTR_RE src/` hits only eval_adapter.py:829-870; the actual hits are :832 and :874, the second outside the stated range (substance — private to the one function — is correct).",
+   "evidence": "tasks/reviews/pr33-r1-resolution.json R1.shared_state vs `grep -n ATTR_RE src/repo_hygiene/eval_adapter.py` → 832, 874",
+   "repro": "grep -n ATTR_RE src/repo_hygiene/eval_adapter.py",
+   "acceptance": "Range reads 832-874 (or just 'two hits, both inside check_external_stylesheets_nonblocking')."
+  }
+ ]
+}

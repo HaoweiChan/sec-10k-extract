@@ -1,0 +1,22 @@
+<!doctype html>
+<!-- ui-font-link-nonblocking-regression: exactly THREE of these links must fire. -->
+<head>
+<!-- 1. the shipped fix — must NOT fire -->
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<!-- 2. its no-JS fallback — must NOT fire (noscript is stripped, see docstring) -->
+<noscript><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap" rel="stylesheet"></noscript>
+<!-- 3. a second external sheet with the attributes removed — MUST fire (render-blocking) -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC">
+<!-- 4. print with no onload — MUST fire (never applies on screen) -->
+<link rel="stylesheet" href="//cdn.example.net/icons.css" media="print">
+<!-- 5. same-origin sheet — must NOT fire (out of scope) -->
+<link rel="stylesheet" href="/static/local.css">
+<!-- 6. commented out — must NOT fire:
+<link rel="stylesheet" href="https://example.org/dead.css">
+-->
+<!-- 7. PR #33 R1: the same blocking link with UNQUOTED attribute values (valid HTML) — MUST fire -->
+<link rel=stylesheet href=https://fonts.googleapis.com/css2?family=Unquoted>
+<!-- 8. PR #33 R2: `not all` is a non-screen idiom and media values are case-insensitive — must NOT fire -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=NotAll" media="not all" onload="this.media='ALL'">
+<style>:root{--bg:#000}</style>
+</head>

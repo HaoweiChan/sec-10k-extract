@@ -1,0 +1,23 @@
+{
+  "id": "ui-font-link-nonblocking-regression",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "external_stylesheets_nonblocking"
+    ],
+    "file": "evals/fixtures/repo_hygiene/font-link-blocking.html"
+  },
+  "expect": {
+    "min_failures": 3,
+    "max_failures": 3
+  },
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "The mutation half of ui-font-link-nonblocking, in the S5 `-regression` shape (expect.min_failures == max_failures pins an EXACT count, so a regressed miss and a regressed over-fire both go red). The fixture carries eight links and exactly three must fire: (3) a second external sheet with the media/onload attributes removed — the 'attribute removed' and 'second blocking link' mutations are the same tag; (4) a `media=print` sheet with no onload, which never applies on screen; (7) the same blocking link written with UNQUOTED attribute values (PR #33 R1 — valid HTML that the quoted-only ATTR_RE never saw, so the tag was skipped as 'not a stylesheet'). The five that must NOT fire are the shipped fix itself, its `<noscript>` fallback, a same-origin sheet, an HTML-commented-out link, and (8) a `media=\"not all\"` sheet promoted by `this.media='ALL'` (PR #33 R2 — `not all` is the other standard non-blocking idiom and media values are case-insensitive; both were false positives before round 1). A check that pinned the literal attribute string instead of the property would count (1) green by accident and (4) green by mistake; this fixture is what says it does neither."
+  },
+  "provenance": "S3 follow-up PR #33, created 2026-08-22, alongside the check. Round 0: 2 failures (links 3 and 4), exactly as expected; against index.html at origin/main d271547: 1 failure (the live defect); after the fix: 0. PR #33 round 1, R1: link 7 added and the pin moved to 3 FIRST — watched RED at the old quoted-only parser: `[FAIL] ui-font-link-nonblocking-regression (adversarial, 0.0s)`, invariant 43/44 = 0.977, run_case reported 2 failures against the expected 3; GREEN at exactly 3 once ATTR_RE gained an unquoted-value alternative. R2, in place: link 8 added — watched RED at the round-0 regex (4 failures: 'render-blocking (media='not all')'), GREEN at 3 once `not all` joined NON_SCREEN_MEDIA and the onload regex gained re.I."
+}

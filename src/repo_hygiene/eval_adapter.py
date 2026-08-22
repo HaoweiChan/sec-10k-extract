@@ -833,6 +833,69 @@ def check_boilerplate_plumbing(case):
     return bad
 
 
+LINK_RE = re.compile(r"<link\b[^>]*>", re.I)
+# quoted OR unquoted values — PR #33 R1: `<link rel=stylesheet href=https://…>`
+# is valid HTML and the quoted-only form skipped it as "not a stylesheet"
+ATTR_RE = re.compile(r"""([\w-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))""")
+NOSCRIPT_RE = re.compile(r"<noscript>.*?</noscript>", re.S | re.I)
+EXTERNAL_HREF_RE = re.compile(r"^(?:https?:)?//", re.I)
+# media values a screen never matches — a stylesheet scoped to one of these
+# does not block first paint. Anything else (unset, `all`, `screen`, any
+# `(...)` query) is evaluated against the screen and blocks. `not all` is the
+# other standard non-blocking idiom (PR #33 R2); values compare lowercased
+# because media types are case-insensitive.
+NON_SCREEN_MEDIA = ("print", "speech", "not all")
+
+
+def check_external_stylesheets_nonblocking(case):
+    """S3-FONT (gates-2026-08-22 `S3_browser_evidence.font_fallback_finding`,
+    MEDIUM, measured): `<link rel=stylesheet>` to fonts.googleapis.com was
+    render-blocking, so an origin that BLACKHOLES the connection (vs. refuses
+    it) stopped the inspector painting at all — control FCP 88ms, refused
+    28ms, blackholed never painted in an 8s budget. The fix is the one-
+    attribute pattern `media="print" onload="this.media='all'"`: the sheet is
+    fetched off the critical path and promoted to screen once it arrives.
+
+    The check asserts the PROPERTY, not that literal: every live `<link>`
+    whose `rel` contains `stylesheet` and whose `href` names another host
+    must carry a `media` type a screen never matches AND an `onload` that
+    assigns `media` to a screen-matching value — without the second half a
+    `print` sheet simply never applies, which is the other way to get the
+    fix wrong. Same-origin sheets are out of scope (the finding is about a
+    third-party host you cannot make answer); `@import url(https://…)` inside
+    `<style>` is not scanned — the file has none, and one would be the same
+    defect — noted so the next reader does not assume coverage.
+
+    `<noscript>` blocks are stripped before scanning, deliberately and
+    honestly: the conventional no-JS fallback is a plain blocking link, and it
+    IS render-blocking for a JS-off visitor on a blackholing network. That is
+    accepted here because the inspector is fetch-driven end to end — with JS
+    off the visitor has the static shell and nothing else — so a webfont that
+    arrives late costs them nothing the page still offers.
+    """
+    inp = case.get("input", {})
+    text = _live((ROOT / inp.get("file", UI_STYLESHEET)).read_text(), "js")
+    text = NOSCRIPT_RE.sub("", text)
+    bad = []
+    for tag in LINK_RE.findall(text):
+        attrs = {k.lower(): (v or w or u) for k, v, w, u in ATTR_RE.findall(tag)}
+        if ("stylesheet" not in attrs.get("rel", "").lower().split()
+                or not EXTERNAL_HREF_RE.match(attrs.get("href", ""))):
+            continue
+        href = attrs["href"].split("?")[0]
+        media = attrs.get("media", "").strip().lower()
+        onload = attrs.get("onload", "")
+        if media not in NON_SCREEN_MEDIA:
+            bad.append(f"{href}: external stylesheet is render-blocking "
+                       f"(media={media or 'unset'!r}) — a blackholed host stops "
+                       f"first paint; want media=print + an onload promoting it "
+                       f"to all")
+        elif not re.search(r"\bmedia\s*=\s*['\"]?(all|screen)\b", onload, re.I):
+            bad.append(f"{href}: media={media!r} but no onload promoting it to "
+                       f"all/screen — the sheet never applies on screen")
+    return bad
+
+
 # Text a source can hand the resolver that is NOT a build identity, and must
 # therefore resolve to `unknown` (ADR-028) — fed through BOTH the file and the
 # `GIT_SHA` override, because the ruling is per-value, not per-source. None of
@@ -1108,6 +1171,7 @@ CHECKS = {
     "anchor_contract": check_anchor_contract,
     "boilerplate_exclusion": check_boilerplate_exclusion,
     "boilerplate_plumbing": check_boilerplate_plumbing,
+    "external_stylesheets_nonblocking": check_external_stylesheets_nonblocking,
     "build_identity": check_build_identity,
 }
 
