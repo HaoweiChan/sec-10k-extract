@@ -1,6 +1,6 @@
 # ADR-024 — 10-K/A stays out of scope: the form is accepted by EDGAR, the item set is not the era's
 
-Date: 2026-08-20. Status: accepted.
+Date: 2026-08-20. Status: accepted. Amended in place 2026-08-22 (Decision point 3 superseded in one respect — see the amendment note under it).
 
 **Ruling**: Form 10-K/A is **out of scope** and keeps returning `doc_status: unsupported` with `unsupported_form` naming the detected form; the refusal is now pinned by a self-check on both detection routes rather than left as a side effect of `ACCEPTED_FORMS`.
 **Because**: an amendment's item set is whatever it chose to restate, not what its era requires, so every unamended item would report `missing` — supporting it means a second expected-set model, which is a capability the T8 freeze forbids and no committed fixture could test.
