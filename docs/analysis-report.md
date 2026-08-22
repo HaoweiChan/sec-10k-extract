@@ -94,7 +94,9 @@ reach:
   for digit, under a header naming the run of record — while the ledger and
   `prompts/009` both recorded that sweep as complete. It is not asserted a
   fourth time: `python3 -m evals.bench --check-docs <artifact>` now checks
-  every decimal printed beside a backticked fixture name against that
+  every decimal printed within 60 characters after a backticked fixture name,
+  same line, in the five `DOC_FILES` — ratios/percentages/prices and the
+  `DOC_ALLOW` history list excepted (ADR-021 §b12) — against that
   artifact, reading **52 checked / 0 unmatched** here and 22 unmatched against
   the superseded run. It found a **seventh** stale figure the review had not
   cited. The documents' claim is narrowed to what the check reaches:

@@ -80,8 +80,8 @@ The ruling in two clauses, because one is not enough:
    block's ten caption bullets address items in the interleaved order 10, 10,
    11, 10, 11, 12, 10, 11, 13, 10, and what that interleaving forecloses is
    narrow: **no partition gives item 10 the *complete* block AND items 11–13
-   their own spans.** It costs item-10 coverage — 956 of the block's 3,263
-   chars — and nothing else. It does not put items 11–13 beyond the contract:
+   their own spans.** Item 10 keeps 956 of the block's 3,263 chars under the
+   partition — the cost is the other 2,307, and nothing else. It does not put items 11–13 beyond the contract:
    the four caption regions sit at strictly increasing, disjoint offsets,
    `no_overlap_ordered` passes on that assignment, and `segment.classify`
    returns `extracted` on each of the four bodies. A combined-heading fan-out
@@ -554,8 +554,8 @@ Items 12 and 13 land on precisely their own captions. INV-S1's only executable
 form checks `s2 < e1` over spans in item order and nothing else; nothing in it
 forbids this. The true claim is narrower than the one I made: **no partition
 gives item 10 the *complete* block AND items 11–13 their own spans.** The
-interleaving costs item-10 coverage — 956 chars of 3,263 — and does not put
-items 11–13 beyond the contract. The surface returns to **4 of 768**, and the
+interleaving leaves item 10 with 956 of the block's 3,263 chars — the cost is
+2,307 — and does not put items 11–13 beyond the contract. The surface returns to **4 of 768**, and the
 debt case is back to four `extracted` assertions with its item-10 floor lowered
 from 2,000 (which silently encoded the whole-block design) to 500 (cleared by
 both designs). Watched red again.
