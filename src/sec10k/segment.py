@@ -462,9 +462,13 @@ def assign_boundaries(survivors, expected, text):
 
 # ADR-004: IBR is for pointers to a DIFFERENT document. An internal "appears on
 # pages 52-167" pointer (JPM Items 7/8) stays `extracted`.
+# `security` is the SEC's own term for the same document (Rule 14a-3(b), Form
+# 10-K General Instruction G(2)); without it a whole-item pointer naming the
+# "Annual Report to Security Holders" reported `extracted` at 0.95 — cold-review
+# finding T4-1 (tasks/reviews/gates-2026-08-22.json), `ibr-security-holders`.
 EXTERNAL_DOC_RE = re.compile(
-    r"(?i)(proxy statement|information statement|annual report to (share|stock)"
-    r"[ ]?(holders|owners)|annual report to its (share|stock)[ ]?(holders|owners))")
+    r"(?i)(proxy statement|information statement|annual report to (its )?"
+    r"(share|stock|security)[ ]?(holders|owners))")
 # "incorporated ... by reference" tolerates an interposed phrase: Wells Fargo
 # 2008 writes "incorporated INTO THIS REPORT by reference" on ten of its items,
 # and both of the old fixed alternatives missed it, so every one of them

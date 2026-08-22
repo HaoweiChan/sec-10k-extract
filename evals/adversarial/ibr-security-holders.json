@@ -1,0 +1,31 @@
+{
+  "id": "ibr-security-holders",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/ibr-security-holders/filing.txt"},
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "deterministic"},
+      {"type": "doc_status", "value": "success_with_warning"},
+      {"type": "item_present", "item": "6", "status": "incorporated_by_reference"},
+      {"type": "confidence", "item": "6", "value": 0.85},
+      {"type": "text_contains", "item": "6", "value": "Annual Report to Security Holders"},
+      {"type": "item_present", "item": "3", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "7", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "8", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "5", "status": "extracted"},
+      {"type": "item_present", "item": "1", "status": "extracted"},
+      {"type": "min_chars", "item": "1", "value": 5000},
+      {"type": "expected_set_complete", "items": ["1","2","3","4","5","6","7","7A","8","9","10","11","12","13","14"]},
+      {"type": "only_items", "items": ["1","2","3","4","5","6","7","7A","8","9","10","11","12","13","14"]}
+    ]
+  },
+  "triage": {
+    "class": "status-misclassification",
+    "note": "Cold-reviewer finding T4-1 (tasks/reviews/gates-2026-08-22.json, HIGH, orchestrator-verified). EXTERNAL_DOC_RE in src/sec10k/segment.py was a closed enumeration — proxy statement, information statement, annual report to share/stock holders/owners — that did not include the SEC's own statutory term for the same document: 'annual report to security holders' (Exchange Act Rule 14a-3(b), Form 10-K General Instruction G(2)). A whole-item pointer that names the document by that term carries IBR_RE but not EXTERNAL_DOC_RE, so classify() returns `extracted` at 0.95 over a one-sentence pointer instead of `incorporated_by_reference` at 0.85 — the status moves UP in confidence while the item's content is in another document. The finding's claim that the term 'appears in a committed fixture (ibm-1997, 1 hit)' is true but the hit is NOT a pointer: it is the exhibit-index row '(13) Annual report to security holders' inside item 14 (raw line 931), and every item-body pointer in ibm-1997 says 'Annual Report to Stockholders', which matches. So no committed real filing exercises the miss, and the case needs the one-word mutation below."
+  },
+  "provenance": "SELF-CREATED adversarial fixture: a copy of evals/fixtures/ibm-1997/filing.txt (International Business Machines Corp FY1997 10-K405, EDGAR accession 0001047469-98-012291 — see that fixture's README row for original public-source provenance), mutated 2026-08-22 by ONE substitution on ONE line: raw line 450, item 6's whole-item pointer, 'Annual Report to Stockholders' -> 'Annual Report to Security Holders' (4 bytes added, 344,714 -> 344,718; `diff` against the source shows exactly that one line). Item 6 in full after the mutation: \"Refer to page 78 of IBM's 1997 Annual Report to Security Holders which is incorporated herein by reference.\" — the same sentence the ibm-1997-shallow golden case quotes, with the document named by the term the SEC uses for it. MEASURED EFFECT at HEAD d66711e before the fix: item 6 flips from `incorporated_by_reference` 0.85 (the value ibm-1997-shallow asserts on the unmutated source) to `extracted` 0.95; every other item is byte-identical in status and confidence to the unmutated run; doc_status stays success_with_warning with the same single unattributed_content warning — nothing in the envelope registers the flip. WHY THESE CHECKS: item_present(6, incorporated_by_reference) + confidence(6, 0.85) are the direct assertions and are the only two that fail before the fix. text_contains(6, 'Annual Report to Security Holders') pins that the case is exercising the mutated sentence (IBR spans carry offsets, INV-S1 as extended by G1); the string occurs exactly 1x in the mutated fixture's normalized text and 0x in the unmutated source. Items 3/7/8 asserted IBR and items 5/1 asserted extracted (1 with min_chars 5000, real body 9,721) so that a fix which widened IBR indiscriminately — or disabled it — would go red here: item 5 is the pointer-FIRST-then-real-content shape ('Refer to pages 78 and 79 ... incorporated herein by reference solely as they re...' followed by ~600 chars of market data) and must stay extracted. expected_set_complete/only_items carry the same 15-item 1997 set as ibm-1997-shallow; a one-word substitution cannot change the filing's item inventory. Tagged 'invariant' for the same reason ibr-pointer-first is: the failure produces a confident, clean-looking envelope while reporting content as present that is in another document. OUT OF THIS FIX, deliberately: the finding's third probe, 'Exhibit 13 to this Form 10-K', is a pointer to an exhibit filed WITH the 10-K rather than to a separately delivered document; no committed fixture writes a pointer whose only external-document term is 'Exhibit 13' (wmt-2010's Part II pointers name the 'Annual Report to Shareholders' and classify IBR already), so it is logged in tasks/TODO.md's debt table rather than fixed blind. NOT yet dual-passed by extraction-auditor: pending, per case-authoring step 8."
+}
