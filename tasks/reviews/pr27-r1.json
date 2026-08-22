@@ -1,0 +1,52 @@
+{
+  "pr": 27,
+  "task": "S8",
+  "round": 1,
+  "date": "2026-08-22",
+  "reviewer": "groundwork:pr-reviewer (fresh context, full-diff sweep of main...task/S8 @ 4c1ae91)",
+  "result": "REQUEST_CHANGES",
+  "counts": {
+    "HIGH": 1,
+    "MEDIUM": 1,
+    "LOW": 2
+  },
+  "routing_note": "R1 is HIGH and routed repair: it is a live cross-feature regression - turning the new checkbox ON silently breaks the S4 compare-pane anchoring that PR #21 spent three rounds building, on six items reachable from the fixture dropdown. The orchestrator re-ran it independently (0 failures OFF, 6 ON) before routing. R2 is MEDIUM and routed repair on two grounds: it is a check that cannot fail, and two of its four passing breakages defeat the task's own headline requirement that default-OFF behaviour is unchanged, which also makes the committed debt row's disclosure narrower than the truth. R3 and R4 are LOW and route to debt regardless of criteria. R4 is a VERDICT rather than a defect - it answers the open question the orchestrator raised in the PR body about the additive `boilerplate_excluded` key, and the answer is that it is acceptable and breaks no contract.",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "Ticking the new checkbox silently breaks the S4 compare-pane anchor contract: `build_view` feeds the chrome-stripped body into `item.text`, and `findAnchor` uses exactly that string as its TOC-disambiguation oracle against a source that still contains the chrome, so items lose their source anchor (and the item before an unanchored one gets its highlighted source region silently widened).",
+      "evidence": "src/sec10k/web/view.py:41-44 sets `text` to `strip_chrome(...)`; src/sec10k/web/static/index.html:538 `ITEM_START_ANCHORS = items.map(it => findAnchor(SOURCE_INDEX, it.heading_text, it.text))` and :465-515 `targetCore(itemText, needle)` / AGREEMENT_MIN=15; index.html:544-555 `itemRegion` walks forward to the next non-null anchor for `end`. Concrete trigger - caps-cover-2016 item 4: OFF text `'ITEM 4. MINE SAFETY DISCLOSURES.\\n\\nN/A\\n\\n2\\n\\nTable of Contents\\n\\nPART II\\n\\n'`, ON text `'ITEM 4. MINE SAFETY DISCLOSURES.\\n\\nN/A\\n\\n\\n\\nPART II\\n\\n'` - the stripped body scores below AGREEMENT_MIN and `find_anchor` returns None. The repo's own Python mirror + gated check agrees: `check_anchor_contract` returns 0 failures on the OFF path and 6 on the ON path (caps-cover-2016 item 4, items-stripped item 4, malformed-html item 4, premier-pacific-2016 item 4, toc-titled item 4, wfc-2008 item 9B), all reachable from the fixture dropdown. Its own docstring calls anything else failing to anchor 'a genuine contract violation'. No committed case runs the anchor check with exclusion on.",
+      "repro": "Monkeypatch `src.repo_hygiene.eval_adapter.extract_items` to force `exclude_boilerplate=True`, then call `check_anchor_contract({'input':{}})`. ORCHESTRATOR RE-RAN THIS INDEPENDENTLY: OFF failures 0, ON failures 6, exactly the six items listed.",
+      "acceptance": "An eval case runs `anchor_contract` (or an equivalent) over the fixture set with `exclude_boilerplate=True` and is green - i.e. anchoring resolves identically with the flag on and off. Watch it red first against the current code (6 failures), then fix by giving the anchor path the un-stripped slice (e.g. keep the verbatim body available to `findAnchor` rather than reusing the display string), not by lowering AGREEMENT_MIN."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "`check_boilerplate_plumbing` stays green on four realistic silent breakages of the wire, two of which defeat the task's headline requirement (default OFF = unchanged behaviour) and are not covered by the debt row's disclosure, which names only 'a wrong parameter name, a wrong body shape or a 422'.",
+      "evidence": "src/repo_hygiene/eval_adapter.py::check_boilerplate_plumbing:344-359 - the handler test is `'exclude_boilerplate' not in api[j:k]` (the kwarg name to `_run` satisfies it, so the JSON key the client sends is never compared), and the last hop is `re.search(r'extract_items\\(\\s*path,\\s*exclude_boilerplate=', api)`, which matches `extract_items(path, exclude_boilerplate=not exclude_boilerplate)`. Mutations run against copies of the real `app.py`/`index.html`, all 0 failures: (a) server reads `excludeBoilerplate` while the client sends `exclude_boilerplate` (fixture+URL silently never exclude); (b) UI hardcodes `exclude_boilerplate: true` instead of `excludeBp()` (checkbox ignored, every fixture/URL request excludes - the OFF-is-unchanged guarantee gone); (c) upload handler compares `== \"true\"` while index.html:770-773 sends `&exclude_boilerplate=1` (upload silently never excludes - verified live over HTTP: `?exclude_boilerplate=true` returns `boilerplate_excluded=False`); (d) `extract_items(path, exclude_boilerplate=not exclude_boilerplate)` (flag inverted at the final hop). Only (a) is arguably disclosed in tasks/TODO.md's new debt row. The regression fixture `evals/adversarial/ui-boilerplate-exclusion-regression.json` pins exactly 3 breakage shapes, none of which is (b), (c) or (d).",
+      "repro": "Copy `src/sec10k/web/app.py` and `static/index.html` into a scratch dir, apply each of the four edits above, and call `check_boilerplate_plumbing` against the copies - all four return []. Control returns []; sanity mutation `upload_no_send` returns 1.",
+      "acceptance": "Either the check binds the two ends together (assert the UI sends the same literal key the handler reads, assert the call sites use `excludeBp()` rather than a literal, assert the upload literal in the JS matches the comparison in `app.py`, and assert the final hop passes the parameter unmodified), or the fixture pair is extended with these shapes at an exact failure count - with each mutation observed red before it is claimed covered. Alternatively an HTTP-level case (fastapi+httpx are installable; a TestClient run of all three modes off/on takes ~2s) replaces the textual check, and the debt row is corrected to name what it actually misses."
+    },
+    {
+      "id": "R3",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "`truncated` is the one item field whose value changes meaning under exclusion and it is pinned by nothing - the new check omits it from `pinned` and never asserts it, so an implementation that computes it from the un-stripped span still passes.",
+      "evidence": "src/sec10k/web/view.py:52 `\"truncated\": len(body) > display_max` (body = stripped) vs :51 `\"chars\": len(raw)`; src/repo_hygiene/eval_adapter.py:524-526 `pinned = (\"item\",\"part\",\"start\",\"end\",\"chars\",\"status\",\"method\",\"confidence\",\"heading_text\")` - `truncated` absent, and no later assertion touches it. Mutation `truncated = len(raw) > display_max` (which would print the 'shown first N of M' notice on an item whose entire stripped body is visible) leaves `check_boilerplate_exclusion` at 0 failures / items_stripped 16. The fixtures do exercise the region: ge-1994 max item is 46,929 chars and msft-2013's is 111,892, both over DISPLAY_MAX=40,000.",
+      "repro": "Mutate `truncated` to `len(raw) > display_max` and re-run `check_boilerplate_exclusion` -> 0 failures, items_stripped 16. Sibling mutations confirm the rest of the oracle is sound: end-1 -> 31 failures, no-window -> 34.",
+      "acceptance": "The exclusion case asserts `truncated == (len(expected_stripped) > DISPLAY_MAX)` per item on the ON run (and `== (len(raw) > DISPLAY_MAX)` on the OFF run), watched red against the `len(raw)` mutation."
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "Verdict on the additive `boilerplate_excluded` key: acceptable - nothing enumerates the view payload's keys, so it is not a contract change, and every OFF-path value is still pinned; the residue is that 'existing behavior unchanged' for the OFF path rests on a one-off manual payload diff plus per-item assertions on two fixtures, not on a committed whole-payload check.",
+      "evidence": "No spec or ADR mentions `build_view` or the inspector payload (`grep -rn 'build_view|norm_chars' specs/ docs/` returns nothing), so the new top-level key at src/sec10k/web/view.py:71 breaks no contract, and index.html:731/752 are the only consumers. `check_boilerplate_exclusion` does pin the OFF path per item (`text` == verbatim slice, `chars` == e-s, `boilerplate_excluded is False`), on ge-1994 and msft-2013 only; nothing pins `warnings`, `counts`, `trace` or `meta` against a pre-S8 snapshot for any other fixture.",
+      "repro": "grep -rn 'build_view' specs/ docs/ -> empty. Orchestrator's own independent check: full `build_view` payload diffed against merged main on msft-2013/ge-1994/aapl-2025, sole difference is the added key.",
+      "acceptance": "No change required for the key itself. If the OFF-path guarantee is to be gateable rather than manual, add one case asserting the OFF payload for a fixture equals a committed snapshot with `boilerplate_excluded` allowed as the only new key."
+    }
+  ]
+}
