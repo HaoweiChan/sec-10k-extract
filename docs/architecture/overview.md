@@ -57,7 +57,7 @@ proceeding in silence.
 
 **3. Normalization** — deterministic plain text. Stdlib `HTMLParser` subclass:
 block-level tags emit `\n`, inline tags (including all `ix:*`) emit nothing,
-`script`/`style` skipped, `html.unescape`, nbsp→space, 3+ newlines collapsed.
+`script`/`style`/`title` skipped, `html.unescape`, nbsp→space, 3+ newlines collapsed.
 Plain-text era: newline normalization passthrough. Page furniture deliberately
 **stays in the text** (removing it risks verbatim provenance and determinism) —
 it is filtered at candidate level instead. Failure modes: word-joining at block
