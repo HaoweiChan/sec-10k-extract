@@ -1,0 +1,34 @@
+{
+  "pr": 30,
+  "round": 2,
+  "task": "T3",
+  "review": "tasks/reviews/pr30-r2.json",
+  "resolved_by": "implementer",
+  "date": "2026-08-22",
+  "protocol": "Both repros re-run before editing; both reproduced. R8 repaired with the watch-red form for a prose defect (cell count 7 before, 6 after) plus a sweep of every table row this PR added or edited in evals/fixtures/README.md, tasks/TODO.md and README.md; R9 routed to debt and corrected in place because the header is part of the same amendment artifact this PR authored.",
+  "gate_at_resolution": {
+    "invariant": "41/41 = 1.000",
+    "fast": "83/83 = 1.000",
+    "baseline": "1.000, not moved"
+  },
+  "findings": [
+    {
+      "id": "R8",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "reproduced": true,
+      "repro_observed": "awk 'NR==28{print gsub(/\\|/,\"|\")-1}' evals/fixtures/README.md -> 7 at b4716b4 (the unescaped pipe in `grep -o | wc -l`)",
+      "fix": "evals/fixtures/README.md:28 now reads '`grep -o` piped to `wc -l` gives 40, `grep -c` 34' -- the pipe is prose outside any code span (the `\\|` form was tried first and still counts 7 under the reviewer's own awk, so it was not used); the 40/34 numbers stay. Sweep: every table row added or edited by this PR in evals/fixtures/README.md (6 cells), tasks/TODO.md Debt rows (3) and the T3 milestone row (7), README.md:114 (3) counts correctly, and no changed line carries a pipe inside backticks.",
+      "covered_by": "awk 'NR==28{print gsub(/\\|/,\"|\")-1}' evals/fixtures/README.md -> 6"
+    },
+    {
+      "id": "R9",
+      "severity": "LOW",
+      "status": "debt",
+      "reproduced": true,
+      "repro_observed": "sed -n 3p specs/decisions/ADR-024-10ka-out-of-scope.md -> 'Date: 2026-08-20. Status: accepted.'; grep -l 'Amended by:' specs/decisions/ADR-0*.md lists the header convention; ADR-024's amendment note sat at :95 with no header marker",
+      "debt_row": "ADR-024's header line did not flag its in-body amendment",
+      "note": "Corrected in place in round 2: ADR-024:3 now reads 'Date: 2026-08-20. Status: accepted. Amended in place 2026-08-22 (Decision point 3 superseded in one respect -- see the amendment note under it).' The row stays on the ledger for the convention question (in-place amendment vs a new ADR number)."
+    }
+  ]
+}

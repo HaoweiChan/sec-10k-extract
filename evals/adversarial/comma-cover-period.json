@@ -1,0 +1,32 @@
+{
+  "id": "comma-cover-period",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/comma-cover-2016/filing.htm"},
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "deterministic"},
+      {"type": "doc_status", "in": ["success", "success_with_warning"]},
+      {"type": "warning_absent", "code": "period_end_unknown"},
+      {"type": "item_present", "item": "1A", "status": "extracted"},
+      {"type": "item_present", "item": "7A", "status": "extracted"},
+      {"type": "item_present", "item": "9A", "status": "extracted"},
+      {"type": "item_present", "item": "9B", "status": "extracted"},
+      {"type": "item_present", "item": "15", "status": "extracted"},
+      {"type": "text_not_contains", "item": "1", "value": "ITEM 1A. RISK FACTORS."},
+      {"type": "max_chars", "item": "1", "value": 7600},
+      {"type": "text_not_contains", "item": "9", "value": "ITEM 9A(I). CONTROLS AND PROCEDURES"},
+      {"type": "max_chars", "item": "9", "value": 500},
+      {"type": "expected_set_complete", "items": ["1","1A","1B","2","3","4","5","6","7","7A","8","9","9A","9B","10","11","12","13","14","15","16"]},
+      {"type": "only_items", "items": ["1","1A","1B","2","3","4","5","6","7","7A","8","9","9A","9B","10","11","12","13","14","15","16"]}
+    ]
+  },
+  "triage": {
+    "class": "input-variant",
+    "note": "Cold-reviewer finding T3-3 (tasks/reviews/gates-2026-08-22.json, MEDIUM, reviewer-stated; reproduced by the implementer 2026-08-22 before anything was edited). normalize.py COVER_DATE_RE kept a rigid ',?\\s+' between the day and the year, so a cover date typeset without a space after the comma ('December 31,2016') -- or with the comma floated off the day ('December 31 , 2016') -- does not match; and DATE_RE, the regex the captured string is handed to, had the same '\\s*,?\\s+' demand for at least one space AFTER the comma (the finding credits DATE_RE with already fixing the hazard; it fixes only the floating comma, not the space-less one -- measured, see provenance). period_end comes back None, segment.expected_items' date guard is falsy for every dated code, and the filing is silently demoted to the 14-code 1993 item set with taxonomy_era 'legacy' and doc_status success_with_warning -- the identical failure path caps-cover-taxonomy pins for the all-caps cover, one typesetting choice over. Same class (input-variant): the code is correct for every cover spacing it was tested against; the eval set never contained the other."
+  },
+  "provenance": "SELF-CREATED adversarial fixture: a copy of evals/fixtures/premier-pacific-2016/filing.htm (Premier Pacific Construction, Inc. FY2016 10-K, EDGAR accession 0001127855-17-000104 -- see that fixture's README row for original public-source provenance), mutated 2026-08-22 by ONE byte: inside the single cover-page <font> run that carries the period ('For the fiscal year ended ... December 31, 2016', the first of 40 'December 31, 2016' occurrences in the raw file (`grep -o | wc -l` 40; they sit on 34 lines, `grep -c` 34), at raw byte offset 2196), the space after the comma was deleted -- 'December 31, 2016' -> 'December 31,2016'. 642,332 -> 642,331 bytes; `cmp` shows the first differing byte at offset 2208 and nothing else is touched (the derivation asserts exactly one 'December 31,2016' in the output). This is a real filer typesetting shape, and the tag-stripped iXBRL path can produce it too ('31,</span><span>2016' loses nothing but may lose the space). MEASURED EFFECT at origin/main 3c2b8f4 (before any fix), the red line: extract_items -> meta.period_end None (unmutated source: 2016-12-31), taxonomy_era 'legacy' (source: 'modern'), 14 items instead of 21, doc_status success_with_warning with the single warning period_end_unknown; the spans bleed by exact arithmetic -- item 1 measures 7,767 chars = 7,496 + 129 (Item 1A) + 142 (Item 1B); item 9 measures 7,454 = 102 + 7,166 (Item 9A) + 186 (Item 9B); item 14 measures 2,624 = 1,253 + 1,371 (Item 15) -- the same three numbers caps-cover-taxonomy records, because it is the same code path. The eval runner's red line: '[FAIL] comma-cover-period' with 11 of 17 checks failing -- warning_absent (\"unexpected warning 'period_end_unknown': no period of report found; expected item set is a guess\"); item_present 1A/7A/9A/9B/15 ('item 1A not extracted: None' etc.); text_not_contains item 1 ('item 1 contains forbidden 'ITEM 1A. RISK FACTORS.'') and item 9 (likewise for 'ITEM 9A(I). CONTROLS AND PROCEDURES'); max_chars 1/9 ('item 1 has 7767 chars > 7600', 'item 9 has 7454 chars > 500'); expected_set_complete ('expected items missing or unstatused: 1A, 1B, 7A, 9A, 9B, 15, 16'). The text_not_contains rows fire here because items 1 and 9 exist and are bled INTO; the max_chars bands beside them are what keeps the assertion load-bearing if a future failure mode drops the item instead (text_not_contains is vacuous on an absent item, as eval_adapter documents). WHY THESE CHECKS: warning_absent(period_end_unknown) is the direct assertion -- the date is on the cover and the pipeline must read it; the item_present, max_chars, text_not_contains, expected_set_complete and only_items rows are copied from caps-cover-taxonomy on purpose: the two fixtures are one-transformation siblings of the same source, so the same 21-item FY2016 inventory is the ground truth for both, and a fix that passes one but not the other has fixed a casing or a spacing rather than the date reader. Both comma shapes are additionally pinned at the layer by normalize.py::_demo (COVER_DATE_RE + _parse_date on 'December 31,2016' and 'December 31 , 2016'), because one fixture can carry only one of them and the floating-comma shape is the one DATE_RE already handled -- so the fixture carries the space-less shape, the one that was red on both regexes. Tagged 'invariant' for the same reason as caps-cover-taxonomy: a silent era demotion produces confident, plausible, wrong spans across the whole document. NOT yet dual-passed by extraction-auditor: pending, per case-authoring step 8."
+}

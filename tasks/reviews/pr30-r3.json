@@ -1,0 +1,13 @@
+{
+ "pr": 30,
+ "round": 3,
+ "date": "2026-08-22",
+ "result": "APPROVED",
+ "scope": "repair diff b4716b4..ba29c7e + standing R8/R9",
+ "gate": "[eval] suite 'invariant': 41/41 = 1.000 (+4 enumerated debt, unscored) | [eval] suite 'fast': 83/83 = 1.000 (+4 enumerated debt, unscored) | .eval-baseline.json {\"fast\": 1.0} unchanged",
+ "standing": {
+  "R8": "resolved — README.md:28 6 cells; 40/34 re-measured; full sweep of every changed table row in README.md / tasks/TODO.md / evals/fixtures/README.md clean (tokenizer finds no | inside any code span)",
+  "R9": "debt row present, in-place ADR-024:3 header correction verified; pr30-r2-resolution.json consistent"
+ },
+ "findings": []
+}

@@ -29,6 +29,13 @@ ACCEPTED_FORMS = {"10-K", "10-K405"}
 # freely says "Form 10-Q" and a 10-Q always cites its own prior "Form 10-K"
 COVER_CHARS = 3000
 FORM_SNIFF_RE = re.compile(r"\bFORM\s{0,4}(10-[A-Z0-9]{1,4}(?:/A)?)\b", re.I)
+# an amendment's cover may typeset the marker away from the form token —
+# "FORM 10-K" / "(Amendment No. 1)" on the next line, or "Amendment No. 1 to"
+# above it — so the /A alternative alone does not hold ADR-024's refusal
+# (cold-review T3-2, gates-2026-08-22). Within this many normalized chars of
+# the token, on either side; no committed cover says "Amendment No" at all.
+AMENDMENT_RE = re.compile(r"\bamendment\s+no\b", re.I)
+AMENDMENT_REACH = 80
 
 # normalized text this short means the parse collapsed, whatever the input was
 COLLAPSE_FLOOR = 2000
@@ -41,8 +48,11 @@ BLOCK_TAGS = {
 }
 CELL_TAGS = {"td", "th"}
 # ix:header/ix:hidden hold XBRL context definitions whose character data is not
-# document text at all — 15.4% of JPM 2024 before the first readable word (ADR-006)
-SKIP_TAGS = {"script", "style", "ix:header", "ix:hidden"}
+# document text at all — 15.4% of JPM 2024 before the first readable word (ADR-006).
+# <title> is the source filename or a filing agent's label ("aapl-20250927",
+# "e10vk", "Document") — machine metadata no reader sees, INV-S5; it opened
+# normalized_text on 18 of 38 fixtures (cold-review T3-1, gates-2026-08-22)
+SKIP_TAGS = {"script", "style", "title", "ix:header", "ix:hidden"}
 
 
 class _Plain(HTMLParser):
@@ -135,9 +145,12 @@ DEI_PERIOD_RE = re.compile(r'name="dei:DocumentPeriodEndDate"')
 # Without it the two regexes disagree about case, the captured string fails to
 # parse, period_end comes back None, and expected_items silently drops the
 # whole modern taxonomy — caps-cover-taxonomy.
-DATE_RE = re.compile(r"(?i)([A-Za-z]{3,9})\.?\s+(\d{1,2})\s*,?\s+(\d{4})")
+DATE_RE = re.compile(r"(?i)([A-Za-z]{3,9})\.?\s+(\d{1,2})\s*,?\s*(\d{4})")
+# same comma freedom on BOTH sides here: "December 31,2016" (space-less) and
+# "December 31 , 2016" (floating) are typesetting, and a miss demotes the
+# filing to the 1993 item set (cold-review T3-3, comma-cover-period)
 COVER_DATE_RE = re.compile(r"(?i)fiscal year ended[:\s]*"
-                           r"([A-Z][a-z]{2,8}\.?\s+\d{1,2},?\s+\d{4})")
+                           r"([A-Z][a-z]{2,8}\.?\s+\d{1,2}\s*,?\s*\d{4})")
 MONTHS = ["january", "february", "march", "april", "may", "june", "july",
           "august", "september", "october", "november", "december"]
 
@@ -180,7 +193,13 @@ def period_end(raw, text):
 def sniff_form(text):
     """Form type per the cover page, or None. Second opinion on <TYPE>."""
     m = FORM_SNIFF_RE.search(text[:COVER_CHARS])
-    return m.group(1).upper().replace(" ", "") if m else None
+    if not m:
+        return None
+    form = m.group(1).upper().replace(" ", "")
+    if not form.endswith("/A") and AMENDMENT_RE.search(
+            text[max(0, m.start() - AMENDMENT_REACH):m.end() + AMENDMENT_REACH]):
+        form += "/A"
+    return form
 
 
 def select_and_normalize(raw):
@@ -317,9 +336,9 @@ def _demo():
 
     # ADR-024 rules 10-K/A OUT, so the refusal is the behaviour that has to
     # hold — on BOTH routes, because an amendment reaches us either way and the
-    # /A is one character wide. No fixture is committed for it (adding one moves
-    # the T13 benchmark corpus and every published figure derived from it), so
-    # the ruling is enforced here, at the layer, the ADR-016 treatment.
+    # /A is one character wide. These two byte-adjacent shapes are pinned here,
+    # at the layer (ADR-024 §2); the non-adjacent marker (T3-2) has a gate case
+    # of its own, amended-cover-refused, on the synthetic amended-cover-2021.
     amd_sgml = "<DOCUMENT>\n<TYPE>10-K/A\n<TEXT>\nFORM 10-K/A\nbody\n</TEXT>\n</DOCUMENT>"
     assert select_and_normalize(amd_sgml)[1]["form_type"] == "10-K/A"
     # ...and the one that matters more: a primary .htm carries no SGML header at
@@ -328,6 +347,21 @@ def _demo():
     m3 = select_and_normalize(amd_htm)[1]
     assert m3["form_type_declared"] is None and m3["form_type"] == "10-K/A", m3
     assert "10-K/A" not in ACCEPTED_FORMS   # extract.py returns `unsupported`
+
+    # cold-review T3-1 (gates-2026-08-22): the <title> is a filename or a filing
+    # agent's label — machine metadata, INV-S5 — not the first line of the filing
+    titled = "<html><head><title>aapl-20250927</title></head><body><p>FORM 10-K</p></body></html>"
+    assert "aapl-20250927" not in select_and_normalize(titled)[0]
+    # T3-2: the ADR-024 refusal must hold when the amendment marker is typeset
+    # away from the form token, on either side of it
+    for cover in ("<p>FORM 10-K</p><p>(Amendment No. 1)</p>",
+                  "<p>Amendment No. 1 to</p><p>FORM 10-K</p>"):
+        got = sniff_form(select_and_normalize(f"<html><body>{cover}</body></html>")[0])
+        assert got == "10-K/A", (cover, got)
+    # T3-3: a space-less or floating comma in the cover date is typesetting,
+    # not a missing date (comma-cover-period carries the space-less shape)
+    for s in ("fiscal year ended December 31,2016", "fiscal year ended December 31 , 2016"):
+        assert period_end("", s) == date(2016, 12, 31), (s, period_end("", s))
 
     print("[normalize self-check] ok")
 

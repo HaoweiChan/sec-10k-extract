@@ -1,0 +1,79 @@
+{
+  "pr": 30,
+  "round": 1,
+  "task": "T3",
+  "review": "tasks/reviews/pr30-r1.json",
+  "resolved_by": "implementer",
+  "date": "2026-08-22",
+  "protocol": "Every finding's repro was re-run before anything was edited; all seven reproduced. R1-R3 repaired, R4-R7 routed to the Debt table per the round's routing (scope rule); R4 and R5 sit in text R1/R3 already rewrote (the T3 row cell, the html-title-metadata provenance), so they were corrected in place and their Debt rows say so. R3 took the reviewer's preferred route: a synthetic fixture + a fast+invariant case, watched red with the fix disabled before re-enabling it; the fix itself is unchanged.",
+  "gate_at_resolution": {
+    "invariant": "41/41 = 1.000",
+    "fast": "83/83 = 1.000",
+    "baseline": "1.000, not moved",
+    "self_checks": "python3 -m src.sec10k.normalize ok; python3 -m evals.bench --self-check ok"
+  },
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "reproduced": true,
+      "repro_observed": "awk 'NR==103{print gsub(/\\|/,\"|\")-1}' tasks/TODO.md -> 7 (the Normalized-character row was glued onto the PR #28 R4/R5 row's line: the patch inserted before that line's newline instead of after it)",
+      "fix": "tasks/TODO.md line 103 split at '...next ledger pass |' + newline; the Normalized-character row is now its own line (line 104), the vacuous_coverage row line 105; each has 3 cells",
+      "covered_by": "awk 'NR>=103 && NR<=105 {print gsub(/\\|/,\"|\")-1}' tasks/TODO.md -> 3 3 3; the pre-existing :84/:89/:96 cell-count defects are untouched"
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "reproduced": true,
+      "repro_observed": "grep -o 'December 31, 2016' evals/fixtures/premier-pacific-2016/filing.htm | wc -l -> 40; grep -c -> 34 (lines). The first version counted lines and called them occurrences.",
+      "fix": "evals/fixtures/README.md comma-cover-2016 row and evals/adversarial/comma-cover-period.json provenance now say 40 occurrences on 34 lines, each with the command that reproduces the number",
+      "covered_by": "grep -o ... | wc -l -> 40 matches the wording 'occurrences'; grep -c -> 34 matches 'lines'"
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "reproduced": true,
+      "repro_observed": "With src/sec10k/normalize.py::AMENDMENT_RE replaced by a never-matching pattern (== origin/main 3c2b8f4's sniff_form), both suites stayed green (40/40, 82/82) at 1dbffe0 -- no gate case saw the branch. No committed or held-out fixture has /amendment\\s+no/i in text[:6000], confirmed.",
+      "fix": "New synthetic fixture evals/fixtures/amended-cover-2021/filing.htm (sandston-2021 -- the smallest committed source with no SGML <TYPE> header, the route on which the sniff alone decides -- with ONE <p> '(Amendment No. 1)' inserted directly below the cover's FORM 10-K line at raw offset 20078, 799,426 -> 799,612 bytes; registered in evals/bench.py SYNTHETIC and evals/fixtures/README.md) + case evals/adversarial/amended-cover-refused.json (fast + invariant; mirrors ksb-unsupported: doc_status unsupported exact, warning_present unsupported_form, warning_absent normalization_collapse, only_items [], no_empty_success, plus norm_contains '(Amendment No. 1)'). ADR-024 gets an amendment note under Decision point 3 (superseded in the one respect: a code path in the refusal needs a gate case; point 2's layer-assert treatment is for behaviour no fixture can carry, which this is not) and its Enforced-by line names the case; the _demo comment that said 'no fixture is committed for it' is rewritten; tasks/TODO.md T3 row restated without citing ADR-024 §3 for 'no fixture'. No change to the fix itself.",
+      "red_line": "[FAIL] amended-cover-refused (3 of 6 checks) with AMENDMENT_RE disabled: \"doc_status 'success_with_warning' != 'unsupported'\"; \"expected warning 'unsupported_form', got ['unattributed_content']\"; \"items outside allowed set []: ['1', '1A', '1B', '2', '3', '4', '5', '6', '7', '7A', '8', '9', '9A', '9B', '9C', '10', '11', '12', '13', '14', '15', '16']\". Green (6/6) with the fix in.",
+      "covered_by": "amended-cover-refused (invariant + fast); removing the AMENDMENT_RE branch now turns both suites red"
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "status": "debt",
+      "reproduced": true,
+      "repro_observed": "cvx-2015 unattributed_content message '9,731 chars before the first' -> '9,725'; wfc-2008 '7,423' -> '7,416'; truncated-download normalization_collapse '... normalized to 13' -> '... to 0'; warning CODES unchanged on all fixtures",
+      "debt_row": "'ZERO changes to ... warnings' in the T3 row and commit 1dbffe0 overstated: warning CODES are unchanged, two warning MESSAGES re-count",
+      "note": "Corrected in place in round 1: the T3 row now reads 'warning CODES' and names the three re-counted messages. Commit 1dbffe0's message is pushed and cannot be rewritten; the round-1 commit message states the correction."
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "status": "debt",
+      "reproduced": true,
+      "repro_observed": "bac-2006 normalized_text.find('For the fiscal year ended December 31, 2006') -> 297 (count 1); COVER_DATE_RE.search(text[:6000]).start() -> 305",
+      "debt_row": "html-title-metadata and the T3 row gave the cover line's offset as 305; the string starts at 297, 305 is the regex match",
+      "note": "Corrected in place in round 1 in both the case (provenance + triage note) and the T3 row: 297 (string) / 305 (regex match)."
+    },
+    {
+      "id": "R6",
+      "severity": "LOW",
+      "status": "debt",
+      "reproduced": true,
+      "repro_observed": "select_and_normalize('<html><head><title>x<meta charset=x></head><body><p>FORM 10-K</p>...') -> '' (unclosed <title> swallows the document; failed/normalization_collapse); '<noscript>JS OFF TEXT</noscript>' in <head> -> leaks as text",
+      "debt_row": "Edge shapes of the `<title>` skip: an unclosed `<title>` now swallows the whole document into `failed`; `<noscript>` text in `<head>` still leaks"
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "status": "debt",
+      "reproduced": true,
+      "repro_observed": "specs/decisions/ADR-010-g1-corrections.md:138 '13 normalized chars'; specs/decisions/ADR-020-fallback-not-justified.md:291-294 corpus 8,450,478 / median 108,938; neither named in the Normalized-character Debt row's 'Where' cell",
+      "debt_row": "Two residual stale-number spots the Normalized-character Debt row does not name: ADR-010:138 ('13 normalized chars') and ADR-020 §d's corpus 8,450,478 / median 108,938 lines"
+    }
+  ]
+}
