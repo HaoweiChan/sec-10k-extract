@@ -873,13 +873,38 @@ META_CALL = '"git_sha": git_sha(ROOT)'
 GIT_LOCATION_VARS = ["GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR"]
 
 
-def _temp_repo(td, env):
-    """`td` made into a real one-commit checkout; its short HEAD, or None if
-    git cannot build one here (then the source-3 assertions are skipped rather
-    than faked). Source 3 is the ONE branch a temp directory cannot exercise
-    by accident, and PR #31 R4 measured the cost of not exercising it: a
-    resolver reordered to try `git rev-parse` FIRST left this check at 0
-    failures, so the published precedence table was enforced by nothing."""
+def _no_git_env():
+    """The ambient environment with EVERY `GIT_*` variable removed.
+
+    For BUILDING a fixture repository, where the only safe assumption is that
+    we control nothing. Deliberately wider than the resolver's own scrub:
+    `GIT_INDEX_FILE` does not redirect `rev-parse`, so the resolver has no
+    reason to strip it, but it absolutely redirects `git commit` — and PR #31
+    R4 measured what that cost. `git commit -a` sets it, and so does
+    committing from a linked worktree (`.git/worktrees/<name>/index`), which
+    is how this PR was authored. Under an inherited absolute value the fixture
+    commit lands in another repository's index, `_temp_repo` returns None, and
+    every source-3 assertion silently disappears — the git-first falsifier
+    went from 2 failures to 0 inside exactly the pre-commit gate that is
+    supposed to be enforcing it.
+    """
+    return {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+
+
+def _temp_repo(td):
+    """`td` made into a real one-commit checkout; its short HEAD, or None.
+
+    Source 3 is the ONE branch a temp directory cannot exercise by accident,
+    and PR #31 R4 measured the cost of not exercising it: a resolver reordered
+    to try `git rev-parse` FIRST left this check at 0 failures, so the
+    published precedence table was enforced by nothing. Builds in
+    `_no_git_env()` rather than in whatever the caller inherited — the caller
+    is the thing being tested, so its environment is not a safe place to
+    construct the fixture from. A None here is NOT silently tolerated; see
+    the call site.
+    """
+    env = _no_git_env()
+
     def run(*a):
         return subprocess.run(["git", *a], cwd=td, env=env,
                               capture_output=True, text=True)
@@ -992,12 +1017,18 @@ def check_build_identity(case):
     # PR #31 R4. Source 3, and the only place it can be exercised: a real
     # checkout, so that BUILD_SHA and GIT_SHA are seen to OUTRANK it rather
     # than merely to answer where it cannot.
-    clean_full = {k: v for k, v in os.environ.items()
-                  if k not in GIT_LOCATION_VARS and k != "GIT_SHA"}
+    clean_full = _no_git_env()
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
-        head = _temp_repo(td, clean_full)
-        if head:
+        head = _temp_repo(td)
+        if not head:
+            # PR #31 R4: the previous version skipped here in silence, so a
+            # broken fixture and a passing precedence table were the same
+            # observation. An assertion that cannot run has not passed.
+            bad.append("could not build a temp git checkout, so the source-3 "
+                       "precedence assertions did not run — this check reports "
+                       "nothing about precedence until that is fixed")
+        else:
             got = build_id.git_sha(root, clean_full)
             if got != head:
                 bad.append(f"source 3: a real checkout must report its own "
@@ -1018,8 +1049,15 @@ def check_build_identity(case):
     # branch that is SUPPOSED to find a repository. Skipped only where git
     # cannot answer at all; a real BUILD_SHA sitting in the tree is the
     # file-first case above, already pinned.
-    head = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT,
-                          capture_output=True, text=True).stdout.strip()
+    # PR #31 R10: the oracle must measure HEAD in the SAME environment the
+    # resolver resolves in. Once the resolver started stripping the location
+    # vars and this subprocess did not, an ambient GIT_DIR made the two
+    # disagree and turned correct code red — a false failure in precisely the
+    # pre-commit-hook condition this check's own history is about.
+    head = subprocess.run(
+        ["git", "rev-parse", "--short", "HEAD"], cwd=ROOT,
+        env={k: v for k, v in os.environ.items() if k not in GIT_LOCATION_VARS},
+        capture_output=True, text=True).stdout.strip()
     if head and not build_id.build_sha(ROOT):
         got = build_id.git_sha(ROOT, dict(os.environ, GIT_SHA=""))
         if got != head:
