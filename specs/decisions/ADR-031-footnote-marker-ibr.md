@@ -121,8 +121,13 @@ that the held-out set neither triggers nor contradicts it.
   footnote alone would have re-judged nine correct items on one filing and
   its derivative; a rule keyed on the marker alone would flip ba-2003 items 5
   and 10, which carry real content. The marker on the heading AND the empty
-  body AND the footnote naming the code are each load-bearing, and each is
-  pinned (§h).
+  body AND the footnote naming the code are each load-bearing. Pinned how:
+  the empty-body conjunct by the gate (remove it and items 5/10 flip, which
+  the case forbids); the same-marker-run and names-THIS-code conjuncts by the
+  CI self-check `segment._demo` ONLY — no corpus instance can pin them (an
+  unmarked-heading mutation and a not-named mutation both flip nothing on all
+  47 documents, PR #42 R2), so the gate cannot see them until a fixture
+  carries a second marker or a footnote naming the wrong item.
 - **The marker family is asterisk runs, exactly matched.** Only `*` occurs on
   a heading; `**` and `***` occur in the same filing as table-footnote
   markers (deliveries, debentures), which is why the heading's run and the
@@ -191,10 +196,14 @@ text (the contract's no-`text`-field rule). `evidence`'s internal shape is
 (`specs/001-sec10k-contract.md`, Envelope fields), so adding the key is NOT a
 contract change; the IBR offsets paragraph of the contract IS narrowed by
 this ruling and is amended in place to say so. The eval adapter gains the one
-thing needed to make the design falsifiable: `text_contains` with an
-`"evidence": "footnote"` key anchors the slice at `evidence[key]` instead of
-the span, and fails when the key is absent or the slice is wrong
-(`test_ibr_spans_are_checked`).
+thing needed to make the design falsifiable: an `"evidence": "footnote"` key
+on any span-reading check (`text_contains`, `text_not_contains`, `min_chars`,
+`max_chars` — `EVIDENCE_CHECKS`) resolves the item's offsets to
+`evidence[key]` once, so containment AND extent are pinnable; the key must
+exist, and every other check type REFUSES it loudly rather than silently
+checking the span (PR #42 R1 — the first cut honoured it on `text_contains`
+only, and a wrong footnote slice passed). `test_ibr_spans_are_checked` and
+`test_evidence_key` prove both directions.
 
 **Rejected: point the span at the footnote.** It would put the pointer
 sentence where ADR-011 says it belongs — and it would overlap item 14's span
@@ -280,14 +289,16 @@ incorporated_by_reference: extracted`. The `[DEBT]` enumeration reads 4 lines
 at main and 3 on this branch (`axp-2008-combined-part-iii`,
 `cvx-2015-internal-pointer`, `msft-2013-website-block` remain).
 
-**The case now pins** (19 checks; the original five kept, fourteen added):
+**The case now pins** (26 checks; the original five kept, twenty-one added):
 items 11/13 IBR at 0.85; item 11 `method heading_strict`; item 11's span
 contains `Executive Compensation*` and is ≤ 34 chars, item 13's ≤ 59 (the
-span is the heading line); `evidence.footnote` on 11 carries the footnote's
-first 114 chars verbatim and on 13 `definitive proxy statement`; items 5 and
-10 `extracted` at 0.95 (a substantive body under the same marker is never
-flipped); item 14 IBR with `definitive proxy statement` in its own span (the
-body path, untouched).
+span is the heading line); `evidence.footnote` on BOTH 11 and 13 carries the
+footnote's first 114 chars verbatim, its last 51 (`within 120 days after the
+close of the fiscal year.`) and is exactly 236 chars (`min_chars` +
+`max_chars` on the evidence — head, tail and length together fix the slice
+at 402285–402521, PR #42 R1); items 5 and 10 `extracted` at 0.95 (a
+substantive body under the same marker is never flipped); item 14 IBR with
+`definitive proxy statement` in its own span (the body path, untouched).
 
 **Mutations** (each run on this branch with bytecode caching off, the case
 re-run after restore):
@@ -296,7 +307,8 @@ re-run after restore):
 |---|---|
 | `extract.py`: the `footnote_pointer` call replaced by `None` | RED — `item 11 not incorporated_by_reference: extracted`, same for 13, `confidence 0.95 != 0.85` ×2, `item 11 has no evidence span 'footnote'` ×2 |
 | `segment.py`: `EXTERNAL_DOC_RE` swapped for `INTERNAL_REF_RE` in the footnote test (the "non-external target" mutation) | RED — identical six lines: the proxy-statement footnote is not an internal pointer, so nothing resolves |
-| `extract.py`: `evidence.footnote` never written | RED — `item 11 has no evidence span 'footnote'`, same for 13, and nothing else: the evidence anchor is the only check that sees the key, and it does |
+| `extract.py`: `evidence.footnote` never written | RED — `item 11 has no evidence span 'footnote'`, same for 13, and nothing else: the evidence checks are the only ones that see the key, and they do |
+| `segment.py`: `PARA_END_RE` never matches (PR #42 R1's repro) — `footnote_pointer` returns (72070, 414197), a different `*`-led line of 342,127 chars | before R1: GREEN 19/19 (containment only). After: RED — `item 11 has 342127 chars > 236`, same for 13 |
 
 Layer echo in `segment._demo`: positive on a wrapped txt-style footnote for
 items 11 and 13 (the second with a space before its marker); None for a
@@ -308,7 +320,7 @@ internal targets are not IBR).
 **Gate after**: `invariant 51/51 = 1.000` (+3 enumerated debt, unscored),
 `fast 99/99 = 1.000` (+3), table fidelity 400/400 · 31/31,
 `.eval-baseline.json` untouched (`{"fast": 1.0}`), `segment` / `validate` /
-`eval_adapter` 18/18 / `bench --self-check` ok, `--check-docs` 68 / 0
+`eval_adapter` 19/19 / `bench --self-check` ok, `--check-docs` 68 / 0
 unmatched.
 
 ## i) What this ADR does NOT claim
@@ -328,6 +340,15 @@ unmatched.
   enumerated so the claim "3 of 1,547" can be re-run.
 - **Ranges and prose lists** — "Items 10 through 14", "Items 10 to 14": not
   observed, not parsed; `ITEM_LIST_RE` takes comma/and lists only.
+- **Sub-item references are not guarded** (PR #42 R3) — `ITEM_LIST_RE` reads
+  "Item 5.03 of Form 8-K" as naming `5` and "Item 15(b)" / "Item 15(a)(3)" as
+  naming `15` (axp-2008 @326904 and xom-2021 @385888 are two of §b2's 11
+  non-external lines with that shape). Harmless on the corpus — none of those
+  paragraphs matches `EXTERNAL_DOC_RE`, and no heading is marked — but a
+  false-positive surface this list must name; a lookahead that excludes a
+  dotted or parenthesised continuation is the fix when a fixture needs it,
+  chosen with care because a list that ENDS a sentence ("…Items 11 and 13.")
+  must still name 13.
 - **A footnote that resolves to an internal target** ("* Items 11 and 13 are
   in Item 7 of this report") — ADR-004 shape 2, stays `extracted`; the
   `_demo` assertion and the `INTERNAL_REF_RE` mutation both cover it.
@@ -335,6 +356,13 @@ unmatched.
   items are classified by their own bodies and the rule does not look at it
   (§b2, §b4). The `cvx-2015` internal pointer and the `axp-2008` combined
   heading stay in the Debt table, untouched.
+- **The per-item near-empty-success validator is NOT built** (PR #42 R4) —
+  the debt triage's "second half": a label-free layer-8 check that flags an
+  `extracted` span that is near-empty for an item whose canonical content
+  cannot be trivial. `no_empty_success` is document-total only, and nothing
+  in the battery reads a single span's emptiness; ba-2003 items 11/13 are
+  caught by THIS rule's resolution, not by a validator. Carried as a Debt row
+  (`Origin: PR #42 R2/R3/R4`).
 - **Held-out** — no threshold or pattern was tuned on it; §b3 is a read-only
   report showing it carries neither half of the convention.
 - **That the rule generalises beyond the one filing it is fitted to** — it is

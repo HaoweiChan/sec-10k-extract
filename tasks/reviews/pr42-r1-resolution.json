@@ -1,0 +1,55 @@
+{
+  "pr": 42,
+  "round": 1,
+  "task": "D4",
+  "review": "tasks/reviews/pr42-r1.json",
+  "resolved_by": "implementer",
+  "date": "2026-08-23",
+  "protocol": "R1's repro re-run before any edit (True — the PARA_END_RE mutation passed 19/19). R1 repaired: the `evidence` key is resolved ONCE at the top of eval_check for the four span-reading check types (EVIDENCE_CHECKS = text_contains, text_not_contains, min_chars, max_chars) and REFUSED loudly by every other type; the case pins the footnote's extent (head + tail anchors, min/max 236) on items 11 and 13; the PARA_END_RE mutation re-run -> RED. R2-R4 routed to debt per the round's routing, each corrected in place in ADR-031 (one sentence / one bullet) and recorded in one new Debt row (Origin: PR #42 R2/R3/R4). Every suite and self-check run with python3 -B. ledger_table_shape re-run last on the final tasks/TODO.md: green (inside the fast run).",
+  "gate_at_resolution": {
+    "invariant": "51/51 = 1.000 (+3 enumerated debt, unscored)",
+    "fast": "99/99 = 1.000 (+3 enumerated debt, unscored); table fidelity cells 1.0000 (400/400), rows 1.0000 (31/31)",
+    "baseline": "1.000, not moved; .eval-baseline.json untouched",
+    "self_checks": "python3 -B -m src.sec10k.segment ok; python3 -B -m src.sec10k.validate ok; python3 -B -m src.sec10k.test_eval_adapter 19/19 (was 18/18; test_evidence_key added); python3 -B -m evals.bench --self-check ok; python3 -B -m evals.bench --check-docs evals/report/20260823-185707-bench.json 68 checked / 0 unmatched; ledger-table-shape PASS in the fast run (run last, after the Debt row was written)"
+  },
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "reproduced": true,
+      "repro_observed": "python3 -B -c \"...segment.PARA_END_RE=re.compile(r'(?!x)x');print(run_case(...)['passed'])\" -> True at 3c7db31 (footnote_pointer returns (72070, 414197), 342,127 chars; the case's two evidence anchors are containment-only and both are satisfied by the oversized slice).",
+      "fix": "src/sec10k/eval_adapter.py: one resolution block at the top of eval_check — if 'evidence' in chk: refuse unless the type is in EVIDENCE_CHECKS (text_contains, text_not_contains, min_chars, max_chars) with the reason \"check type 'X' does not read 'evidence' — key refused\"; else require the item and the evidence[key] offsets (\"item N has no evidence span 'footnote'\") and rebind entry to that slice so the four check bodies run unchanged (text_contains' private evidence branch deleted). evals/adversarial/ba-2003-asterisk-ibr.json: seven checks added — on BOTH items 11 and 13: text_contains evidence head anchor (114 chars, '* Certain information ... to the registrant'), text_contains evidence tail anchor 'within 120 days after the close of the fiscal year.' (51 chars), min_chars 236, max_chars 236 — head + tail + exact length fix the slice at 402285-402521; 26 checks total. src/sec10k/test_eval_adapter.py: test_evidence_key (new, 18 -> 19): max_chars/min_chars on the evidence pass at the footnote's length and fail at ±1; text_not_contains reads the footnote (fails on 'proxy statement') and not the span (passes); item_present / item_field / confidence / verbatim each REFUSE the key (reason contains 'refused') and pass without it. ADR-031 §d adapter paragraph, §h case-pins paragraph, mutation table (new PARA_END_RE row with before/after) and gate line amended; case triage + provenance amended with the repro and the red lines.",
+      "watched_red": "After the fix, the same PARA_END_RE repro -> False: 'item 11 has 342127 chars > 236', 'item 13 has 342127 chars > 236'. Also re-verified in test_evidence_key: evidence end ±1 fails min/max at the synthetic footnote's length.",
+      "existing_cases_affected": "grep -rl '\"evidence\":' evals/golden evals/adversarial evals/heldout -> only evals/adversarial/ba-2003-asterisk-ibr.json, whose evidence keys sit on text_contains / min_chars / max_chars (all in EVIDENCE_CHECKS). No other case carries the key, so no case fails loudly under the refusal; invariant 51/51 and fast 99/99 confirm.",
+      "covered_by": "evals/adversarial/ba-2003-asterisk-ibr.json (fast + invariant, 26 checks); src/sec10k/test_eval_adapter.py::test_evidence_key; ADR-031 §d / §h"
+    },
+    {
+      "id": "R2",
+      "severity": "LOW",
+      "status": "debt",
+      "reproduced": true,
+      "repro_observed": "Agreed without re-running the in-memory wrapper: the only corpus instance has `*` on every marked heading and names every marked item, so neither the marker-run nor the named-code conjunct can flip any of the 47 documents when relaxed; only segment._demo asserts the `**` vs `*` and not-named cases.",
+      "debt_row": "ADR-031 footnote rule: conjunct pinning, sub-item references, per-item near-empty validator (Origin: PR #42 R2/R3/R4)",
+      "note": "Corrected in place: ADR-031 §b4 'each is pinned (§h)' replaced by the explicit split — the empty-body conjunct is gate-pinned (items 5/10 flip when it is removed), the same-marker-run and names-THIS-code conjuncts are pinned by the CI self-check ONLY, no corpus instance can pin them, and the condition that would let the gate see them (a fixture with a second marker or a wrong-item footnote) is named."
+    },
+    {
+      "id": "R3",
+      "severity": "LOW",
+      "status": "debt",
+      "reproduced": true,
+      "repro_observed": "python3 -B -c \"...print(ITEM_LIST_RE.findall('pursuant to Item 5.03 of Form 8-K'))\" -> ['5'] (and 'Item 15(b)' -> ['15']); the two census lines named (axp-2008@326904, xom-2021@385888) are in §b2's 11 non-external lines.",
+      "debt_row": "ADR-031 footnote rule: conjunct pinning, sub-item references, per-item near-empty validator (Origin: PR #42 R2/R3/R4)",
+      "note": "Corrected in place with the ADR sentence, NOT the regex: ADR-031 §i gains a 'Sub-item references are not guarded' bullet naming 'Item 5.03' / 'Item 15(b)' / 'Item 15(a)(3)', the two census lines, why it is harmless on the corpus (none matches EXTERNAL_DOC_RE, no heading is marked), and why the lookahead is deferred — a list that ends a sentence ('...Items 11 and 13.') must still name 13, so a naive `(?![.(])` would regress the very shape the rule is for. Regex unchanged, so the census counts (1,547 / 301 / 14 / 3 dev; 195 / 24 / 0 / 0 held-out) stand as published."
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "status": "debt",
+      "reproduced": true,
+      "repro_observed": "grep -n no_empty_success src/sec10k/eval_adapter.py -> the check sums every extracted span (document-total); grep -n 'near-empty' specs/decisions/ADR-031-footnote-marker-ibr.md at 3c7db31 -> no hit.",
+      "debt_row": "ADR-031 footnote rule: conjunct pinning, sub-item references, per-item near-empty validator (Origin: PR #42 R2/R3/R4)",
+      "note": "Corrected in place: ADR-031 §i gains a bullet 'The per-item near-empty-success validator is NOT built' — the debt triage's second half, a layer-8 label-free check for a near-empty `extracted` span on an item whose content cannot be trivial; `no_empty_success` is document-total only; ba-2003 items 11/13 are caught by the resolution rule, not by a validator. The Debt row carries it forward (a new layer-8 capability needs its own ADR)."
+    }
+  ]
+}

@@ -32,6 +32,11 @@ METHODS = {"heading_strict", "heading_lenient", "status_keyword", "llm_fallback"
 # at the pointer paragraph — real, inspectable text — so every span-level check
 # must reach it. `missing`/`omitted` have no span by definition.
 SPAN_STATUSES = {"extracted", "incorporated_by_reference"}
+# check types that read an item's offsets, and so may be pointed at an offsets
+# pair the item publishes under evidence[<key>] instead (ADR-031: `footnote`).
+# Any other check type REFUSES an "evidence" key — a silently ignored key is a
+# check that cannot fail (PR #42 R1).
+EVIDENCE_CHECKS = {"text_contains", "text_not_contains", "min_chars", "max_chars"}
 NO_EMPTY_SUCCESS_FLOOR = 1000  # provisional floor — narrows (not closes) the one-good-item hole
 # fields that determinism actually governs — timings/cost/trace/meta legitimately vary
 # run to run (wall-clock, run-local trace ids) on an honest, correct pipeline
@@ -55,6 +60,19 @@ def eval_check(result, chk, path=None):
     extracted = [i for i in result.get("items", []) if i["status"] == "extracted"]
     spanned = [i for i in result.get("items", []) if i["status"] in SPAN_STATUSES]
     has_span = entry is not None and entry["status"] in SPAN_STATUSES
+    if "evidence" in chk:
+        # ADR-031 / PR #42 R1: resolve (item, evidence key) -> offsets ONCE, and
+        # let the span-reading checks below run on that slice unchanged. The
+        # key must exist; a check type that does not read spans refuses it.
+        if t not in EVIDENCE_CHECKS:
+            return f"check type {t!r} does not read 'evidence' — key refused"
+        if entry is None:
+            return f"item {chk['item']} not in output"
+        ev = (entry.get("evidence") or {}).get(chk["evidence"])
+        if not ev:
+            return f"item {chk['item']} has no evidence span {chk['evidence']!r}"
+        entry = {**entry, "start": ev["start"], "end": ev["end"], "status": "extracted"}
+        has_span = True
 
     if t == "item_present":
         if entry is None or entry["status"] != chk.get("status", "extracted"):
@@ -69,20 +87,9 @@ def eval_check(result, chk, path=None):
     elif t == "text_contains":
         if entry is None:
             return f"item {chk['item']} missing text {chk['value']!r}"
-        if "evidence" in chk:
-            # ADR-031: an offsets pair the item publishes under
-            # evidence[<key>] (today: `footnote`, the sentence that resolved a
-            # marked empty heading to IBR) is anchored like the span itself —
-            # the key must exist and its slice must carry the value
-            ev = (entry.get("evidence") or {}).get(chk["evidence"])
-            if not ev:
-                return f"item {chk['item']} has no evidence span {chk['evidence']!r}"
-            if chk["value"] not in item_text(result, ev):
-                return (f"item {chk['item']} evidence {chk['evidence']!r} missing "
-                        f"text {chk['value']!r}")
-        elif not has_span:
+        if not has_span:
             return "item has no span"
-        elif chk["value"] not in item_text(result, entry):
+        if chk["value"] not in item_text(result, entry):
             return f"item {chk['item']} missing text {chk['value']!r}"
     elif t == "text_not_contains":
         # a null-offset status has no text at all -> vacuously can't contain it
