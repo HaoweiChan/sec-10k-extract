@@ -1,0 +1,52 @@
+{
+ "pr": 40,
+ "round": 1,
+ "task": "debt-sweep-closed-rows",
+ "branch": "task/debt-sweep-closed-rows",
+ "head": "ffaebbf",
+ "reviewer": "groundwork:pr-reviewer, fresh context, full diff (round 1); re-run after the first attempt was lost to a session restart",
+ "gate_at_review": {
+  "invariant": "49/49 = 1.000",
+  "fast": "97/97 = 1.000",
+  "table_fidelity": "cells 400/400, rows 31/31",
+  "baseline": "byte-identical to origin/main"
+ },
+ "result": "REQUEST_CHANGES",
+ "counts": {
+  "HIGH": 0,
+  "MEDIUM": 1,
+  "LOW": 1
+ },
+ "routing_note": "R1 is MEDIUM and makes a published claim in the ledger dishonest -- it mis-reads the file it cites, which is the defect class the row itself is about. R2 is LOW and would normally route to debt, but it is a dangling citation in a row this same PR adds, and its acceptance (commit the audit as an artifact) closes a real gap the debt table's own preamble demands. Bundled, not a severity call.",
+ "verified_no_finding": [
+  "Deletion 1 (span-coverage row) SAFE: ADR-019:125-183 carries the whole retirement narrative incl. the 2026-08-19 post-fix footnote and 7-fixture table; ADR-015 SS5 carries the dated correction notes (278, 297, 311); the successor row survives at tasks/TODO.md:52.",
+  "Deletion 2 (T13 mechanisms, deleted rather than trimmed) SAFE: (a) closed -- evals/bench.py:674 returns failure on a vacuous run, _demo:986-1002 asserts six vacuous/edge cases return 1, main returns that code (:1032-1047); (b) closed -- .githooks/pre-commit:21-23 and .github/workflows/ci.yml:48-49 run both checks; (c) closed by L1; (d)/(e) genuinely survive as their own open row at tasks/TODO.md:137, already on origin/main. Nothing live dropped.",
+  "Deletion 3 (V4) SAFE: closure mechanically pinned by evals/adversarial/ui-equal-pane-heights.json (pane_heights over #sidebar/#pane/#source, invariant+fast, red-watched pre-fix); trace in tasks/reviews/pr21-r1.json + resolution and tasks/DONE.md:31.",
+  "Kept row axp-2008 PR #11 R22 CORRECTLY KEPT: the case has exactly seven checks and no text_contains; an equal-quarters chop gives item 10 ~815 chars, clearing min_chars 500. Part (3) is live.",
+  "Kept row bench._demo/DOC_ALLOW CORRECTLY KEPT: DOC_ALLOW appears only at :543 (definition) and :659 (lookup); no _demo assertion. The drift it predicted has already happened.",
+  "Table integrity: check_ledger_table_shape (src/repo_hygiene/eval_adapter.py:1267-1275) counts every | naively via body.count('|')+1; tasks/TODO.md contains zero backslash-pipe sequences; gate green.",
+  "Collateral: diff is exactly tasks/TODO.md + evals/report/history.jsonl; 3 deletions, 3 additions, no other line touched. tasks/DONE.md, ADR-022 and .eval-baseline.json untouched, matching the human's ruling.",
+  "New row 1 (three dangling cross-references) ACCURATE AND COMPLETE: the three phrases are at :52, :56, :137; every other 'row above'/'row below' in the file (14 more) names a surviving row."
+ ],
+ "breaker_state": "Round 1 of 3.",
+ "findings": [
+  {
+   "id": "R1",
+   "severity": "MEDIUM",
+   "route": "repair",
+   "claim": "The new debt row \"ADR-021's published DOC_ALLOW count is stale again, 20 against a measured 26\" mis-states the committed file: the same ADR sentence already publishes 26, and the row's assertion that \"the prose count was not moved with them\" is false.",
+   "evidence": "tasks/TODO.md:142 asserts ADR-021 \"still reads '20 remaining legitimate non-measurements' ... while len(DOC_ALLOW) answers 26 ... and the prose count was not moved with them\". But specs/decisions/ADR-021-benchmark-instrument.md:377-381 reads: \"The 20 remaining legitimate non-measurements are listed in DOC_ALLOW with a reason each (len(DOC_ALLOW) re-measured 2026-08-23, L1, PR #12 R29 -- the count was first written as 14 from memory; **26 after D2**, same day: +13 dated entries, -7)\". The count WAS moved, in the same sentence, and 20+13-7=26 reconciles. The residual real defect is narrower: only the sentence's lead integer is stale relative to its own parenthetical. A ledger row written to document a stale-number defect is itself carrying an inaccurate reading of the file it cites -- the exact class it names.",
+   "repro": "awk 'NR>=376 && NR<=382' specs/decisions/ADR-021-benchmark-instrument.md; python3 -c \"import sys;sys.path.insert(0,'.');from evals.bench import DOC_ALLOW;print(len(DOC_ALLOW))\"  # 26, and line 379 already says '26 after D2'",
+   "acceptance": "The row states what is actually wrong -- the lead integer at ADR-021:377 disagrees with the corrected count in its own parenthetical at :379 -- and drops the claim that the count was never moved."
+  },
+  {
+   "id": "R2",
+   "severity": "LOW",
+   "route": "repair",
+   "claim": "The new debt row about twenty-two unverified struck-through rows cites tasks/reviews/ for the D2 sweep audit, but no such artifact exists on this branch, so the citation does not resolve.",
+   "evidence": "tasks/TODO.md:143 middle column reads \"this table; the D2 sweep commit; tasks/reviews/ for the audit that mis-scored two of five\". ls tasks/reviews/ at HEAD ffaebbf contains nothing for PR #40 or the sweep -- newest are pr39-r1.json, pr39-r1-resolution.json, pr39-r1-sweep.py, pr39-r2.json, s2-postmerge-gate.json. The debt table's own preamble at tasks/TODO.md:47-48 says \"Every one of them is visible in a committed eval case or an ADR section, never only here\"; the audit this row rests on is committed nowhere. The row's other claims check out: 22 struck rows (grep -c '^| ~~' -> 22) and the duplicate repo_hygiene titles at :127 and :130.",
+   "repro": "ls tasks/reviews/ | grep -i -e pr40 -e sweep -e d2 ; grep -c '^| ~~' tasks/TODO.md",
+   "acceptance": "Either the five-row audit lands as a committed artifact under tasks/reviews/ and the row names the file, or the citation is replaced by one that resolves. A reader following the middle column finds the evidence."
+  }
+ ]
+}

@@ -1,0 +1,39 @@
+{
+ "pr": 40,
+ "round": 3,
+ "task": "debt-sweep-closed-rows",
+ "branch": "task/debt-sweep-closed-rows",
+ "head": "13949b6",
+ "reviewer": "groundwork:pr-reviewer, fresh context, scoped to repair diff 422220c..13949b6 plus standing R3/R4, with a spot-check that R1/R2 held",
+ "gate_at_review": {
+  "invariant": "50/50 = 1.000",
+  "fast": "98/98 = 1.000",
+  "table_fidelity": "cells 400/400, rows 31/31",
+  "baseline": "byte-identical to origin/main"
+ },
+ "result": "APPROVED",
+ "standing_closed": [
+  "R3",
+  "R4"
+ ],
+ "regression_spotcheck": "R1 and R2 held",
+ "counts": {
+  "HIGH": 0,
+  "MEDIUM": 0,
+  "LOW": 1
+ },
+ "root_cause_confirmed": "The implementer's published root cause was INDEPENDENTLY REPRODUCED, not accepted. At c0c1958 the debt section's separator line is |---|---|---| and `grep -c '^| '` returns 89 while `grep -c '^|'` returns 90 -- the separator is in the second count only. Minus-two reproduces every withdrawn figure exactly (87/91/91/94); minus-one gives the correct 88/92/92/95. So the derivation, not the transcription, was the bug, and it was uniformly one low -- which is why re-deriving alone would not have caught it across four recurrences.",
+ "routing_note": "R5 is LOW, artifact prose only, and no published integer is wrong. It routes to debt, which the reviewer itself recommended alongside 'Merge.' It does not sit inside text any other finding reopens, so the bundling rationale used in rounds 1 and 2 does not apply here.",
+ "findings": [
+  {
+   "id": "R5",
+   "severity": "LOW",
+   "route": "debt",
+   "status": "new",
+   "claim": "The repair created a dangling self-reference: pr40-r1-resolution.json's post_merge_note still opens 'The two counts recorded above', but the repair removed one of those two counts from the keys above it, leaving only one.",
+   "evidence": "tasks/reviews/pr40-r1-resolution.json -- post_merge_note begins 'The two counts recorded above were read BEFORE origin/main was merged'. The two it referred to were findings[1].verification's \"grep -c '^| ~~' ... -> 22\" and table_integrity's 'Debt row count unchanged at 91'. The repair rewrote table_integrity to carry no absolute row count, so exactly one count now precedes the note, and the note goes on to describe only that one. The trailing parenthetical acknowledges the withdrawal but does not fix the count of counts. Artifact prose only; no published integer is wrong. Same class as the PR's own 'three relative cross-references now point at deleted rows' row.",
+   "repro": "python3 -c \"import json;d=json.load(open('tasks/reviews/pr40-r1-resolution.json'));print(d['post_merge_note'][:60]);print(d['table_integrity'])\"",
+   "acceptance": "The note says 'the struck-row count recorded above' (or 'the count recorded above'), or the withdrawn count is restored to table_integrity -- either way the note's arithmetic about itself matches the file."
+  }
+ ]
+}
