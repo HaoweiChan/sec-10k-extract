@@ -1,0 +1,96 @@
+{
+ "pr": 37,
+ "round": 1,
+ "task": "S2-close",
+ "branch": "task/S2-close",
+ "head": "beb41b8",
+ "reviewer": "groundwork:pr-reviewer, fresh context, full diff (round 1); every figure re-derived independently",
+ "gate_at_review": {
+  "invariant": "48/48 = 1.000",
+  "fast": "96/96 = 1.000",
+  "table_fidelity": "cells 1.0000 (400/400), rows 1.0000 (31/31)",
+  "baseline": "{\"fast\": 1.0}, unmoved"
+ },
+ "result": "REQUEST_CHANGES",
+ "counts": {
+  "HIGH": 2,
+  "MEDIUM": 2,
+  "LOW": 4
+ },
+ "routing_note": "R1-R4 meet the blocking bar on the dishonest-published-claim clause. R5-R8 are LOW and would normally route to debt; all four sit INSIDE the two sections (ADR-028 g1, ADR-029 i3) that R1 and R3 force open for rewrite, and each is a false or materially incomplete statement in text being rewritten anyway. Leaving a known-false citation or a self-undermining attribution inside a section under repair is not defensible. Bundling decision, not a severity one. R5 in particular cannot be separated from R3: R3's fix is not correct until the question of where the branch's own readings are recorded is answered.",
+ "breaker_state": "Round 1 of 3.",
+ "findings": [
+  {
+   "id": "R1",
+   "severity": "HIGH",
+   "route": "repair",
+   "claim": "ADR-029 §i3 publishes a false unreproducibility claim — the source branch's \"3,902 <table> elements\" IS exactly reproducible against this tree, and three correct measurements were deleted on that false premise.",
+   "evidence": "specs/decisions/ADR-029-structured-tables-annotation.md:398-404 says \"'3,902 <table> elements' … not reproduced … Neither is 3,902, the source branch's method is not recoverable from the file, and a figure that cannot be re-derived is not published\", and drops \"3,733 of 3,902 tables (95.7 %)\" and \"693 of 3,902 (17.8 %)\" with it. Measured on this tree: <table> open tags in the selected document of the 34 HTML/iXBRL fixtures = 3,902 exactly (the remaining 167 of the amendment's own 4,069 are txt-era SGML <TABLE> tags). The population is also 3,852 recorded + 50 all-empty HTML tables the visible-text rule drops = 3,902. The method IS stated on the source branch: `git show 5ad1a0f:specs/decisions/ADR-029-table-structure-annotation.md` line 97 sits directly above line 98's 3,902. Derivatives reproduce: constant colspan-weighted row width = 3,734 of 3,902 = 95.7% (published 3,733, off by one), and \"1,018 single-row\" reproduces exactly.",
+   "repro": "python3 counting <table open tags in the selected document of each non-txt fixture -> 3902 opens, 3852 records, 3734 constant-width",
+   "acceptance": "§i3 either republishes 3,902 with its now-recovered definition (<table> open tags across the 34 HTML/iXBRL fixtures = 3,852 recorded + 50 all-empty), together with the two derivatives it re-derives, or states a concrete checkable reason the re-derivation is wrong. The blanket 'method is not recoverable from the file' must go."
+  },
+  {
+   "id": "R2",
+   "severity": "HIGH",
+   "route": "repair",
+   "claim": "ADR-029 §i1's 4,069 figure silently mixes txt-era SGML <TABLE> tags into an HTML-table count, making both the stated gap explanation and the nesting-depth line false against the tree and against the amendment's own era split three lines earlier.",
+   "evidence": "ADR-029:342-346 — \"The selected documents hold 4,069 <table> open tags … and 333,838 raw <td>/<th> tags. §f already reports … 3,852 records and 332,916 cells — and the gap is the visible-text rule §b1 states, not a loss.\" Measured: 167 of the 4,069 are txt-era SGML <TABLE> tags in 6 txt fixtures (ge-1994 72, ibr-pointer-first 72, ibm-1997 8, ibr-security-holders 8, ko-1997 6, ksb-2007 1), carrying ZERO <td>/<th> and producing zero records because normalize() answers [] for the txt era (§e:200). So of the 217-table gap only 50 is the visible-text rule; 167 is the era rule the sentence does not mention. Worse, :356 reads \"Maximum <table> nesting depth | 1, on all 4,069 tables of all 34 HTML fixtures\" — 167 of those tags are not in the 34 HTML fixtures at all, contradicting :339 (\"34 are HTML/iXBRL and 7 are txt-era\"). The depth-1 result is correct, but over 3,902 tables, not 4,069.",
+   "repro": "python3 listing txt-era fixtures with <table opens -> 6 fixtures, 167 opens, 0 cells",
+   "acceptance": "§i1 states the HTML/iXBRL count (3,902) as the table population, notes the 167 txt-era SGML <TABLE> tags separately if it wants 4,069 at all, splits the 217-table gap into 167 (era rule, §e) + 50 (visible-text rule, §b1), and corrects :356 to 'all 3,902 tables of the 34 HTML fixtures'."
+  },
+  {
+   "id": "R3",
+   "severity": "MEDIUM",
+   "route": "repair",
+   "claim": "ADR-028 §g1 flatly contradicts itself in bold on the attribution claim the whole section rests on: it says this branch made none of the readings, then twice says this branch made the row-4 readings.",
+   "evidence": "ADR-028:181 — \"Every reading is somebody's, and this branch made none of them.\" vs :192 — \"Only the row-4 readings were made from this branch…\" and :217-218 — \"Row 4 alone does it, and this branch made those readings itself; the closure does not rest on relayed testimony.\" Both cannot be true, and which holds decides whether §g1's heading claim ('closed by observation', not relayed testimony) stands. Nothing in the Status line (:3) disambiguates.",
+   "repro": "sed -n '181p;192p;217,218p' specs/decisions/ADR-028-build-identity.md",
+   "acceptance": "One of the two sentences is corrected so a reader can tell whether closure rests on this branch's own readings or on relayed testimony; if :181 means 'none of readings 1-3', it says so."
+  },
+  {
+   "id": "R4",
+   "severity": "MEDIUM",
+   "route": "repair",
+   "claim": "ADR-029 §i2 overstates the blast radius past what it measured — 'every committed anchor, every min_chars/max_chars band … on every HTML filing in the corpus' is false for 53 of the 169 committed anchors/bands and for one of the 34 HTML fixtures.",
+   "evidence": "ADR-029:391-394. Measured over evals/golden + evals/adversarial: 169 text_contains/text_not_contains/min_chars/max_chars checks resolve to a fixture; 53 of them (31%) sit on the 7 txt-era fixtures, which the rejected design would not touch at all (§e:200 — normalize() answers [] for the txt era; zero <td>/<th>). And 'every HTML filing' is 34, but truncated-download is HTML with no tables (§i1:340-341 says so), so 0% of its offsets move. The source branch was precise here — 5ad1a0f line 113: \"53 (11 more on txt fixtures are unaffected)\" — precision this amendment dropped, in a section whose own framing (:328-330) is that these claims are 'a measurement, not a manner of speaking'.",
+   "repro": "python3 tallying anchor/band checks by fixture era -> {'txt': 53}",
+   "acceptance": "§i2's prose is scoped to what was measured — the 33 table-carrying HTML/iXBRL fixtures and the anchors/bands on them, with the txt-fixture count stated as unaffected — rather than 'every committed anchor' / 'every HTML filing'."
+  },
+  {
+   "id": "R5",
+   "severity": "LOW",
+   "route": "repair",
+   "claim": "The two readings §g1 claims for this branch (08:16Z, 08:20:02Z) have no observation record anywhere in the diff, yet they are the sole support for 'the closure does not rest on relayed testimony'.",
+   "evidence": "ADR-028:189 lists four row-4 timestamps, of which '08:16Z, 08:20:02Z' are attributed to 'the session that wrote this section'; :192-194 says they were checked against `git rev-parse origin/main | cut -c1-12`. The diff touches only two ADRs, INDEX.md and history.jsonl — no tasks/reviews/ artifact, no command, no http_status, no full_json, unlike the committed precedent tasks/reviews/s2-postmerge-gate.json on main which records all three per observation. The other two row-4 readings belong to PR #36's session, so removing the two unrecorded ones leaves 'this branch made those readings itself' with nothing behind it.",
+   "repro": "git diff origin/main...HEAD --stat && grep -rn '08:20:02' . --exclude-dir=.git",
+   "acceptance": "Either the two readings land in an observation record with command/status/response the way s2-postmerge-gate.json does, or §g1 drops the first-person framing and rests the closure on the readings that are committed."
+  },
+  {
+   "id": "R6",
+   "severity": "LOW",
+   "route": "repair",
+   "claim": "ADR-029 §i3's second drop mis-cites the source branch: §b6 is 'Rejected alternatives' and its last row rejects the design that actually shipped; the 33/33 re-parse figure lives in §b5 and §h4.",
+   "evidence": "ADR-029:406-408 — \"That measured a rejected design (§b6 of the source branch: structure recovered by re-parsing the raw body).\" On 5ad1a0f, §b6's table rejects \"Structure recorded during normalize() instead of re-parsed\" — i.e. the shipped design — while the 33/33 figure is in §b5 and restated in §h4. A reader following the citation lands on a table that appears to reject what shipped.",
+   "repro": "git show 5ad1a0f:specs/decisions/ADR-029-table-structure-annotation.md | sed -n '/### b6/,/^## c/p' | tail -4",
+   "acceptance": "The citation points at §b5 (or §h4). The substantive ruling — the figure is inapplicable to what shipped — is correct and stands."
+  },
+  {
+   "id": "R7",
+   "severity": "LOW",
+   "route": "repair",
+   "claim": "ADR-028 §g1 says 'the three assumptions this section opens with', but §g1 does not open with them — §g does.",
+   "evidence": "ADR-028:212. §g1 begins at :175 and opens with the ledger sentence; the three assumptions are §g's opening paragraph at :149-154. The Status line at :3 gets it right ('the three assumptions §g lists as unverified').",
+   "repro": "sed -n '149,154p;175,180p;212p' specs/decisions/ADR-028-build-identity.md",
+   "acceptance": "The sentence reads '§g opens with' (or matches the Status line's wording)."
+  },
+  {
+   "id": "R8",
+   "severity": "LOW",
+   "route": "repair",
+   "claim": "§g1 stages the reading-2 disagreement as testimony-vs-artifact while omitting the one contemporaneous committed record that corroborates reading 2 — a commit this same PR cites elsewhere.",
+   "evidence": "ADR-028:184-194 records reading 2 (e6810a4339f7) as unreproducible and 'recorded on their authors' testimony'; :201-206 sets it against s2-postmerge-gate.json's not_claimed[0]. But commit 5ad1a0f's own message (on task/S7-adr, the commit ADR-029 §i:325 cites by name in this same PR) states: \"Reading 2 ran: the deployed /api/meta returned e6810a4339f7, main's merge commit truncated to 12, which closes all three items ADR-028 §g listed as unverifiable\" — a committed, dated, contemporaneous record, not testimony.",
+   "repro": "git log -1 --format=%B 5ad1a0f | grep -A3 'Reading 2 ran'",
+   "acceptance": "§g1's row 2 or the disagreement paragraph cites 5ad1a0f as the contemporaneous written record of reading 2, so the disagreement is weighed on evidence rather than on which session a reader believes."
+  }
+ ]
+}
