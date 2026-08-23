@@ -5,7 +5,8 @@ mis-specified span-coverage debt row), ADR-018 (its consequences still named
 the span-coverage validator as the live post-freeze candidate — marked in place
 2026-08-22, ADR-027 §g) and ADR-004 (records, does not resolve,
 a standing disagreement over `cvx-2015` item 6). Ships the Executive-Officers
-boundary fix (`src/sec10k/segment.py`, `EXEC_OFFICERS_RE`).
+boundary fix (`src/sec10k/segment.py`, `EXEC_OFFICERS_RE`). Amended by:
+ADR-030 (§d's successor built, noted in place 2026-08-23).
 
 **Ruling**: measure the silent-failure rate at 1/30 sampled (3.3%, CI [0.1%, 17.2%]) over the 447 confident-but-unchecked items; fix the Executive-Officers boundary bleed across 7 fixtures; retire the mis-specified span-coverage debt row; leave the internal-pointer-to-paginated-section class as recorded, unresolved debt.
 **Because**: metric 6 reads 0.0 by construction (the gate forces every declared check green), so the only way to see the real rate was to sample outside the checked population with an instrument the gate doesn't control.
@@ -172,6 +173,8 @@ document, plus the escalation-policy question** (should any single-item
 dominance, first or last, escalate `doc_status` as `last_item_dominates`
 already does for the last) — named here, not built (T8 freeze). ADR-015 §5
 gets a dated correction note pointing here; its history is not rewritten.
+*(Built 2026-08-23 as the sanctioned exception: ADR-030, D3 — `item_dominates`
+at `ITEM_MAX = 0.55`, escalating; both halves of the question ruled there.)*
 
 **The honest consequence: the EO clip creates interior unattributed content
 that no item covers and no validator reports** — correct (officer bios aren't

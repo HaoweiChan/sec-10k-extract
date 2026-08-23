@@ -1,0 +1,46 @@
+{
+ "pr": 41,
+ "round": 1,
+ "date": "2026-08-23",
+ "result": "APPROVED",
+ "gate": "invariant 50/50; fast 98/98; table fidelity 400/400 · 31/31; baseline untouched; validate / eval_adapter 18/18 / bench / metrics self-checks ok; --check-docs 68/0; every ADR-030 §b1/§b2 number re-measured and reproduces; main→HEAD snapshot over 47 documents: only the new fixture and items-stripped change as stated; fixture byte-exact reconstruction from wmt-2010; red at main and all mutations reproduced; LAST_ITEM_MAX intact",
+ "routing_rule": "repair = HIGH/MEDIUM and (acceptance violated | gate red | published claim dishonest); everything else debt (pr-loop scope boundary)",
+ "findings": [
+  {
+   "id": "R1",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "Present-tense corpus counts in descriptive docs went stale with the new fixture directory and are not marked.",
+   "evidence": "docs/analysis-report.md:547-549 says 'the 41 dev-corpus fixtures in evals/fixtures/ … evals/fixtures/ holds 42 directories (41 filings + repo_hygiene)'; ADR-021 §b8 (specs/decisions/ADR-021-benchmark-instrument.md:171-178) says 'Forty-two fixture directories are committed'. At HEAD iter_fixtures yields 42 and ls -d evals/fixtures/*/ gives 43. ADR-030 §g notes the bench artifact predates the fixture but these sentences carry no dated marker.",
+   "repro": "python3 -c 'from evals.oracle import iter_fixtures; print(len(list(iter_fixtures())))' → 42; ls -d evals/fixtures/*/ | wc -l → 43; sed -n 547,549p docs/analysis-report.md",
+   "acceptance": "Either a dated parenthetical at both spots ('42 filings / 43 directories since ADR-030; bench artifact of record is n=41') or the wording re-scoped to the artifact's population rather than the present tree."
+  },
+  {
+   "id": "R2",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "prompts/017 mis-attributes the 7.4 ratio to a legitimate filing; it is jpm-2024's last-span defect.",
+   "evidence": "prompts/017-d3-non-last-span-dominance.md:29-31: 'the ratio is 5.15 on the one defective fixture and 5.6–7.4 on legitimate pointer-heavy filings (wfc-2008, cvx-2015, mrk-1995)'. Re-measured: wfc 6.95, cvx 5.76, mrk 5.58 (legit range 5.58–6.95); 7.41 is jpm-2024 (last_item_dominates, ambiguous), which ADR-030 §b2 correctly lists as a defect.",
+   "repro": "largest/second-largest extracted span ratio per fixture at origin/main; compare ADR-030 §b2 list vs prompts/017 line 30",
+   "acceptance": "prompts/017 reads '5.6–7.0 on legitimate pointer-heavy filings (wfc-2008, cvx-2015, mrk-1995); the two last-span defects read 7.41/4.99', matching ADR-030 §b2."
+  },
+  {
+   "id": "R3",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "ADR-030 §c reason 2 uses the held-out outcome as evidence for the escalation ruling while §g disclaims any held-out derivation; under the held-out README's burn rule (influence, not re-running) and the axp-2008 precedent, the two statements conflict.",
+   "evidence": "specs/decisions/ADR-030-non-last-span-dominance.md §c.2: 'At 0.55 no committed real filing, dev or held-out, fires (§b1 / §b1-held-out)' given as the second of three reasons; §g: 'any threshold chosen on held-out data (the held-out table enters no derivation…)'; §b1-held-out commits doc_status + largest-span item/fraction for all 5 held-out fixtures. evals/heldout/README.md:20-22 burn rule; :174-181 axp-2008 precedent.",
+   "repro": "grep -n 'dev or held-out' specs/decisions/ADR-030-non-last-span-dominance.md; sed -n 18,23p evals/heldout/README.md",
+   "acceptance": "Either §c.2 cites only the 26 dev real filings (the dev FP set alone carries the argument; the held-out table stays a read-only report) or the ADR/README record that the policy ruling consulted the five held-out outcomes and says why that is not a burn under the rule's own text."
+  },
+  {
+   "id": "R4",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "Two ledger/ADR cross-references were left pointing at the pre-D3 state.",
+   "evidence": "(a) ADR-020 §e condition 2 is met per ADR-030 §g and the new debt row, but specs/decisions/ADR-020-fallback-not-justified.md:355-359 carries no dated in-place note. (b) tasks/TODO.md T5-5 row: the 'Where' cell still says 'the standing A non-last span dominating the document row above (class 1 is its interior-gap half)' — that row is now struck and PROMOTED — and the 'Why it is not taken' cell still says 'each is a new validator … none of the three is a one-line fix' although the first cell says class 1 is CLOSED by D3.",
+   "repro": "grep -n 'Amended' specs/decisions/ADR-020-fallback-not-justified.md | head -3 (none); grep -n \"the standing 'A non-last span\" tasks/TODO.md",
+   "acceptance": "ADR-020 §e.2 gets a one-line dated note; T5-5 'Where' names the PROMOTED row / ADR-030, and 'Why' is scoped to classes 2 and 3."
+  }
+ ]
+}

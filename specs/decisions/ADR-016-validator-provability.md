@@ -28,12 +28,15 @@ Disposition is one of three, and every code gets one:
 
 ## The eight layer-8 codes and the four upstream warnings
 
+*(Nine layer-8 codes since 2026-08-23: ADR-030 added `item_dominates`, the row below `last_item_dominates`.)*
+
 | code | disposition | where |
 |---|---|---|
 | `toc_manifest_mismatch` | fixture | `heading-unnumbered` |
 | `expected_items_mostly_missing` | fixture | `items-stripped-escalation` — **assertion added by this ADR**, see §1 |
 | `unattributed_content` | fixture | `ibm-1997-shallow` |
 | `last_item_dominates` | fixture | `jpm-2024-structure` |
+| `item_dominates` | fixture | `interior-span-dominates` — **added 2026-08-23, ADR-030** (non-last span above `ITEM_MAX`; escalating) |
 | `boundary_hygiene` | **unit** | `validate._demo`, added by this ADR — see §2 |
 | `numeric_density_inversion` | **fixture** | `spans-transposed`, new — see §3 |
 | `keyword_fingerprint` | **fixture** | `spans-transposed`, new — see §3 |

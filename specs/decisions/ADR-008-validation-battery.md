@@ -1,10 +1,10 @@
 # ADR-008 — T5: the validator battery that survived measurement
 
-Date: 2026-08-16. Status: accepted. Amended by: ADR-013, ADR-018, ADR-027
-(the last two in place, 2026-08-22 — each amended figure carries its marker).
+Date: 2026-08-16. Status: accepted. Amended by: ADR-013, ADR-018, ADR-027,
+ADR-030 (the last three in place — each amended figure carries its marker).
 Implements layers 8-9 (`src/sec10k/validate.py`).
 
-**Ruling**: ship six label-free validators with measured thresholds (TOC manifest, unattributed content, last-item domination, boundary hygiene, relative numeric density, keyword fingerprints) — seven since ADR-013 added `expected_items_mostly_missing` (amended 2026-08-22, ADR-027 §g; `grep -c 'warn("' src/sec10k/validate.py` → 7); reject the other four proposed ("Item 8 longest", "1A ≫ 1B", "spans end at sentence punctuation", part-region consistency) as false-positive generators.
+**Ruling**: ship six label-free validators with measured thresholds (TOC manifest, unattributed content, last-item domination, boundary hygiene, relative numeric density, keyword fingerprints) — seven since ADR-013 added `expected_items_mostly_missing` (amended 2026-08-22, ADR-027 §g; `grep -c 'warn("' src/sec10k/validate.py` → 7), eight since ADR-030 added `item_dominates` (amended 2026-08-23; the same grep → 8); reject the other four proposed ("Item 8 longest", "1A ≫ 1B", "spans end at sentence punctuation", part-region consistency) as false-positive generators.
 **Because**: a validator that cries wolf is a defect, not caution — each rejected check was measured to misfire on real fixtures (AAPL, Premier Pacific, JPM).
 **Enforced by**: `src/sec10k/validate.py`; `evals/golden/*-structure.json` cases; `evals/adversarial/heading-unnumbered.json`
 
@@ -23,6 +23,7 @@ false-positive rates rather than quietly omitted.
 | TOC manifest cross-check | any mismatch | the filing's own contents page vs what we resolved — no threshold to set |
 | Unattributed content | > 17% | clean modern filings leave 0.7–7.6% before the first span / after the last (*amended 2026-08-22, ADR-027 §g: not "outside every item" — interior gaps are not counted, and ADR-019 §d measured them nonzero on the 7 EXEC_OFFICERS_RE fixtures, up to 9.7 points*); IBR-heavy and appendix-carrying ones leave 26.5–76.9%. Floor sits in the empty band |
 | Last-item domination | > 50% | JPM 2024's Item 15 is 83.3% of the document; next highest in the set is 18.9% (Textron's exhibit list). Band midpoint |
+| Non-last domination (*added 2026-08-23, ADR-030*) | > 55% | the largest non-last span of a real filing is jnj-2016's Item 8 at 53.4% (the financial statements, `success`); the smallest that must fire is items-stripped's Item 4 at 57.2%. Band midpoint; both edges pinned |
 | Boundary hygiene | any | every span must open with its own heading; 0 failures across 14 fixtures, kept as a tripwire |
 | Numeric density, relative | d(8) ≤ d(1A) | absolute bands overlap across filers (d(1A) 0.001–0.008 vs d(8) 0.008–0.095 — they touch), but the *ordering* holds in 9 of 9 filings where both items are substantive |
 | Keyword fingerprints | no prior word present | gated to spans ≥ 5,000 chars |
@@ -77,7 +78,9 @@ the same way, which it previously missed.
 
 Only `toc_manifest_mismatch` and `last_item_dominates` may push `doc_status`
 to `ambiguous` (*amended 2026-08-22, ADR-027 §g: three codes since ADR-013
-added `expected_items_mostly_missing` — `len(AMBIGUOUS_CODES)` → 3*).
+added `expected_items_mostly_missing` — `len(AMBIGUOUS_CODES)` → 3; amended
+2026-08-23, ADR-030 §c: four since `item_dominates` joined — `len(AMBIGUOUS_CODES)`
+→ 4*).
 `unattributed_content` deliberately may not: IBM 1997 leaves
 43% of its document outside every item and Textron 28%, because those filings
 incorporate by reference — that shape is normal, the honest report is a
