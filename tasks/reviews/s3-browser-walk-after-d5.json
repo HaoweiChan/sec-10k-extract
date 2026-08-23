@@ -1,0 +1,49 @@
+{
+ "base": "http://localhost:8001",
+ "modes": {
+  "fixture": {
+   "text": "doc_status: success\n\u2014 18 extracted \u00b7 5 incorporated_by_reference\nfixture: aapl-2025",
+   "cls": "s-success",
+   "items_rendered": 23,
+   "shot": "s3-browser-walk-after-d5/mode1-fixture.png",
+   "agrees_with_row": true
+  },
+  "upload": {
+   "text": "doc_status: ambiguous\n\u2014 4 extracted \u00b7 17 missing \u00b7 2 omitted\nupload: s3-upload-4item.htm",
+   "cls": "s-ambiguous",
+   "items_rendered": 23,
+   "shot": "s3-browser-walk-after-d5/mode2-upload.png",
+   "agrees_with_row": true
+  },
+  "url": {
+   "text": "doc_status: failed",
+   "cls": "s-failed",
+   "shot": "s3-browser-walk-after-d5/mode3-url-failed.png",
+   "agrees_with_row": true
+  }
+ },
+ "fonts": {
+  "control": {
+   "first_contentful_paint_ms": 28,
+   "painted_within_budget": true,
+   "shot": "s3-browser-walk-after-d5/fonts-control.png"
+  },
+  "refused": {
+   "first_contentful_paint_ms": 28,
+   "painted_within_budget": true,
+   "shot": "s3-browser-walk-after-d5/fonts-refused.png"
+  },
+  "blackholed": {
+   "first_contentful_paint_ms": 28,
+   "painted_within_budget": true,
+   "shot": "s3-browser-walk-after-d5/fonts-blackholed.png"
+  }
+ },
+ "upload_file": {
+  "path": "tasks/reviews/s3-upload-4item.htm",
+  "sha256": "a57534e9e2a6ea114d7b434c875848e1e004a9369d6f0e486c316ae6549cebd8",
+  "bytes": 3681
+ },
+ "font_fallback_verdict": "DEGRADES: the page paints without the webfont",
+ "mode_failures": []
+}

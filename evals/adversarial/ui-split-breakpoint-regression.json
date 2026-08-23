@@ -1,0 +1,29 @@
+{
+  "id": "ui-split-breakpoint-regression",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "split_breakpoint"
+    ],
+    "file": "evals/fixtures/repo_hygiene/split-breakpoint-raised.html",
+    "split": ".split",
+    "stack_selector": "#source",
+    "min_side_by_side": 1024,
+    "state_label": "sync-state"
+  },
+  "expect": {
+    "min_failures": 7,
+    "max_failures": 7
+  },
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "Seven ways the D5 half-1 layout regresses, one failure each, at an EXACT count so both a regressed miss (too few) and a regressed over-fire (too many) go red — the S5 pane-heights-ragged idiom. The seven: (1) the base `.split` rule loses a track, i.e. 'narrower columns' taken as 'one fewer pane', which stacks nothing and still hides the compare pane at every width; (2) the stacking `@media` re-raised to the pre-D5 1100px — the original V5 defect, restored verbatim; (3) the JS still watches `matchMedia(\"(max-width:1000px)\")`, so between 1001 and 1100 the panes stack under a control that has not been told, which is the ORIGINAL V5 complaint (a live-looking control with nothing to sync) reintroduced through the gap between two numbers rather than through either one; (4) `syncOn()` drops the `!c.disabled` term, so a disabled control still drives the sync and disabling it changes only its appearance; (5) `syncStacked()` disables the control but sets no `#sync-state` wording; (6) the `change` listener is gone, so the state is evaluated once at load and a resize past the breakpoint leaves it stale; (7) the `#sync-state` element itself is gone. Every OTHER hop in the fixture is correctly wired.",
+    "ceiling": "Same static-read ceiling as ui-split-breakpoint: this fixture is a text file, and the check reads text. It proves the CHECK catches these seven source shapes; it says nothing about what any browser renders.",
+    "red_first": "Watched red against src/repo_hygiene/eval_adapter.py's check_split_breakpoint (7 failures on the fixture) on 2026-08-23, alongside ui-split-breakpoint.json's own red-first run at c13aa5c."
+  },
+  "provenance": "D5, created 2026-08-23 alongside ui-split-breakpoint.json."
+}

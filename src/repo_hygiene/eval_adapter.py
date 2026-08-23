@@ -1276,6 +1276,210 @@ def check_ledger_table_shape(case):
     return bad
 
 
+# --- D5: inspector layout + exclusion honesty -------------------------------
+#
+# BOTH checks below are STATIC reads of the committed source — CSS text and JS
+# text. Nothing in this harness issues an HTTP request and nothing lays
+# anything out, so neither check observes the RENDER; they pin the source that
+# produces it, and the existing pin mechanism's documented holes apply (a
+# pinned element can be `hidden` and still satisfy its pin). The rendered
+# geometry is evidence only a browser can give: it lives in
+# tasks/reviews/d5-browser-walk.json, measured at 1280 / 1024 / 900 / 768.
+
+# D5 half 1. What carries "the panes are stacked" into the sync-scroll
+# control, pinned WHOLE for the reason WIRE_UI above is an allow-list: asking
+# each hop a question about itself ("does it mention disabled?") is a question
+# a broken hop can also answer correctly. A deliberate change here must update
+# the pin — that friction is the point.
+STACK_WIRE = [
+    ("syncOn() refuses to sync through a disabled control",
+     'function syncOn(){ const c = $("#sync-scroll"); return !!(c && c.checked && !c.disabled); }'),
+    ("the stacked state disables the control AND says so in words",
+     'function syncStacked(){\n'
+     '  const c = $("#sync-scroll"); if(!c) return;\n'
+     '  c.disabled = STACKED.matches;\n'
+     '  $("#sync-state").textContent = STACKED.matches ? " — inactive: panes stacked" : "";\n'
+     '}'),
+    ("crossing the breakpoint re-evaluates it, so a resize cannot leave a "
+     "live-looking control sitting over stacked panes",
+     'STACKED.addEventListener("change", syncStacked);'),
+]
+
+
+def _media_blocks(css):
+    """Yield (condition, body) for every `@media` block, braces MATCHED rather
+    than regexed — _flat_rules' own `([^{}]+)\\{([^{}]*)\\}` cannot see inside
+    one at all (it documents that hole), and a plain regex would end the block
+    at the first nested `}`."""
+    css = css_contrast._strip_comments(css)
+    for m in re.finditer(r"@media([^{]*)\{", css):
+        i, depth = m.end(), 1
+        while i < len(css) and depth:
+            if css[i] == "{":
+                depth += 1
+            elif css[i] == "}":
+                depth -= 1
+            i += 1
+        yield m.group(1).strip(), css[m.end():i - 1]
+
+
+def _without_media(css):
+    """`css` with every `@media` block removed, so `_declared_for` (which is
+    media-BLIND — it documents that hole) can be asked about the unconditional
+    cascade. Without this, `.split`'s base `grid-template-columns` reads as
+    the LAST one declared in the file, which is the narrowest breakpoint's."""
+    css = css_contrast._strip_comments(css)
+    out, last = [], 0
+    for m in re.finditer(r"@media[^{]*\{", css):
+        if m.start() < last:
+            continue
+        i, depth = m.end(), 1
+        while i < len(css) and depth:
+            if css[i] == "{":
+                depth += 1
+            elif css[i] == "}":
+                depth -= 1
+            i += 1
+        out.append(css[last:m.start()])
+        last = i
+    out.append(css[last:])
+    return "".join(out)
+
+
+def _tracks(value):
+    """Track count of a `grid-template-columns` value. Enough for the literal
+    values this stylesheet declares; a repeat()/minmax() form would need a
+    real parser and none is used here."""
+    return len(value.split())
+
+
+def check_split_breakpoint(case):
+    """D5 half 1 (debt row V5). The compare pane (`#source`) and the item pane
+    (`#pane`) must stay in ONE grid row down to `min_side_by_side` px — below
+    the old 1100px breakpoint `#source` dropped to `grid-column:1/-1` and
+    stacked BELOW `#pane`, so the two were never on screen together and
+    sync-scroll had nothing to demonstrate itself against (measured live at
+    1024x860 on c13aa5c: `#pane` top 507, `#source` top 1157). Wherever the
+    layout DOES still stack, the sync-scroll control must be disabled and
+    labelled inactive rather than left looking live.
+
+    Mechanically: `.split`'s own rule declares three tracks; every `@media`
+    block that stacks (drops `.split` below three tracks, or gives `#source` a
+    `grid-column` span) must trigger strictly below `min_side_by_side`; the JS
+    must watch a media query at EXACTLY the widest stacking breakpoint, so
+    re-raising the CSS `max-width` without moving the JS one goes red twice;
+    and the three expressions carrying "stacked" into the control are pinned
+    whole.
+
+    Text, not layout — see the block comment above this function.
+    """
+    inp = case.get("input", {})
+    text = (ROOT / inp.get("file", UI_STYLESHEET)).read_text()
+    live = _live(text, "js")   # strips /* */, // and <!-- -->; CSS + JS in one file
+    js = _squash(live)
+    split = inp.get("split", ".split")
+    stack_sel = inp.get("stack_selector", "#source")
+    floor = inp.get("min_side_by_side", 1024)
+    bad = []
+
+    base = _declared_for(_without_media(live), split, "grid-template-columns")
+    if not base or _tracks(base) < 3:
+        bad.append(f"{split}: base rule declares {base!r} — want three tracks "
+                   f"(sidebar + both compare panes) at full width")
+
+    stack_widths = []
+    for cond, body in _media_blocks(live):
+        cols = _declared_for(body, split, "grid-template-columns")
+        stacks = (cols is not None and _tracks(cols) < 3) or bool(
+            _declared_for(body, stack_sel, "grid-column"))
+        if not stacks:
+            continue
+        w = re.search(r"max-width\s*:\s*(\d+)px", cond)
+        if not w:
+            bad.append(f"@media{cond}: stacks the panes under a condition with "
+                       f"no max-width — nothing says where the stacking starts")
+            continue
+        w = int(w.group(1))
+        stack_widths.append(w)
+        if w >= floor:
+            bad.append(f"@media{cond}: stacks the panes at widths up to {w}px, "
+                       f"so {stack_sel} and #pane are not on screen together at "
+                       f"{floor}px (want a stacking breakpoint < {floor})")
+
+    if not stack_widths:
+        bad.append("no stacking @media block found at all — this check would "
+                   "pass vacuously, and the control's inactive state has no "
+                   "breakpoint to key on")
+    else:
+        want = f'matchMedia("(max-width:{max(stack_widths)}px)")'
+        if _squash(want) not in js:
+            bad.append(f"the JS does not watch {want} — the width the CSS "
+                       f"stacks at and the width the control calls itself "
+                       f"inactive at must be the same number")
+
+    for why, expr in STACK_WIRE:
+        if _squash(expr) not in js:
+            bad.append(f"missing pinned expression ({why}): {expr}")
+
+    label = inp.get("state_label", "sync-state")
+    if not re.search(r'id="' + re.escape(label) + r'"', live):
+        bad.append(f'#{label}: no element carrying the "inactive" wording — a '
+                   f"silently disabled checkbox still looks like a live control")
+    return bad, {"stack_widths": stack_widths, "split_columns": base}
+
+
+def check_exclusion_note(case):
+    """D5 half 2 (debt row: the compare pane still shows chrome while the
+    extracted pane hides it). With the box ticked the two panes visibly
+    disagree — the left drops the detected runs, the right still serves every
+    `<PAGE>` and running head — because `boilerplate` offsets index the
+    DERIVED `normalized_text` while the compare pane serves the RAW filing,
+    and no raw<->normalized offset map exists anywhere in this pipeline.
+    Building one stays ruled out as post-freeze scope creep (ADR-026 s.a);
+    this note is an honest statement of the limit, NOT a fix for it.
+
+    Pinned: the element exists; it ships `hidden`, so it cannot fire with
+    exclusion off; its visibility is assigned from the response's own
+    `boilerplate_excluded` (the same read-at-request-time field the pane
+    header labels itself from); and its wording says what IS true (raw vs
+    normalized, the panes will not agree) and none of what is not (that the
+    map exists, or that the panes match).
+
+    Text, not render — see the block comment above check_split_breakpoint.
+    """
+    inp = case.get("input", {})
+    text = (ROOT / inp.get("file", UI_STYLESHEET)).read_text()
+    live = _live(text, "js")
+    ident = inp.get("note_id", "bp-note")
+    bad = []
+    m = re.search(r'<div[^>]*\bid="' + re.escape(ident) + r'"([^>]*)>(.*?)</div>',
+                  live, re.S)
+    if not m:
+        return ([f'#{ident}: no note element in the markup — under exclusion '
+                 f"the two panes disagree with nothing on screen saying why"],
+                {"note_text": None})
+    attrs = m.group(1)
+    # tags out, whitespace collapsed: how the note happens to be wrapped in
+    # the file says nothing about what it tells the reader (_squash's argument,
+    # kept at single spaces here because the pinned wording is prose).
+    body = " ".join(re.sub(r"<[^>]+>", "", m.group(2)).split())
+    if not re.search(r"(?:^|\s)hidden(?:[=\s]|$)", attrs):
+        bad.append(f"#{ident}: does not ship `hidden` — the note would stand on "
+                   f"screen with exclusion off, where it is simply false")
+    for expr in inp.get("wire", []):
+        if _squash(expr) not in _squash(live):
+            bad.append(f"missing pinned expression (the note follows the "
+                       f"response's own exclusion state): {expr}")
+    for want in inp.get("must_say", []):
+        if want not in body:
+            bad.append(f"#{ident}: does not say {want!r}")
+    for nope in inp.get("must_not_say", []):
+        if nope in body:
+            bad.append(f"#{ident}: says {nope!r} — the panes do NOT agree and "
+                       f"no offset map exists; the note may not imply either")
+    return bad, {"note_text": body}
+
+
 CHECKS = {
     "adr_headers": lambda case: check_adr_headers(),
     "adr_index": lambda case: check_index(),
@@ -1296,6 +1500,8 @@ CHECKS = {
     "build_identity": check_build_identity,
     "ledger_table_shape": check_ledger_table_shape,
     "fixture_discovery": check_fixture_discovery,
+    "split_breakpoint": check_split_breakpoint,
+    "exclusion_note": check_exclusion_note,
 }
 
 

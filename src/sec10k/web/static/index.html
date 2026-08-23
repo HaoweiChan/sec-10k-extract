@@ -122,8 +122,30 @@ button:disabled{opacity:.5;cursor:default}
 .warn .msg{font-size:14px;margin-top:2px}
 .none{color:var(--dim);font-size:13px}
 
+/* D5 (debt row: the compare pane still shows chrome while the extracted pane
+   hides it). Above the split rather than inside either pane: it is a statement
+   about BOTH panes, and #pane/#source are height-locked columns whose content
+   tops and bottoms are made to coincide (S5 amendment (3)/(7)) — an in-flow
+   band inside either one would break that alignment to say it. Borrowed from
+   .warn on purpose (same shape, ambiguous rather than warning accent): this is
+   a stated limit of the display, not a validator firing. */
+#bp-note{border:1px solid var(--line);border-left:3px solid var(--amb);
+  border-radius:var(--r);padding:8px 11px;margin-bottom:12px;background:var(--panel);
+  font-size:13px;color:var(--dim)}
+#bp-note code{font:12px var(--mono);color:var(--amber-ink)}
+
 .split{display:grid;grid-template-columns:290px 1fr 1fr;gap:14px;align-items:start}
-@media(max-width:1100px){.split{grid-template-columns:290px 1fr}#source{grid-column:1/-1}}
+/* D5 (debt row V5): the SIDEBAR narrows first, so #pane and #source stay in
+   one row down to 1024. The old @media(max-width:1100px) dropped #source to
+   grid-column:1/-1 and stacked it BELOW #pane, which is the whole compare
+   feature gone on a 1024-wide screen — measured at 1024x860 on c13aa5c:
+   #pane top 507, #source top 1157, 650px apart on an 860px viewport. It was
+   the fixed 290px sidebar that ran the two panes out of width, not the panes,
+   so that is what gives way. Below 1000 they do still stack, and there
+   syncStacked() disables the sync-scroll control and labels it inactive —
+   two panes that are never on screen together have nothing to sync. */
+@media(max-width:1180px){.split{grid-template-columns:196px 1fr 1fr}}
+@media(max-width:1000px){.split{grid-template-columns:196px 1fr}#source{grid-column:1/-1}}
 @media(max-width:820px){.split{grid-template-columns:1fr}}
 /* One shared height so the three columns' tops (already equal via the grid's
    own align-items:start) AND bottoms line up (S5 round 3) — #sidebar used to
@@ -277,6 +299,16 @@ footer a{color:var(--accent)}
 
 <div id="banner" class="s-idle">No filing extracted yet.</div>
 <div id="warnings"></div>
+<!-- D5: shown only while the response that is on screen was extracted with
+     exclusion ON (render() assigns .hidden from v.boilerplate_excluded, the
+     same read-at-request-time field the pane header labels itself from). It
+     states the limit; it does not fix it, and must not read as if it did. -->
+<div id="bp-note" hidden>Boilerplate exclusion applies to the
+  derived <code>normalized_text</code> only. The compare pane serves the raw
+  filing bytes, so it still shows every page break and running head the
+  extracted pane drops — the two panes will not agree while this is on. There is
+  no raw-to-normalized offset map in this pipeline (ADR-026 §a), so this is a
+  known limit of the compare view, not a fault in either pane.</div>
 
 <div class="split">
   <div id="sidebar"><div style="padding:11px" class="none">Items appear here.</div></div>
@@ -287,7 +319,7 @@ footer a{color:var(--accent)}
   <div id="source">
     <div class="src-hdr"><span>original filing</span>
       <span id="anchor-status"></span>
-      <label><input type="checkbox" id="sync-scroll" checked> sync scroll</label>
+      <label><input type="checkbox" id="sync-scroll" checked> sync scroll<span id="sync-state"></span></label>
     </div>
     <div id="source-body"><div class="none" style="padding:12px">Extract a filing to see its original source.</div></div>
   </div>
@@ -588,7 +620,20 @@ function scrollSourceToItem(i){
 // back to whole-document proportional only when the item has no anchor.
 let SYNC_GUARD = false;
 
-function syncOn(){ const c = $("#sync-scroll"); return c && c.checked; }
+function syncOn(){ const c = $("#sync-scroll"); return !!(c && c.checked && !c.disabled); }
+// D5 (debt row V5). Below the width where .split stacks #source under #pane
+// the two panes are never on screen together, so there is nothing to sync:
+// the control is disabled AND says why, rather than staying a live-looking
+// checkbox over a layout that cannot honour it. 1000px is the same number the
+// stylesheet stacks at — ui-split-breakpoint pins the two to each other.
+const STACKED = matchMedia("(max-width:1000px)");
+function syncStacked(){
+  const c = $("#sync-scroll"); if(!c) return;
+  c.disabled = STACKED.matches;
+  $("#sync-state").textContent = STACKED.matches ? " — inactive: panes stacked" : "";
+}
+STACKED.addEventListener("change", syncStacked);
+syncStacked();
 // S8. Read at REQUEST time, not render time: the pane labels itself from the
 // response's own `boilerplate_excluded`, so toggling the box after an
 // extraction cannot make the label lie about the text on screen.
@@ -689,6 +734,10 @@ function render(v){
         x.item ? ` <span class="hint">item ${esc(x.item)}</span>` : ""
       }<div class="msg">${esc(x.message)}</div></div>`).join("")
     : `<div class="none">No warnings — every validator stayed silent.</div>`;
+  // D5: the note tracks the RESPONSE's exclusion state, not the checkbox's
+  // current one, for the same reason the pane header does (S8) — toggling the
+  // box after an extraction must not make the note lie about what is on screen.
+  $("#bp-note").hidden = !v.boilerplate_excluded;
 
   const items = v.items || [];
   $("#sidebar").innerHTML = items.length ? items.map((it,i) => {
