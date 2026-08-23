@@ -214,7 +214,7 @@ extraction 0.58 s → 0.70 s (**+20%**); annotation 1,237,818 bytes of JSON on a
 the marks-free `_tidy` branch is the original three `re.sub` calls. This is
 why §b3 rules opt-in. *(The committed bench column now exists — ADR-021 §b13,
 D2, `evals/report/20260823-185707-bench.json`: `tables_median_s` per fixture,
-ratio median 1.19× / max 1.30× over the 37 processed fixtures, `jpm-2024`
+ratio median 1.19× / max 1.3× (1.295) over the 37 processed fixtures, `jpm-2024`
 0.5821 → 0.7227 s (1.24×). The one-off figures in this paragraph stay as the
 dated working-tree measurement they were.)*
 

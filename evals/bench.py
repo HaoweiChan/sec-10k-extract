@@ -555,7 +555,7 @@ DOC_ALLOW = {
     ("ADR-021-benchmark-instrument.md", "ksb-2007", "2.5"),    # §d1, same
     ("ADR-021-benchmark-instrument.md", "ksb-2007", "44.1"),   # Verification, the stale figure choice 12 found
     ("analysis-report.md", "ksb-2007", "44.55"),               # v4 repair-round-1 note: that round's ksb value (now 43.01)
-    ("analysis-report.md", "ksb-2007", "0.0025"),              # §3.2 R16 note: first_s == min_s on the 13761cc trio (0.0026 on 185707)
+    ("analysis-report.md", "ksb-2007", "0.0025"),              # §3.2 R16 note: first_s == min_s == 0.0025 on the 13761cc trio (185707 reads first 0.0027, min 0.0026, median 0.0026)
     ("009-t13-perf-cost-scalability.md", "ksb-2007", "0.0025"),  # same sentence, in the record
     ("analysis-report.md", "msft-2013", "6.6"),                # §3 v3-vs-v4 row; 6.6 is tgt-2002's at v4 (6.19 now)
     ("analysis-report.md", "msft-2013", "33.8"),               # §3 v3-vs-v4 row; 33.8 is ibm-1997's at v4 (32.16 now)

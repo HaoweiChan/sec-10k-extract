@@ -434,7 +434,7 @@ survived two sweeps that had both been claimed as complete; 13 in D2,
     is **processed** fixtures only, because a refusal returns before any table
     is read. On the run of record: median **1.187×**, maximum **1.295×**
     (`wfc-2008`), `jpm-2024` 0.5821 → 0.7227 s (1.242×); across the three runs
-    the median reads 1.18–1.20 and the maximum 1.27–1.30. Pinned by the golden
+    the median reads 1.18–1.20 and the maximum 1.274–1.295. Pinned by the golden
     record (`tables_median_s` 0.15, ratio 1.154) and three new `derived`
     fields in the golden payload (1.2 / 1.3 / `ko-1997`, a maximum set by
     neither the largest nor the slowest row), per choice 10.
@@ -528,7 +528,7 @@ only ever confirms.
 1. **No warm-up effect.** Over the 36 fixtures above the 1 ms ratio floor
    (choice 9), the first-repeat vs fastest-repeat ratio has median **1.004**
    and maximum **1.02** on the run of record. Across the three clean runs the
-   maximum is 1.021 / 1.031 / 1.042 and lands on a different fixture each time
+   maximum is 1.032 / 1.021 / 1.042 (run order; first printed sorted, and the first as 1.031 — corrected 2026-08-23, PR #39 R2 class) and lands on a different fixture each time
    — it is the noise floor, which is what "no warm-up" should look like. v3
    asserted this from one filing; it holds corpus-wide, and `first_s` is in the
    artifact so it can be re-checked rather than believed. *(2026-08-23, D2,
@@ -758,7 +758,7 @@ arithmetic; aggregates to two significant figures):
   1,213,298 → **1,213,284**; the cost counterfactual's median-filing estimate
   $0.14 → **$0.13** (opus-5), corpus $10.56 → **$10.94**; the largest-filing
   row is unchanged at $1.52 / does-not-fit.
-- New: `tables=True` median **1.19×**, max **1.30×** (`wfc-2008`),
+- New: `tables=True` median **1.19×**, max **1.3×** (1.295, `wfc-2008`),
   `jpm-2024` 0.58 → 0.72 s with the flag on (§b13).
 - Corpus-wide the default path reads ~5–7% slower than on 2026-08-20, outside
   the ±3% spread. **Not attributed** here to the tree or the machine: `src/`

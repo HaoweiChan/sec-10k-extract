@@ -218,7 +218,7 @@ table, the population boundaries and the cost counterfactual:
 | Latency p50 / p95 | **0.044 s / 0.40 s** across the 41 dev-corpus fixtures (p95 is the 39th of 41 medians under nearest-rank; it read 0.51 s at n=37 because the rank fell on a slower filing, not because anything got faster) |
 | Largest filing | JPM FY2024, 12.25 MiB → **0.58 s**; **0.72 s** with the opt-in `tables=True` annotation (ADR-029) |
 | Throughput | **14.1 MiB/s** aggregate, 60.54 MiB in 4.307 s; 6.2–32.2 MiB/s per fixture over the 37 the pipeline actually processes (4 are refusals on a shorter code path) |
-| `tables=True` overhead | median **1.19×**, max 1.30× the default path's wall-clock, per fixture |
+| `tables=True` overhead | median **1.19×**, max 1.3× the default path's wall-clock, per fixture |
 | Peak memory | **119–124 MiB** driving all 41 filings in one process — a plateau, not a function of the largest document (that alone reaches **94.6–102.4 MiB** across the seven committed clean-tree runs; v4 said "94.6, stable to 0.1" from three) |
 | Cost per filing | **$0.00** — structural, no paid dependency exists |
 | Full EDGAR year (~7,000 10-Ks) | **~18 min** single process, embarrassingly parallel — mean over the 33 real EDGAR filings committed, not over the synthetic-diluted dev mean |

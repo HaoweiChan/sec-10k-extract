@@ -15,7 +15,7 @@ the rule and the two exceptions are stated in §3.1) and
 metric 9. What moved, grouped: p95 **0.51 s → 0.40 s** — a rank effect, not a
 speed-up: nearest-rank p95 at n=41 is the 39th of 41 medians, where at n=37
 it was the 36th of 37 (on the 2026-08-20 trio those two filings read
-0.366–0.380 s and 0.500–0.521 s; today `cvx-2015` reads 0.399 s and
+0.366–0.374 s and 0.500–0.521 s; today `cvx-2015` reads 0.399 s and
 `bac-2006` 0.536 s); **the whole corpus reads about 5–7% slower than on
 2026-08-20** — the largest filing's median 0.548 → 0.582 s, batch throughput
 14.8 → **14.1 MiB/s** — which is outside the ±3% run-to-run spread and which
@@ -28,7 +28,7 @@ filing 108,938 → **102,453**, and it is now a synthetic derivative,
 largest-filing RSS figure is re-qualified from "94.6 MiB, stable to 0.1 MiB"
 to a measured **94.6–102.4 MiB range** across seven clean-tree runs; and a
 **`tables=True` column** is new (ADR-029 §f's one-off +20% becomes a committed
-per-fixture field: median 1.19×, max 1.30×). The v4 repair-round notes below
+per-fixture field: median 1.19×, max 1.3×). The v4 repair-round notes below
 are history and keep their own figures; §3.2's "Corrections to v3" table keeps
 the v4 values it was written against, relabelled. Nothing in `src/` changed
 between the two runs of record except what T3/D1/S7 already shipped and
@@ -614,7 +614,7 @@ artifact later (PR #12 R25). The corpus peak, by contrast, stays inside
 | Aggregate throughput, batch | **14.1 MiB/s** (60.54 MiB in 4.307 s) | 14.04–14.23 |
 | Per-fixture throughput, 37 processed | **6.2 – 32.2 MiB/s**, median 13.6, spread **5.2×** | spread 5.20–5.24 |
 | Peak RSS | **123 MiB** driving all 41 filings in one process (26 MiB baseline) | 119.6–123.5 |
-| `tables=True` / default | median **1.19×**, max **1.30×** (`wfc-2008`); `jpm-2024` 0.58 → **0.72 s** (1.24×) | median 1.18× – 1.20×, max 1.27× – 1.30× |
+| `tables=True` / default | median **1.19×**, max **1.3×** (`wfc-2008`); `jpm-2024` 0.58 → **0.72 s** (1.24×) | median 1.18× – 1.20×, max 1.274× – 1.295× |
 
 **Four fixtures are refusals and are excluded from the throughput
 statistics.** `ksb-2007`, `aapl-2026-10q` and `amended-cover-2021` return
@@ -672,7 +672,7 @@ markup-density coefficient on top of it.
 **`tables=True` costs a fifth, measured per fixture, not asserted from one.**
 ADR-029 §f quoted "+20% on jpm-2024" from its working tree. The committed
 column reads median **1.19×** over the 37 processed fixtures, maximum
-**1.30×** (`wfc-2008`, a 0.22 MiB filing — the annotation's fixed
+**1.3×** (1.295; `wfc-2008`, a 0.22 MiB filing — the annotation's fixed
 per-table cost shows most on small inputs), and `jpm-2024` 0.5821 → 0.7227 s
 (**1.24×**). The pass is timed *after* every memory reading so the RSS family
 below is still the default path's; the flag-off path is unchanged (ADR-029 §d
@@ -681,11 +681,11 @@ taken with the flag off).
 
 **No warm-up effect.** Over the 40 fixtures above the 1 ms ratio floor, the
 first-repeat / fastest-repeat ratio has median **1.005** and maximum **1.05**
-(`derived.warmup_*`). Across the three runs the maximum is 1.048 / 1.051 /
-1.056 and lands on a different fixture each time (`sandston-2021`, `jpm-2024`,
-`ko-1997`) — i.e. it is the noise floor,
+(`derived.warmup_*`). Across the three runs the maximum is 1.056 / 1.048 /
+1.051 and lands on a different fixture each time (`sandston-2021`, `jpm-2024`,
+`ko-1997`, in run order) — i.e. it is the noise floor,
 which is exactly what "no warm-up" should look like (the 2026-08-20 trio read
-1.021 / 1.031 / 1.042). `truncated-download` (1,200 bytes, ~0.1 ms) is excluded
+1.032 / 1.021 / 1.042 in run order — v4 printed them sorted, and the first as 1.031). `truncated-download` (1,200 bytes, ~0.1 ms) is excluded
 from this statistic and from the repeat spread, and named in the artifact as
 excluded (`derived.ratio_excluded_fixtures`), because at one scheduler tick a
 ratio is quantization rather than measurement.
