@@ -1,0 +1,106 @@
+{
+  "pr": 44,
+  "task": "S10",
+  "round": 2,
+  "date": "2026-08-24",
+  "branch": "task/S10",
+  "head": "89d3331",
+  "base": "c13aa5c",
+  "scope": "repair diff 81764f7..HEAD plus the standing round-1 findings; not a fresh full-diff sweep",
+  "result": "REQUEST_CHANGES",
+  "gate": {
+    "invariant": "52/52 = 1.000",
+    "fast": "105/105 = 1.000",
+    "table_fidelity": "cells 427/427, rows 34/34 (ratio unmoved)",
+    "baseline": "unmoved, byte-identical to origin/main",
+    "run_by": "orchestrator, on 89d3331"
+  },
+  "counts": {
+    "HIGH": 0,
+    "MEDIUM": 3,
+    "LOW": 3
+  },
+  "routing": {
+    "repair_blocking": [
+      "R7",
+      "R8",
+      "R9"
+    ],
+    "repair_rider": [
+      "R10",
+      "R11",
+      "R12"
+    ],
+    "debt": []
+  },
+  "routing_rationale": "R7/R8/R9 are MEDIUM and each makes a committed claim dishonest — in_table computes a wrong answer for an image outside the table, ADR-032 sec b2a's rewritten rule is still false in general, and the red-first evidence cites a run of a different version of the case than the one committed. R10/R11/R12 are LOW and would normally route to debt; they are carried as riders on this already-triggered round because each is a one-line correction inside text or lines the blocking fixes must rewrite anyway (R11 sits in the same sec g paragraph as R9; R12 is on the same eval_adapter branch as R7; R10 is a wrong published tally the reviewer has already re-derived). Opening debt rows for one-line corrections the implementer is standing on would leave knowingly-wrong numbers in documents of record. No debt rows logged this round.",
+  "round1_acceptance_verified_met": {
+    "R2": "_dim returns a positive int or None across 29 probed inputs (0, -5, 0px, 1.5, 0.75px, 1.5px, 50%, auto, empty, missing, whitespace, non-numeric, 1e3px, 999999999); the 53 committed corpus image records byte-identical before and after the fix",
+    "R3": "81150 is the single <img> in aapl-2026-10q/filing.htm; all 28 cited golden offsets land on an <img> (tally wrong, see R10)",
+    "R1_placement_half": "the shipped case and _demo both go red under a tight() mutation, on the real xom-2021 images; labeled xom signature grid re-transcribed from raw bytes 2000571-2002445 (3 rows, colspan=3 expanded to 9 columns, 12 empty cells clamped to 232188)",
+    "R5_R6": "debt rows present in the correct TODO.md section with Origin: PR #44 R5 / R6",
+    "byte_identity": "dev 19168a6e...30e9223a, held-out 51de5a11...04957f3f, cmp equal vs origin/main c13aa5c, .eval-baseline.json diff empty"
+  },
+  "findings": [
+    {
+      "id": "R7",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "blocking": true,
+      "claim": "The new `in_table` check tests the table span with an inclusive end (`start <= offset <= end`) while table spans are half-open, so an image that sits entirely OUTSIDE the table markup — immediately after `</table>` — is reported `in_table=True`, and no case or unit test pins the boundary.",
+      "evidence": "src/sec10k/eval_adapter.py:486 `got = any(t[\"start\"] <= im[\"offset\"] <= t[\"end\"] for t in result[\"tables\"])` — the sibling `item` derivation four lines above uses half-open `i[\"start\"] <= off < i[\"end\"]`. Input `<html><body><p>Before.</p><table><tr><td>a</td></tr><tr><td>b</td></tr></table><img src=after.jpg><p>FORM 10-K</p></body></html>` gives image offset 13 and table (9, 13) -> `in_table` True for an image outside the table entirely; the same holds for an image-only TRAILING row -> offset 13, table (9,13), True. That directly falsifies ADR-032 §b2a:96-98, added in this diff, which says an image that 'precedes (or follows) all of the table's visible text' is 'outside the table span entirely'. Nothing pins the convention: test_eval_adapter.py:614-618 uses table (7,19) with the image at 18, and 0 of the corpus's 53 image offsets equal any table end, so the gate is green by luck of corpus — the same construction R2 was raised for.",
+      "repro": "cd <worktree> && python3 -c \"import sys;sys.path.insert(0,'.');from src.sec10k.normalize import select_and_normalize;t,_,_,tabs,imgs=select_and_normalize('<html><body><p>Before.</p><table><tr><td>a</td></tr><tr><td>b</td></tr></table><img src=after.jpg><p>FORM 10-K</p></body></html>',tables=True,images=True);print(imgs[0]['offset'],[(x['start'],x['end']) for x in tabs])\" -> 13 [(9, 13)]; mutation proof that nothing catches it: copy the tree, change `<= t['end']` to `< t['end']` in eval_adapter.py, then `python3 -m src.sec10k.test_eval_adapter` -> 20/20 pass and images-in-table-cell still passes.",
+      "acceptance": "`in_table` uses the same half-open convention as the `item` derivation (or ADR-032 §b2a states and defends the inclusive one), with an assertion — a `test_eval_adapter` table whose end offset equals the image offset, or a `normalize.py::_demo` trailing-image shape — that goes red under the other convention."
+    },
+    {
+      "id": "R8",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "blocking": true,
+      "claim": "The rule ADR-032 §b2a was rewritten to state is still false in general: 'an image in a cell that carries text lands inside that cell's span' breaks as soon as any block element separates the image from the text in the same cell, and the only thing asserting it is again a synthetic `_demo` cell built so it cannot expose the counterexample — the exact pattern round-1 R1 named.",
+      "evidence": "specs/decisions/ADR-032-image-reference-annotation.md:95 (bullet 1 of §b2a, new in this diff) asserted only by src/sec10k/normalize.py:499-500 `cell = itabs[0]['rows'][0][0]; assert cell[0] <= imgs[3]['offset'] <= cell[1]`, whose cell is `<td>cell<img src=c.jpg></td>` — image adjacent to inline text. Counterexample, one line of HTML and the shape a filer actually writes (`<td><img/><div>caption</div></td>`): `<table><tr><td><img src=a.jpg><div>text</div></td></tr></table>` gives image offset 7 while the only cell is (9, 13) — the image is outside its own text-carrying cell AND outside the table. Same for `<td><img src=b.jpg><br>text</td>` and `<td><img src=c.jpg><p></p><p>text</p></td>` (offset 7 vs cell (9,13)). The true condition is whether a whitespace/block separator sits between the image mark and the cell's first visible character, not whether the cell carries text. The corpus half of §b2a does reproduce exactly (tag-depth scan: 10 of 53 in `<table>` markup — cvx-2015 4/4, xom-2021 3/9, bac-2006 2/5, ba-2003 1/3; all 10 in text-empty `<td>`s; 0 of 53 offsets inside any table or cell span), so only the general rule statement is wrong.",
+      "repro": "cd <worktree> && python3 -c \"import sys;sys.path.insert(0,'.');from src.sec10k.normalize import select_and_normalize;t,_,_,tabs,imgs=select_and_normalize('<html><body><p>Before.</p><table><tr><td><img src=a.jpg><div>text</div></td></tr></table><p>FORM 10-K</p></body></html>',tables=True,images=True);print(imgs[0]['offset'],tabs[0]['rows'])\" -> 7 [[[9, 13]]]",
+      "acceptance": "§b2a bullet 1 states the condition that is actually true (image adjacent to the cell's visible text, no intervening block/whitespace emitter) or is stated as a corpus observation rather than a mechanism, and `normalize.py::_demo` carries the `<td><img><div>text</div></td>` shape alongside the friendly one so the distinction is pinned rather than assumed."
+    },
+    {
+      "id": "R9",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "blocking": true,
+      "claim": "The red-first evidence committed for the new R1 case is misdescribed: the history line it cites was produced by a DIFFERENT version of the case whose `table` check was also failing (4 failures, not 3), so 'this exact case' and 'flipping the three labels to false is the whole repair' are both false, and the case as committed was never itself watched red.",
+      "evidence": "evals/adversarial/images-in-table-cell.json provenance ('RED FIRST … this exact case, with in_table set to TRUE for g7/g8/g9 … ran 3 failures … Flipping the three labels to false and correcting §b1 is the whole repair') and specs/decisions/ADR-032-image-reference-annotation.md:311-313, both citing `20260824-000828 fast 81764f7 dirty 104/105 0.9905`. That history line carries `table_cells_fidelity 0.5829, table_rows_fidelity 0.4776` (evals/report/history.jsonl:527). The committed case's table label contributes 27 cells / 3 rows, which can only give suite fidelity >= 400/427 = 0.937. Running the committed case with the `table` check's `\"index\": 1` removed — so the anchor 'Darren W. Woods' resolves to table record 19 (36 rows, 324 cells) instead of record 50 — reproduces 0.58287 and 0.47761 exactly, i.e. 0.5829/0.4776, with 4 failures: 'grid differs: 36 rows x 9 got vs 3 x 9 labeled' plus the three in_table rows.",
+      "repro": "cd <worktree> && python3 -c \"import sys,json;sys.path.insert(0,'.');from src.sec10k.eval_adapter import run_case;c=json.load(open('evals/adversarial/images-in-table-cell.json'));[chk.pop('index',None) for chk in c['expect']['checks'] if chk['type']=='table'];[chk.update(in_table=True) for chk in c['expect']['checks'] if chk.get('src','').endswith(('g7.jpg','g8.jpg','g9.jpg'))];r=run_case(c);f=r['table_fidelity'];print(len(r['failures']),(400+f['cells'][0])/(400+f['cells'][1]),(31+f['rows'][0])/(31+f['rows'][1]))\" -> 4 0.5828729 0.4776119, matching history.jsonl 20260824-000828 exactly",
+      "acceptance": "The provenance and ADR §g describe the red run that actually happened (the anchor without `index`, four failures, the `table` check corrected in the same repair as the labels), or a fresh red run of the case exactly as committed is taken and its history.jsonl line cited instead."
+    },
+    {
+      "id": "R10",
+      "severity": "LOW",
+      "route": "repair",
+      "blocking": false,
+      "claim": "The corrected R3 provenance overstates the scope of its own re-verification: it says 'all 34 raw <img> offsets cited in the three golden provenances', but those provenances cite 28 distinct raw offsets (9 + 5 + 14, the breakdown the resolution itself gives, which sums to 28), 29 counting one repeat.",
+      "evidence": "evals/adversarial/images-refusal-path.json:49 (provenance, new sentence) and tasks/reviews/pr44-r1-resolution.json R3 'independent_re_verification'. Scanning the three golden provenances for numbers that equal a raw `<img` byte position in their own fixture: xom-2021-images 9 distinct (10 citations, 1704772 appears twice), bac-2006-images 5, jpm-2024-images 14 = 28 distinct / 29 citations; plus 81150 in this file. Every one of them does land exactly on an `<img`, so the substance of the re-verification holds and only the tally is wrong.",
+      "repro": "cd <worktree> && for each of the three golden case files: read its provenance, extract every 4+-digit number, and count how many equal a raw `<img` byte position in its own fixture -> 10/9 distinct, 5/5, 14/14",
+      "acceptance": "The sentence carries the number a reader counts (28 distinct, or 29 citations), or drops the tally and names the three files."
+    },
+    {
+      "id": "R11",
+      "severity": "LOW",
+      "route": "repair",
+      "blocking": false,
+      "claim": "The R4 honesty paragraph added to ADR-032 §g contains a false sentence that the next sentence contradicts: 'every history line this PR commits is green' — this PR commits a 0.9905 line.",
+      "evidence": "specs/decisions/ADR-032-image-reference-annotation.md:308-310 says 'every history line this PR commits is green'; two sentences later (:311-313) it cites `20260824-000828 fast 81764f7 dirty 104/105 0.9905`, and evals/report/history.jsonl:527 in this same diff is that line.",
+      "repro": "cd <worktree> && git diff 81764f7..HEAD -- evals/report/history.jsonl | grep 0.9905",
+      "acceptance": "The sentence is scoped to round 1's runs ('every history line round 1 committed is green') so the paragraph no longer states something the same paragraph disproves."
+    },
+    {
+      "id": "R12",
+      "severity": "LOW",
+      "route": "repair",
+      "blocking": false,
+      "claim": "The comment on the new `in_table` branch cites the wrong ADR subsection.",
+      "evidence": "src/sec10k/eval_adapter.py:483 '(ADR-032 §b2)' — §b2 is the coincident-offset ruling; the offset-vs-table-span relationship this comment describes is §b2a, added in the same diff at specs/decisions/ADR-032-image-reference-annotation.md:87.",
+      "repro": "cd <worktree> && sed -n '478,491p' src/sec10k/eval_adapter.py; sed -n '87,98p' specs/decisions/ADR-032-image-reference-annotation.md",
+      "acceptance": "The comment points at §b2a."
+    }
+  ]
+}
