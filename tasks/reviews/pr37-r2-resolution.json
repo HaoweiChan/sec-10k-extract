@@ -1,0 +1,69 @@
+{
+ "pr": 37,
+ "round": 2,
+ "task": "S2-close (ADR-028 §g1 + ADR-029 §i evidence sections)",
+ "review": "tasks/reviews/pr37-r2.json",
+ "resolved_by": "implementer",
+ "date": "2026-08-23",
+ "protocol": "Every repro in the artifact was re-run before editing; all four findings reproduced exactly, including R10's two counter-figures (constant-after-padding 3,902; canonical-single-row 2,011). Nothing was taken on the artifact's word. The R10 repair was then verified the way the round demanded: the rewritten method bullets were read back and followed literally, and the procedure they describe returns 3,733 / 693 / 1,018 / 1,595. All four repaired; none rejected, none deferred. One debt row logged under the round's explicit conditional authorisation.",
+ "gate_at_resolution": {
+  "invariant": "48/48 = 1.000 (+4 enumerated debt, unscored)",
+  "fast": "96/96 = 1.000 (+4 enumerated debt, unscored); table fidelity cells 1.0000 (400/400), rows 1.0000 (31/31)",
+  "baseline": "{\"fast\": 1.0, \"table_cells_fidelity\": 1.0, \"table_rows_fidelity\": 1.0}, not moved; .eval-baseline.json untouched",
+  "self_checks": "ledger_table_shape on tasks/TODO.md -> 4 tables, 82 data rows, 0 field-count mismatches (escaped \\| discounted); adr-header-and-index golden green; the four figures re-derived from the rewritten ADR wording -> 3733 / 693 / 1018 / 1595"
+ },
+ "findings": [
+  {
+   "id": "R9",
+   "severity": "MEDIUM",
+   "status": "fixed",
+   "reproduced": true,
+   "repro_observed": "git show f39c93c:...ADR-028...| sed -n '188p' -> row 3 read only '2026-08-22, after PR #34 merged'; grep -rn '1efc457' --exclude-dir=.git . | grep -v ADR-028 -> no artifact dates the sighting. The '18:23:02Z / fifteen minutes / at odds with the contemporaneous record' wording was new in the round-1 repair diff and sourced from nothing.",
+   "fix": "The exclusion now rests on the unrecorded-reading rule alone: 'no committed artifact records the sighting, and none records when it happened.' The invented timing and the contradiction claim are deleted. The paragraph states plainly that nothing there claims the sighting did not occur and nothing dates it, and it names the earlier draft's two errors — the window was invented, and 5ad1a0f was written before the sighting so it could not contradict it either way. 5ad1a0f is still cited, for exactly what it says: as of its commit at 2026-08-22T18:38:20Z the second-redeploy reading had not yet run.",
+   "note": "The finding's third point is the one that mattered: crediting an unrecorded reading far enough to time it, two paragraphs after ruling that such readings are not evidence, is self-undermining. The repaired paragraph says so in its own words rather than just removing the sentence."
+  },
+  {
+   "id": "R10",
+   "severity": "MEDIUM",
+   "status": "fixed",
+   "reproduced": true,
+   "repro_observed": "Following the published method literally over the 3,902 tables: constant width AFTER grid()'s padding = 3902 (100%), against the published 3,733; canonical single-row = 2011, against the published 1,018. Both counter-figures reproduce exactly as the finding states. Only 693 and modal-2-on-1,595 used the full canonicalization, and both reproduce.",
+   "fix": "The single method sentence is replaced by three bullets, one procedure per figure. (1) Constant colspan-weighted row width (3,733): per row, sum each cell's colspan (record's third element, else 1); the table counts if every row's sum is equal — measured on the record BEFORE any padding, with the reason padding would falsify it stated inline. (2) Canonical width <= 1 (693) and modal canonical width (2 on 1,595): full canonicalization — tables.grid(), then drop every row empty in every column, then every column empty in every remaining row; a table with no visible text has 0 columns and falls under '<= 1'. (3) Single-row (1,018): records holding exactly one <tr>, counted BEFORE canonicalization. The block opens by naming the earlier draft's error and both numbers it produces, so the correction is on the record rather than silently absorbed.",
+   "verification": "The rewritten bullets were read back and implemented literally, from the wording alone: constant colspan-expanded row width 3,733 (169 ragged); canonical column count <= 1 = 693; exactly one <tr> = 1,018; modal canonical column count 2 on 1,595. All four match what §i1 publishes."
+  },
+  {
+   "id": "R11",
+   "severity": "LOW",
+   "status": "fixed",
+   "reproduced": true,
+   "repro_observed": "src/sec10k/normalize.py:271 — `found = [t for t in found if any(c[0] < c[1] for r in t['rows'] for c in r)]` — drops the 50 all-empty tables before normalize() returns, so no 'of 3,902' figure is obtainable from extract_items(). The preamble claimed all figures came through it; :385 conceded a html.parser walk.",
+   "fix": "The preamble now distinguishes the two provenances instead of asserting one. Most figures come straight from the shipped extract_items(path, tables=True); the four rows denominated 'of 3,902' cannot, and are measured with the shipped recorder and that one filter line lifted — _Plain(tables=True), _tidy, _place_tables, tables.grid(), all shipped, with only the list comprehension at normalize.py:271 skipped. §i1's note now presents the html.parser walk as the independent cross-check it is: two routes, agreeing, with the walk falsified against the shipped annotation (3,852/3,852 same verdict, 0 disagreements) before anything was published from it.",
+   "improvement_over_acceptance": "The acceptance allowed either naming the filter-lifted recorder OR naming the walk. Taking the first made the second unnecessary as provenance: all four figures are now derived from shipped code with one line skipped, and the walk is demoted to corroboration. That is a stronger answer than the finding asked for, and it is why the figures are quoted from route A rather than from the walk."
+  },
+  {
+   "id": "R12",
+   "severity": "LOW",
+   "status": "fixed",
+   "reproduced": true,
+   "repro_observed": "sed -n '184p;186,192p' -> the rule 'Only readings with a contemporaneous written record are listed' sits two lines above a table in which rows 2-4 cite a record and row 1 cites only an attribution.",
+   "fix": "Row 1's 'observed by' cell now names three records: §a of this ADR, tasks/TODO.md's Origin: S2 Debt row, and s2-postmerge-gate.json not_claimed[0], quoted ('the only pre-S2 deployed observation on record is git_sha unknown (2026-08-22)'). The 'when' cell is also dated 2026-08-22 to match. Every row now satisfies the rule stated above it."
+  }
+ ],
+ "debt_logged": [
+  {
+   "origin": "PR #37 R10",
+   "where": "tasks/TODO.md ## Debt",
+   "what": "ADR-029 §i1's four table-shape figures are prose with no runnable pin, and are the only figures in the ADR the shipped API cannot return (normalize.py:271). Round 2 found the published method for two of them did not reproduce them; the method is fixed, but nothing stops the drift recurring, and this repo has been bitten by stale figures in documents of record before (PR #31 R14, the T3 normalized_chars row).",
+   "why_not_taken": "The round explicitly ruled the reviewer's optional runnable check OUT of this PR as scope expansion and authorised a debt row instead. Taking it needs a repo_hygiene check that re-derives the four and compares them against prose, plus a red-first fixture — a new instrument, not a ledger edit.",
+   "scope_note": "This is the round's one sanctioned departure from the docs-only scope; nothing else outside specs/ and tasks/reviews/ was touched."
+  }
+ ],
+ "not_changed": [
+  "The cache caveat in ADR-028 §g1: 'No observation exists of a build that FAILED to move' stands verbatim, and the conclusion is still written to hold on the gate artifact's narrower one-move reading.",
+  "ADR-029's ruling and §a-§h. The round is an evidence-section repair.",
+  "The four published figures themselves — 3,733 / 693 / 1,018 / 1,595 are unchanged and were re-derived twice this round. R10 was a defect in the recipe, not in the numbers.",
+  "specs/decisions/INDEX.md — no finding touched it.",
+  "tasks/DONE.md and the S2 row: PR #36 owns them.",
+  "tasks/reviews/pr37-r1.json — round 1's R1 acceptance was wrong and is superseded in place by the round-2 adjudication, not retro-edited."
+ ]
+}

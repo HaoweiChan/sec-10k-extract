@@ -328,10 +328,18 @@ already made, and made without these numbers. What the numbers change is how
 strong §f2's refusal is allowed to sound: "essentially every offset in the
 corpus" is now a measurement, not a manner of speaking.
 
-Every figure here was re-derived against **this** tree on 2026-08-23 through
-the shipped `extract_items(path, tables=True)` and the shipped selection
-(`split_documents` / `ACCEPTED_FORMS`) — not copied from that branch. Figures
-that did not reproduce are named as such below rather than repeated.
+Every figure here was re-derived against **this** tree on 2026-08-23, not
+copied from that branch. Most come straight from the shipped
+`extract_items(path, tables=True)` over the shipped selection
+(`split_documents` / `ACCEPTED_FORMS`). The four rows denominated **"of
+3,902"** cannot: `normalize.py:271` drops the 50 all-empty tables before they
+reach the envelope, so the shipped API can never return them. Those four were
+measured with **the shipped recorder and that one filter line lifted** —
+`_Plain(tables=True)`, `_tidy`, `_place_tables`, `tables.grid()`, all shipped,
+with the single list comprehension at `normalize.py:271` skipped and nothing
+else changed. The count of what that line removes was cross-checked with an
+independent `html.parser` walk (§i1). Figures that did not reproduce are named
+as such below rather than repeated.
 
 ### i1. The corpus, as the shipped annotation sees it
 
@@ -381,19 +389,39 @@ population.
 The constant-width count is **3,733, not 3,734**: of the 50 all-empty tables
 49 have a constant expanded row width and one does not (`cat-2023`, row widths
 `[27, 15, 27, 27, 27, 27, 27, 27]`), so the source branch's 3,733 / 169 split
-is right as published and the round-1 review's 3,734 / 168 is one out. The
-`html.parser` walk this was measured with was falsified against the shipped
-annotation first: on all 3,852 visible-text tables it returns the same
-table count per fixture and the same constant-width verdict, 0 disagreements.
+is right as published and the round-1 review's 3,734 / 168 is one out.
 
-The last four rows use the source branch's canonicalization (its §d1):
-`colspan` expanded, `rowspan` not, rows padded, then all-empty columns and rows
-dropped. Steps 1–3 are exactly `tables.grid()` and the drop is exactly what
-`to_markdown()` already does before rendering, so these are read off the
-shipped code rather than a private reimplementation. Note this is **not** what
-§c's fidelity metric applies — §c compares `grid()` output against the labeled
-rows with no empty-dropping at all, deliberately, since a golden is the truth
-and not a tolerance.
+Two independent routes give that 3,902-table population, and they agree: the
+shipped recorder with `normalize.py:271`'s visible-text filter lifted, and an
+`html.parser` walk written for the purpose. The walk was falsified against the
+shipped annotation before anything was published from it — on all 3,852
+visible-text tables it returns the same table count per fixture and the same
+constant-width verdict, 0 disagreements.
+
+**Each of the last four rows uses a different procedure, so each is stated
+separately.** An earlier draft described all four as one canonicalization; two
+of them do not survive it — `grid()` pads every row to the table's width, so
+"constant width after padding" is 3,902 (100 %) by construction, and counting
+canonical rows gives 2,011, not 1,018. Follow the wording below instead and
+the published numbers come back:
+
+- **Constant `colspan`-weighted row width (3,733).** Per row, sum each cell's
+  `colspan` (the record's third element, else 1); the table counts if every
+  row's sum is equal. Measured on the record **before any padding** — padding
+  would make this true of every table.
+- **Canonical width ≤ 1 (693)** and **modal canonical width (2, on 1,595).**
+  Full canonicalization: `tables.grid()` (`colspan` expanded, `rowspan` not,
+  rows padded), then drop every row that is empty in every column, then every
+  column that is empty in every remaining row; count what is left. A table with
+  no visible text has 0 columns and so falls under "≤ 1".
+- **Single-row (1,018).** Tables whose record holds exactly one `<tr>`, counted
+  **before** canonicalization.
+
+The drop in the middle bullet is exactly what `to_markdown()` already does
+before rendering, so nothing here is a private reimplementation of it. None of
+it is what §c's fidelity metric applies — §c compares `grid()` output against
+the labeled rows with no empty-dropping at all, deliberately, since a golden is
+the truth and not a tolerance.
 
 They bear on §e's refusal to classify tables as data or layout: **17.8 % of
 `<table>` elements canonicalize to width ≤ 1 and 26.1 % have a single row**, so

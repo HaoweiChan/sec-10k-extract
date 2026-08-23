@@ -185,18 +185,26 @@ evidence. Only readings with a contemporaneous written record are listed.
 
 | # | `git_sha` | when | equal to | observed by |
 |---|---|---|---|---|
-| 1 | `unknown` | before PR #31 merged | — (the defect §a describes) | the S2 implementation session |
+| 1 | `unknown` | 2026-08-22, before PR #31 merged | — (the defect §a describes) | the S2 implementation session; recorded in §a of this ADR, in `tasks/TODO.md`'s `Origin: S2` Debt row, and in `s2-postmerge-gate.json` `not_claimed[0]` ("the only pre-S2 deployed observation on record is git_sha 'unknown' (2026-08-22)") |
 | 2 | `e6810a4339f7` | 2026-08-22 ~09:47Z, ~300 s after PR #31 merged at 09:42:29Z | `e6810a4339f73069bc214f7eebf6df0f58836d95`, the PR #31 merge commit | the S2 orchestrating session, from a bounded poll that curled every 20 s until the value stopped being `unknown`; written down the same day in commit `5ad1a0f`'s message (`git log -1 --format=%B 5ad1a0f`) |
 | 3 | `1efc457e598d` | 2026-08-23T07:47:22Z | `1efc457e598de56faa8f2d78386594427aa5a966`, the PR #34 merge commit | the PR #36 orchestrator; recorded in `s2-postmerge-gate.json` |
 | 4 | `1ed784ccf68e` | 2026-08-23T07:49:54Z and 07:51:52Z | `1ed784ccf68e1f5dde5fb1d592517cb0d29704f3`, the PR #35 merge commit | PR #36's orchestrator and implementer; `s2-postmerge-gate.json` records the 07:51:52Z one with its command, `http_status` 200 and full response body |
 
 A reading that is *not* in the table: the S2 orchestrating session also
-reports seeing `1efc457e598d` on 2026-08-22, shortly after PR #34 merged at
-18:23:02Z. It is left out under the rule above — nothing written at the time
-records it, and `5ad1a0f`'s message, committed 18:38:20Z that same evening,
-says reading 3 had **not** run as of fifteen minutes after that merge. Listing
-it would put the table at odds with the one contemporaneous record covering
-that window. Its omission costs nothing: `1efc457e598d` is in the table on the
+reports seeing `1efc457e598d` on 2026-08-22, after PR #34 merged. It is left
+out under the rule above, and under that rule alone — **no committed artifact
+records the sighting, and none records when it happened.** That is the whole
+reason; nothing here claims it did not occur, and nothing here dates it. An
+earlier draft of this section went further and placed it inside a window in
+order to derive a conflict with `5ad1a0f`. That was wrong twice over: the
+window was invented (no record gives the time), and `5ad1a0f` was written
+*before* the sighting, so it could not contradict it either way. Crediting an
+unrecorded reading far enough to time it, while ruling that such readings are
+not evidence, is the contradiction this paragraph now avoids.
+
+What `5ad1a0f` does say, and all it is cited for here, is that **as of its
+commit at 2026-08-22T18:38:20Z the second-redeploy reading had not yet run**.
+The omission costs nothing in any case: `1efc457e598d` is in the table on the
 07:47:22Z observation, which is recorded.
 
 **None of these is this branch's own.** Each of those builds had been replaced
