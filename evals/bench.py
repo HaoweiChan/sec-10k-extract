@@ -65,6 +65,10 @@ CLI:
     python3 -m evals.bench --json out.json      # also dump the artifact
     python3 -m evals.bench --repeats 5          # more repeats per fixture
     python3 -m evals.bench --self-check         # assert-based proof of the math
+    python3 -m evals.bench --check-docs evals/report/<stamp>-bench.json
+                                                # fixture-attributed decimals in
+                                                # DOC_FILES vs that artifact;
+                                                # fails closed on a vacuous run
 """
 import argparse
 import ast
@@ -185,22 +189,28 @@ def _r2(xs, ys):
 
 # ------------------------------------------------------------- measurement
 
-def time_fixture(path, repeats):
+def time_fixture(path, repeats, tables=False):
     """(list of seconds, normalized chars, doc_status) for one fixture."""
     times, chars, status = [], 0, None
     for _ in range(repeats):
         t0 = time.perf_counter()
-        out = extract_items(path)
+        out = extract_items(path, tables=tables)
         times.append(time.perf_counter() - t0)
         chars, status = len(out["normalized_text"]), out["doc_status"]
     return times, chars, status
 
 
-def make_record(name, file, raw_bytes, times, chars, status, rss_after):
+def make_record(name, file, raw_bytes, times, chars, status, rss_after, tables_times):
     """One fixture's row. Split out of `run_all` so `_demo` can drive the
     median/throughput arithmetic with a KNOWN list of times — otherwise the
-    only test of `median_s` is a test of `statistics.median` (PR #12, R2)."""
+    only test of `median_s` is a test of `statistics.median` (PR #12, R2).
+
+    `tables_times` is the same repeat loop with `extract_items(..., tables=True)`
+    (ADR-029's opt-in annotation), timed in a SEPARATE pass after every RSS
+    reading is taken, so the memory family stays comparable with the
+    2026-08-20 artifacts (D2, ADR-021 §b13)."""
     med = statistics.median(times)
+    tmed = statistics.median(tables_times)
     return {
         "fixture": name, "file": file,
         "raw_bytes": raw_bytes, "normalized_chars": chars, "doc_status": status,
@@ -214,6 +224,8 @@ def make_record(name, file, raw_bytes, times, chars, status, rss_after):
         "mean_s": round(statistics.fmean(times), 4), "max_s": round(max(times), 4),
         "mib_per_s": round(raw_bytes / MIB / med, 2) if med else None,
         "peak_rss_mib_after": round(rss_after, 1),
+        "tables_median_s": round(tmed, 4),
+        "tables_over_default": round(tmed / med, 3) if med else None,
     }
 
 
@@ -251,12 +263,10 @@ def run_all(repeats=3):
         raise SystemExit(f"[bench] SYNTHETIC names no longer exist as fixtures: {sorted(missing)}")
 
     rss_start = peak_rss_mib()
-    records = []
+    timed = []
     for name, path in fixtures:
         times, chars, status = time_fixture(path, repeats)
-        records.append(make_record(name, str(path.relative_to(ROOT)),
-                                   path.stat().st_size, times, chars, status,
-                                   peak_rss_mib()))
+        timed.append((name, path, times, chars, status, peak_rss_mib()))
 
     # batch: one sequential pass over the whole corpus, timed as a unit. This
     # is the number §5's projection divides into, not the sum of the medians —
@@ -266,6 +276,15 @@ def run_all(repeats=3):
         extract_items(path)
     batch_s = time.perf_counter() - t0
 
+    # tables=True pass (ADR-029 §f) LAST: it allocates the annotation on top of
+    # the envelope, and every RSS reading above must stay a default-path
+    # reading comparable with the earlier artifacts of record (ADR-021 §b13).
+    records = []
+    for name, path, times, chars, status, rss_after in timed:
+        tables_times, _, _ = time_fixture(path, repeats, tables=True)
+        records.append(make_record(name, str(path.relative_to(ROOT)),
+                                   path.stat().st_size, times, chars, status,
+                                   rss_after, tables_times))
     return records, batch_s, rss_start
 
 
@@ -338,6 +357,8 @@ def summarize(records, batch_s, rss_start, repeats, heldout=None):
     ratios = [r["first_s"] / r["min_s"] for r in ratio_pop]
     spreads = [(r["max_s"] - r["min_s"]) / r["median_s"] for r in ratio_pop]
     tp = sorted(r["mib_per_s"] for r in processed if r["mib_per_s"] is not None)
+    tables_rows = [r for r in processed if r["tables_over_default"] is not None]
+    tables_max = max(tables_rows, key=lambda r: r["tables_over_default"], default=None)
     perf["derived"] = {
         "note": DERIVED_NOTE,
         "sum_of_medians_s": round(sum(r["median_s"] for r in records), 3),
@@ -359,6 +380,12 @@ def summarize(records, batch_s, rss_start, repeats, heldout=None):
         "rss_plateau_first_index": plateau_i,
         "rss_plateau_first_fixture": records[plateau_i]["fixture"] if plateau_i is not None else None,
         "rss_plateau_first_value_mib": records[plateau_i]["peak_rss_mib_after"] if plateau_i is not None else None,
+        # ADR-029's opt-in `tables=True` path relative to the default path,
+        # over PROCESSED fixtures (a refusal returns before any table is read)
+        "tables_over_default_median": round(statistics.median(
+            r["tables_over_default"] for r in tables_rows), 3) if tables_rows else None,
+        "tables_over_default_max": tables_max["tables_over_default"] if tables_max else None,
+        "tables_over_default_max_fixture": tables_max["fixture"] if tables_max else None,
     }
 
     # ---- §5 projections, one entry per candidate population (ADR-021 §b8).
@@ -436,13 +463,13 @@ def render(records, perf, cost):
            f"        {platform.python_version()} on {platform.platform()}",
            "        sizes and rates are BINARY (MiB = 1048576 B)", ""]
     out.append(f"{'fixture':<24}{'raw bytes':>12}{'norm chars':>12}"
-               f"{'median s':>10}{'MiB/s':>8}{'peak RSS':>10}  flags")
+               f"{'median s':>10}{'MiB/s':>8}{'peak RSS':>10}{'tables s':>10}  flags")
     for r in records:
         flags = ",".join(f for f, on in (("refused", r["refused"]),
                                           ("synthetic", r["synthetic"])) if on)
         out.append(f"{r['fixture']:<24}{r['raw_bytes']:>12,}{r['normalized_chars']:>12,}"
                    f"{r['median_s']:>10.4f}{(r['mib_per_s'] or 0):>8.1f}"
-                   f"{r['peak_rss_mib_after']:>10.1f}  {flags}")
+                   f"{r['peak_rss_mib_after']:>10.1f}{r['tables_median_s']:>10.4f}  {flags}")
     out += ["",
             f"latency p50 {perf['latency_p50_s']}s  p95 {perf['latency_p95_s']}s  "
             f"max {perf['latency_max_s']}s ({perf['slowest_fixture']})",
@@ -466,6 +493,9 @@ def render(records, perf, cost):
             f"{perf['peak_rss_mib_corpus']} MiB corpus peak; within 0.5 MiB of peak "
             f"from index {d['rss_plateau_first_index']} "
             f"({d['rss_plateau_first_fixture']}, {d['rss_plateau_first_value_mib']} MiB) onward",
+            f"tables=True / default (processed): median {d['tables_over_default_median']}x, "
+            f"max {d['tables_over_default_max']}x ({d['tables_over_default_max_fixture']}); "
+            f"RSS above is the default path only (the tables pass runs after it)",
             ""]
     out.append("projections (of record: " + perf["projection_of_record"] + "):")
     for label, p in perf["populations"].items():
@@ -544,6 +574,17 @@ DOC_ALLOW = {
     ("TODO.md", "truncated-download", "0.1"),                  # same, in the ledger
     ("TODO.md", "axp-2008", "0.1264"),                         # ADR-019 oracle gap fraction, not a bench value
     ("TODO.md", "cvx-2015", "0.95"),                           # a confidence value, not a bench value
+    # -- the PR #12 R25 Debt row (D2 promoted it) quotes the 20260820-115810
+    #    run's RSS readings as the evidence of the contradiction; they are that
+    #    run's values by design, not the run of record's
+    ("TODO.md", "jpm-2024", "102.4"),
+    ("TODO.md", "xom-2021", "112.8"),
+    # -- the PR #12 R26-R31 Debt row: 42.8 is ksb-2007's withdrawn first-draft
+    #    maximum, quoted BEFORE the `ksb-2007` name and so attributed to the
+    #    preceding `bac-2006`; 2.104 is the real_edgar_committed mean MiB, a
+    #    population figure that sits beside the `items-stripped` name
+    ("TODO.md", "bac-2006", "42.8"),
+    ("TODO.md", "items-stripped", "2.104"),
 }
 
 DOC_WINDOW = 60  # chars after the closing backtick, same line only
@@ -558,21 +599,33 @@ def _fixture_values(art):
                 r["peak_rss_mib_after"]]
         if r["mib_per_s"] is not None:
             vals.append(r["mib_per_s"])
+        if r.get("tables_median_s") is not None:   # absent in pre-D2 artifacts
+            vals.append(r["tables_median_s"])
         out[r["fixture"]] = vals
     return out
 
 
-def check_docs(artifact_path):
+def check_docs(artifact_path, files=None, window=None):
+    """Exit 0 only when every doc in `files` exists AND at least one decimal was
+    actually checked AND none is unmatched. A run that checks nothing — a
+    `DOC_WINDOW` of 0, a renamed `DOC_FILES` entry, a doc that stopped naming
+    fixtures — is a failure, not a pass (PR #12 R26: the first version exited
+    0 on "0 checked", so the gate could be satisfied by checking nothing).
+    `files`/`window` are parameters only so `_demo` can drive this path."""
+    files = DOC_FILES if files is None else files
+    window = DOC_WINDOW if window is None else window
     art = json.loads(Path(artifact_path).read_text())
     vals = _fixture_values(art)
     names = sorted(vals, key=len, reverse=True)
     name_re = re.compile("`(" + "|".join(re.escape(n) for n in names) + ")`")
     num_re = re.compile(r"(?<![\w.])(\d+\.\d+)(?![\d])")
 
-    bad, checked = [], 0
-    for rel in DOC_FILES:
+    bad, missing, checked = [], [], 0
+    for rel in files:
         path = ROOT / rel
         if not path.is_file():
+            missing.append(f"  {rel}  is in DOC_FILES but does not exist — renamed or "
+                           f"deleted; its coverage would silently vanish")
             continue
         text = path.read_text()
         hits = list(name_re.finditer(text))
@@ -582,7 +635,7 @@ def check_docs(artifact_path):
             # backticked fixture name. Wider than that and every aggregate in
             # the paragraph gets swept in; narrower and table rows are missed.
             eol = text.find("\n", m.end())
-            stop = min(m.end() + DOC_WINDOW,
+            stop = min(m.end() + window,
                        eol if eol != -1 else len(text),
                        hits[i + 1].start() if i + 1 < len(hits) else len(text))
             for nm in num_re.finditer(text, m.end(), stop):
@@ -601,10 +654,16 @@ def check_docs(artifact_path):
                     bad.append(f"  {rel}:{line}  `{fixture}` {lit} "
                                f"is not a value of that fixture in {Path(artifact_path).name}")
     print(f"[bench] doc cross-check against {Path(artifact_path).name}: "
-          f"{checked} fixture-attributed decimals checked, {len(bad)} unmatched")
-    for b in bad:
+          f"{checked} fixture-attributed decimals checked, {len(bad)} unmatched"
+          + (f", {len(missing)} DOC_FILES entries missing" if missing else ""))
+    for b in bad + missing:
         print(b)
-    return 1 if bad else 0
+    if checked == 0:   # fail CLOSED: a check that checked nothing proves nothing
+        print("[bench] doc cross-check FAILED: 0 decimals checked — a vacuous run "
+              "(DOC_WINDOW, DOC_FILES or the docs themselves no longer reach a "
+              "fixture-attributed decimal) is a failure, not a pass")
+        return 1
+    return 1 if bad or missing else 0
 
 
 # -------------------------------------------------------------- self-check
@@ -647,8 +706,10 @@ def check_docs(artifact_path):
 #     (900,000), and the largest exceeds the cheap tier's context while the
 #     median does not — so `fits_haiku_context` has both values present (R22).
 
-def _rec(name, mib, times, chars=1000, status="success", rss=100.0):
-    return make_record(name, "f", int(mib * MIB), times, chars, status, rss)
+def _rec(name, mib, times, chars=1000, status="success", rss=100.0, tables=None):
+    # tables=None -> the tables pass took exactly the default times (ratio 1.0)
+    return make_record(name, "f", int(mib * MIB), times, chars, status, rss,
+                       times if tables is None else tables)
 
 
 def _golden_corpus():
@@ -656,23 +717,28 @@ def _golden_corpus():
     Names are real corpus names because `refused`/`synthetic` are derived from
     status and from membership of SYNTHETIC, not passed in."""
     return [
-        _rec("cat-2023", 3, [0.4], 900000, rss=50.0),
-        _rec("nvda-2024", 2, [0.72, 0.60, 0.60], 200000, rss=99.6),
-        _rec("ko-1997", 1, [0.22, 0.20, 0.20], 100000, rss=100.0),
+        # tables=True medians 0.48 / 0.66 / 0.26 -> ratios 1.2 / 1.1 / 1.3: the
+        # maximum (ko-1997) is neither the largest nor the slowest row, and the
+        # median (1.2) differs from the max and from the refused rows' 1.0
+        _rec("cat-2023", 3, [0.4], 900000, rss=50.0, tables=[0.48]),
+        _rec("nvda-2024", 2, [0.72, 0.60, 0.60], 200000, rss=99.6, tables=[0.70, 0.66, 0.66]),
+        _rec("ko-1997", 1, [0.22, 0.20, 0.20], 100000, rss=100.0, tables=[0.26]),
         _rec("aapl-2026-10q", 1, [0.01], 10000, "unsupported", 100.0),
         make_record("truncated-download", "f", 1048, [0.0004, 0.0001, 0.0001],
-                    100, "failed", 100.0),
+                    100, "failed", 100.0, [0.0004, 0.0001, 0.0001]),
     ]
 
 
 # One record, every field. Pins `make_record` itself and fails on a new key.
 # times [0.30, 0.11, 0.12, 0.90, 0.13] -> median 0.13, min 0.11, first 0.30,
-# max 0.90, mean 1.56/5 = 0.312; 2 MiB / 0.13 s = 15.38 MiB/s.
+# max 0.90, mean 1.56/5 = 0.312; 2 MiB / 0.13 s = 15.38 MiB/s;
+# tables pass [0.16, 0.15, 0.14, 0.15, 0.15] -> median 0.15, 0.15/0.13 = 1.154.
 _GOLDEN_RECORD = {
     "fixture": "x", "file": "f", "raw_bytes": 2097152, "normalized_chars": 1000,
     "doc_status": "success", "refused": False, "synthetic": False, "repeats": 5,
     "median_s": 0.13, "min_s": 0.11, "first_s": 0.3, "mean_s": 0.312,
     "max_s": 0.9, "mib_per_s": 15.38, "peak_rss_mib_after": 100.0,
+    "tables_median_s": 0.15, "tables_over_default": 1.154,
 }
 
 # Hand-derived, not blessed from a run. The load-bearing derivations, so a
@@ -733,6 +799,9 @@ _GOLDEN_PAYLOAD = {
         "rss_plateau_first_index": 1,
         "rss_plateau_first_fixture": "nvda-2024",
         "rss_plateau_first_value_mib": 99.6,
+        "tables_over_default_median": 1.2,
+        "tables_over_default_max": 1.3,
+        "tables_over_default_max_fixture": "ko-1997",
     },
     "populations": {
         "all_dev_fixtures": {
@@ -801,7 +870,7 @@ def _demo():
     # drives `make_record`, where `med` is actually computed. Five distinct
     # times so median, first, min and max are four different values — and the
     # whole dict is diffed, so a new key in a record fails here (R22).
-    r = _rec("x", 2.0, [0.30, 0.11, 0.12, 0.90, 0.13])
+    r = _rec("x", 2.0, [0.30, 0.11, 0.12, 0.90, 0.13], tables=[0.16, 0.15, 0.14, 0.15, 0.15])
     d = _diff(r, _GOLDEN_RECORD)
     assert not d, "make_record() drifted from the hand-derived record:\n" + "\n".join(d)
     # classification comes off the data, not off a caller's say-so
@@ -885,6 +954,32 @@ def _demo():
     pperf, _ = summarize(perfect, batch_s=1.0, rss_start=1.0, repeats=1)
     assert pperf["derived"]["processed_size_vs_time_r2"] == 1.0, pperf["derived"]
     assert pperf["derived"]["processed_mib_per_s_spread"] == 1.0, pperf["derived"]
+
+    # 3b. `check_docs` FAILS CLOSED (PR #12 R26, closed by D2). Driven on a
+    # scratch artifact built from the golden corpus and scratch docs, so the
+    # four outcomes are pinned: a matching decimal passes, a wrong decimal
+    # fails, checking NOTHING fails, and a missing DOC_FILES entry fails.
+    import contextlib
+    import io
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp, contextlib.redirect_stdout(io.StringIO()):
+        art = Path(tmp) / "a.json"
+        art.write_text(json.dumps(build_payload(corpus, perf, cost)))
+        ok_doc = Path(tmp) / "ok.md"
+        ok_doc.write_text("`cat-2023` takes 0.4 s and `ko-1997` 0.2 s\n")
+        bad_doc = Path(tmp) / "bad.md"
+        bad_doc.write_text("`cat-2023` takes 0.9 s\n")
+        empty_doc = Path(tmp) / "empty.md"
+        empty_doc.write_text("no fixture named here\n")
+        assert check_docs(art, files=[ok_doc]) == 0                     # 2 checked, 0 unmatched
+        assert check_docs(art, files=[bad_doc]) == 1                    # 1 unmatched
+        assert check_docs(art, files=[ok_doc], window=0) == 1           # vacuous: 0 checked
+        assert check_docs(art, files=[empty_doc]) == 1                  # vacuous: 0 checked
+        assert check_docs(art, files=[ok_doc, Path(tmp) / "gone.md"]) == 1  # missing entry
+        assert check_docs(art, files=[]) == 1                           # nothing to check
+        # a decimal beside a ratio/price/percent mark is not a measurement
+        (Path(tmp) / "sym.md").write_text("`cat-2023` at 9.9× and $9.9 and 9.9%\n")
+        assert check_docs(art, files=[Path(tmp) / "sym.md"]) == 1      # 0 checked -> fails closed
 
     # 4. No network/API surface exists in this module — the price table is
     # data, and nothing here can be talked into spending money.

@@ -40,6 +40,13 @@ jobs:
       # the view layer imports no fastapi, precisely so it can run here
       - run: python3 -m src.sec10k.web.view
       - run: python3 -m evals.metrics --self-check
+      # ADR-021 names both of these "Enforced by" artifacts too, and PR #12 R27
+      # found neither wired anywhere (D2). --check-docs reads the bench
+      # artifact of record named in ADR-021's header — fails closed on a
+      # vacuous run and on a missing DOC_FILES entry. Same path as
+      # .githooks/pre-commit; move them together.
+      - run: python3 -m evals.bench --self-check
+      - run: python3 -m evals.bench --check-docs evals/report/20260820-031540-bench.json
 
   invariant-eval:
     runs-on: ubuntu-latest

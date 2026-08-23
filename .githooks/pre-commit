@@ -13,4 +13,12 @@ if [ $status -ne 0 ]; then
   echo "  python3 -m evals.run --suite fast --update-baseline   # + record why in an ADR"
   exit 1
 fi
+# ADR-021 §b12 / D2: the bench instrument's own proof and the docs' fixture-
+# attributed decimals against the artifact of record. Both were "Enforced by"
+# artifacts nothing ran (PR #12 R27) — a self-check no gate runs is a claim.
+# The artifact path is the run of record named in ADR-021's header; move it
+# there and here together.
+python3 -m evals.bench --self-check || { echo "COMMIT BLOCKED: bench --self-check red"; exit 1; }
+python3 -m evals.bench --check-docs evals/report/20260820-031540-bench.json \
+  || { echo "COMMIT BLOCKED: a fixture-attributed decimal in the docs does not match the bench artifact of record"; exit 1; }
 exit 0
