@@ -65,6 +65,13 @@ them all); the example once showed `lenient_match`, which nothing emits.
   own pointer text — the sentence naming the other document. That text is real
   and is the evidence a human uses to confirm the claim, so it is addressable
   like any other span, and INV-S1 + boundary hygiene cover it (ADR-011).
+  One shape puts the pointer OUTSIDE the item's body (ADR-031): a heading
+  whose line ends in an asterisk run over an empty body, resolved by a
+  footnote elsewhere that names the item and an external document. There the
+  span is the item's own marked heading line and the footnote's offsets into
+  `normalized_text` are published at `evidence.footnote = {"start", "end"}`
+  (offsets only — no second copy of the text). The key is absent on every
+  other item.
 - For `status: missing` / `omitted`: `start`/`end` are null — there is no span.
 - All statuses require `confidence` (how sure are we it's actually
   absent/incorporated, not missed).

@@ -178,12 +178,19 @@ Measured 2026-08-23 over **all 54 committed dev fixture files and all 5
 held-out fixtures**: a snapshot of (normalized-text sha256, `norm_chars`,
 `doc_status`, `warnings`, the sorted envelope key list, and every item's
 `item`/`status`/`start`/`end`/`confidence`/`method`/`heading_text`) at
-`origin/main` (3e16f70) and at this branch's HEAD, **default flags**, is
-byte-identical — dev snapshot sha256
-`e7072435632bd729f3a6eafc236a949ba5ba4a26903a15a8bcece4eda9b6aaf7` on both
-sides, held-out `51de5a11671621a423319e9704e4e227133e90703fe8b114e71a178204957f3f`
-on both sides, and the two JSON files themselves compare equal byte for byte
-(`cmp`). Every published normalized-length figure, every ADR-021 bench number
+`origin/main` and at this branch's HEAD, **default flags**, is byte-identical
+— the two JSON files compare equal byte for byte (`cmp`). Measured **twice**,
+because `origin/main` moved mid-task when PR #42 (D4, ADR-031) merged:
+
+| base | dev sha256 | held-out sha256 |
+|---|---|---|
+| 3e16f70, the branch point | `e7072435…a9b6aaf7` | `51de5a11…04957f3f` |
+| c13aa5c, after merging D4 in | `19168a6e…30e9223a` | `51de5a11…04957f3f` |
+
+The dev digest differs between the two rows because **D4** changed two
+`ba-2003` item statuses; it is identical across `origin/main` and HEAD within
+each row, which is the only comparison this section claims. Every published
+normalized-length figure, every ADR-021 bench number
 and every committed case anchor therefore stands unchanged. The script is
 committed as `evals/snapshot.py` — it takes a tree root and writes the
 snapshot, so the comparison is re-runnable rather than a claim, and it is
@@ -291,9 +298,12 @@ itself on a synthetic envelope, including every way `_images_shape` must
 refuse a record — the gate case is the eval case, the self-check is the floor
 (PR #25 R1).
 
-Gate after: `--suite invariant` **51/51**, `--suite fast` **103/103**, table
-fidelity unchanged at cells 400/400 = 1.0, rows 31/31 = 1.0; every module
-self-check ok.
+Gate after: at the branch point (3e16f70) `--suite invariant` **51/51** and
+`--suite fast` **103/103**; after merging `origin/main` c13aa5c (PR #42, D4,
+which adds one case and promotes `ba-2003-asterisk-ibr` out of debt)
+`--suite invariant` **52/52** and `--suite fast` **104/104**. Table fidelity
+unchanged at cells 400/400 = 1.0, rows 31/31 = 1.0 in both; every module
+self-check ok; `.eval-baseline.json` untouched (§h).
 
 ## h. No baseline move (hard rule 1)
 
