@@ -19,6 +19,6 @@ fi
 # The artifact path is the run of record named in ADR-021's header; move it
 # there and here together.
 python3 -m evals.bench --self-check || { echo "COMMIT BLOCKED: bench --self-check red"; exit 1; }
-python3 -m evals.bench --check-docs evals/report/20260820-031540-bench.json \
+python3 -m evals.bench --check-docs evals/report/20260823-185707-bench.json \
   || { echo "COMMIT BLOCKED: a fixture-attributed decimal in the docs does not match the bench artifact of record"; exit 1; }
 exit 0

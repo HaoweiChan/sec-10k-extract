@@ -545,15 +545,21 @@ DOC_ALLOW = {
     # is NOT that fixture's measurement in the artifact of record. Every entry
     # is a deliberate decision, which is the point — adding one is where
     # someone has to say "this is history / this is a different quantity",
-    # rather than a way to quiet a stale number.
+    # rather than a way to quiet a stale number. Since D2 (2026-08-23) the
+    # artifact of record is 20260823-185707; "superseded" below names what the
+    # current value is, so no entry hides a number nobody re-measured.
     #
     # -- historical values, quoted inside their own correction note
-    ("ADR-021-benchmark-instrument.md", "ksb-2007", "42.8"),   # §c, R5's withdrawn first-draft maximum
+    ("ADR-021-benchmark-instrument.md", "ksb-2007", "42.8"),   # §c, R5's withdrawn first-draft maximum (now 43.01, a refusal outside the range)
     ("ADR-021-benchmark-instrument.md", "ksb-2007", "3.5"),    # §d1, R16's irreproducible observation
     ("ADR-021-benchmark-instrument.md", "ksb-2007", "2.5"),    # §d1, same
     ("ADR-021-benchmark-instrument.md", "ksb-2007", "44.1"),   # Verification, the stale figure choice 12 found
-    ("analysis-report.md", "msft-2013", "6.6"),                # §3 v3-vs-now row; 6.6 is tgt-2002's
-    ("analysis-report.md", "msft-2013", "33.8"),               # §3 v3-vs-now row; 33.8 is ibm-1997's
+    ("analysis-report.md", "ksb-2007", "44.55"),               # v4 repair-round-1 note: that round's ksb value (now 43.01)
+    ("analysis-report.md", "ksb-2007", "0.0025"),              # §3.2 R16 note: first_s == min_s on the 13761cc trio (0.0026 on 185707)
+    ("009-t13-perf-cost-scalability.md", "ksb-2007", "0.0025"),  # same sentence, in the record
+    ("analysis-report.md", "msft-2013", "6.6"),                # §3 v3-vs-v4 row; 6.6 is tgt-2002's at v4 (6.19 now)
+    ("analysis-report.md", "msft-2013", "33.8"),               # §3 v3-vs-v4 row; 33.8 is ibm-1997's at v4 (32.16 now)
+    ("analysis-report.md", "msft-2013", "0.78"),               # §3 v3-vs-v4 row; R² of the fit, not a fixture value
     # prompts/009 round-3 entry quotes the five stale values R20 found, as the
     # evidence for the finding. They are the superseded run's, deliberately.
     ("009-t13-perf-cost-scalability.md", "intc-2002", "6.8"),
@@ -561,29 +567,30 @@ DOC_ALLOW = {
     ("009-t13-perf-cost-scalability.md", "msft-2013", "7.5"),
     ("009-t13-perf-cost-scalability.md", "ibm-1997", "33.7"),
     ("009-t13-perf-cost-scalability.md", "ko-1997", "26.8"),
-    # -- a number belonging to the NEXT fixture named on the same line
-    ("ADR-021-benchmark-instrument.md", "bac-2006", "0.55"),   # §c table: max 0.55 s is jpm-2024's
-    # -- cross-run ranges (§3.1): min-max over the three committed clean runs,
-    #    so by construction not the single run of record's value
-    ("analysis-report.md", "bac-2006", "0.500"),
-    ("analysis-report.md", "bac-2006", "0.521"),
-    ("analysis-report.md", "jpm-2024", "0.541"),
-    ("analysis-report.md", "jpm-2024", "0.557"),
+    # -- cross-run ranges (report §3.2 headline table): min-max over the three
+    #    committed clean runs at ba263ee, so by construction not the single
+    #    run of record's value (it is inside each range)
+    ("analysis-report.md", "cvx-2015", "0.388"),               # p95 0.388–0.399 s
+    ("analysis-report.md", "jpm-2024", "0.580"),               # max 0.580–0.589 s
+    ("analysis-report.md", "jpm-2024", "0.589"),
     # -- a different quantity that happens to sit beside a fixture name
     ("analysis-report.md", "truncated-download", "0.1"),       # 0.1 ms, i.e. median_s 0.0001 s
-    ("TODO.md", "truncated-download", "0.1"),                  # same, in the ledger
-    ("TODO.md", "axp-2008", "0.1264"),                         # ADR-019 oracle gap fraction, not a bench value
     ("TODO.md", "cvx-2015", "0.95"),                           # a confidence value, not a bench value
-    # -- the PR #12 R25 Debt row (D2 promoted it) quotes the 20260820-115810
-    #    run's RSS readings as the evidence of the contradiction; they are that
-    #    run's values by design, not the run of record's
+    # -- the PR #12 R25 Debt row (struck, PROMOTED to D2) quotes the
+    #    20260820-031540 -> 20260820-115810 RSS readings as the evidence of the
+    #    contradiction; they are those runs' values by design (94.6 / 105.5 on
+    #    the run of record; published as a 94.6–102.4 range since D2)
     ("TODO.md", "jpm-2024", "102.4"),
+    ("TODO.md", "xom-2021", "107.5"),
     ("TODO.md", "xom-2021", "112.8"),
-    # -- the PR #12 R26-R31 Debt row: 42.8 is ksb-2007's withdrawn first-draft
-    #    maximum, quoted BEFORE the `ksb-2007` name and so attributed to the
-    #    preceding `bac-2006`; 2.104 is the real_edgar_committed mean MiB, a
-    #    population figure that sits beside the `items-stripped` name
+    # -- the PR #12 R26-R31 Debt row (struck, PROMOTED to D2): 42.8 is
+    #    ksb-2007's withdrawn first-draft maximum, quoted BEFORE the `ksb-2007`
+    #    name and so attributed to the preceding `bac-2006`; 0.505 is
+    #    bac-2006's 20260820-031540 median (0.5363 now), the row's own example
+    #    of a line-wrapped value the check cannot see; 2.104 is the
+    #    real_edgar_committed mean MiB beside the `items-stripped` name
     ("TODO.md", "bac-2006", "42.8"),
+    ("TODO.md", "bac-2006", "0.505"),
     ("TODO.md", "items-stripped", "2.104"),
 }
 
@@ -635,10 +642,15 @@ def check_docs(artifact_path, files=None, window=None):
             # backticked fixture name. Wider than that and every aggregate in
             # the paragraph gets swept in; narrower and table rows are missed.
             eol = text.find("\n", m.end())
-            stop = min(m.end() + window,
-                       eol if eol != -1 else len(text),
-                       hits[i + 1].start() if i + 1 < len(hits) else len(text))
-            for nm in num_re.finditer(text, m.end(), stop):
+            bound = min(eol if eol != -1 else len(text),
+                        hits[i + 1].start() if i + 1 < len(hits) else len(text))
+            stop = min(m.end() + window, bound)
+            # a number STARTS inside the window; it is never cut at the window
+            # edge (D2: slicing at `stop` turned "1.18×" into "1.1", a literal
+            # that could then match — or fail — as a different value)
+            for nm in num_re.finditer(text, m.end(), bound):
+                if nm.start() >= stop:
+                    break
                 lit = nm.group(1)
                 after = text[nm.end():nm.end() + 2]
                 if text[nm.start() - 1:nm.start()] == "$" or after[:1] in ("%", "\u00d7") \
@@ -980,6 +992,14 @@ def _demo():
         # a decimal beside a ratio/price/percent mark is not a measurement
         (Path(tmp) / "sym.md").write_text("`cat-2023` at 9.9× and $9.9 and 9.9%\n")
         assert check_docs(art, files=[Path(tmp) / "sym.md"]) == 1      # 0 checked -> fails closed
+        # a number that STARTS inside the window is read whole, never cut at
+        # the window edge: "0.45" straddling char 60 is 0.45 (unmatched), not
+        # "0.4" (cat-2023's median, a false pass). Watched red on the sliced
+        # version, which returned 0 here.
+        (Path(tmp) / "edge.md").write_text("`cat-2023`" + " " * (DOC_WINDOW - 3) + "0.45 s\n")
+        assert check_docs(art, files=[Path(tmp) / "edge.md"]) == 1
+        (Path(tmp) / "edge_ok.md").write_text("`cat-2023`" + " " * (DOC_WINDOW - 3) + "0.40 s\n")
+        assert check_docs(art, files=[Path(tmp) / "edge_ok.md"]) == 0
 
     # 4. No network/API surface exists in this module — the price table is
     # data, and nothing here can be talked into spending money.

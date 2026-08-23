@@ -46,7 +46,7 @@ jobs:
       # vacuous run and on a missing DOC_FILES entry. Same path as
       # .githooks/pre-commit; move them together.
       - run: python3 -m evals.bench --self-check
-      - run: python3 -m evals.bench --check-docs evals/report/20260820-031540-bench.json
+      - run: python3 -m evals.bench --check-docs evals/report/20260823-185707-bench.json
 
   invariant-eval:
     runs-on: ubuntu-latest
