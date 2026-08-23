@@ -128,7 +128,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from src.sec10k.extract import extract_items  # noqa: E402 — the only src/ import; read-only
+from src.sec10k.extract import extract_items  # noqa: E402 — read-only src/ imports: the
+from src.sec10k.web.fixtures import fixture_file  # noqa: E402 — extractor + the fixture rule (D1)
 
 FIXTURES_DIR = ROOT / "evals" / "fixtures"
 SUCCESS_STATUSES = {"success", "success_with_warning"}
@@ -170,15 +171,16 @@ LOCATOR_RUNWAY_FLOOR = 300
 
 # ------------------------------------------------------------ fixture I/O
 
-def iter_fixtures():
-    """(name, path) for the largest non-.md file in each evals/fixtures/ dir —
-    the same convention the eval cases use."""
-    for d in sorted(FIXTURES_DIR.iterdir()):
-        if not d.is_dir():
-            continue
-        files = [f for f in d.iterdir() if f.is_file() and f.suffix.lower() != ".md"]
-        if files:
-            yield d.name, max(files, key=lambda f: f.stat().st_size)
+def iter_fixtures(root=FIXTURES_DIR):
+    """(name, path) for every fixture directory under `root` — a directory
+    holding exactly one file, the filing (src/sec10k/web/fixtures.py: the
+    same rule /api/meta lists by and `_fixture_file` serves by, D1). Before
+    D1 this yielded the largest non-.md file of EVERY directory, so
+    `repo_hygiene/` (14 regression stubs) was a dev fixture to the bench."""
+    for d in sorted(root.iterdir()):
+        f = fixture_file(d) if d.is_dir() else None
+        if f is not None:
+            yield d.name, f
 
 
 # ------------------------------------------------------------ check 1 + 2
