@@ -1,6 +1,6 @@
 # ADR-028 — S2: build identity is injected at build time, and never lies
 
-Date: 2026-08-22. Status: accepted. Implements S2.
+Date: 2026-08-22. Status: accepted. Implements S2. Amended in place 2026-08-23 (§g1: the post-merge gate ran; the three assumptions §g lists as unverified are closed by observation, the cached-layer mode is addressed only as far as observation can address it, and the ruling is unchanged).
 
 Renumbered 027 -> 028 on 2026-08-22 when `origin/main` merged first with its own
 ADR-027 (ambiguity caps confidence, PR #32 / T5). All four PR #31 review
@@ -170,5 +170,73 @@ Which is exactly why the S2 gate is worded as it is — "`/api/meta` reports a
 real sha **that tracks redeploys**". A sha that merely *exists* would pass a
 weaker reading of that gate while frozen by a cached layer. The check is
 `curl -s .../api/meta` after the merge **and again after a second redeploy**,
-with the requirement that the value **MOVE**; it stays `UNRUN` in the ledger
-until both observations exist.
+with the requirement that the value **MOVE**.
+
+### g1. Amendment, 2026-08-23: the gate ran, and the three fail-closed assumptions are closed by observation
+
+The gate is no longer `UNRUN` — the S2 row left the ledger for `tasks/DONE.md`
+in PR #36, whose observation record is `tasks/reviews/s2-postmerge-gate.json`.
+This section records what the readings establish for *this ADR*.
+
+**Every reading is somebody's, and this branch made none of them.** The
+attribution column is not politeness; a `curl` response cannot be re-run, so
+"who saw it" is the whole of the evidence.
+
+| # | `git_sha` | when | equal to | observed by |
+|---|---|---|---|---|
+| 1 | `unknown` | before PR #31 merged | — (the defect §a describes) | the S2 implementation session |
+| 2 | `e6810a4339f7` | 2026-08-22 ~09:47Z, ~300 s after PR #31 merged at 09:42:29Z | `e6810a4339f73069bc214f7eebf6df0f58836d95`, the PR #31 merge commit | the S2 orchestrating session, from a bounded poll that curled every 20 s until the value stopped being `unknown` |
+| 3 | `1efc457e598d` | 2026-08-22, after PR #34 merged; re-seen 2026-08-23T07:47:22Z | `1efc457e598de56faa8f2d78386594427aa5a966`, the PR #34 merge commit | the same session, and again by the PR #36 orchestrator |
+| 4 | `1ed784ccf68e` | 2026-08-23T07:49:54Z, 07:51:52Z, 08:16Z, 08:20:02Z | `1ed784ccf68e1f5dde5fb1d592517cb0d29704f3`, the PR #35 merge commit | PR #36's orchestrator and implementer; the last two by the session that wrote this section |
+
+Only the row-4 readings were made from this branch, and they were checked
+against the repo rather than eyeballed: `curl -s .../api/meta` and
+`git rev-parse origin/main | cut -c1-12` returned the same twelve characters.
+**Readings 1–3 are other observers' and cannot be reproduced from here** —
+each of those builds had been replaced by the time this section was written.
+They are recorded on their authors' testimony, attributed, and that is the
+strongest thing that can honestly be said about a past HTTP response.
+
+**A disagreement on the record, named rather than smoothed over.**
+`tasks/reviews/s2-postmerge-gate.json` — a committed document of record —
+says in its `not_claimed[0]` that "no `/api/meta` response ever showed
+`e6810a4`" and that `e6810a4 → 1efc457` is inferred from git's first-parent
+chain rather than seen. That is reading 2 being denied. The record's own
+`not_claimed[5]` explains how: its round 1 (R1/R3) *removed* an
+`e6810a4`-as-observed claim, and the generalisation it left behind turns "this
+session did not observe it" into "nobody did". The session that ran the poll
+reports otherwise. Both statements stay on the record; a reader weighing them
+should note that the artifact is scrupulous about its own limits and simply
+had no visibility into another session's poll.
+
+**What is closed.** The three assumptions this section opens with — that the
+builder sets `ZEABUR_GIT_COMMIT_SHA`, that it runs `build_command` in the
+directory the runtime later serves from, and that it carries the written file
+into the run image — are **closed by observation**. Any single reading of a
+real sha equal to the repo's tip closes all three at once, because `unknown`
+is what any one of them failing produces. Row 4 alone does it, and this branch
+made those readings itself; the closure does not rest on relayed testimony.
+
+**What the moving sha addresses, and how far.** Failure mode 2 above — the
+cached `build_command` layer — is the one no validation can detect from
+inside, and no single reading can touch it: a frozen-but-valid sha looks
+exactly like a current one. Only a *move* speaks to it. Taking the readings as
+attributed, the chain is `unknown → e6810a4339f7 → 1efc457e598d →
+1ed784ccf68e`: **three moves, each link seen at both ends.** On the gate
+artifact's narrower reading, which does not credit reading 2, it is one move
+(`1efc457 → 1ed784c`). Either way at least one build boundary invalidated
+correctly, and the conclusion below is written to hold on the narrow reading
+too.
+
+That establishes: **the `build_command` layer was not cached across those
+boundaries.** It does **not** establish that the layer can never be cached.
+Zeabur's cache policy is not published here, was not configured by this repo,
+and can change; build boundaries that invalidated correctly are evidence about
+those boundaries. **No observation exists of a build that *failed* to move** —
+the failure mode is excluded only by the moves that happened to be seen, never
+by a test that forced one to occur. Three seen moves strengthen that; they do
+not close it. A cached layer remains undetectable from the served value, and
+the only defence is the one the gate used: look again after the next redeploy
+and check the value against `git rev-parse origin/main`. The `Origin: S2` Debt
+row ("nothing in the eval set or CI ever observes the DEPLOYED instance")
+stays open for exactly that reason; nothing here automates the check.
