@@ -1,0 +1,78 @@
+{
+ "pr": 40,
+ "round": "r0-audit",
+ "task": "debt-sweep-closed-rows",
+ "date": "2026-08-23",
+ "what_this_is": "The pre-implementation audit that scoped the D2 debt sweep, plus the implementer's per-row verification of it. Committed because tasks/TODO.md:47-48 requires every debt row to be visible in a committed artifact, never only in the ledger, and the row about the twenty-two remaining struck-through rows rests on this audit's outcome. Filed as r0 because the audit preceded the branch; the review of the resulting diff is pr40-r1.json.",
+ "proposal": "Five rows in tasks/TODO.md's '## Open debt, carried deliberately' section were identified by an orchestrator audit as settled: four to delete outright, one (the T13-mechanisms row) to trim to its open parts. Line numbers were given against origin/main at c0c1958.",
+ "binding_the_audit_carried": "Verify each row against the thing it claims closed it, not against its own CLOSED marker. A row that merely says CLOSED is not proof. Deleting a live debt row is worse than leaving a closed one: if a row turns out to be live, refuse it and report.",
+ "base_drift": "The audit's line numbers and its count of 88 debt rows were read at c0c1958. origin/main had moved to dc3f8f0 by implementation time (87 debt rows at c0c1958, 91 at dc3f8f0). Every row was therefore located by its text, not its line number. One consequence is recorded under row 3 below.",
+ "rows": [
+  {
+   "n": 1,
+   "audit_line": "~52",
+   "title": "~~No span-coverage validator~~ -- RETIRED (T11, ADR-019 SSd)",
+   "audit_proposed": "delete (fully closed)",
+   "claimed_closure": "RETIRED under T11 / ADR-019 SSd",
+   "what_was_checked": "Read specs/decisions/ADR-019-*.md SSd (:125-183) end to end. It rules 'Retire the row' in terms, and carries every artifact the ledger row was summarising: the seven-fixture coverage table, the structural argument that the EXEC_OFFICERS_RE clip is the only interior-gap source this pipeline has, the named successor, and the 'revisit only if an unintentional gap appears' condition. Separately confirmed no coverage or gap validator exists to be outstanding.",
+   "repro": "sed -n '125,183p' specs/decisions/ADR-019-*.md ; grep -n '^def ' src/sec10k/validate.py",
+   "outcome": "CONFIRMED CLOSED -- deleted"
+  },
+  {
+   "n": 2,
+   "audit_line": "~61",
+   "title": "PR #11 R22: the axp-2008 debt case's checks do not pin the four-way partition they are said to pin",
+   "audit_proposed": "delete (marked CLOSED)",
+   "claimed_closure": "doc halves (1)(2)(4)(5)(6) CLOSED by L1 (2026-08-23, PR #35 R2)",
+   "what_was_checked": "The row's own text does not stop at that marker -- it continues '**(3) stays open**', and (3) is what the row TITLE names. Checked (3) against the case rather than the prose: evals/adversarial/axp-2008-combined-part-iii.json carries exactly seven checks (no_empty_success, no_overlap_ordered, four item_present/extracted for items 10-13, min_chars on item 10 with value 500) and no text_contains. The combined block is 3,263 chars, so an equal-quarters chop gives each quarter ~815 chars and clears min_chars 500 -- the checks still do not pin the four-way partition they are said to pin.",
+   "repro": "python3 -c \"import json;print(json.load(open('evals/adversarial/axp-2008-combined-part-iii.json'))['expect']['checks'])\"",
+   "outcome": "AUDIT MIS-SCORED -- row is LIVE, refused, left in place"
+  },
+  {
+   "n": 3,
+   "audit_line": "~63",
+   "title": "Both T13 mechanisms claim broader coverage than they deliver, and neither is gated",
+   "audit_proposed": "trim: remove the closed part (c), keep (a)(b)(d)(e), and adjust the opening claim since 'neither is gated' may no longer hold",
+   "claimed_closure": "(c) closed by L1; (a)(b)(d)(e) open",
+   "what_was_checked": "The trim was unexecutable as written because the tree had moved past it. On dc3f8f0 the row is struck through and marked 'PROMOTED to D2 (2026-08-23), closed by PR #39' -- the earlier, unrelated task that also carried the id D2. All four parts verified: (a) evals/bench.py:674 returns failure on a vacuous run and _demo:986-1002 asserts six vacuous/edge cases return 1; (b) .githooks/pre-commit:21-23 and .github/workflows/ci.yml:48-49 run both --self-check and --check-docs, so 'neither is gated' is indeed no longer true; (c) closed by L1, grep -c 'anywhere in this repo' README.md -> 0; (d) and (e) already re-filed by PR #39 as their own open row. No open remainder was left inside the row to keep.",
+   "repro": "grep -n 'bench' .githooks/pre-commit .github/workflows/ci.yml ; grep -c 'anywhere in this repo' README.md",
+   "outcome": "CONFIRMED FULLY CLOSED -- deleted whole rather than trimmed; deviation from the audit's instruction, flagged to the reviewer and upheld (pr40-r1.json verified_no_finding, deletion 2)"
+  },
+  {
+   "n": 4,
+   "audit_line": "~64",
+   "title": "evals/bench._demo has no assertion that the published DOC_ALLOW count equals len(DOC_ALLOW)",
+   "audit_proposed": "delete (marked CLOSED)",
+   "claimed_closure": "both counts CLOSED by L1 (2026-08-23, PR #35 R2)",
+   "what_was_checked": "Same shape as row 2: the marker covers the two documentation counts, and the row then says '-- **open**: the durable fix, an assertion in evals/bench._demo', which is what the row TITLE names. Checked the code, not the prose: DOC_ALLOW appears in evals/bench.py only at :543 (definition) and :659 (lookup). _demo begins at :879 and contains no assertion about len(DOC_ALLOW). The drift the row exists to prevent has meanwhile occurred -- len(DOC_ALLOW) reads 26 -- which is logged as its own debt row.",
+   "repro": "grep -n 'DOC_ALLOW' evals/bench.py ; grep -n 'def _demo' evals/bench.py",
+   "outcome": "AUDIT MIS-SCORED -- row is LIVE, refused, left in place"
+  },
+  {
+   "n": 5,
+   "audit_line": "~76",
+   "title": "V4 -- CLOSED by S5 (2026-08-22)",
+   "audit_proposed": "delete (fully closed)",
+   "claimed_closure": "closed by S5; 'Row kept for the trace; nothing outstanding'",
+   "what_was_checked": "tasks/DONE.md:31 records S5 as 'closes debt row V4 from PR #21' and repeats the same measurements the ledger row quotes (three panes 344/1143, content [382,1142] vs [383,1142] at 1920x1080 on aapl-2025 item 7). The reviewer additionally pinned the closure mechanically to evals/adversarial/ui-equal-pane-heights.json, which asserts pane heights over #sidebar/#pane/#source in the invariant and fast suites and was watched red pre-fix.",
+   "repro": "grep -n 'closes debt row V4' tasks/DONE.md",
+   "outcome": "CONFIRMED CLOSED -- deleted"
+  }
+ ],
+ "result": {
+  "proposed": 5,
+  "acted_on": 3,
+  "refused_as_live": 2,
+  "deleted": [
+   "span-coverage validator (RETIRED)",
+   "T13 mechanisms (PROMOTED, closed by PR #39)",
+   "V4 (closed by S5)"
+  ],
+  "refused": [
+   "PR #11 R22 / axp-2008 partition -- part (3) open",
+   "evals/bench._demo / DOC_ALLOW -- durable assertion unwritten"
+  ]
+ },
+ "reusable_failure_mode": "TWO OF FIVE were mis-scored by the audit, both the same way: a debt row's CLOSED marker covered SUB-PARTS while the row's TITLE named the part still open. In both, the row's own body said so a few hundred characters later -- 'but (3) stays open', '-- open: the durable fix' -- but a scan that stops at the bold CLOSED reads the row as settled. Neither row would have survived a line-number-and-marker sweep. The rule this produced: a struck-through title and the word CLOSED are not evidence; read the row to its end, then check the artifact it names against the thing it claims closed it. Note that both refusals were also the rows whose titles state a defect in the PRESENT tense -- a title that still describes something true is the cheapest available signal that a row is live.",
+ "scope_discipline": "The audit deliberately scoped the sweep to rows it had verified. Twenty-two struck-through rows remain in the table, unverified and untouched by design, logged as their own debt row for a later pass. Given that two of five proposals here scored wrong, widening the sweep on the implementer's own initiative would have been the expensive mistake."
+}
