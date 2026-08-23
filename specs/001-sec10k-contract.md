@@ -123,7 +123,14 @@ them all); the example once showed `lenient_match`, which nothing emits.
   10-K → `unsupported`; unresolvable competing candidates or implausibly low
   extraction coverage → `ambiguous`; any warning emitted →
   `success_with_warning`; else `success`. Thresholds inside these rules are
-  implementation-owned and provisional; the ordering is not.
+  implementation-owned and provisional; the ordering is not. The warning codes
+  that may reach `ambiguous` are exactly `validate.AMBIGUOUS_CODES`:
+  `toc_manifest_mismatch`, `last_item_dominates`,
+  `expected_items_mostly_missing` (ADR-008, ADR-013) and `item_dominates`
+  (ADR-030 — a non-last span above `ITEM_MAX`; produced end to end on
+  `evals/adversarial/interior-span-dominates.json`, per ADR-016's rule that a
+  listed code is one a path produces). Every other warning code is
+  non-escalating.
 - `unsupported`/`failed` mean the pipeline **refused** — it must never emit a
   best-effort `items` parse of a document it could not identify as a 10-K.
 - `warnings` is present (possibly empty); `doc_status: success` requires it to

@@ -18,7 +18,7 @@ from src.sec10k.segment import (
 )
 from src.sec10k.validate import AMBIGUOUS_CODES, STRICT_SIM, score, validate
 
-VERSION = "0.7.0-t5d"  # meta.extractor_version — audits compare across runs
+VERSION = "0.8.0-d3"  # meta.extractor_version — audits compare across runs
 
 
 def _item(code, cand, status, period_end=None):
@@ -156,7 +156,7 @@ def extract_items(path, exclude_boilerplate=False, tables=False):
     trace.append({"layer": "validate",
                   "checks_fired": [w["code"] for w in findings]})
 
-    # doc_status ladder (contract v2, fixed order). Only the three validators
+    # doc_status ladder (contract v2, fixed order). Only the four validators
     # named in AMBIGUOUS_CODES may reach `ambiguous`; the rest warn and move
     # confidence, per the taxonomy's warn-don't-hard-fail policy. Decided
     # BEFORE scoring: an `ambiguous` verdict caps every item (ADR-027 §a) —

@@ -6,11 +6,11 @@ labeled fixtures comes from.
 
 Policy (failure-taxonomy F7): every validator is itself a false-positive
 source, so validators emit warnings and move confidence; none hard-fails a run
-alone, and only the three named in `AMBIGUOUS_CODES` may push `doc_status` to
+alone, and only the four named in `AMBIGUOUS_CODES` may push `doc_status` to
 `ambiguous`. Every threshold below states its measured basis or names itself
 a judgment call (SUBSTANTIVE_MIN, and MISSING_MAX's floor-not-midpoint), and
 each is pinned from both sides of its measured empty band by a committed case
-(ADR-027 §c lists the pins); ADR-008 carries the original distributions and
+(ADR-027 §c and ADR-030 §f list the pins); ADR-008 carries the original distributions and
 the priors this battery REJECTED after measuring them.
 
 Self-check: python3 -m src.sec10k.validate
@@ -31,6 +31,21 @@ UNATTRIBUTED_MAX = 0.17
 # 18.9% (Textron's exhibit list). Band midpoint. Re-measured 2026-08-22: band
 # (0.1892 textron-2001, 0.7063 xom-2021), pinned on both (ADR-027 §c).
 LAST_ITEM_MAX = 0.50
+# ADR-030 (D3): the NON-last spans have their own distribution — a real
+# filing's Item 1/7/8 is legitimately up to half the document, where the last
+# item (the exhibit list) is legitimately small. Measured 2026-08-23 over the
+# 37 span-bearing dev fixtures (26 real filings, 11 synthetic) and, read-only,
+# the 5 held-out: the largest non-last span of a real filing is
+# jnj-2016's Item 8 at 0.5336 (`success`, the financial statements); the
+# smallest that must fire is items-stripped's Item 4 at 0.5723 (eight
+# headings gone, the span swallowed them). Band (0.5336, 0.5723), midpoint;
+# pinned by `warning_absent` on jnj-bare-headings and `warning_present` on
+# items-stripped-escalation. The thinnest margin in this battery (1.03x over
+# the worst real filing) — stated, not smoothed; the held-out set reads 0.5274
+# at most (mrk-1995, read-only, not tuned on). ADR-015 §0's Target failure
+# (item 4 at 0.81, NOT the last span) is the shape this catches and
+# `last_item_dominates` structurally cannot.
+ITEM_MAX = 0.55
 # content-shape validators cannot judge a pointer paragraph: GE's Item 8 is
 # "See index under item 14." (86 chars) and NVDA's is a 209-char internal
 # pointer, both legitimately `extracted` per ADR-004 shape 2. A judgment call,
@@ -44,8 +59,14 @@ SUBSTANTIVE_MIN = 5000
 # deliberately NOT among them: for IBR-heavy filings (IBM 1997 leaves 43% of
 # the document outside every item, Textron 28%) that shape is normal and the
 # honest report is a warning, not "we could not resolve this".
+# `item_dominates` IS (ADR-030 §c): one span over half the document is the
+# same shape whether it sits last or not, the last already escalates, and the
+# measured false-positive set at ITEM_MAX is empty on every committed real
+# filing — ADR-013's cost asymmetry decides the rest (a false `ambiguous` is a
+# report a consumer can inspect; a false `success` on a swallowed document is
+# the silent failure this battery exists for).
 AMBIGUOUS_CODES = {"toc_manifest_mismatch", "last_item_dominates",
-                   "expected_items_mostly_missing"}
+                   "expected_items_mostly_missing", "item_dominates"}
 
 # H1: JNJ 2016 lost 18 of 21 items and still reported success_with_warning,
 # because `expected_item_missing` is per-item and is not an escalating code —
@@ -144,14 +165,28 @@ def validate(text, items, accepted, manifest):
     # 3. Last-item domination — the tail-bleed detector. An exhibit index is
     # never the largest thing in a 10-K; if it is, the span swallowed an
     # appendix (ADR-004 shape 2 content that carries no heading of its own).
+    # 3b (ADR-030, D3). Non-last domination — the interior-bleed detector the
+    # last-span check structurally cannot be: a span that is not the last one
+    # and still holds most of the document swallowed the items after it (their
+    # headings went unresolved — few enough to sit under MISSING_MAX, or not
+    # missing at all but resolved to stubs further down, ADR-015 §0's Target
+    # shape). Its own threshold, because its own distribution: see ITEM_MAX.
+    # The two are disjoint by construction: the last span is judged by 3 only,
+    # every other span by 3b only, so no span can carry both codes.
     if spans:
         last_code = max(spans, key=lambda c: spans[c][0])
-        frac = (spans[last_code][1] - spans[last_code][0]) / n
-        if frac > LAST_ITEM_MAX:
-            warn("last_item_dominates",
-                 f"item {last_code} is {frac:.0%} of the document — its span most "
-                 "likely swallowed unlabelled content that follows it",
-                 item=last_code)
+        for code, (s, e) in spans.items():
+            frac = (e - s) / n
+            if code == last_code and frac > LAST_ITEM_MAX:
+                warn("last_item_dominates",
+                     f"item {code} is {frac:.0%} of the document — its span most "
+                     "likely swallowed unlabelled content that follows it",
+                     item=code)
+            elif code != last_code and frac > ITEM_MAX:
+                warn("item_dominates",
+                     f"item {code} is {frac:.0%} of the document — its span most "
+                     "likely swallowed the items that follow it",
+                     item=code)
 
     # 4. Boundary hygiene — every span must open with its own heading. Cheap,
     # and it is the one thing that must never be wrong. A layer-consistency
@@ -323,6 +358,21 @@ def _demo():
                "end": len(big), "evidence": {}}]
     codes = [x["code"] for x in validate(big, items2, {"1": {}, "15": {}}, [])]
     assert "last_item_dominates" in codes, codes
+    # ADR-030: ...and the mirror image — a NON-last span swallowing the
+    # document fires item_dominates, and only that (the last span here is
+    # tiny, so last_item_dominates must stay silent). Before 3b existed this
+    # envelope carried no domination warning at all.
+    big2 = "Item 1. Business\n" + "y" * 5000 + "\nItem 15. Exhibits\nshort"
+    cut3 = big2.index("Item 15.")
+    items3 = [{"item": "1", "part": "I", "status": "extracted", "start": 0, "end": cut3,
+               "evidence": {}},
+              {"item": "15", "part": "IV", "status": "extracted", "start": cut3,
+               "end": len(big2), "evidence": {}}]
+    w3 = validate(big2, items3, {"1": {}, "15": {}}, [])
+    codes = [x["code"] for x in w3]
+    assert "item_dominates" in codes and "last_item_dominates" not in codes, codes
+    assert [x["item"] for x in w3 if x["code"] == "item_dominates"] == ["1"], w3
+    assert "item_dominates" in AMBIGUOUS_CODES  # ADR-030 §c: it escalates
 
     # keyword_fingerprint on item 1A: no committed fixture can prove this red
     # (the only candidate, spans-transposed, has transposed financial prose
