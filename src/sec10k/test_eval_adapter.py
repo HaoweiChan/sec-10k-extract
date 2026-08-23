@@ -608,6 +608,21 @@ def test_image_checks():
     assert eval_check(r, good) is None, eval_check(r, good)
     assert eval_check(r, {"type": "envelope_shape"}) is None, eval_check(r, {"type": "envelope_shape"})
     assert eval_check(r, {"type": "images_sane", "min": 3, "max": 3}) is None
+    # PR #44 R1: `in_table` asserts the offset-vs-table-span relationship the
+    # ADR first got wrong. Table (7, 19) holds the chart at 18 but not the
+    # cover logo at 5, and without the tables annotation the check refuses
+    # rather than guessing.
+    tab = {"start": 7, "end": 19, "header": 0, "rows": [[[7, 13], [14, 19]]]}
+    rt = {**r, "tables": [tab]}
+    assert eval_check(rt, {"type": "image", "src": "chart.jpg", "in_table": True}) is None
+    assert eval_check(rt, {"type": "image", "src": "logo.jpg", "in_table": False}) is None
+    for src, claim, why in [("chart.jpg", False, "is inside a recorded table span"),
+                            ("logo.jpg", True, "is outside every recorded table span")]:
+        reason = eval_check(rt, {"type": "image", "src": src, "in_table": claim})
+        assert reason is not None and why in reason, (src, reason)
+    no_tab = eval_check(r, {"type": "image", "src": "chart.jpg", "in_table": False})
+    assert no_tab is not None and "needs the tables annotation" in no_tab, no_tab
+
     # the cover image falls in NO item span -- null is a label, not a miss
     outside = {"type": "image", "src": "logo.jpg", "item": None}
     assert eval_check(r, outside) is None, eval_check(r, outside)

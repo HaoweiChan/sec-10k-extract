@@ -9,7 +9,7 @@ T8 feature freeze (`tasks/TODO.md`, **Freeze guard**), on the pattern
 
 **Ruling**: the S10 capability ships as its **offline half only**. `extract_items(path, images=True)` adds one envelope key, `images` — a list of `{offset, src, alt, width, height}` records, one per HTML `<img>`, in document order; `offset` is a **point** into `normalized_text` (an image emits no text, so it has no span), which is byte-identical with the flag on and off, as are every item offset, `doc_status` and `warnings`. The item an image falls in is **derived from offsets**, never stored, exactly as ADR-029 derives an item's tables. The **fetch half is ruled OUT of S10** — no network call, no cache, no inspector route — and **no image bytes are committed as fixtures**; §c names the cost of that ruling in both directions.
 **Because**: the bytes are not in the fixtures — every one of the 53 `<img>` in the committed corpus is an external reference to a sibling document in its EDGAR accession, none is an inline `data:` URI — so the only half of "extract the images" that can be gated offline, by the eval set that is this repo's spec, is the reference. Recording it costs the text run nothing it does not already have (the position counter is already there and the recorder never emits), moves no offset anywhere, and makes "on and off are identical" true by construction; fetching, by contrast, buys a network dependency, a cache, and an eval case that either hits EDGAR on every run or is mocked — and hard rule 4 forbids the second.
-**Enforced by**: `evals/golden/bac-2006-images.json`, `evals/golden/xom-2021-images.json`, `evals/golden/jpm-2024-images.json`, `evals/adversarial/images-refusal-path.json` (fast) and `evals/adversarial/images-offsets-invariant.json` (invariant + fast); `src/sec10k/eval_adapter.py` (`image`, `images_sane`, `offsets_invariant_under_images`, and `envelope_shape`'s `_images_shape`); `src/sec10k/normalize.py::_demo` and `src/sec10k/test_eval_adapter.py::test_image_checks` — see §g.
+**Enforced by**: `evals/golden/bac-2006-images.json`, `evals/golden/xom-2021-images.json`, `evals/golden/jpm-2024-images.json`, `evals/adversarial/images-refusal-path.json`, `evals/adversarial/images-in-table-cell.json` (fast) and `evals/adversarial/images-offsets-invariant.json` (invariant + fast); `src/sec10k/eval_adapter.py` (`image`, `images_sane`, `offsets_invariant_under_images`, and `envelope_shape`'s `_images_shape`); `src/sec10k/normalize.py::_demo` and `src/sec10k/test_eval_adapter.py::test_image_checks` — see §g.
 
 ---
 
@@ -49,15 +49,15 @@ emits anything extra: the recorder reads the position counter, it does not
 write to the text — the identical rule ADR-029 §b1 states for tables, and the
 reason the two annotations compose in one pass (§b4).
 
-One record per `<img>`, wherever it sits — including inside a table cell,
-where the offset lands inside that cell's span:
+One record per `<img>`, wherever it sits, including inside a table cell — but
+see §b2a for what an in-cell offset does and does not mean:
 
 | field | meaning |
 |---|---|
 | `offset` | a **point** into `normalized_text`, where the image sits in the reading order. Not a span: an `<img>` emits no text, so there is nothing to bound. Two adjacent images therefore share an offset, and that is the correct answer, not a collision (§b2) |
 | `src` | the `src` attribute verbatim, entity-decoded by `html.parser`; `null` when the tag has none |
 | `alt` | the `alt` attribute verbatim, entity-decoded; `null` when the tag has none (4 of the corpus's 53, all in cvx-2015). Reported as the filer wrote it and never improved — 5 of bac-2006's say only "LOGO", 3 of jpm-2024's are bare Workiva asset ids |
-| `width`, `height` | the declared pixel size as an int, or `null`. The `width=`/`height=` attribute first, then a `width:Npx` / `height:Npx` declaration in `style`. **0 of the corpus's 53 images carry the attribute form and 40 carry the style form**, so recording only the attribute would have shipped a field that is `null` on every committed filing — a field no case could pin, which is the untestable-code-path sin ADR-010 named. A non-pixel value (`50%`, `auto`) is not a declared pixel size and answers `null` rather than a wrong number |
+| `width`, `height` | the declared pixel size as an int, or `null`. The `width=`/`height=` attribute first, then a `width:Npx` / `height:Npx` declaration in `style`. **0 of the corpus's 53 images carry the attribute form and 40 carry the style form**, so recording only the attribute would have shipped a field that is `null` on every committed filing — a field no case could pin, which is the untestable-code-path sin ADR-010 named. Anything that is not a whole POSITIVE number of pixels answers `null` rather than a wrong number: a non-pixel unit (`50%`, `auto`), a zero (`width="0"`, the classic spacer gif) and a fractional declaration (`0.75px`, `1.5px`). The last two were PR #44 R2: they returned 0 and 1, and 0 is a value `_images_shape` and specs/001 ("positive int") both refuse, so the extractor could emit an envelope its own contract rejects. 0 of the 53 committed images trigger it; `normalize.py::_demo` is the whole guard |
 
 Offsets are recorded pre-`_tidy` and moved by the **same** `_sub_map` machinery
 ADR-029 §b1 introduced for table marks — the marks-carrying path calls
@@ -82,6 +82,40 @@ occupies no characters, so two images between the same two words are at the
 same place — and both the contract shape (`_images_shape`) and the case
 (`xom-2021-images`) pin it, so an implementation cannot "fix" it by nudging
 offsets apart. Nudging would be a text edit by another name.
+
+### b2a. An in-cell image is usually OUTSIDE its table's recorded span
+
+Corrected 2026-08-24 after PR #44 R1, which falsified the unconditional claim
+§b1 first made. An image offset is a **reading-order point**. A table's
+`start`/`end` and every cell's span are tightened to the table's **visible
+text** (ADR-029 §b1) and an image contributes none, and an empty cell is
+additionally clamped into its table's tightened span. The two therefore do not
+nest in general:
+
+- an image in a cell that **carries text** lands inside that cell's span;
+- an image in a **text-empty** cell does not sit at any text, and if it
+  precedes (or follows) all of the table's visible text the clamp puts every
+  empty cell at the tightened boundary while the image stays where it was —
+  outside the table span entirely.
+
+**The corpus is entirely the second case.** 10 of the 53 `<img>` sit inside
+`<table>` markup (cvx-2015 4 of 4, xom-2021 3 of 9, bac-2006 2 of 5, ba-2003
+1 of 3) and **0 of 53 image offsets fall inside any recorded table or cell
+span** — because a filer who typesets a graphic in a table gives it a cell of
+its own, with no text in it. The named instance is the **xom-2021 cover
+signature block**: g7/g8/g9 each have their own `<td colspan="3">` in the
+leading rows of one table, all three report offset **232186**, and the table
+is recorded at **(232188, 232373)** with every empty cell clamped to 232188 —
+the images sit two characters before the table starts. bac-2006 does the same
+at 391006 against a table at (391008, 391112).
+
+This is not a defect and is not worked around: pulling the table span back to
+swallow the images would break ADR-029's rule that a table span is tight to
+its text, and moving the image offset would make it something other than where
+the image is. It is a relationship that has to be **asserted rather than
+assumed**, which is what the `image` check's `in_table` key and
+`evals/adversarial/images-in-table-cell.json` now do, on the real xom-2021
+images rather than on a synthetic cell built so it cannot expose the case.
 
 ### b3. No derived-view module, and no stored containing item
 
@@ -261,7 +295,7 @@ that no image bytes are committed is what keeps that true.
 
 ## g. Enforcement
 
-Five cases, plus the module and adapter self-checks. Every case was **red at
+Six cases, plus the module and adapter self-checks. Every case was **red at
 `origin/main` (3e16f70)** — `unknown check type 'image'` /
 `'images_sane'` / `'offsets_invariant_under_images'`, 5 FAIL rows on
 `--suite fast` (98/103) and 1 on `--suite invariant` (50/51, an INVARIANT
@@ -269,12 +303,23 @@ VIOLATION) — and then red again, on **content**, under five one-line
 mutations of the working implementation, so none of them passes on vocabulary
 alone.
 
+**Those five red runs are NOT in `evals/report/history.jsonl`** (PR #44 R4).
+They were made in a throwaway `git archive` tree of 3e16f70 with the case
+files copied in, so the runner appended its lines to that tree's copy of the
+file and they were discarded with it; every history line this PR commits is
+green. The time series therefore carries no trace of them, and the claim above
+rests on this document plus the round-1 reviewer's independent reproduction of
+the 50/51 invariant result and of four of the five mutations. The one red line
+the time series *does* carry is round 2's: `20260824-000828 fast 81764f7 dirty
+104/105 0.9905`, the R1 case run with ADR §b1's original claim in it (§b2a).
+
 | case | fixture · suite | labels (`src`/`alt`/`width`/`height` hand-read from the raw HTML by an independent regex route and compared field-by-field with the shipped annotation before being written; `offset` cross-checked by the 30 characters of `normalized_text` on either side of it) |
 |---|---|---|
 | `bac-2006-images` | bac-2006 · fast | 5 uppercase `<IMG SRC=... ALT="LOGO">`, no style attribute so `width`/`height` null on all five; **the only case whose item labels discriminate** — Item 7 twice, Item 8 three times, on a `success` document with no warnings; two images sharing offset 391006 |
 | `xom-2021-images` | xom-2021 · fast | 9 records: 6 Earnings Factor Analysis performance graphs and 3 cover signatures; **g7/g8/g9 all at offset 232186**, the coincident-offset shape (§b2) |
 | `jpm-2024-images` | jpm-2024 · fast | 14 records inside a 1,213,284-char text — the scale check for `_images_shape`; every awkward `alt` in the corpus (apostrophes, spaces, bare Workiva ids), and all four image kinds the S10 row names |
 | `images-offsets-invariant` | xom-2021 · **invariant** + fast | on-vs-off equality, both directions of the default-off rule, shape of all 9 records, exact count |
+| `images-in-table-cell` | xom-2021 · fast | added in PR #44 round 2 for R1: the 3 signature images against the table that contains them in the raw HTML but not in its recorded span (§b2a), all 9 images' `in_table`, and the first case in the suite to run `tables=True` and `images=True` together |
 | `images-refusal-path` | aapl-2026-10q · fast | `unsupported` still carries the list when asked; `item: null` — the containment derivation's no-span branch, which no other case reaches; the `found`/`imgs` name-collision class ADR-029's `tables-refusal-path` exists for |
 
 Mutations (this working tree, 2026-08-23, each applied alone and restored):
@@ -290,7 +335,9 @@ Mutations (this working tree, 2026-08-23, each applied alone and restored):
 `src/sec10k/normalize.py::_demo` pins the synthetic shapes no fixture isolates
 (a `width=`/`height=` attribute, a `50%` non-pixel size, an `<img>` with no
 `src`, an `<img>` inside `<title>` that is never recorded, an `<img>` inside a
-table cell landing inside that cell's span, an `&amp;` in `alt`, and the text
+table cell that carries text landing inside that cell's span AND an image in
+an image-only leading row landing outside the whole tightened table, an
+`&amp;` in `alt`, and the text
 being identical with the flag on and off) and is run by
 `.github/workflows/ci.yml`'s unit-tests job.
 `src/sec10k/test_eval_adapter.py::test_image_checks` pins the check vocabulary
@@ -301,9 +348,12 @@ refuse a record — the gate case is the eval case, the self-check is the floor
 Gate after: at the branch point (3e16f70) `--suite invariant` **51/51** and
 `--suite fast` **103/103**; after merging `origin/main` c13aa5c (PR #42, D4,
 which adds one case and promotes `ba-2003-asterisk-ibr` out of debt)
-`--suite invariant` **52/52** and `--suite fast` **104/104**. Table fidelity
-unchanged at cells 400/400 = 1.0, rows 31/31 = 1.0 in both; every module
-self-check ok; `.eval-baseline.json` untouched (§h).
+`--suite invariant` **52/52** and `--suite fast` **104/104**; after PR #44
+round 2 (the R1 case, +1 case with a `table` check of its own)
+`--suite invariant` **52/52** and `--suite fast` **105/105**. Table fidelity
+is 1.0 throughout — cells 400/400 then 427/427, rows 31/31 then 34/34, a
+RATIO the baseline gates, so the new labels move the counts and not the gated
+value. Every module self-check ok; `.eval-baseline.json` untouched (§h).
 
 ## h. No baseline move (hard rule 1)
 

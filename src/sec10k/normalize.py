@@ -56,19 +56,26 @@ SKIP_TAGS = {"script", "style", "title", "ix:header", "ix:hidden"}
 
 
 def _dim(attrs, name):
-    """A declared pixel size, or None. The HTML attribute first, then the
-    `style` declaration — which is where every sized image in the committed
-    corpus puts it: 0 of 53 <img> carry width=/height=, 40 carry style
-    (ADR-032 §b1). A non-pixel value ("50%", "auto") is not a declared
-    pixel size and answers None rather than a wrong number."""
+    """A declared pixel size as a POSITIVE int, or None. The HTML attribute
+    first, then the `style` declaration — which is where every sized image in
+    the committed corpus puts it: 0 of 53 <img> carry width=/height=, 40 carry
+    style (ADR-032 §b1).
+
+    Anything that is not a whole positive number of pixels answers None rather
+    than a wrong number: a non-pixel unit ("50%", "auto"), a zero ("width=0",
+    the classic spacer gif), and a sub-pixel or fractional declaration
+    ("0.75px", "1.5px" — truncating those to 0 and 1 was PR #44 R2). None is
+    the honest answer for all three, and it is the only one `_images_shape`
+    and specs/001 ("positive int") accept."""
     v = (attrs.get(name) or "").strip().lower()
     if v.endswith("px"):
         v = v[:-2].strip()
-    if v.isdigit():
-        return int(v)
-    m = re.search(rf"(?:^|;)\s*{name}\s*:\s*(\d+)(?:\.\d+)?\s*px",
-                  attrs.get("style") or "", re.I)
-    return int(m.group(1)) if m else None
+    if not v.isdigit():
+        # `\s*px` right after the digits, so "0.75px" does not match at all
+        m = re.search(rf"(?:^|;)\s*{name}\s*:\s*(\d+)\s*px",
+                      attrs.get("style") or "", re.I)
+        v = m.group(1) if m else ""
+    return int(v) if v.isdigit() and int(v) > 0 else None
 
 
 class _Plain(HTMLParser):
@@ -480,29 +487,49 @@ def _demo():
 
     # ADR-032: the same rule for images, and the shapes no committed fixture
     # has — a width/height ATTRIBUTE (0 of the corpus's 53 <img> carry one), a
-    # non-pixel size, an <img> with no src at all, an <img> inside a table
-    # cell, and an <img> inside skipped machine metadata (never recorded).
+    # non-pixel size, an <img> with no src at all, and an <img> inside skipped
+    # machine metadata (never recorded). The two in-cell shapes below are the
+    # PR #44 R1 pair: a cell that carries text, and one that does not.
     img_doc = ("<html><head><title>t<img src=meta.png></title></head><body>"
                "<p>Before.</p><img src='a.jpg' alt='AT&amp;T logo' width=120 height='60px'>"
                "<p>Mid.</p><img src=\"b.jpg\" style='height:200px;width:500px'>"
                "<img alt=nosrc width='50%'>"
                "<table><tr><td>cell<img src=c.jpg></td></tr></table>"
+               "<table><tr><td><img src=d.jpg></td></tr><tr><td>after</td></tr></table>"
                "<p>FORM 10-K</p></body></html>")
     plain = select_and_normalize(img_doc)[0]
     itext, _, _, itabs, imgs = select_and_normalize(img_doc, tables=True, images=True)
     assert itext == plain == select_and_normalize(img_doc, images=True)[0], itext
     assert "meta.png" not in itext and [i["src"] for i in imgs] == \
-        ["a.jpg", "b.jpg", None, "c.jpg"], imgs      # <title> content is skipped
+        ["a.jpg", "b.jpg", None, "c.jpg", "d.jpg"], imgs   # <title> content skipped
     assert imgs[0] == {"offset": 8, "src": "a.jpg", "alt": "AT&T logo",
                        "width": 120, "height": 60}, imgs[0]
     off = imgs[0]["offset"]      # it sits between the two paragraphs, not in one
     assert itext[:off].endswith("Before.\n") and itext[off:].startswith("\nMid."), repr(itext)
     assert (imgs[1]["width"], imgs[1]["height"], imgs[1]["alt"]) == (500, 200, None), imgs[1]
     assert (imgs[2]["width"], imgs[2]["height"]) == (None, None), imgs[2]   # "50%" is not px
-    # an image inside a cell sits inside that cell's span, and offsets are
-    # non-decreasing whatever else was asked for in the same pass
+    # PR #44 R2: a zero or sub-pixel declaration is not a declared pixel size
+    # either. `_images_shape` refuses width 0, so returning it would let the
+    # extractor emit an envelope its own contract (specs/001, "positive int")
+    # rejects. No committed fixture has one; this is the whole guard.
+    zero = ("<html><body><p>x</p><img src=z.gif width=0 height='0px'>"
+            "<img src=f.gif style='width:0.75px;height:1.5px'>"
+            "<p>FORM 10-K</p></body></html>")
+    zimgs = select_and_normalize(zero, images=True)[4]
+    assert [(i["width"], i["height"]) for i in zimgs] == [(None, None), (None, None)], zimgs
+    # PR #44 R1, BOTH halves. An image offset is a reading-order point; a
+    # table/cell span is tightened to VISIBLE TEXT (ADR-029 §b1) and an image
+    # contributes none. So an image in a cell that carries text does land
+    # inside that cell's span (c.jpg), and an image in a text-empty cell lands
+    # OUTSIDE its cell and outside the whole tightened table (d.jpg) — which is
+    # what every one of the 10 real in-cell images in the corpus does, because
+    # they all sit in image-only cells. Neither is a defect; the two together
+    # are the rule, and images-in-table-cell pins it on xom-2021.
     cell = itabs[0]["rows"][0][0]
     assert cell[0] <= imgs[3]["offset"] <= cell[1], (cell, imgs[3])
+    tab = itabs[1]                       # image-only FIRST row, then "after"
+    assert tab["rows"][0][0] == [tab["start"], tab["start"]], tab   # clamped, empty
+    assert imgs[4]["offset"] < tab["start"], (tab, imgs[4])
     assert [i["offset"] for i in imgs] == sorted(i["offset"] for i in imgs), imgs
     assert select_and_normalize("<DOCUMENT>\n<TYPE>10-K\n<TEXT>\nFORM 10-K\nx\n"
                                 "</TEXT>\n</DOCUMENT>", images=True)[4] == []   # txt era

@@ -1,0 +1,125 @@
+{
+  "id": "images-in-table-cell",
+  "task": "sec10k",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "path": "evals/fixtures/xom-2021/filing.htm",
+    "tables": true,
+    "images": true
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "envelope_shape"
+      },
+      {
+        "type": "images_sane",
+        "min": 9,
+        "max": 9
+      },
+      {
+        "type": "tables_sane",
+        "min": 110,
+        "max": 140
+      },
+      {
+        "type": "table",
+        "anchor": "Darren W. Woods",
+        "index": 1,
+        "header": 0,
+        "rows": [
+          [
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          [
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          [
+            "Darren W. Woods Chief Executive Officer",
+            "",
+            "",
+            "Kathryn A. Mikells Senior Vice President and Chief Financial Officer",
+            "",
+            "",
+            "Len M. Fox Vice President and Controller (Principal Accounting Officer)",
+            "",
+            ""
+          ]
+        ]
+      },
+      {
+        "type": "image",
+        "src": "xom-20211231_g1.jpg",
+        "offset": 159291,
+        "in_table": false
+      },
+      {
+        "type": "image",
+        "src": "xom-20211231_g2.jpg",
+        "offset": 160166,
+        "in_table": false
+      },
+      {
+        "type": "image",
+        "src": "xom-20211231_g3.jpg",
+        "offset": 170903,
+        "in_table": false
+      },
+      {
+        "type": "image",
+        "src": "xom-20211231_g4.jpg",
+        "offset": 171619,
+        "in_table": false
+      },
+      {
+        "type": "image",
+        "src": "xom-20211231_g5.jpg",
+        "offset": 177075,
+        "in_table": false
+      },
+      {
+        "type": "image",
+        "src": "xom-20211231_g6.jpg",
+        "offset": 177691,
+        "in_table": false
+      },
+      {
+        "type": "image",
+        "src": "xom-20211231_g7.jpg",
+        "offset": 232186,
+        "in_table": false
+      },
+      {
+        "type": "image",
+        "src": "xom-20211231_g8.jpg",
+        "offset": 232186,
+        "in_table": false
+      },
+      {
+        "type": "image",
+        "src": "xom-20211231_g9.jpg",
+        "offset": 232186,
+        "in_table": false
+      }
+    ]
+  },
+  "provenance": "PR #44 R1, and ADR-032 §b2a — the case that exists because the ADR's first wording was wrong. §b1 originally said an <img> inside a table cell gets an offset that \"lands inside that cell's span\". It does not, for any real in-cell image in the committed corpus, and the only thing asserting it was a synthetic cell in normalize.py::_demo built so that it could not expose the case.\n\nWHAT IS ACTUALLY TRUE, AND WHAT THIS CASE PINS. An image offset is a reading-order point. A table's start/end and every cell span are tightened to the table's VISIBLE TEXT (ADR-029 §b1), an image contributes none, and an empty cell is then clamped into its table's tightened span. So an image in a cell that carries text does land inside that cell; an image in a text-empty cell that precedes all of the table's visible text lands OUTSIDE the whole tightened table. The corpus is entirely the second case: 10 of 53 <img> sit inside <table> markup (cvx-2015 4 of 4, xom-2021 3 of 9, bac-2006 2 of 5, ba-2003 1 of 3), and 0 of 53 image offsets fall inside any recorded table or cell span, because a filer who typesets a graphic in a table gives it a cell of its own with no text in it.\n\nWHY xom-2021. Its cover signature block is the sharpest instance and the one ADR-032 §b2a names: g7/g8/g9 (raw bytes 2001029, 2001245, 2001461) each sit in their own <td colspan=\"3\"> in the LEADING rows of one <table>; all three report normalized offset 232186 while the table is recorded at (232188, 232373) with all twelve of its empty cells clamped to 232188. The images are two characters before their own table starts. bac-2006 shows the same shape at 391006 against a table at (391008, 391112) and cvx-2015 has the largest share (4 of 4), but xom-2021 is already a committed image fixture, so using it adds no corpus and no ADR-021 population movement.\n\nWHAT EACH CHECK IS FOR. The `table` check is load-bearing and not decoration: without it, `in_table: false` would also pass on an implementation that recorded no tables at all, and the assertion would be vacuous. It pins that the signature table IS recorded, with its two image-only leading rows present as all-empty rows and the officers' row derived correctly — i.e. the very table the images are claimed to be outside of. anchor \"Darren W. Woods\" with index 1: that string occurs in four recorded tables (records 19, 50, 123, 124 at HEAD) because the cover block is nested inside a larger layout table and repeated in the signature pages, and record 50 at (232188, 232373) is the 3-row one; index 1 selects it, per ADR-029 §c's locate rule. The nine `image` checks carry the exact offset and `in_table` for EVERY image in the filing, not just the three in-cell ones, so the six that are not in table markup pin the negative side too and a blanket `in_table` implementation cannot pass. tables_sane 110-140 bands the 126 records at HEAD.\n\nTHIS CASE IS ALSO THE FIRST TO RUN tables=true AND images=true TOGETHER. Both annotations share one _Plain pass and one merged _tidy marks map (normalize.py), and until this case nothing in the suite exercised that composition on a real filing.\n\nRED FIRST (hard rule 2, watched 2026-08-24 before the ADR was corrected): this exact case, with in_table set to TRUE for g7/g8/g9 — i.e. ADR-032 §b1's claim as committed at a0675ad, expressed as an executable check — ran 3 failures, \"image xom-20211231_g7.jpg at 232186 is outside every recorded table span, labeled in_table=True\" and the same for g8 and g9; `python3 -m evals.run --suite fast` reported 104/105 = 0.990. Flipping the three labels to false and correcting §b1 is the whole repair."
+}

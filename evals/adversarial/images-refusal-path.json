@@ -1,21 +1,50 @@
 {
   "id": "images-refusal-path",
   "task": "sec10k",
-  "suites": ["fast"],
-  "input": {"path": "evals/fixtures/aapl-2026-10q/filing.htm", "images": true},
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "path": "evals/fixtures/aapl-2026-10q/filing.htm",
+    "images": true
+  },
   "expect": {
     "checks": [
-      {"type": "doc_status", "value": "unsupported"},
-      {"type": "warning_present", "code": "unsupported_form"},
-      {"type": "envelope_shape"},
-      {"type": "images_sane", "min": 1, "max": 1},
-      {"type": "image", "src": "aapl-20260627_g1.jpg", "alt": "g66145g66i43.jpg",
-       "width": 36, "height": 45, "offset": 401,
-       "before": "mission File Number: 001-36743", "after": "\n\nApple Inc.\n\n(Exact name of R",
-       "item": null},
-      {"type": "offsets_invariant_under_images"},
-      {"type": "only_items", "items": []}
+      {
+        "type": "doc_status",
+        "value": "unsupported"
+      },
+      {
+        "type": "warning_present",
+        "code": "unsupported_form"
+      },
+      {
+        "type": "envelope_shape"
+      },
+      {
+        "type": "images_sane",
+        "min": 1,
+        "max": 1
+      },
+      {
+        "type": "image",
+        "src": "aapl-20260627_g1.jpg",
+        "alt": "g66145g66i43.jpg",
+        "width": 36,
+        "height": 45,
+        "offset": 401,
+        "before": "mission File Number: 001-36743",
+        "after": "\n\nApple Inc.\n\n(Exact name of R",
+        "item": null
+      },
+      {
+        "type": "offsets_invariant_under_images"
+      },
+      {
+        "type": "only_items",
+        "items": []
+      }
     ]
   },
-  "provenance": "ADR-032 §b3, the refusal path -- the exact shape tables-refusal-path exists for, re-checked for `images` rather than inherited. A refused envelope (`unsupported` or `failed`) is built by an EARLIER return in extract_items than the success path, so 'the annotation is carried when asked' is a separate claim on that branch and has to be asserted there. aapl-2026-10q is Apple's Q3 FY2026 10-Q (evals/fixtures/README.md), refused by form identity with `unsupported_form`; it carries readable text (83,193 normalized chars) and exactly one <img>, the Apple logo on the cover at raw offset 3117: `<img src=\"aapl-20260627_g1.jpg\" alt=\"g66145g66i43.jpg\" style=\"height:45px;...;width:36px\"/>`, which normalizes to offset 401, immediately after 'Commission File Number: 001-36743'.\n\nWHAT EACH CHECK IS FOR. doc_status + warning_present: the refusal itself must be unchanged by the flag -- adding an annotation must not turn a refusal into a parse. only_items([]): the contract's refusal rule, no best-effort items, restated here because a refusal envelope that grew an items list while growing an images list would be the same defect twice. `item: null` on the image label is the load-bearing half of that: with no items there is no span to fall in, and the containment derivation must answer null rather than crash or invent a code -- the branch nothing else in the image cases reaches, since every other labeled image lands inside some span. images_sane min=max=1 and the full `image` label: the list is really carried and really populated on this branch, not merely present-and-empty. offsets_invariant_under_images: the equality holds on the refusal path too, where the annotation is computed before the refusal is decided.\n\nHARD RULE 2 NOTE. tables-refusal-path exists because the first S7 build had a `found` name collision on exactly this path -- the local name for the tables list shadowed something else and the refusal envelope shipped a string where a list belonged, which every other table case missed. S10 reuses that same `found` local in normalize() and adds `imgs` beside it, so the collision class is live again; this case is the guard, and `envelope_shape` (which runs `_images_shape`) plus `images_sane` are both here so a wrong TYPE is caught and not only a wrong value."
+  "provenance": "ADR-032 §b3, the refusal path -- the exact shape tables-refusal-path exists for, re-checked for `images` rather than inherited. A refused envelope (`unsupported` or `failed`) is built by an EARLIER return in extract_items than the success path, so 'the annotation is carried when asked' is a separate claim on that branch and has to be asserted there. aapl-2026-10q is Apple's Q3 FY2026 10-Q (evals/fixtures/README.md), refused by form identity with `unsupported_form`; it carries readable text (83,193 normalized chars) and exactly one <img>, the Apple logo on the cover at raw offset 81150 (the file is 1,018,210 bytes and holds exactly one `<img`; the figure read 3117 until PR #44 R3 falsified it -- byte 3117 is inside an <xbrli:unit> element, and it was not a body-relative offset either, since split_documents finds no <DOCUMENT> block here. Re-verified 2026-08-24, together with all 34 raw <img> offsets cited in the three golden provenances, every one of which reproduces exactly): `<img src=\"aapl-20260627_g1.jpg\" alt=\"g66145g66i43.jpg\" style=\"height:45px;...;width:36px\"/>`, which normalizes to offset 401, immediately after 'Commission File Number: 001-36743'.\n\nWHAT EACH CHECK IS FOR. doc_status + warning_present: the refusal itself must be unchanged by the flag -- adding an annotation must not turn a refusal into a parse. only_items([]): the contract's refusal rule, no best-effort items, restated here because a refusal envelope that grew an items list while growing an images list would be the same defect twice. `item: null` on the image label is the load-bearing half of that: with no items there is no span to fall in, and the containment derivation must answer null rather than crash or invent a code -- the branch nothing else in the image cases reaches, since every other labeled image lands inside some span. images_sane min=max=1 and the full `image` label: the list is really carried and really populated on this branch, not merely present-and-empty. offsets_invariant_under_images: the equality holds on the refusal path too, where the annotation is computed before the refusal is decided.\n\nHARD RULE 2 NOTE. tables-refusal-path exists because the first S7 build had a `found` name collision on exactly this path -- the local name for the tables list shadowed something else and the refusal envelope shipped a string where a list belonged, which every other table case missed. S10 reuses that same `found` local in normalize() and adds `imgs` beside it, so the collision class is live again; this case is the guard, and `envelope_shape` (which runs `_images_shape`) plus `images_sane` are both here so a wrong TYPE is caught and not only a wrong value."
 }

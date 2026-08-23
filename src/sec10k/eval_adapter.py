@@ -475,6 +475,19 @@ def eval_check(result, chk, path=None):
                         and i["start"] <= im["offset"] < i["end"]), None)
             if got != chk["item"]:
                 return f"image {chk['src']} falls in item {got!r}, labeled {chk['item']!r}"
+        if "in_table" in chk:
+            # PR #44 R1: whether the offset lies inside a recorded ADR-029
+            # table span. It usually does NOT even for an image the raw HTML
+            # puts inside a <td>, because a table span is tightened to the
+            # table's visible TEXT and an image contributes none — so this
+            # relationship has to be asserted, not assumed (ADR-032 §b2).
+            if "tables" not in result:
+                return "in_table needs the tables annotation too (set \"tables\": true)"
+            got = any(t["start"] <= im["offset"] <= t["end"] for t in result["tables"])
+            if got != chk["in_table"]:
+                return (f"image {chk['src']} at {im['offset']} is "
+                        f"{'inside a' if got else 'outside every'} recorded table span, "
+                        f"labeled in_table={chk['in_table']}")
     elif t == "images_sane":
         # ADR-032 §d, the counterpart to `tables_sane`: the contract shape
         # (offsets in bounds, document order, field types) plus a count band.
