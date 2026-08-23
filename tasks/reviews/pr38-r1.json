@@ -1,0 +1,37 @@
+{
+ "pr": 38,
+ "round": 1,
+ "date": "2026-08-23",
+ "result": "APPROVED",
+ "gate": "invariant 49/49; fast 97/97; table fidelity 400/400 · 31/31; baseline untouched; bench --self-check ok; oracle_oss parses; red-at-main reproduced (4 failures); mutations red; list_fixtures == main's 42 minus repo_hygiene; heldout_sizes identical; SYNTHETIC 13/13; README fixtures resolve; 404 text unchanged",
+ "routing_rule": "repair = HIGH/MEDIUM and (acceptance violated | gate red | published claim dishonest); everything else debt (pr-loop scope boundary)",
+ "findings": [
+  {
+   "id": "R1",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "The app.py live-text pins can be satisfied by a wrong program that rebinds or re-imports the names without a `def`: appending `fixture_file = lambda d: ...` or `list_fixtures = lambda root=FIXTURES: sorted(d.name for d in root.iterdir() if d.is_dir())`, or importing `fixture_file` from another module, passes all three pins.",
+   "evidence": "src/repo_hygiene/eval_adapter.py:1219-1228 — `count(_squash(META_FIXTURES))`, `count(_squash(RESOLVE_CALL))` and `re.search(r\"def\\s+(_?list_fixtures|fixture_file)\\b\", api)` only; scratch copies of app.py with a trailing lambda rebind of either name, or with the import line changed to `from os.path import exists as fixture_file`, each returned 0 failures from check_fixture_discovery.",
+   "repro": "load evals/adversarial/fixture-discovery.json, write a scratch app.py = HEAD app.py + a trailing lambda rebind of list_fixtures, set case['input']['api_file'] to it, call check_fixture_discovery(case) -> ([], info).",
+   "acceptance": "Either the def-regex also covers `(_?list_fixtures|fixture_file)\\s*=` and the import line of `fixture_file`/`list_fixtures` from `src.sec10k.web.fixtures` is pinned, or the check's docstring/triage note states that only `def`-style shadowing and call-site text are pinned (the same ceiling build_identity's git_sha pin has)."
+  },
+  {
+   "id": "R2",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "The new 'exactly one file' rule, now applied to the oracle/bench too, makes discovery silently drop a real fixture when any stray file (e.g. a Finder `.DS_Store`, an editor backup) lands beside the filing — at main iter_fixtures/heldout_sizes tolerated that (largest non-.md), so this is a strictness change the row does not mention.",
+   "evidence": "src/sec10k/web/fixtures.py:30-31 counts every `is_file()` entry incl. dotfiles; evals/oracle.py:180-183 and evals/bench.py:233-236 now skip such a directory with no message. Today no fixture dir has a second file (42 dirs, 41 single-file, the one exception is repo_hygiene), so no fixture is dropped at HEAD.",
+   "repro": "cp -r evals/fixtures/aapl-2025 <scratch>/aapl-2025 && touch <scratch>/aapl-2025/.DS_Store; iter_fixtures(Path('<scratch>')) -> [] (main's expression yields ('aapl-2025', filing.htm)).",
+   "acceptance": "Either accepted as the deliberate rule (a one-line note in the D1 debt row or fixtures.py docstring that hidden/stray files also disqualify a directory, and that the bench's n_fixtures should be compared against the directory count), or the rule ignores dotfiles."
+  },
+  {
+   "id": "R3",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "The D1 row's Contents cell describes the rule as 'exactly one filing-shaped file' while the shipped predicate (and the row's own Status cell, the fixtures README rule and the new debt row) is 'exactly one file, suffix not inspected' — the same row states both.",
+   "evidence": "tasks/TODO.md:28 Contents: '...exactly one filing-shaped file — the test `_fixture_file` already applies at request time'; src/sec10k/web/fixtures.py:24-28 `ponytail:` comment: suffix not inspected; the author files the gap as a debt row (Origin: D1). Verified main's `_fixture_file` inspected no suffix, so the 'same test' clause is the true one.",
+   "repro": "grep -n 'filing-shaped' tasks/TODO.md; fixture_file(Path('evals/fixtures/repo_hygiene/fixture-discovery')) -> README.md (a lone .md resolves).",
+   "acceptance": "Contents cell reads 'exactly one file' (or 'filing-shaped' is explicitly deferred to the D1 debt row in the same sentence) so a reader of the first table is not told a suffix test exists."
+  }
+ ]
+}
