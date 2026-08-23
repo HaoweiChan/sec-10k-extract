@@ -61,7 +61,12 @@ bac-2006 each write a caption their own period end has already outlived.
    bodies must not terminate/open items.
 4. **Incorporation by reference** — Part III often contains only a pointer to
    the proxy statement. That is `incorporated_by_reference`, not `missing`,
-   and not a tiny "extracted" item.
+   and not a tiny "extracted" item. One filer convention puts the pointer
+   OUTSIDE the item: a bare `*` on the heading line, the body empty, and a
+   single footnote elsewhere ("* Certain information required by Items 5, 10,
+   11, 13 and 14 is incorporated herein by reference to … proxy statement") —
+   ba-2003, ADR-031; the marker on the heading and the empty body are both
+   required, a marked heading over real content is still `extracted`.
 5. **Multi-document .txt submissions** — find the 10-K `<DOCUMENT>` block
    first; exhibits repeat item-like headings.
 6. **Page furniture** — repeated page headers ("PART II", company name) and

@@ -317,7 +317,10 @@ run against a report older than its case files now announce the mismatch
 instead of printing silent zeros.
 
 The debt channel is what makes this table more than a re-bucketed v1: it
-enumerates real failures instead of a gate-forced 1.0. `ba-2003-asterisk-ibr`
+enumerates real failures instead of a gate-forced 1.0. *(Dated note,
+2026-08-23: `ba-2003-asterisk-ibr` left the debt channel — D4 / ADR-031 built
+the footnote resolution and the case is scored in `fast` + `invariant`; the
+paragraph below describes the measurement as it stood.)* `ba-2003-asterisk-ibr`
 fails at two confidence values, not one — items 11 and 13, `extracted` at
 0.95 over 34 chars and at 0.75 over 59 chars respectively, in a document that
 otherwise reports plain `success`. Both are wrong for the same reason (the

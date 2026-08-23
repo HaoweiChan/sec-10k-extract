@@ -59,7 +59,7 @@ statuses; silence is never how absence is reported (INV-S4):
 | status | meaning |
 |---|---|
 | `extracted` | heading found, span assigned |
-| `incorporated_by_reference` | the item's content lives in another document; offsets point at the pointer sentence (ADR-011) |
+| `incorporated_by_reference` | the item's content lives in another document; offsets point at the pointer sentence (ADR-011) — or, when the pointer is a footnote resolving a marked empty heading, at that heading line with the footnote's offsets at `evidence.footnote` (ADR-031) |
 | `omitted` | era/filer rules permit the absence (ADR-005) |
 | `missing` | expected, and we did not find it — an admission, not a silence |
 

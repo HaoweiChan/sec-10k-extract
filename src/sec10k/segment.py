@@ -596,6 +596,52 @@ def classify(code, body, present):
     return "incorporated_by_reference" if rest <= IBR_REMAINDER_MAX else "extracted"
 
 
+# ADR-031 (D4): a heading whose line ends in a typographic footnote marker and
+# whose body is EMPTY, resolved by a footnote anywhere in the document that
+# begins with the SAME marker, names this item's code and names an external
+# document. Boeing FY2003 marks Items 5, 10, 11, 13 and 14 with a bare `*` and
+# says once, in a footnote inside item 14's body, "* Certain information
+# required by Items 5, 10, 11, 13 and 14 is incorporated herein by reference to
+# the registrant's definitive proxy statement" — so items 11 and 13, whose
+# bodies are whitespace, read `extracted` 0.95 over nothing, the silent-failure
+# shape. The marker family is asterisk runs only: measured over all 47
+# committed documents (42 dev + 5 held-out), the only marked headings are
+# ba-2003's five, all `*`; `**`/`***` occur as table-footnote markers in the
+# same filing, which is why the run must match exactly. Daggers and `(1)`-style
+# numerals are not claimed. The body must be empty: items 5 and 10 carry the
+# same marker over real content and stay `extracted` (ADR-004 shape 3 — the
+# footnote says "certain information"); item 14 holds the footnote in its own
+# body and is IBR by `classify` already.
+MARKER_TAIL_RE = re.compile(r"(\*+)\s*$")
+FOOTNOTE_RE = re.compile(r"(?m)^[ \t]*(\*+)[ \t]*(?=\S)")
+ITEM_LIST_RE = re.compile(r"(?i)\bitems?\s+((?:\d{1,2}[A-D]?\b[\s,]*(?:and\s+)?)+)")
+PARA_END_RE = re.compile(r"\n[ \t]*\n")
+
+
+def footnote_pointer(code, heading_text, body, text):
+    """(start, end) into `text` of the footnote that incorporates `code` by
+    reference, or None. Only for a marked heading over an empty body.
+    ponytail: empty means whitespace-only, which is what the corpus has; a body
+    of page furniture alone ('122 / Table of Contents') would not qualify — add
+    a furniture strip here when a fixture shows it."""
+    m = MARKER_TAIL_RE.search(heading_text or "")
+    if not m or body.strip():
+        return None
+    marker = m.group(1)
+    for f in FOOTNOTE_RE.finditer(text):
+        if f.group(1) != marker:
+            continue
+        pe = PARA_END_RE.search(text, f.end())      # txt-era footnotes wrap
+        end = pe.start() if pe else len(text)
+        flat = re.sub(r"\s+", " ", text[f.start(1):end])
+        named = {c.upper() for lst in ITEM_LIST_RE.findall(flat)
+                 for c in re.findall(r"(?i)\d{1,2}[A-D]?", lst)}
+        # the same two signals classify() demands of a body pointer
+        if code in named and IBR_RE.search(flat) and EXTERNAL_DOC_RE.search(flat):
+            return f.start(1), end
+    return None
+
+
 def _demo():
     exp = expected_items(date(2025, 9, 27))
     assert exp[:4] == ["1", "1A", "1B", "1C"] and len(exp) == 23, exp
@@ -791,6 +837,31 @@ def _demo():
     assert classify("6", "[Reserved]", True) == "extracted"           # ADR-005 rule 1
     assert classify("16", "", False) == "omitted"                     # rule 2
     assert classify("1A", "", False) == "missing"                     # rule 3
+
+    # ADR-031: a marked EMPTY heading resolved by a footnote that names the
+    # item and an external document (ba-2003 items 11/13). The footnote may sit
+    # anywhere; it must begin with the SAME marker run, name THIS code, and
+    # carry both pointer signals.
+    doc = ("Item 10. Directors*\n\nBios of the directors. " * 3 + "\n"
+           "Item 11. Executive Compensation*\n\n"
+           "Item 13. Certain Relationships *\n\n"
+           "Item 14. Fees*\n\n* Certain information required by Items 10, 11,\n"
+           "13 and 14 is incorporated herein by reference to the\n"
+           "registrant's definitive proxy statement.\n\n122\n\nPART IV\n"
+           "** Deliveries included intracompany units.\n")
+    fn = doc.index("* Certain")
+    assert footnote_pointer("11", "Item 11. Executive Compensation*", "\n\n", doc) \
+        == (fn, doc.index("\n\n122"))                          # wrapped, txt-style
+    assert footnote_pointer("13", "Item 13. Certain Relationships *", "\n\n", doc) \
+        == (fn, doc.index("\n\n122"))                          # space before the marker
+    assert footnote_pointer("10", "Item 10. Directors*", "\n\nBios.", doc) is None   # body not empty
+    assert footnote_pointer("11", "Item 11. Executive Compensation", "\n\n", doc) is None  # no marker
+    assert footnote_pointer("12", "Item 12. Security Ownership*", "\n\n", doc) is None  # not named
+    assert footnote_pointer("11", "Item 11. Executive Compensation**", "\n\n", doc) is None  # `**` != `*`
+    internal = doc.replace("the\nregistrant's definitive proxy statement",
+                           "Item 7 of this\nForm 10-K")
+    assert footnote_pointer("11", "Item 11. Executive Compensation*", "\n\n", internal) \
+        is None                                                # internal target: ADR-004
     print("[segment self-check] ok")
 
 

@@ -239,6 +239,28 @@ def test_ibr_spans_are_checked():
     assert eval_check(r4, {"type": "text_not_contains", "item": "6",
                            "value": "proxy statement"}) is not None
 
+    # ADR-031: a footnote-resolved IBR item keeps its heading line as the span
+    # and publishes the footnote's offsets under evidence.footnote; a
+    # text_contains with "evidence" anchors THAT slice. Red when the key is
+    # absent or points at the wrong text.
+    t5 = "Item 11. Executive Compensation*\n\nItem 14. Fees*\n\n* Items 11 and 14 are in the proxy statement."
+    fn = t5.index("* Items")
+    r5 = {"normalized_text": t5, "items": [
+        {"item": "11", "status": "incorporated_by_reference", "start": 0,
+         "end": 33, "confidence": 0.85, "heading_text": "Item 11. Executive Compensation*",
+         "evidence": {"footnote": {"start": fn, "end": len(t5)}}},
+        {"item": "14", "status": "incorporated_by_reference", "start": 34,
+         "end": len(t5), "confidence": 0.85, "evidence": {}}]}
+    chk = {"type": "text_contains", "item": "11", "evidence": "footnote",
+           "value": "proxy statement"}
+    assert eval_check(r5, chk) is None
+    assert eval_check(r5, {**chk, "item": "14"}) is not None          # no key
+    assert eval_check(r5, {**chk, "value": "Compensation*"}) is not None  # wrong slice
+    assert eval_check(r5, {"type": "text_contains", "item": "11",
+                           "value": "proxy statement"}) is not None  # span itself has none
+    assert eval_check(r5, {"type": "verbatim"}) is None   # heading-line span is well-formed
+    assert eval_check(r5, {"type": "no_overlap_ordered"}) is None
+
 
 def test_checks_that_had_never_gone_red():
     """The G1 audit (ADR-010 consequences) named four checks that were

@@ -69,9 +69,20 @@ def eval_check(result, chk, path=None):
     elif t == "text_contains":
         if entry is None:
             return f"item {chk['item']} missing text {chk['value']!r}"
-        if not has_span:
+        if "evidence" in chk:
+            # ADR-031: an offsets pair the item publishes under
+            # evidence[<key>] (today: `footnote`, the sentence that resolved a
+            # marked empty heading to IBR) is anchored like the span itself —
+            # the key must exist and its slice must carry the value
+            ev = (entry.get("evidence") or {}).get(chk["evidence"])
+            if not ev:
+                return f"item {chk['item']} has no evidence span {chk['evidence']!r}"
+            if chk["value"] not in item_text(result, ev):
+                return (f"item {chk['item']} evidence {chk['evidence']!r} missing "
+                        f"text {chk['value']!r}")
+        elif not has_span:
             return "item has no span"
-        if chk["value"] not in item_text(result, entry):
+        elif chk["value"] not in item_text(result, entry):
             return f"item {chk['item']} missing text {chk['value']!r}"
     elif t == "text_not_contains":
         # a null-offset status has no text at all -> vacuously can't contain it
