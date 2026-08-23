@@ -1,0 +1,122 @@
+{
+ "artifact": "S2 post-merge gate — /api/meta git_sha tracks redeploys — RAN",
+ "date": "2026-08-23",
+ "why_this_exists": "S2 (PR #31, merged e6810a4 2026-08-22) carried one UNRUN gate that no agent could run from inside a session: the deployed sha has to be observed MOVING across two redeploys, not merely existing (ADR-028 §g, PR #31 R9). Under ADR-022 rule 2 the row cannot archive to DONE.md while that gate is UNRUN. This file is the observation record; it makes no claim beyond the HTTP responses listed.",
+ "gate_text_verbatim": "`/api/meta` reports a real sha **that tracks redeploys** — **UNRUN**, and unrunnable from here: no agent can run a Zeabur build, so this is confirmed by `curl -s https://whaleforce-sec10k.zeabur.app/api/meta` after the merge and again after a second redeploy — **the sha must MOVE across two redeploys, not merely exist**, which is the only observation that catches a cached build layer freezing a real-but-stale sha (ADR-028 §g, PR #31 R9).",
+ "how_run": "Three real HTTP GETs against the deployed instance (no mocks, hard rule 4), each paired with `git log` of the commit the returned sha names. The first two were made by the orchestrator and relayed to the implementer with timestamps; the implementer could not reproduce the 1efc457 response (that build had already been replaced) and re-confirmed the current one itself.",
+ "observations": [
+  {
+   "when": "2026-08-23T07:47:22Z",
+   "who": "orchestrator",
+   "command": "curl -s https://whaleforce-sec10k.zeabur.app/api/meta",
+   "git_sha": "1efc457e598d",
+   "what_commit": "1efc457e598de56faa8f2d78386594427aa5a966 — Merge pull request #34 from HaoweiChan/task/S7 (committed 2026-08-22T18:23:02Z) — the deploy BEFORE PR #35; PR #35 had merged 87 s earlier (07:45:55Z; 07:47:22Z - 07:45:55Z = 87 s) and its build had not yet replaced the running one"
+  },
+  {
+   "when": "2026-08-23T07:49:54Z",
+   "who": "orchestrator",
+   "command": "curl -s https://whaleforce-sec10k.zeabur.app/api/meta",
+   "git_sha": "1ed784ccf68e",
+   "what_commit": "1ed784ccf68e1f5dde5fb1d592517cb0d29704f3 — Merge pull request #35 from HaoweiChan/task/L1 (committed 2026-08-23T07:45:55Z) — origin/main at observation"
+  },
+  {
+   "when": "2026-08-23T07:51:52Z",
+   "who": "implementer",
+   "command": "curl -s -w '\\nHTTP %{http_code}\\n' https://whaleforce-sec10k.zeabur.app/api/meta",
+   "http_status": 200,
+   "git_sha": "1ed784ccf68e",
+   "what_commit": "1ed784ccf68e1f5dde5fb1d592517cb0d29704f3 — Merge pull request #35 from HaoweiChan/task/L1 — origin/main at observation (`git log -1 origin/main` = 1ed784c)",
+   "full_json": {
+    "git_sha": "1ed784ccf68e",
+    "fixtures": [
+     "aapl-2025",
+     "aapl-2026-10q",
+     "amended-cover-2021",
+     "axp-2008",
+     "ba-2003",
+     "bac-2006",
+     "caps-cover-2016",
+     "cat-2023",
+     "comma-cover-2016",
+     "cvx-2015",
+     "fy2021-item9c",
+     "ge-1994",
+     "gs-2002",
+     "heading-unnumbered",
+     "ibm-1997",
+     "ibr-pointer-first",
+     "ibr-security-holders",
+     "intc-2002",
+     "items-stripped",
+     "jnj-2016",
+     "jpm-2024",
+     "ko-1997",
+     "ksb-2007",
+     "malformed-html",
+     "msft-2013",
+     "nike-2006",
+     "nvda-2024",
+     "premier-pacific-2016",
+     "reac-2015",
+     "repo_hygiene",
+     "sandston-2021",
+     "sgrp-2019",
+     "spaced-letter-heading",
+     "spans-transposed",
+     "spatz-2014",
+     "textron-2001",
+     "tgt-2002",
+     "toc-titled",
+     "truncated-download",
+     "wfc-2008",
+     "wmt-2010",
+     "xom-2021"
+    ],
+    "max_bytes": 26214400,
+    "allowed_suffix": [
+     ".htm",
+     ".html",
+     ".txt"
+    ]
+   }
+  }
+ ],
+ "commit_chain_since_pr31_merge": {
+  "command": "git log --first-parent --format='%h %cd %s' --date=iso-strict e6810a4..origin/main",
+  "base": "e6810a4 2026-08-22T09:42:29Z Merge pull request #31 from HaoweiChan/task/S2 (S2 itself; the build this gate's mechanism first shipped in)",
+  "merges_after_it_each_a_redeploy": [
+   "6c71ca6 2026-08-22T15:41:53Z Merge pull request #33 from HaoweiChan/task/S3",
+   "1efc457 2026-08-22T18:23:02Z Merge pull request #34 from HaoweiChan/task/S7",
+   "1ed784c 2026-08-23T07:45:55Z Merge pull request #35 from HaoweiChan/task/L1"
+  ],
+  "reading": "Zeabur rebuilds on every push to main, so each first-parent merge after e6810a4 is a redeploy. What the responses show: two distinct real shas (1efc457e598d at 07:47:22Z, 1ed784ccf68e at 07:49:54Z and 07:51:52Z), each equal to a commit on main's first-parent chain, and ONE move seen at both ends (1efc457 -> 1ed784c, between 07:47:22Z and 07:49:54Z, 152 s apart). The deployed sha was never observed at e6810a4 or 6c71ca6 — the only pre-S2 deployed observation on record is git_sha 'unknown' (2026-08-22) — so e6810a4 -> 1efc457 is inferred from the chain, not seen. The build running at 07:47:22Z was NOT the one merged 87 s earlier (07:45:55Z), so the sha was not reading from a live git checkout of main either — it changed only when the new image came up (1ed784c first seen 239 s after its merge), which is the injected-at-build behaviour ADR-028 §b specifies.",
+  "intervals_recomputed": {
+   "command": "python3 -c \"from datetime import datetime as d; f=d.fromisoformat; print((f('2026-08-23T07:47:22')-f('2026-08-23T07:45:55')).total_seconds(), (f('2026-08-23T07:49:54')-f('2026-08-23T07:47:22')).total_seconds(), (f('2026-08-23T07:51:52')-f('2026-08-23T07:49:54')).total_seconds(), (f('2026-08-23T07:49:54')-f('2026-08-23T07:45:55')).total_seconds())\"",
+   "pr35_merge_to_obs1": "87.0 s",
+   "obs1_to_obs2": "152.0 s",
+   "obs2_to_obs3": "118.0 s",
+   "pr35_merge_to_obs2": "239.0 s",
+   "note": "PR #36 R1: an earlier version of this record (commit 5a6d718) gave this interval as 92, not 87; corrected 2026-08-23 in round 1."
+  }
+ },
+ "verdict": "RAN — SATISFIED: two distinct real shas observed, one move seen end-to-end — (e6810a4, 6c71ca6: deployed sha not observed) -> 1efc457e598d observed 07:47:22Z -> 1ed784ccf68e observed 07:49:54Z and 07:51:52Z; matches origin/main at observation. The gate's wording (a curl after the merge and again after a second redeploy, the sha must move) is met by the 1efc457 -> 1ed784c move.",
+ "not_claimed": [
+  "No /api/meta response ever showed e6810a4 (the S2 merge itself) or 6c71ca6 (PR #33) as the deployed sha; the only pre-S2 deployed observation on record is git_sha 'unknown' (2026-08-22). Their place in the chain is inferred from git and Zeabur's push-to-main trigger, not observed, so 'e6810a4 -> 1efc457' is not a seen move.",
+  "Only ONE move was seen at both ends (1efc457 -> 1ed784c). Two distinct real shas were observed; a second end-to-end move was not.",
+  "No observation of a build that FAILED to move: the cached-layer failure mode ADR-028 §g names (a real-but-stale sha frozen by a cached build layer) is excluded only by the one move actually seen, not by any test that would force it to occur.",
+  "The implementer did not reproduce the 1efc457 observation — that build was gone by 07:51; the implementer's observation confirms the current sha and the git facts only. The two orchestrator observations are relayed with their timestamps, not re-observed.",
+  "No claim about WHEN within the 87-239 s window after the PR #35 merge the new image came up; only that it had not at 07:47:22Z and had by 07:49:54Z.",
+  "The first version of this record (commit 5a6d718) gave the PR #35-merge-to-first-observation interval as 92 (it is 87) and presented e6810a4 as an observed chain start; both corrected in PR #36 round 1 (R1, R3)."
+ ],
+ "debt_found_in_passing": {
+  "what": "the deployed /api/meta `fixtures` list (above) carries `repo_hygiene`; `evals/fixtures/repo_hygiene/` holds 14 UI/ledger regression fixtures (S3/S4/S5/L1), not a filing, and the inspector's dropdown (`src/sec10k/web/static/index.html:327`) renders every name in that list as a choosable filing",
+  "probe": {
+   "when": "2026-08-23T07:51:59Z",
+   "command": "curl -s -X POST -H 'Content-Type: application/json' -d '{\"fixture\":\"repo_hygiene\"}' https://whaleforce-sec10k.zeabur.app/api/extract/fixture",
+   "http_status": 404,
+   "body_head": "{\"doc_status\":\"failed\",\"items\":[],\"counts\":{},\"trace\":[],\"meta\":{},\"warnings\":[{\"code\":\"bad_input\",\"item\":null,\"message\":\"expected exactly one filing file in /app/evals/fixtures/repo_hygiene, found 14\"}]}"
+  },
+  "bench_discovery": "`evals/oracle.iter_fixtures()` (yields the largest non-.md file per `evals/fixtures/*` dir) DOES yield `repo_hygiene` -> `boilerplate-wire-values.html` (42 names, checked locally 2026-08-23); `evals/bench.py:246` and `evals/oracle.py:310` consume it unfiltered, so a fresh bench/oracle run would time a 2.6 KB HTML test stub as a dev fixture. The bench artifacts of record (`evals/report/20260820-*-bench.json`, n_fixtures 37) predate the directory (first added 421fe2b, 2026-08-21) and are unaffected; `SYNTHETIC`/`DOC_FILES` in bench.py do not name it.",
+  "disposition": "debt row in tasks/TODO.md (Origin: S2 post-merge gate), not fixed here — inspector listing and fixture discovery are outside S2's spec and hard rule 2 wants a red case first"
+ }
+}
