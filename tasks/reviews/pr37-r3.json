@@ -1,0 +1,61 @@
+{
+ "pr": 37,
+ "round": 3,
+ "task": "S2-close",
+ "branch": "task/S2-close",
+ "head": "636e1a0",
+ "reviewer": "groundwork:pr-reviewer, fresh context, scoped to repair diff 59f4d8f..636e1a0 plus standing R9-R12, plus a spot-check that R1-R8 stayed closed",
+ "gate_at_review": {
+  "invariant": "48/48 = 1.000",
+  "fast": "96/96 = 1.000",
+  "table_fidelity": "cells 1.0000 (400/400), rows 1.0000 (31/31)",
+  "baseline": "byte-identical to origin/main"
+ },
+ "result": "APPROVED",
+ "standing_closed": [
+  "R9",
+  "R10",
+  "R11",
+  "R12"
+ ],
+ "regression_spotcheck": "R1-R8 all held",
+ "counts": {
+  "HIGH": 0,
+  "MEDIUM": 0,
+  "LOW": 3
+ },
+ "routing_note": "R13, R14 and R15 are LOW prose-accuracy notes. None touches a published figure or a ruling, and none sits inside a section this round reopens -- unlike the LOWs bundled in rounds 1 and 2. They route to debt, which is what the reviewer itself recommended alongside 'Merge.'",
+ "decisive_test": "R10 was settled by EXECUTION, not by reading. The reviewer implemented the rewritten bullets literally from their own wording, with no knowledge of the targets, over a 3,902 population built from shipped code with only src/sec10k/normalize.py:271 skipped, and got 3,733 constant / 169 ragged, width<=1 693, single-row 1,018, modal (2, 1,595) -- all four matching. The round-2 counter-figures 3,902 and 2,011 are not reachable from the new text. The four published figures are byte-identical to 59f4d8f, confirming the numbers did not move to fit the wording.",
+ "findings": [
+  {
+   "id": "R13",
+   "severity": "LOW",
+   "route": "debt",
+   "status": "new",
+   "claim": "Both the new preamble and the new debt row say the four 'of 3,902' rows are the only figures the shipped API cannot return, but the max-nesting-depth row is denominated over the same 3,902 population and is equally unobtainable from extract_items().",
+   "evidence": "ADR-029:337-338 'The four rows denominated \"of 3,902\" cannot: normalize.py:271 drops the 50 all-empty tables', and tasks/TODO.md's new Origin: PR #37 R10 row states 'They are also the only figures in the ADR that the shipped API cannot return'. ADR-029:375 is a fifth row over that population — 'Maximum <table> nesting depth | 1, on all 3,902 tables of the 34 HTML/iXBRL fixtures' — with no provenance prose attaching it to either named route. The raw-attribute counts at :373-377 are likewise not from the API, though :379-383 does say they are read off the selected document.",
+   "repro": "sed -n '336,339p;375p' specs/decisions/ADR-029-structured-tables-annotation.md; grep -n 'Origin: PR #37 R10' tasks/TODO.md",
+   "acceptance": "Either the preamble's carve-out says 'the rows measured over the 3,902' rather than 'the four rows', or the nesting-depth row is named with the four; and the debt row drops or widens 'the only figures'. No published number changes."
+  },
+  {
+   "id": "R14",
+   "severity": "LOW",
+   "route": "debt",
+   "status": "new",
+   "claim": "The repaired §g1 exclusion paragraph says 'nothing here dates it' and then asserts an ordering that partially dates it — that 5ad1a0f was written before the sighting.",
+   "evidence": "ADR-028:198-205: 'no committed artifact records the sighting, and none records when it happened. That is the whole reason; ... nothing here dates it.' Two sentences later: 'and 5ad1a0f was written before the sighting, so it could not contradict it either way.' The second clause places the sighting after 2026-08-22T18:38:20Z, a lower bound on its time. It is an inference, not an invention — 5ad1a0f says reading 3 had not run at that commit, and the sighting is reading 3 — and it is the same ordering the round-2 acceptance itself endorsed ('an observation it predates'), which is why this is LOW and not a reopening of R9. But it is the one sentence a reader can hold against 'nothing here dates it'.",
+   "repro": "sed -n '193,207p' specs/decisions/ADR-028-build-identity.md",
+   "acceptance": "The clause is phrased as the earlier draft's defect rather than as a fact about the sighting, or 'nothing here dates it' is softened to 'nothing here assigns it a time'. Nothing below §g1 rests on either form (ADR-028:216-217 already says so)."
+  },
+  {
+   "id": "R15",
+   "severity": "LOW",
+   "route": "debt",
+   "status": "new",
+   "claim": "§g1's row 2 carries a timestamp and a polling method that no committed artifact records — the same class of detail R9 removed from the paragraph directly below it.",
+   "evidence": "ADR-028:189 'when' = '2026-08-22 ~09:47Z, ~300 s after PR #31 merged at 09:42:29Z', 'observed by' = 'from a bounded poll that curled every 20 s until the value stopped being unknown'. grep across md/json/py returns exactly one hit: that line. git log -1 --format=%B 5ad1a0f records the reading but gives no time and no method. The row still satisfies §g1's stated admission rule (the reading itself has a contemporaneous record) and nothing downstream uses ~09:47Z or ~300 s, which is why this is LOW rather than a repeat of R9. But §g1's own rule two paragraphs later is that an unrecorded reading 'is not evidence merely because the session that made it says so', and these two details are exactly that, inside a listed row.",
+   "repro": "grep -rn '09:47|bounded poll|every 20 s' --include='*.md' --include='*.json' --include='*.py' --exclude-dir=.git .",
+   "acceptance": "Row 2's 'when' cell gives what the record gives ('2026-08-22, after PR #31 merged at 09:42:29Z') with the ~09:47Z / ~300 s / 20 s-poll detail either dropped or marked as the session's unrecorded account, matching how the paragraph below treats unrecorded detail."
+  }
+ ]
+}

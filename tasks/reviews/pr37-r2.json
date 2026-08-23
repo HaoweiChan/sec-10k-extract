@@ -1,0 +1,75 @@
+{
+ "pr": 37,
+ "round": 2,
+ "task": "S2-close",
+ "branch": "task/S2-close",
+ "head": "fab439f",
+ "reviewer": "groundwork:pr-reviewer, fresh context, scoped to repair diff f39c93c..fab439f plus the eight standing findings",
+ "gate_at_review": {
+  "invariant": "48/48 = 1.000",
+  "fast": "96/96 = 1.000",
+  "table_fidelity": "cells 1.0000 (400/400), rows 1.0000 (31/31)",
+  "baseline": "unmoved"
+ },
+ "result": "REQUEST_CHANGES",
+ "standing_closed": [
+  "R1",
+  "R2",
+  "R3",
+  "R4",
+  "R5",
+  "R6",
+  "R7",
+  "R8"
+ ],
+ "counts": {
+  "HIGH": 0,
+  "MEDIUM": 2,
+  "LOW": 2
+ },
+ "adjudication_R1": "Round 1's R1 acceptance was WRONG and the implementer was right. Re-derived independently through the shipped recorder with the visible-text filter lifted: constant colspan-expanded row width = 3,733 (3,684 of the 3,852 records + 49 of the 50 empties), 169 ragged. The single ragged all-empty table is cat-2023, row widths [27,15,27,27,27,27,27,27], reproduced character for character. tasks/reviews/pr37-r1.json:R1's 'published 3,733, off by one' is an error in the round-1 artifact; it is superseded in place by pr37-r1-resolution.json and by ADR-029:381-387, and left standing per this repo's supersede-don't-retro-edit convention.",
+ "routing_note": "R9 and R10 are MEDIUM and both make a published claim dishonest — R9 invents a timestamp to derive a contradiction, R10 publishes a method that does not reproduce half the figures it governs, inside a section whose stated standard is that unreproducible figures are not published. R11 and R12 are LOW and would route to debt, but each sits inside the very section its MEDIUM sibling reopens (R11 with R10 in ADR-029 §i, R12 with R9 in ADR-028 §g1) and each is a false or incomplete statement in text being rewritten anyway. Bundling decision, not a severity one.",
+ "breaker_state": "Round 2 of 3. A round-3 review that does not approve trips the circuit breaker and escalates to the human.",
+ "findings": [
+  {
+   "id": "R9",
+   "severity": "MEDIUM",
+   "route": "repair",
+   "status": "new",
+   "claim": "§g1 excludes the earlier `1efc457e598d` sighting for the right reason and then adds a wrong one: it invents a timestamp for an admittedly unrecorded reading and uses it to assert a contradiction with `5ad1a0f` that the evidence does not support.",
+   "evidence": "ADR-028:193-200: 'the S2 orchestrating session also reports seeing 1efc457e598d on 2026-08-22, shortly after PR #34 merged at 18:23:02Z ... 5ad1a0f's message, committed 18:38:20Z that same evening, says reading 3 had not run as of fifteen minutes after that merge. Listing it would put the table at odds with the one contemporaneous record covering that window.' Three problems: (1) Nothing on record places the sighting inside 18:23:02Z-18:38:20Z — the pre-repair text (f39c93c, row 3) said only '2026-08-22, after PR #34 merged', and `grep -rn '1efc457'` finds no artifact recording when it happened; 'shortly after ... at 18:23:02Z' is new in this diff and sourced from nothing. (2) The observation was made by the orchestrating session AFTER 5ad1a0f was written, so 5ad1a0f predates it and cannot contradict it. (3) Self-undermining: :208-215 rules that an unrecorded reading 'is not evidence merely because the session that made it says so', yet :194 credits that same session's account precisely far enough to place the sighting before 18:38:20Z so a contradiction can be derived. An unrecorded reading has no recorded time; no contradiction is derivable. The exclusion is correct under §g1's own rule — the fault is the published reason, in a document whose whole subject is not overstating evidence.",
+   "repro": "git show f39c93c:specs/decisions/ADR-028-build-identity.md | sed -n '188p'; grep -rn '1efc457' --exclude-dir=.git . | grep -v ADR-028; sed -n '193,200p' specs/decisions/ADR-028-build-identity.md",
+   "acceptance": "§g1 excludes the sighting on the unrecorded-reading rule alone: drop the invented '18:23:02Z / fifteen minutes' timing and the 'would put the table at odds with the one contemporaneous record' claim, or replace with what is true — no committed artifact records the sighting or its time, so it is not listed. 5ad1a0f may still be cited for what it does say (that as of 18:38:20Z the second-redeploy reading had not run) without being presented as contradicting an observation it predates."
+  },
+  {
+   "id": "R10",
+   "severity": "MEDIUM",
+   "route": "repair",
+   "status": "new",
+   "claim": "The repair publishes a derivation method for its four new figures that does not reproduce two of them — following the stated procedure literally gives 3,902 (100%) instead of 3,733 (95.7%), and 2,011 (51.5%) instead of 1,018 (26.1%).",
+   "evidence": "ADR-029:389-392: 'The last four rows use the source branch's canonicalization (its §d1): colspan expanded, rowspan not, rows padded, then all-empty columns and rows dropped. Steps 1-3 are exactly tables.grid()'. tables.grid() (src/sec10k/tables.py:29-40) pads every row to the table's width, so after step 3 every table is constant-width by construction. Measured over all 3,902: constant width AFTER padding = 3902/3902, versus the published 3,733 at :369, reachable only from PRE-padding colspan-expanded row widths. Likewise :371 'Single-row tables (one <tr>)' = 1,018 counts _Plain rows before canonicalization; counting canonical rows as the paragraph prescribes gives 2,011. Only :370 (693) and :372 (modal 2 on 1,595) use the full canonicalization; both reproduce exactly. This sits in a section whose stated standard (:331-334) is 'a figure that cannot be re-derived is not published', and a reader applying the published method gets different numbers for half the new rows.",
+   "repro": "python3 over evals/fixtures: g=[r for r in grid(text,t) if any(r)]; constant-after-padding -> 3902 (published 3733); len(g)==1 -> 2011 (published 1018); len(t['rows'])==1 -> 1018; canonical width<=1 -> 693; modal -> (2,1595)",
+   "acceptance": "The method sentence is split so each of the four rows names the procedure that actually produces it: constant colspan-weighted row width measured on colspan-expanded widths BEFORE padding; single-row counts <tr> records before canonicalization; only width<=1 and modal width use grid()+empty-row/column dropping. Re-deriving each of the four from the ADR's own words must return 3,733 / 693 / 1,018 / 1,595."
+  },
+  {
+   "id": "R11",
+   "severity": "LOW",
+   "route": "repair",
+   "status": "new",
+   "claim": "§i's provenance sentence — every figure derived 'through the shipped extract_items(path, tables=True)' — became false when the repair added four rows over 3,902 tables, 50 of which the shipped API cannot return.",
+   "evidence": "ADR-029:331-333 claims every figure was re-derived 'through the shipped extract_items(path, tables=True) and the shipped selection'. But src/sec10k/normalize.py:271 drops the 50 all-empty tables before they reach the envelope, so none of the four new rows at :369-372 — all denominated 'of 3,902' — is obtainable from the shipped API. The repair concedes this at :385 ('The html.parser walk this was measured with'), leaving preamble and body in direct conflict about how the section's numbers were produced. The figures are correct either way (all four reproduced).",
+   "repro": "sed -n '331,334p;369,372p;383,387p' specs/decisions/ADR-029-structured-tables-annotation.md; sed -n '268,272p' src/sec10k/normalize.py",
+   "acceptance": "The preamble says the four all-3,902 rows are measured with the shipped recorder minus the visible-text filter at normalize.py:271 (or names the walk), so the section does not claim a provenance one of its own paragraphs contradicts."
+  },
+  {
+   "id": "R12",
+   "severity": "LOW",
+   "route": "repair",
+   "status": "new",
+   "claim": "§g1's new admission rule is not applied uniformly across the table it governs: row 1 is listed with no record cited while rows 2-4 each name theirs.",
+   "evidence": "ADR-028:184 states 'Only readings with a contemporaneous written record are listed', and rows 2-4 (:190-192) each cite one. Row 1 (:189) cites nothing beyond an attribution ('the S2 implementation session') — exactly the shape the section now rules out. A record does exist and is easy to point at: s2-postmerge-gate.json not_claimed[0] ('the only pre-S2 deployed observation on record is git_sha unknown (2026-08-22)'), tasks/TODO.md:108, and ADR-028 §a itself. So this is an uncited row rather than a credited-but-unrecorded one. It is the one row a reader testing the rule will test first.",
+   "repro": "sed -n '184p;186,192p' specs/decisions/ADR-028-build-identity.md; grep -n 'only pre-S2 deployed observation' tasks/reviews/s2-postmerge-gate.json",
+   "acceptance": "Row 1's 'observed by' cell names its contemporaneous record (§a of this ADR, and/or s2-postmerge-gate.json not_claimed[0]), so every row satisfies the rule stated two lines above it."
+  }
+ ]
+}
