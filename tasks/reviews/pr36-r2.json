@@ -1,0 +1,33 @@
+{
+ "pr": 36,
+ "round": 2,
+ "date": "2026-08-23",
+ "result": "APPROVED",
+ "scope": "repair diff 239cc3d..f27895f + standing R1-R3",
+ "gate": "invariant 48/48; fast 96/96; table fidelity 400/400 · 31/31; no code/baseline change; ledger_table_shape [] on final and on 7d3df10; reviewer's own GET /api/meta 2026-08-23T08:16:27Z -> 1ed784ccf68e",
+ "standing": {
+  "R1": "resolved — intervals 87/152/118/239 s recomputed, every commit timestamp matches git",
+  "R2": "resolved — 7d3df10 carries the RAN row in TODO.md, f27895f moves it; 5a6d718's earlier deletion stays in history and is stated",
+  "R3": "debt row present + in-place verified (record, row cell, DONE line agree)"
+ },
+ "findings": [
+  {
+   "id": "R4",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "The resolution artifact's R2 'Proof' says `git log -p -S'UNRUN' -- tasks/TODO.md` lists 7d3df10; it does not — 7d3df10 does not change the UNRUN occurrence count, so the pickaxe's top hit is still 5a6d718 (the unrepaired deletion of the UNRUN row), and the r1 acceptance's secondary clause is not met as literally written.",
+   "evidence": "tasks/reviews/pr36-r1-resolution.json findings[1].fix: 'Proof: `git log -p -S'UNRUN' -- tasks/TODO.md` lists 7d3df10 …'. UNRUN count in tasks/TODO.md at 239cc3d / 7d3df10 / f27895f = 5 / 5 / 5, so pickaxe skips both repair commits.",
+   "repro": "git log --oneline -S'UNRUN' -- tasks/TODO.md | head -3  -> 5a6d718, 9a50dae, bb95e4e (no 7d3df10); for c in 239cc3d 7d3df10 f27895f; do git show ${c}:tasks/TODO.md | grep -o UNRUN | wc -l; done -> 5 5 5",
+   "acceptance": "Resolution R2.fix names a command that actually demonstrates the ordering (e.g. `git log --oneline -S'RAN 2026-08-23 — SATISFIED' -- tasks/TODO.md` -> f27895f, 7d3df10) and states plainly that 5a6d718's UNRUN-form deletion stays in history unrepaired; same class as PR #35 R9 (claim wider than its command)."
+  },
+  {
+   "id": "R5",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "The repointed 'Nothing in the eval set or CI ever observes the DEPLOYED instance' debt row says the gate was cleared 'by a human … by hand on 2026-08-23', but the record attributes all three observations to 'orchestrator' and 'implementer' (agents), so the row and the record disagree on who observed.",
+   "evidence": "tasks/TODO.md:108 '… a named UNRUN gate a human cleared by hand on 2026-08-23 (sha observed moving 1efc457 -> 1ed784c across redeploys)'; tasks/reviews/s2-postmerge-gate.json observations[*].who = orchestrator / orchestrator / implementer. Introduced in 5a6d718 but within this round's scope.",
+   "repro": "grep -o 'a human cleared by hand[^)]*)' tasks/TODO.md; python3 -c \"import json;print([o['who'] for o in json.load(open('tasks/reviews/s2-postmerge-gate.json'))['observations']])\"",
+   "acceptance": "The debt row's attribution matches the record (e.g. 'cleared by real curls on 2026-08-23, orchestrator + implementer, recorded in …'), or the record's who fields name the human if one made the curls."
+  }
+ ]
+}
