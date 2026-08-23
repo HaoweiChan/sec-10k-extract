@@ -1,0 +1,45 @@
+{
+  "pr": 36,
+  "round": 1,
+  "task": "S2 (post-merge gate close-out)",
+  "review": "tasks/reviews/pr36-r1.json",
+  "resolved_by": "implementer",
+  "date": "2026-08-23",
+  "protocol": "Every finding's repro was re-run before anything was edited; all three reproduced. R1 and R2 repaired, R3 routed to debt per the round's routing and corrected in place because the record was being rewritten for R1 anyway. R2 required the move to be split into two commits so history shows the UNRUN cell replaced before the row leaves TODO.md: commit A (7d3df10) restores the row from origin/main with its cells rewritten and takes the DONE.md line back out; commit B (the commit that adds this file) moves the row to DONE.md. ledger_table_shape re-run on the final tasks/TODO.md before each commit: green.",
+  "gate_at_resolution": {
+    "invariant": "48/48 = 1.000 (+4 enumerated debt, unscored)",
+    "fast": "96/96 = 1.000 (+4 enumerated debt, unscored); table fidelity cells 1.0000 (400/400), rows 1.0000 (31/31)",
+    "baseline": "1.000, not moved; .eval-baseline.json untouched",
+    "self_checks": "ledger_table_shape on tasks/TODO.md -> passed, [] (before commit A and before commit B); json.load on s2-postmerge-gate.json ok"
+  },
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "reproduced": true,
+      "repro_observed": "python3 -c \"from datetime import datetime as d;print((d.fromisoformat('2026-08-23T07:47:22')-d.fromisoformat('2026-08-23T07:45:55')).total_seconds())\" -> 87.0; grep -c '92 s' tasks/reviews/s2-postmerge-gate.json at 239cc3d -> 2 (observations[0].what_commit, commit_chain_since_pr31_merge.reading).",
+      "fix": "Both occurrences now read 87 s (observations[0].what_commit carries the subtraction inline: '07:47:22Z - 07:45:55Z = 87 s'). Every interval in the record recomputed with one command, pasted under commit_chain_since_pr31_merge.intervals_recomputed: PR #35 merge 07:45:55Z -> obs1 07:47:22Z = 87.0 s; obs1 -> obs2 07:49:54Z = 152.0 s; obs2 -> obs3 07:51:52Z = 118.0 s; PR #35 merge -> obs2 = 239.0 s; obs3 -> repo_hygiene probe 07:51:59Z = 7.0 s (not stated as an interval in the record). The reading now uses 87 s and 239 s only. grep -c '92 s' after -> 0; the two places that mention the old figure historically say '92, not 87' without a unit so no arithmetic claim remains that disagrees with the listed timestamps.",
+      "covered_by": "tasks/reviews/s2-postmerge-gate.json intervals_recomputed (command + four values); commit 7d3df10"
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "reproduced": true,
+      "repro_observed": "git show 5a6d718^:tasks/TODO.md | grep '^| S2 ' | grep -o 'UNRUN\\|awaiting human merge' -> UNRUN, awaiting human merge, UNRUN; git diff origin/main...239cc3d -- tasks/TODO.md showed only the '-| S2 …' deletion.",
+      "fix": "Split into two commits. Commit A = 7d3df10 'S2: post-merge gate RAN — row cells updated in place (R1/R2/R3 of PR #36 round 1)': the S2 row restored into tasks/TODO.md from origin/main under the pre-submission table, Validation '**UNRUN**, and unrunnable from here' -> '**RAN 2026-08-23 — SATISFIED** (`tasks/reviews/s2-postmerge-gate.json`); it was unrunnable from inside a session' (rest of the cell kept), Status '**pr — PR #31 APPROVED at round 3, awaiting human merge**' -> '**done** — PR #31 merged e6810a4 (2026-08-22); gate ran 2026-08-23' and the trailing '**Post-merge gate above is UNRUN**' -> the verdict line; the DONE.md line from 5a6d718 removed in the same commit so the row exists in exactly one place. Commit B = the commit that adds this file, 'tasks: S2 row -> DONE.md (no UNRUN gate remains)': the rewritten row deleted from TODO.md and the one-liner appended to DONE.md. Proof: `git log -p -S'UNRUN' -- tasks/TODO.md` lists 7d3df10 (the row added with RAN — SATISFIED, i.e. the UNRUN-bearing form never reappears) before commit B's deletion of the RAN row; `git show 7d3df10:tasks/TODO.md | grep '^| S2 ' | grep -c 'UNRUN\\|awaiting human merge'` -> 0.",
+      "covered_by": "commits 7d3df10 and the commit carrying this file; `git show 7d3df10:tasks/TODO.md | grep '^| S2 '`"
+    },
+    {
+      "id": "R3",
+      "severity": "LOW",
+      "status": "debt",
+      "reproduced": true,
+      "repro_observed": "grep -rn 'e6810a4' tasks specs | grep -i 'curl\\|meta\\|observ' at 239cc3d -> only the new record and the DONE line; no /api/meta observation of e6810a4 or 6c71ca6 deployed exists anywhere on record (the pre-S2 observation is git_sha 'unknown').",
+      "debt_row": "PR #36 R3: the S2 gate record presented e6810a4 as the observed start of the sha chain (Origin: PR #36 R3; corrected in place in round 1) — tasks/TODO.md Debt table, 3 cells, evidence verbatim.",
+      "in_place": "Record verdict now reads 'two distinct real shas observed, one move seen end-to-end — (e6810a4, 6c71ca6: deployed sha not observed) -> 1efc457e598d observed 07:47:22Z -> 1ed784ccf68e observed 07:49:54Z and 07:51:52Z'; not_claimed is the full set (e6810a4/6c71ca6 never observed, only one end-to-end move, no failed-to-move build, 1efc457 not reproduced by the implementer, no claim about when inside the 87–239 s window the image came up, the first version's own 92-s and chain-start errors); the S2 row's Status verdict line (commit 7d3df10) and the DONE.md one-liner (commit B) carry the same chain wording. What stays open is the thing no edit supplies — a second end-to-end observed move — named in the debt row.",
+      "covered_by": "tasks/reviews/s2-postmerge-gate.json verdict + not_claimed; tasks/TODO.md debt row (Origin: PR #36 R3); tasks/DONE.md S2 line"
+    }
+  ]
+}
