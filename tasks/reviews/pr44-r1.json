@@ -1,0 +1,91 @@
+{
+  "pr": 44,
+  "task": "S10",
+  "round": 1,
+  "date": "2026-08-24",
+  "branch": "task/S10",
+  "head": "a0675ad",
+  "base": "c13aa5c",
+  "result": "REQUEST_CHANGES",
+  "gate": {
+    "invariant": "52/52 = 1.000",
+    "fast": "104/104 = 1.000",
+    "table_fidelity": "cells 400/400, rows 31/31",
+    "baseline": "unmoved, byte-identical to origin/main",
+    "run_by": "orchestrator, on a0675ad"
+  },
+  "counts": {
+    "HIGH": 0,
+    "MEDIUM": 3,
+    "LOW": 3
+  },
+  "routing": {
+    "repair": [
+      "R1",
+      "R2",
+      "R3"
+    ],
+    "debt": [
+      "R4",
+      "R5",
+      "R6"
+    ]
+  },
+  "routing_rationale": "R1/R2/R3 are MEDIUM and each corrupts a committed document of record a reader would take as verified-correct (ADR-032 sec b1's in-cell claim; specs/001's positive-int promise contradicted by shippable code; a wrong raw byte offset in a case provenance whose stated purpose is hand re-derivation) — the third clause of the pr-loop scope boundary. R4/R5/R6 are LOW and block nothing regardless of merit.",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-032 §b1 states unconditionally that an <img> inside a table cell gets an offset that \"lands inside that cell's span\", but this is false for every real in-cell image in the committed corpus — all 10 of them land outside every recorded table span, and the only assertion backing the claim is a synthetic case built so it cannot expose that.",
+      "evidence": "specs/decisions/ADR-032-image-reference-annotation.md:52-53 (\"One record per `<img>`, wherever it sits — including inside a table cell, where the offset lands inside that cell's span\") and §g at :293 (\"an `<img>` inside a table cell landing inside that cell's span\"), asserted only by src/sec10k/normalize.py:505 `assert cell[0] <= imgs[3][\"offset\"] <= cell[1]`, whose cell contains literal text \"cell\". Concrete input: evals/fixtures/xom-2021/filing.htm raw bytes 2001029/2001245/2001461 — g7/g8/g9 each sit inside their own `<td colspan=\"3\">` of one `<tr>` — yet extract_items(..., tables=True, images=True) reports all three at offset 232186 while the containing table is reported at (232188, 232373) and none of its cells covers 232186. Because those cells hold no text, _place_tables' `tight()` (src/sec10k/normalize.py:221-240) pulls table.start past the images. Same on evals/fixtures/bac-2006/filing.htm: images at 391006 vs the table at (391008, 391112). Corpus-wide: 10 of 53 <img> are inside `<table>` markup, 0 of 53 image offsets fall inside any reported table or cell span.",
+      "repro": "cd <worktree> && python3 -c \"import sys;sys.path.insert(0,'.');from src.sec10k.extract import extract_items;r=extract_items('evals/fixtures/xom-2021/filing.htm',tables=True,images=True);print([i['offset'] for i in r['images']][-3:]);print([(t['start'],t['end']) for t in r['tables'] if 232000<t['start']<232500])\" -> images at 232186, table at (232188, 232373); and the tag-depth scan showing 10 of 53 <img> inside <table> markup (ba-2003 1, bac-2006 2, cvx-2015 4, xom-2021 3) against 0 offsets inside any reported table span.",
+      "acceptance": "Either the ADR/`_demo` claim is narrowed to what is true (an image offset is a reading-order point that may fall outside the tightened span of the table that contains it, with the xom-2021 signature block named as the corpus instance), or the recorder/placement is changed so an in-cell image lands inside its cell — and in either case an adversarial case built on the real xom-2021 or bac-2006 in-cell images pins the chosen answer, not a synthetic cell that happens to contain text."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "`_dim` can return 0, which `_images_shape` — the enforcement of the contract this PR adds — rejects as out of shape, so a filing with a `width=\"0\"` spacer image or a sub-pixel `width:0.75px` style makes the extractor emit an envelope its own contract refuses, and no case pins the boundary.",
+      "evidence": "src/sec10k/normalize.py:58-71 `_dim` returns `int(v)` for any all-digit value and `int(m.group(1))` for the style regex `(\\d+)(?:\\.\\d+)?\\s*px`, so `width=\"0\"` -> 0 and `width:0.75px` -> 0; src/sec10k/eval_adapter.py:559 rejects it (`record 0 width 0 is not a positive int or null`), and specs/001-sec10k-contract.md:131 promises \"the declared pixel size as a positive int\". src/sec10k/test_eval_adapter.py:641 deliberately asserts that a record with width 0 is refused, so the two halves of ADR-032 disagree with each other. No corpus fixture triggers it (0 fractional-px and 0 zero-px in the 53 committed <img>), so the gate is green by luck of corpus, not by construction.",
+      "repro": "cd <worktree> && python3 -c \"import sys;sys.path.insert(0,'.');from src.sec10k.normalize import normalize;from src.sec10k.eval_adapter import _images_shape;t,_,i=normalize('<html><body><p>x</p><img src=s.gif width=0 height=0><p>FORM 10-K</p></body></html>','html',images=True);print(i);print(_images_shape({'normalized_text':t,'images':i}))\" -> [{'offset': 2, ..., 'width': 0, 'height': 0}] / \"record 0 width 0 is not a positive int or null\". Same with style='width:0.75px'.",
+      "acceptance": "`_dim` answers null for a non-positive or sub-pixel declared size (or the contract and `_images_shape` are widened to allow 0), with an adversarial case — or a `normalize.py::_demo` assertion beside the existing `50%` one — that goes red under the current code and green after."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The committed provenance of `images-refusal-path` states a raw byte offset for the aapl-2026-10q `<img>` that is off by ~78,000 bytes, in the very sentence whose purpose is to let a reader re-derive the label by hand.",
+      "evidence": "evals/adversarial/images-refusal-path.json:20 — \"exactly one <img>, the Apple logo on the cover at raw offset 3117\". The file's single `<img` occurs at byte 81150 of evals/fixtures/aapl-2026-10q/filing.htm (1,018,210 bytes); byte 3117 is inside an `<xbrli:unit>` element. It is not a body-relative offset either: split_documents() finds no <DOCUMENT> block in this fixture, `<html` is at 244 and `</ix:header>` at 75515. The equivalent raw offsets in the other three goldens (xom 1704772…, bac 1595161…, jpm 2056988…) all reproduce exactly, so this is an isolated wrong number, not a different convention.",
+      "repro": "cd <worktree> && python3 -c \"raw=open('evals/fixtures/aapl-2026-10q/filing.htm','rb').read();print(raw.lower().find(b'<img'), raw.lower().count(b'<img'))\" -> 81150 1",
+      "acceptance": "The provenance carries the offset a reader can verify (81150), or drops the raw offset; a spot-check confirms the other raw-offset lists in the three golden provenances still reproduce."
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "No history.jsonl line records the five new cases red, so the repo's own red-first instrument carries no trace of hard rule 2 for S10 — the claim rests entirely on ADR prose.",
+      "evidence": "evals/report/history.jsonl gains 14 lines in this diff and every one is score 1.0; the first branch line is `20260823-231252 invariant 3e16f70 dirty=True 51/51 1.0`, i.e. already green with the five cases present. evals/run.py:212-226 appends a line on every run including red ones (the file holds 38 non-1.0 lines historically), so a `--suite fast` run at 3e16f70 with the cases added would have left a 98/103 line and a 50/51 invariant line — the two numbers ADR-032 §g reports. Neither exists. The reviewer reproduced 50/51 itself and reproduced M1/M2/M3/M5 of §g's mutation table check-for-check, so the substance of the claim holds; only the committed audit trail is missing.",
+      "repro": "cd <worktree> && python3 -c \"import json;print([ (l['ts'],l['suite'],l['passed'],l['total'],l['score']) for l in map(json.loads,open('evals/report/history.jsonl')) if l['ts']>'20260823-2312'])\" -> all score 1.0. Independent confirmation of the red state: git archive 3e16f70 into a scratch tree, copy in the five case files, `python3 -m evals.run --suite invariant` -> 50/51 = 0.980.",
+      "acceptance": "The red-first run is either committed as a history.jsonl line (or a `evals/report/` red report) or the ADR §g wording says explicitly that the red runs were made in a throwaway tree and are not in the time series."
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "`evals/snapshot.py --self-check` — the only thing CI runs from the new instrument — asserts against a re-implementation of the digest, not against `corpus()`, so it cannot fail if `corpus()` itself regresses.",
+      "evidence": "evals/snapshot.py:73-87: `_demo` builds its own `dig` lambda duplicating the dict literal at :51-58 instead of calling `corpus`. Drop `\"keys\": sorted(r)` from `corpus`'s dict and `--self-check` still prints ok, while the \"an added envelope key is a difference\" property the docstring sells is gone. .github/workflows/ci.yml adds only `python3 evals/snapshot.py --self-check`; nothing in any suite runs `corpus`. (The reviewer did verify the instrument works today: mutating a scratch origin/main tree to emit \"[IMAGE]\" into the text makes the two snapshots differ, and the shipped digests reproduce — dev 19168a6e…30e9223a, heldout 51de5a11…04957f3f, `cmp` equal against origin/main.)",
+      "repro": "cd <worktree> && copy evals/snapshot.py to /tmp/sn.py with '\"keys\": sorted(r),' removed from corpus()'s dict, then `python3 /tmp/sn.py --self-check` -> still \"[snapshot self-check] ok\"",
+      "acceptance": "`_demo` drives `corpus()` (e.g. against a two-file temp tree, one of them producing an extra envelope key) so a regression inside the function CI runs is what turns the self-check red."
+    },
+    {
+      "id": "R6",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "ADR-032 §b4 and specs/001 promise the `images` key is carried on `failed` refusal envelopes as well as `unsupported`, but no fixture and no case reaches the `failed` branch with images.",
+      "evidence": "src/sec10k/extract.py:126-127 (normalization_collapse return) passes `images=imgs`, and specs/001-sec10k-contract.md:133 says \"Carried on refusal envelopes too when asked for\"; `images-refusal-path` exercises only `unsupported` (aapl-2026-10q). The only `failed` filing fixtures are truncated-download and the repo_hygiene files, all with 0 images, so the `failed` line is a code path no committed case can reach — the same untestable-path concern ADR-032 §b1 invokes against attribute-only sizing.",
+      "repro": "cd <worktree> && iterate every fixture through extract_items(..., images=True) and grep doc_status failed -> every failed row has 0 images",
+      "acceptance": "Either a case (synthetic collapse fixture or a `normalize`/`extract` self-check) asserts the `images` list survives the `failed` return, or the contract sentence names `unsupported` only and records `failed` as unexercised."
+    }
+  ]
+}
