@@ -1,6 +1,6 @@
 # ADR-031 — S9: the filing's block structure is reported as offset records into an unchanged `normalized_text`; the whole-document and per-item Markdown are derived views; structure fidelity is a gated per-run metric
 
-Date: 2026-08-23. Status: accepted. Implements S9. Sanctioned exception to
+Date: 2026-08-23. Status: accepted. Amended in place 2026-08-23 (§h addendum: the baseline move as made). Implements S9. Sanctioned exception to
 the T8 feature freeze (`tasks/TODO.md`, **Freeze guard**), on the pattern
 [ADR-020](ADR-020-fallback-not-justified.md) established for T12 and
 [ADR-026](ADR-026-boilerplate-chrome-exclusion.md) /
@@ -462,6 +462,27 @@ two new keys appended — and writes its own full report (ADR-025). The
 addendum below records the move as made, on the committed code; PR #34 R1's
 lesson is applied this time: the `history.jsonl` lines of the recording runs
 are committed with the move.
+
+**Addendum — the move as made, on the committed code (4730052, clean tree).**
+`python3 -m evals.run --suite all` → `evals/report/20260823-234841-all.json`
+(`git_sha` 4730052…, score 109/109, `structure_blocks_fidelity` 1.0,
+`structure_bounds_fidelity` 1.0, table fidelity 1.0/1.0; per case:
+aapl-2025-blocks 10/10 blocks · 10/10 bounds, msft-2013-blocks 18/18 · 18/18,
+xom-2021-blocks 12/12 · 12/12, ge-1994-blocks 1/1 · 1/1, blocks-bullet-
+paragraphs 8/8, blocks-heading-index-table 5/5, blocks-heading-two-cell-table
+4/4, blocks-br-boundary 3/3). Then `python3 -m evals.run --suite fast
+--update-baseline` → `evals/report/20260823-234923-fast.json` and the
+runner's own line `baseline['fast'] = 1.000 (recorded); baseline
+['table_cells_fidelity'] = 1.0; baseline['table_rows_fidelity'] = 1.0;
+baseline['structure_blocks_fidelity'] = 1.0; baseline
+['structure_bounds_fidelity'] = 1.0`. The committed `.eval-baseline.json`
+diff is exactly the runner's write: three keys unchanged, two appended. The
+`history.jsonl` lines of both recording runs (sha `4730052`, `dirty: false`)
+**are committed** with this move, together with the line the pre-commit
+hook appended while making 4730052 itself (sha `145fe4a`, `dirty: true` —
+the hook runs before the commit object exists) — PR #34 R1's gap, closed the
+way it asked; the time series for the two keys therefore starts with the
+recording runs.
 
 That the gate is real and not a printed number: with a baseline holding
 **only** the two structure keys (no `fast` key, so the score gate cannot be
