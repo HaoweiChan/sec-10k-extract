@@ -85,20 +85,34 @@ offsets apart. Nudging would be a text edit by another name.
 
 ### b2a. An in-cell image is usually OUTSIDE its table's recorded span
 
-Corrected 2026-08-24 after PR #44 R1, which falsified the unconditional claim
-§b1 first made. An image offset is a **reading-order point**. A table's
-`start`/`end` and every cell's span are tightened to the table's **visible
-text** (ADR-029 §b1) and an image contributes none, and an empty cell is
-additionally clamped into its table's tightened span. The two therefore do not
-nest in general:
+Corrected 2026-08-24 after PR #44 R1, and **corrected again after R7/R8**,
+which falsified the replacement rule as well. Both wrong versions were written
+from one friendly synthetic example; what follows is derived from the
+mechanism and pinned on all five shapes at once
+(`src/sec10k/normalize.py::_demo`), so it can be checked rather than believed.
 
-- an image in a cell that **carries text** lands inside that cell's span;
-- an image in a **text-empty** cell does not sit at any text, and if it
-  precedes (or follows) all of the table's visible text the clamp puts every
-  empty cell at the tightened boundary while the image stays where it was —
-  outside the table span entirely.
+**The mechanism.** An `<img>` emits nothing, so its offset is simply the
+position the text run had reached when the tag was parsed. A table's
+`start`/`end` and every cell's span are then tightened to their first/last
+**visible character** (ADR-029 §b1), and an empty cell is clamped into its
+table's tightened span. Containment is **half-open** — `start <= offset <
+end`, the same convention as an item's span (PR #44 R7), so an offset equal to
+`end` is the first character *after* the span.
 
-**The corpus is entirely the second case.** 10 of the 53 `<img>` sit inside
+It follows that an image lands inside a span **only when that span's own
+visible text begins exactly at the mark and continues past it**. "The cell
+carries text" is *not* the condition — that was R8's falsification. All five
+shapes, each pinned by an assertion:
+
+| shape | result |
+|---|---|
+| `<td><img>text</td>` — image immediately followed by its cell's text | **inside** the cell (offset == cell start). The only shape that is |
+| `<td>text<img></td>` — image trails its cell's text | **outside**: the mark equals the cell's exclusive end |
+| `<td><img><div>text</div></td>` — a block emitter (`<div>`, `<p>`, `<br>`, an `&nbsp;`) intervenes | **outside its own cell**, because the cell's first visible character is now past the mark — yet still inside the **table**, if neighbouring cells' text widens the table span around it |
+| `<td><img></td>` in an image-only **leading** row | **outside the whole table**: every empty cell is clamped forward to the tightened table start while the image stays behind it |
+| `<img>` straight after `</table>` | **outside**: the mark equals the table's exclusive end |
+
+**The corpus is entirely the fourth case.** 10 of the 53 `<img>` sit inside
 `<table>` markup (cvx-2015 4 of 4, xom-2021 3 of 9, bac-2006 2 of 5, ba-2003
 1 of 3) and **0 of 53 image offsets fall inside any recorded table or cell
 span** — because a filer who typesets a graphic in a table gives it a cell of
@@ -306,12 +320,24 @@ alone.
 **Those five red runs are NOT in `evals/report/history.jsonl`** (PR #44 R4).
 They were made in a throwaway `git archive` tree of 3e16f70 with the case
 files copied in, so the runner appended its lines to that tree's copy of the
-file and they were discarded with it; every history line this PR commits is
-green. The time series therefore carries no trace of them, and the claim above
-rests on this document plus the round-1 reviewer's independent reproduction of
-the 50/51 invariant result and of four of the five mutations. The one red line
-the time series *does* carry is round 2's: `20260824-000828 fast 81764f7 dirty
-104/105 0.9905`, the R1 case run with ADR §b1's original claim in it (§b2a).
+file and they were discarded with it; **every history line round 1 committed
+is green** (PR #44 R11 — the unscoped version of that sentence contradicted
+the citation two sentences later). The time series therefore carries no trace
+of the five, and the claim above rests on this document plus the round-1
+reviewer's independent reproduction of the 50/51 invariant result and of four
+of the five mutations.
+
+Round 3's red run of `images-in-table-cell` *is* in the time series, with its
+own committed report: **`20260824-004456 fast 67628dd dirty 104/105 0.9905`,
+`table_cells_fidelity` 1.0 / `table_rows_fidelity` 1.0**, and
+`evals/report/20260824-004456-fast.json`, in which the three
+`in_table=True` failures can be read directly. It was taken on the case
+*exactly as committed* with only the three labels flipped. An earlier line,
+`20260824-000828`, was cited here and in the case provenance as if it were
+that run; it was not — it carries fidelity 0.5829/0.4776 because the `table`
+check still lacked its `index`, and it had four failures, not three (PR #44
+R9). The fidelity figures are what tell the two runs apart, and the case's
+provenance now records both.
 
 | case | fixture · suite | labels (`src`/`alt`/`width`/`height` hand-read from the raw HTML by an independent regex route and compared field-by-field with the shipped annotation before being written; `offset` cross-checked by the 30 characters of `normalized_text` on either side of it) |
 |---|---|---|
@@ -335,9 +361,8 @@ Mutations (this working tree, 2026-08-23, each applied alone and restored):
 `src/sec10k/normalize.py::_demo` pins the synthetic shapes no fixture isolates
 (a `width=`/`height=` attribute, a `50%` non-pixel size, an `<img>` with no
 `src`, an `<img>` inside `<title>` that is never recorded, an `<img>` inside a
-table cell that carries text landing inside that cell's span AND an image in
-an image-only leading row landing outside the whole tightened table, an
-`&amp;` in `alt`, and the text
+table, in all five positions §b2a's table enumerates (only one of which lands
+inside its own cell), an `&amp;` in `alt`, and the text
 being identical with the flag on and off) and is run by
 `.github/workflows/ci.yml`'s unit-tests job.
 `src/sec10k/test_eval_adapter.py::test_image_checks` pins the check vocabulary

@@ -480,10 +480,14 @@ def eval_check(result, chk, path=None):
             # table span. It usually does NOT even for an image the raw HTML
             # puts inside a <td>, because a table span is tightened to the
             # table's visible TEXT and an image contributes none — so this
-            # relationship has to be asserted, not assumed (ADR-032 §b2).
+            # relationship has to be asserted, not assumed (ADR-032 §b2a).
+            # HALF-OPEN, the same convention as the `item` derivation above
+            # (PR #44 R7): an offset equal to `end` is the first character
+            # AFTER the table, so an image there — e.g. one that follows
+            # </table> — is outside it.
             if "tables" not in result:
                 return "in_table needs the tables annotation too (set \"tables\": true)"
-            got = any(t["start"] <= im["offset"] <= t["end"] for t in result["tables"])
+            got = any(t["start"] <= im["offset"] < t["end"] for t in result["tables"])
             if got != chk["in_table"]:
                 return (f"image {chk['src']} at {im['offset']} is "
                         f"{'inside a' if got else 'outside every'} recorded table span, "

@@ -494,14 +494,17 @@ def _demo():
                "<p>Before.</p><img src='a.jpg' alt='AT&amp;T logo' width=120 height='60px'>"
                "<p>Mid.</p><img src=\"b.jpg\" style='height:200px;width:500px'>"
                "<img alt=nosrc width='50%'>"
-               "<table><tr><td>cell<img src=c.jpg></td></tr></table>"
-               "<table><tr><td><img src=d.jpg></td></tr><tr><td>after</td></tr></table>"
+               "<table><tr><td>cell<img src=c.jpg></td>"
+               "<td><img src=d.jpg>adj</td>"
+               "<td><img src=e.jpg><div>blocked</div></td></tr></table>"
+               "<table><tr><td><img src=f.jpg></td></tr><tr><td>last</td></tr></table>"
+               "<img src=g.jpg>"
                "<p>FORM 10-K</p></body></html>")
     plain = select_and_normalize(img_doc)[0]
     itext, _, _, itabs, imgs = select_and_normalize(img_doc, tables=True, images=True)
     assert itext == plain == select_and_normalize(img_doc, images=True)[0], itext
     assert "meta.png" not in itext and [i["src"] for i in imgs] == \
-        ["a.jpg", "b.jpg", None, "c.jpg", "d.jpg"], imgs   # <title> content skipped
+        ["a.jpg", "b.jpg", None, "c.jpg", "d.jpg", "e.jpg", "f.jpg", "g.jpg"], imgs
     assert imgs[0] == {"offset": 8, "src": "a.jpg", "alt": "AT&T logo",
                        "width": 120, "height": 60}, imgs[0]
     off = imgs[0]["offset"]      # it sits between the two paragraphs, not in one
@@ -525,11 +528,37 @@ def _demo():
     # what every one of the 10 real in-cell images in the corpus does, because
     # they all sit in image-only cells. Neither is a defect; the two together
     # are the rule, and images-in-table-cell pins it on xom-2021.
-    cell = itabs[0]["rows"][0][0]
-    assert cell[0] <= imgs[3]["offset"] <= cell[1], (cell, imgs[3])
-    tab = itabs[1]                       # image-only FIRST row, then "after"
+    # PR #44 R1/R7/R8 — the five in-and-around-a-table shapes, all pinned,
+    # because two rounds of review found the prose claim wrong each time it
+    # was stated from one friendly example. An <img> emits nothing, so its
+    # offset is just where the text run had got to; a table/cell span is then
+    # tightened to its first/last VISIBLE character and an empty cell clamped
+    # into the table. Containment is half-open, like an item's (R7). So an
+    # image lands inside a span only when the span's own visible text starts
+    # AT the mark and continues past it — i.e. only shape (2) below.
+    by = {i["src"]: i["offset"] for i in imgs}
+    c_cell, d_cell, e_cell = itabs[0]["rows"][0]
+    inside = lambda o, s, e: s <= o < e          # noqa: E731
+    # (1) <td>cell<img></td> — image TRAILS its cell's text: the mark equals
+    # the cell's exclusive end, so it is outside the cell it is written in.
+    assert by["c.jpg"] == c_cell[1] and not inside(by["c.jpg"], *c_cell[:2]), (c_cell, by)
+    # (2) <td><img>adj</td> — the ONLY shape that lands inside its own cell:
+    # the cell's visible text begins exactly at the mark.
+    assert by["d.jpg"] == d_cell[0] and inside(by["d.jpg"], *d_cell[:2]), (d_cell, by)
+    # (3) <td><img><div>text</div></td> — a block emitter intervenes, so the
+    # cell's first visible character is past the mark: outside its own cell,
+    # yet still inside the TABLE, whose span the neighbouring cells widen.
+    assert by["e.jpg"] < e_cell[0] and inside(by["e.jpg"], itabs[0]["start"], itabs[0]["end"]), \
+        (e_cell, itabs[0]["start"], itabs[0]["end"], by)
+    # (4) an image-only LEADING row: every empty cell is clamped to the
+    # tightened table start and the image stays behind it — outside the whole
+    # table. This is what all 10 real in-cell images in the corpus do.
+    tab = itabs[1]
     assert tab["rows"][0][0] == [tab["start"], tab["start"]], tab   # clamped, empty
-    assert imgs[4]["offset"] < tab["start"], (tab, imgs[4])
+    assert by["f.jpg"] < tab["start"], (tab, by["f.jpg"])
+    # (5) an image straight after </table> sits at the exclusive end: outside.
+    assert by["g.jpg"] == tab["end"] and not inside(by["g.jpg"], tab["start"], tab["end"]), \
+        (tab, by["g.jpg"])
     assert [i["offset"] for i in imgs] == sorted(i["offset"] for i in imgs), imgs
     assert select_and_normalize("<DOCUMENT>\n<TYPE>10-K\n<TEXT>\nFORM 10-K\nx\n"
                                 "</TEXT>\n</DOCUMENT>", images=True)[4] == []   # txt era

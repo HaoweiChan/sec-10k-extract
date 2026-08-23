@@ -1,0 +1,97 @@
+{
+  "pr": 44,
+  "task": "S10",
+  "round": 2,
+  "date": "2026-08-24",
+  "branch": "task/S10",
+  "reviewed_head": "89d3331",
+  "repaired_from": "67628dd",
+  "gate_after": {
+    "invariant": "52/52 = 1.000",
+    "fast": "105/105 = 1.000",
+    "table_fidelity": "cells 427/427 = 1.0, rows 34/34 = 1.0",
+    "baseline": "untouched, git diff against origin/main empty",
+    "byte_identity": "evals/snapshot.py vs origin/main c13aa5c re-run after these repairs: dev 19168a6e...30e9223a, heldout 51de5a11...04957f3f, cmp equal",
+    "self_checks": "normalize / tables / test_eval_adapter (20/20) / snapshot --self-check all ok",
+    "run_by": "implementer, on the repaired tree"
+  },
+  "all_six_reproduced_before_repair": true,
+  "resolutions": [
+    {
+      "id": "R7",
+      "disposition": "fixed",
+      "summary": "in_table now uses the half-open convention, matching the item derivation four lines above: `t[\"start\"] <= im[\"offset\"] < t[\"end\"]` (src/sec10k/eval_adapter.py). An offset equal to a table's end is the first character AFTER the table, so an image that follows </table> is correctly outside it.",
+      "reproduction": "Confirmed exactly as reported. The reviewer's input gives image offset 13 against table (9, 13), and eval_check(..., {\"in_table\": True}) returned None -- the check AGREED with the wrong answer.",
+      "covered_by": "src/sec10k/test_eval_adapter.py::test_image_checks -- two new assertions: a table whose `end` equals the image offset must be in_table False, and a table whose `start` equals it must be in_table True. Both pin the convention from opposite sides, so neither `<` nor `<=` can be swapped in silently.",
+      "red_first": {
+        "command": "python3 -m src.sec10k.test_eval_adapter  (assertion added, before the < fix)",
+        "observed": "AssertionError at test_eval_adapter.py:630 -- `eval_check({**r, \"tables\": [ends_at_img]}, {\"type\": \"image\", \"src\": \"chart.jpg\", \"in_table\": False})` returned a failure reason instead of None, i.e. the check called an image at the table's exclusive end 'inside'",
+        "after": "20/20 pass; on the reviewer's own HTML, in_table=True on the post-</table> image now returns 'image after.jpg at 13 is outside every recorded table span, labeled in_table=True' and in_table=False returns None"
+      },
+      "knock_on": "This is the same root cause as R8. The _demo assertion round 2 used to 'prove' §b2a bullet 1 was `cell[0] <= imgs[3][\"offset\"] <= cell[1]` on `<td>cell<img></td>` -- an image TRAILING its cell's text, whose offset equals the cell's exclusive end. That assertion only passed because of the inclusive comparison R7 names. Under the correct convention that shape is outside its own cell, which is why R7's fix and R8's rewrite land together."
+    },
+    {
+      "id": "R8",
+      "disposition": "fixed",
+      "summary": "ADR-032 §b2a's mechanism rewritten from scratch and now derived rather than generalised from one example. The rule that is actually true: an <img> emits nothing, so its offset is the position the text run had reached; spans are tightened to their first/last VISIBLE character and empty cells clamped into the table; containment is half-open. Therefore an image lands inside a span ONLY when that span's own visible text begins exactly at the mark and continues past it. 'The cell carries text' is explicitly named as not the condition.",
+      "reproduction": "Confirmed, and the finding understates it. Asserting bullet 1 as committed against all three text-carrying-cell shapes at once shows it false for TWO of three, not one: `<td>cell<img></td>` offset 8 vs cell (4, 8) -> outside (trailing, R7's boundary); `<td><img>adj</td>` offset 9 vs cell (9, 12) -> inside; `<td><img><div>blocked</div></td>` offset 12 vs cell (13, 20) -> outside its cell, but INSIDE the table (4, 20) because the neighbouring cells' text widens the table span -- a fourth distinct outcome neither the finding nor either previous ADR wording had.",
+      "covered_by": "src/sec10k/normalize.py::_demo -- five assertions, one per position, on one synthetic table plus a trailing image: (1) image trailing its cell's text -> at the cell's exclusive end, outside; (2) image immediately followed by its cell's text -> inside, the only such shape; (3) block emitter intervening -> outside its cell, inside the table; (4) image-only leading row -> outside the whole table via the clamp (the corpus shape); (5) image after </table> -> at the table's exclusive end, outside. ADR-032 §b2a carries the same five as a table.",
+      "red_first": {
+        "command": "python3 -m src.sec10k.normalize  (with bullet 1 asserted for all three text-carrying cells, before the rewrite)",
+        "observed": "AssertionError: ('c', [15, 19], 19) -- and printed side by side: c.jpg off 8 cell (4, 8) inside=False / d.jpg off 9 cell (9, 12) inside=True / e.jpg off 12 cell (13, 20) inside=False",
+        "after": "[normalize self-check] ok, with all five positions asserted"
+      },
+      "not_fixed_the_same_way_twice": "The coordinator's instruction was not to repeat the R1 pattern -- one friendly synthetic example standing in for a general claim. What changed structurally: the demo no longer asserts a rule, it enumerates every position an image can occupy relative to a span and asserts the outcome of each, including the two that are counterintuitive. A future wording that is wrong about any of the five is red, not green.",
+      "also_updated": "specs/001-sec10k-contract.md's images caveat, which repeated the same false 'image in an image-only cell' framing, and ADR-032 §g's synthetic-shape list."
+    },
+    {
+      "id": "R9",
+      "disposition": "fixed",
+      "summary": "Took the acceptance's second option -- a fresh red run of the case EXACTLY as committed -- and also recorded, rather than quietly replaced, what the previously cited line really was.",
+      "reproduction": "Confirmed to the digit. Removing the table check's \"index\": 1 and setting the three labels true gives 4 failures and suite fidelity 0.5828729281767956 / 0.4776119402985075, matching history.jsonl 20260824-000828's 0.5829 / 0.4776 exactly. So the cited line was a different version of the case and the provenance sentence was false.",
+      "fresh_red_run": {
+        "method": "only the three in_table values flipped to true on the committed file; nothing else touched (git diff showed 3 insertions, 3 deletions)",
+        "command": "python3 -m evals.run --suite fast",
+        "observed": "[FAIL] images-in-table-cell (adversarial, 0.34s) / [eval] suite 'fast': 104/105 = 0.990 / [eval] table fidelity: cells 1.0000 (427/427), rows 1.0000 (34/34); exactly 3 failures, 'image xom-20211231_g7.jpg at 232186 is outside every recorded table span, labeled in_table=True' and the same for g8 and g9",
+        "history_line": "20260824-004456 fast 67628dd dirty 104/105 0.9905, table_cells_fidelity 1.0, table_rows_fidelity 1.0",
+        "report_committed": "evals/report/20260824-004456-fast.json -- the red run wrote its own full report per ADR-025, and the three failures can be read directly in it rather than taken from prose",
+        "arithmetic_that_distinguishes_the_two_runs": "fidelity 1.0/1.0 (this case, table check correct, 27/27 cells) versus 0.5829/0.4776 (the misdescribed run, table check resolving to record 19, 22/324 cells). The reviewer said they would check the arithmetic; that is the number to check.",
+        "after": "labels flipped back to false -> 0 failures, fast 105/105"
+      },
+      "covered_by": "evals/adversarial/images-in-table-cell.json provenance (rewritten, carrying BOTH the wrong description and the real run) and ADR-032 §g"
+    },
+    {
+      "id": "R10",
+      "disposition": "fixed",
+      "summary": "Counted it: the three golden provenances cite 29 raw <img> offsets, 28 distinct (xom-2021-images names 1704772 twice) -- xom-2021 9 of its 9, bac-2006 5 of 5, jpm-2024 14 of 14. Every one lands exactly on an <img> tag, so only the tally was wrong. The sentence in evals/adversarial/images-refusal-path.json now carries both numbers, the per-file breakdown, the reason they differ, and a note that it read 34 until R10.",
+      "covered_by": "evals/adversarial/images-refusal-path.json (provenance)",
+      "one_copy_deliberately_not_edited": "tasks/reviews/pr44-r1-resolution.json's R3 entry carries the same wrong tally. It is left as written: it is the signed record of what round 1 claimed, and R10 exists because that claim was wrong. Rewriting a past round's artifact would erase the finding's own subject. The live document of record is corrected, and this entry is the correction. Flagged explicitly rather than done silently -- if the reviewer wants the historical artifact amended too, say so and it will be."
+    },
+    {
+      "id": "R11",
+      "disposition": "fixed",
+      "summary": "The sentence is scoped: 'every history line round 1 committed is green', with the R11 attribution inline. The paragraph then states positively that round 3's red run IS in the time series and names it, so the paragraph no longer contains a sentence its own next sentence disproves.",
+      "covered_by": "specs/decisions/ADR-032-image-reference-annotation.md sec g"
+    },
+    {
+      "id": "R12",
+      "disposition": "fixed",
+      "summary": "The comment cites sec b2a, not sec b2, and gained two lines naming the half-open convention R7 established, since that is the branch's actual rule.",
+      "covered_by": "src/sec10k/eval_adapter.py, the in_table branch"
+    }
+  ],
+  "rejected": [],
+  "debt_rows_added": [],
+  "files_touched_this_round": [
+    "src/sec10k/eval_adapter.py (in_table half-open; sec b2a citation)",
+    "src/sec10k/test_eval_adapter.py (half-open boundary pinned from both sides)",
+    "src/sec10k/normalize.py (_demo: five in-and-around-a-table positions)",
+    "specs/decisions/ADR-032-image-reference-annotation.md (sec b2a mechanism rewritten as a five-row table; sec g R9 + R11)",
+    "specs/001-sec10k-contract.md (images caveat aligned to the corrected mechanism)",
+    "evals/adversarial/images-in-table-cell.json (provenance: real red run + what the old citation was)",
+    "evals/adversarial/images-refusal-path.json (provenance: tally corrected to 28/29)",
+    "evals/report/20260824-004456-fast.json (new: the red run's own report)",
+    "evals/report/history.jsonl (including the 20260824-004456 red line)",
+    "tasks/reviews/pr44-r2-resolution.json (this file)"
+  ]
+}

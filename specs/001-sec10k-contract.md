@@ -138,8 +138,11 @@ them all); the example once showed `lenient_match`, which nothing emits.
   `null` when none does) and is deliberately not a field. An image offset is
   **not** guaranteed to fall inside the `tables` span of a table the raw HTML
   puts it in: a table span is tight to the table's visible text and an image
-  contributes none, so an image in an image-only cell can sit outside it —
-  0 of the corpus's 53 do fall inside one (ADR-032 §b2a). The image BYTES are
+  contributes none, so an image lands inside a span only when that span's own
+  visible text begins exactly at the offset and continues past it (half-open,
+  like an item's span). "The cell carries text" is not the condition —
+  0 of the corpus's 53 offsets fall inside any table or cell span, and
+  ADR-032 §b2a enumerates all five positions. The image BYTES are
   never fetched (ADR-032 §c); `<object>`, `<embed>`, inline `<svg>` and CSS
   background images are not recorded (ADR-032 §e). `envelope_shape` refuses
   any other shape.

@@ -622,6 +622,16 @@ def test_image_checks():
         assert reason is not None and why in reason, (src, reason)
     no_tab = eval_check(r, {"type": "image", "src": "chart.jpg", "in_table": False})
     assert no_tab is not None and "needs the tables annotation" in no_tab, no_tab
+    # PR #44 R7: the span is HALF-OPEN, the same convention as the `item`
+    # derivation above -- an offset equal to `end` is the first character
+    # after the table, so an image there is outside it. 0 of the corpus's 53
+    # offsets sit on a table end, so only this assertion pins the boundary.
+    ends_at_img = {**tab, "end": 18}          # chart.jpg is at 18
+    assert eval_check({**r, "tables": [ends_at_img]},
+                      {"type": "image", "src": "chart.jpg", "in_table": False}) is None
+    starts_at_img = {**tab, "start": 18, "end": 19}
+    assert eval_check({**r, "tables": [starts_at_img]},
+                      {"type": "image", "src": "chart.jpg", "in_table": True}) is None
 
     # the cover image falls in NO item span -- null is a label, not a miss
     outside = {"type": "image", "src": "logo.jpg", "item": None}
