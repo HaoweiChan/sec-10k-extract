@@ -441,8 +441,12 @@ def eval_check(result, chk, path=None):
         # reads only the record cannot see a no-op renderer). `value` is the
         # exact Markdown `markdown.to_markdown` must produce for the window —
         # an item's span (`item`), explicit `start`/`end` offsets (the same
-        # offsets a `blocks` label in the case anchors with head/tail), or
-        # `anchor`..`end_anchor` (first occurrences) in normalized_text.
+        # offsets a `blocks` label in the case anchors with head/tail),
+        # `anchor`..`end_anchor` (first occurrences) in normalized_text, or
+        # the whole document when none is given. `omit_chrome: true` renders
+        # with the envelope's ADR-026 runs omitted (PR #45 R1: the S8
+        # checkbox must keep its meaning in Markdown mode, on real chrome);
+        # `contains` / `not_contains` pin substrings of the rendering.
         if "blocks" not in result:
             return "no blocks in result (was blocks set?)"
         text = result["normalized_text"]
@@ -452,7 +456,7 @@ def eval_check(result, chk, path=None):
             s, e = entry["start"], entry["end"]
         elif "start" in chk:
             s, e = chk["start"], chk["end"]
-        else:
+        elif "anchor" in chk:
             s = text.find(chk["anchor"])
             if s < 0:
                 return f"anchor {chk['anchor']!r} not in normalized_text"
@@ -460,9 +464,25 @@ def eval_check(result, chk, path=None):
             if e < 0:
                 return f"end_anchor {chk['end_anchor']!r} not after the anchor"
             e += len(chk["end_anchor"])
-        got = md_to_markdown(text, result["blocks"], result.get("tables") or [], s, e)
-        if got != chk["value"]:
+        else:
+            s, e = 0, len(text)
+        omit = ()
+        if chk.get("omit_chrome"):
+            if "boilerplate" not in result:
+                return "omit_chrome asks for chrome, but no boilerplate in result (was exclude_boilerplate set?)"
+            omit = result["boilerplate"]
+            if len(omit) < chk.get("min_chrome_runs", 0):
+                return f"{len(omit)} chrome runs < min_chrome_runs {chk['min_chrome_runs']}"
+        got = md_to_markdown(text, result["blocks"], result.get("tables") or [], s, e, omit=omit)
+        if "value" in chk and got != chk["value"]:
             return f"markdown differs; got:\n{got}"
+        for v in chk.get("contains", []):
+            if v not in got:
+                return f"markdown missing {v!r}"
+        for v in chk.get("not_contains", []):
+            if v in got:
+                return (f"{'stripped ' if omit else ''}markdown still contains {v!r} "
+                        f"({got.count(v)}x)")
     elif t == "blocks_sane":
         # ADR-031 §d: in bounds, document order, non-overlapping, every slice
         # tight, every kind in the enum, a table block sitting exactly on its

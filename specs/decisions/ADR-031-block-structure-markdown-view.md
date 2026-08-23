@@ -1,6 +1,6 @@
 # ADR-031 — S9: the filing's block structure is reported as offset records into an unchanged `normalized_text`; the whole-document and per-item Markdown are derived views; structure fidelity is a gated per-run metric
 
-Date: 2026-08-23. Status: accepted. Amended in place 2026-08-23 (§h addendum: the baseline move as made). Implements S9. Sanctioned exception to
+Date: 2026-08-23. Status: accepted. Amended in place 2026-08-23 (§h addendum: the baseline move as made) and 2026-08-24 (PR #45 round 1: §b4 chrome-inside-a-block rule + `blocks-omit-chrome`, §g mutation table re-measured, §f2/§b2/§e corrections). Implements S9. Sanctioned exception to
 the T8 feature freeze (`tasks/TODO.md`, **Freeze guard**), on the pattern
 [ADR-020](ADR-020-fallback-not-justified.md) established for T12 and
 [ADR-026](ADR-026-boilerplate-chrome-exclusion.md) /
@@ -10,7 +10,7 @@ document and is read with it.
 
 **Ruling**: block structure ships as an **opt-in annotation, not an edit**. `extract_items(path, blocks=True)` adds one envelope key, `blocks` (and implies `tables=True`, because table blocks point into the ADR-029 records) — a list, in document order and non-overlapping, of `{kind, start, end, …}` records with offsets into `normalized_text`: `heading` (+`level`; +`item` when it is an item heading the segmenter identified), `paragraph` (+`strong` when the whole block was bold in the HTML), `list_item` (+`ordered`), `table` (+`table`, the index of the ADR-029 record it sits on), or `pre` (the one block a txt-era filing is). `normalized_text` is byte-identical with the flag on and off, as are every item offset, `doc_status` and `warnings`. The Markdown — of the whole document, or of an item by its offsets — is *derived* by `src/sec10k/markdown.to_markdown()` and never stored; the inspector renders that derived Markdown as the item body (the S8 `display_text` path) while the compare pane and `text` keep the raw slice. Structure quality is a per-run metric — block fidelity and boundary fidelity against hand-labeled goldens — reported next to table fidelity on every run and gated against the values the runner itself recorded with `--update-baseline`.
 **Because**: the direction literally names the alternative — "parse the filing into Markdown" — and §f2 measures it: rewriting `normalized_text` as Markdown moves the first character on 46 of 46 parseable fixtures (first differing offset 0–74, median 0), every one of the 812 committed item spans, every normalized-length figure ever published (+8 to +140,040 characters per filing), the 74 `min_chars`/`max_chars` band checks and the 6 `table` grids' cell offsets; the annotation route moves **zero** offsets, and that equality is asserted on every run (§d). The one-pass HTML walk already emits a newline at every block-tag boundary, so recording the kind of the text between two boundaries costs nothing the text run does not already have (§b1); the S7 table records and the segmenter's item headings are reused rather than re-derived (§b3); and the Markdown is a function of the envelope exactly as the table grid is.
-**Enforced by**: `evals/golden/aapl-2025-blocks.json`, `evals/golden/msft-2013-blocks.json`, `evals/golden/ge-1994-blocks.json`, `evals/golden/xom-2021-blocks.json`, `evals/adversarial/blocks-heading-two-cell-table.json`, `evals/adversarial/blocks-heading-index-table.json`, `evals/adversarial/blocks-bullet-paragraphs.json`, `evals/adversarial/blocks-br-boundary.json`, `evals/adversarial/blocks-refusal-path.json` (fast), `evals/adversarial/blocks-offsets-invariant.json` and `evals/adversarial/blocks-wrapped-invariant.json` (invariant + fast); `src/sec10k/eval_adapter.py` (`blocks`, `markdown`, `blocks_sane`, `offsets_invariant_under_blocks`, and `envelope_shape`'s `_blocks_shape`); `evals/run.py` (the `structure_blocks_fidelity` / `structure_bounds_fidelity` gate); `src/sec10k/markdown.py::_demo`, `src/sec10k/web/view.py::_demo`; `tasks/reviews/s9_markdown_walk.py` + `s9-markdown-walk.json` (the inspector, in a browser) — see §g.
+**Enforced by**: `evals/golden/aapl-2025-blocks.json`, `evals/golden/msft-2013-blocks.json`, `evals/golden/ge-1994-blocks.json`, `evals/golden/xom-2021-blocks.json`, `evals/adversarial/blocks-heading-two-cell-table.json`, `evals/adversarial/blocks-heading-index-table.json`, `evals/adversarial/blocks-bullet-paragraphs.json`, `evals/adversarial/blocks-br-boundary.json`, `evals/adversarial/blocks-refusal-path.json`, `evals/adversarial/blocks-omit-chrome.json` (fast), `evals/adversarial/blocks-offsets-invariant.json` and `evals/adversarial/blocks-wrapped-invariant.json` (invariant + fast); `src/sec10k/eval_adapter.py` (`blocks`, `markdown`, `blocks_sane`, `offsets_invariant_under_blocks`, and `envelope_shape`'s `_blocks_shape`); `evals/run.py` (the `structure_blocks_fidelity` / `structure_bounds_fidelity` gate); `src/sec10k/markdown.py::_demo`, `src/sec10k/web/view.py::_demo`; `tasks/reviews/s9_markdown_walk.py` + `s9-markdown-walk.json` (the inspector, in a browser) — see §g.
 
 ---
 
@@ -119,8 +119,11 @@ newlines ARE the document), so it is exactly one block, `{kind: "pre", start:
   next same-name end tag — browsers do the same for `<b>`/`<font>` (the
   active-formatting-element rule) and differently for `<span>`. Measured: the
   `malformed-html` fixture (15 `</font>` removed from premier-pacific-2016)
-  has 177 strong blocks where its source has 79, the leak named in §e.
-  Italic is not recorded (§e).
+  has 177 strong blocks where its source has 79, the leak named in §e. The
+  mirror defect (PR #45 R5): the end tag of a non-bold inner element of the
+  SAME name closes the outer bold context early — `<span style=bold><span>A
+  </span> B</span>` is not strong; 0 mismatches against a full open-tag stack
+  on all 47 fixtures, so noted, not fixed. Italic is not recorded (§e).
 - **list_item** — the text inside `<li>` (cleared by `</li>`, `</ol>`,
   `</ul>`), `ordered` when the innermost open list is `<ol>`. **Zero `<li>`
   in the committed corpus** (the two fixtures with `<ul>`, intc-2002 and
@@ -136,10 +139,15 @@ newlines ARE the document), so it is exactly one block, `{kind: "pre", start:
   `_Plain` collapses its whitespace like any other element's, so an HTML
   `<pre>` would be a paragraph; not claimed (§e).
 
-By construction — every visible character lies between two boundaries or
-inside a table — **the blocks cover every non-space character of
-`normalized_text`**: measured 0 uncovered characters on all 47 fixtures, and
-asserted on every run by `blocks_sane`, so the view can lose no text.
+**The blocks cover every non-space character of `normalized_text`** —
+measured 0 uncovered characters on all 47 fixtures, and asserted on every
+blocks case by `blocks_sane`, so the view can lose no text. This is a
+measured property, not one true by construction (PR #45 R4): text inside a
+`<table>` that yields no ADR-029 record — `<table>stray text</table>`, text
+in a `<tr>` outside any cell, a table whose only cell is `&nbsp;` with text
+after it — lands in no block (0 occurrences in the corpus; `blocks_sane`
+is the pin, a paragraph block for such text the upgrade if a filing shows
+it).
 
 ### b3. Item headings — the one promotion, and its limit
 
@@ -169,10 +177,16 @@ is what §b4's clipping rule is for.
   GitHub-flavoured Markdown of `text[start:end]` — the whole document by
   default, an item by its offsets. A block straddling the window is
   **clipped** to it and its clipped slice renders as its kind, except a
-  clipped table, which has no grid and renders as a paragraph. A block lying
-  wholly inside any `omit` span (the ADR-026 chrome runs, when the caller also
-  asked for exclusion) is left out — the S8 checkbox keeps its meaning in
-  Markdown mode. Rendering: a heading is `#`×level + its text with internal
+  clipped table, which has no grid and renders as a paragraph. `omit` — the ADR-026
+  chrome runs, when the caller also asked for exclusion — is removed from
+  every block's rendered text exactly as `boilerplate.strip_chrome` removes
+  it from an item: from a paragraph's or heading's slice and from every table
+  cell (`tables.grid`/`to_markdown` take the same `omit`), and a block, table
+  row or whole table left empty by that disappears. That is what makes the S8
+  checkbox keep its meaning in Markdown mode; the rule as first shipped
+  ("leave out a block lying wholly inside a run") omitted nothing on
+  jpm-2024, whose 572 runs all sit inside two-cell page-furniture tables
+  (PR #45 R1; `blocks-omit-chrome`). Rendering: a heading is `#`×level + its text with internal
   whitespace collapsed (`## Item 1. BUSINESS` for the two-cell shape); a
   strong paragraph is `**…**`; a list item `- ` / `1. `; a table is
   `tables.to_markdown` (ADR-029 §b2, unchanged); `pre` is the slice in a
@@ -265,9 +279,10 @@ records the move.
 What the gate is worth *today*, stated as ADR-029 §c2 stated it: every
 committed `blocks` golden asserts an exact sequence, so on a green suite the
 metric is 1.0 by construction and a drop always coincides with a case going
-red. Its value now is the **magnitude** (§g: strong never recorded is a 17%
-block loss with 100% boundary agreement; table blocks dropped is a 22% loss
-on both; the name collision is a 52% loss) and the time series. It becomes an
+red. Its value now is the **magnitude** (§g, re-measured 2026-08-24: strong never
+recorded is 48/61 — a 21% block loss with 100% boundary agreement; table
+blocks dropped is 48/61 on both; the name collision is 31/61 — a 49% loss)
+and the time series. It becomes an
 independent gate the day a `blocks` case is labeled with a tolerance or a
 held-out structure set is scored — a Debt row, not claimed.
 
@@ -309,7 +324,7 @@ Each out-of-scope item that someone might want is a Debt row in
 | headings from styling | **out**: bold, underline, centering, font size never make a heading (§b2). A bold whole block is `strong`; the inspector renders it bold, not as `#` |
 | Part headings | **out**: `PART I` stays a (strong) paragraph; only item headings are promoted (§b3) |
 | inline emphasis | **out**: `strong` is whole-block; a bold lead-in or a bold phrase inside a paragraph is not recorded. Italic (`<i>/<em>/font-style:italic`) is not recorded at all. Debt |
-| bold leaking from an unclosed carrier | **known**: an unclosed `<b>`/`<font style=bold>` marks every following block strong until the next same-name end tag (malformed-html: 177 vs 79). The text is untouched and the view loses nothing; the flag is wrong on those blocks. Debt |
+| bold leaking from an unclosed carrier, or closed early by a same-name inner end tag | **known**: an unclosed `<b>`/`<font style=bold>` marks every following block strong until the next same-name end tag (malformed-html: 177 vs 79); a non-bold inner element of the same tag name ends the outer bold at its own end tag (PR #45 R5; 0 corpus mismatches). The text is untouched and the view loses nothing; the flag is wrong on those blocks. Debt |
 | `<li>` lists | **recorded, pinned only synthetically**: no committed fixture has one (§b2). Nested lists render flat; numbering is `1.` for every ordered item (Markdown renumbers) |
 | bullet glyphs / bullet tables | **not lists**: paragraphs and table blocks respectively (§b2); the inspector shows a bullet table as a one-row table |
 | definition lists, blockquotes, HTML `<pre>`, `<caption>` | paragraphs (`<dl>/<dt>/<dd>` in intc-2002 and tgt-2002 only; 0 `<pre>`, 0 `<caption>` in the corpus). Debt |
@@ -344,7 +359,7 @@ character — that is exactly the string the alternative would have stored.
 
 | measured over the 46 parseable fixtures (42 dev + 5 held-out, less `truncated-download`, which normalizes to nothing) | value |
 |---|---|
-| first differing offset | **0 – 74, median 0** (44 of 46 below 25: the cover page's first bold line is the first strong paragraph) |
+| first differing offset | **0 – 74, median 0** (43 of 46 below 25 — cvx-2015 74, intc-2002 68, tgt-2002 68 are the three above; the cover page's first bold line is the first strong paragraph. PR #45 R3 corrected the count from 44) |
 | item spans whose offsets move | **812 of 812** — every span-carrying item on every fixture |
 | normalized-length change | **+8 (every txt-era filing, the fence) to +140,040 (jpm-2024), median +4,734** — so every `norm_chars` figure, every ADR-021 bench figure derived from lengths, and every normalized-character figure in the README and the ADRs moves |
 | offset-band checks that would need re-deriving | **74** (`min_chars` 41 + `max_chars` 33) — they bound span lengths in normalized characters |
@@ -373,8 +388,9 @@ pinned on real material.
 
 ## g. Enforcement
 
-Eleven cases, the adapter's self-check, three module self-checks, a browser
-walk. Every case was **red at `origin/main`** (145fe4a) — `unknown check
+Twelve cases (eleven in the first commit, `blocks-omit-chrome` added in the
+PR #45 round-1 repair), the adapter's self-check, three module self-checks,
+a browser walk. Every case was **red at `origin/main`** (145fe4a) — `unknown check
 type 'blocks'` / `'blocks_sane'` / `'markdown'` /
 `'offsets_invariant_under_blocks'` (and `no tables in result` on
 `blocks-offsets-invariant`'s `tables_sane`), `--suite fast` 98/108 = 0.907
@@ -404,22 +420,26 @@ sweep, before any commit; renamed `docs`; pinned on both shapes (M8).
 | `blocks-refusal-path` | aapl-2026-10q · fast | `unsupported` still carries `blocks` + `tables` when asked, nothing when not; no promotion |
 | `blocks-offsets-invariant` | aapl-2025 · **invariant** + fast | on-vs-off equality on a primary `.htm`; shape and coverage of all 698 blocks; 650–750 band |
 | `blocks-wrapped-invariant` | msft-2013 · **invariant** + fast | the same on an SGML-wrapped `.htm`; 1,300–1,400 band |
+| `blocks-omit-chrome` | jpm-2024 · fast (PR #45 R1, 2026-08-24) | `exclude_boilerplate` + `blocks`: the plain rendering carries `JPMorgan Chase & Co./2024 Form 10-K`, the chrome-omitted rendering of the whole document and of item 15 carries none of its 286 running heads; ≥500 chrome runs carried, ≥250 running heads. Red at 0f194cf: `stripped markdown still contains 'JPMorgan Chase & Co./2024 Form 10-K' (286x)` (report `evals/report/20260824-002657-fast.json`, history line `20260824-002657`, both committed) |
 
-Mutations (this working tree, 2026-08-23, each applied alone and restored;
-run metric in parentheses, `blocks`/`bounds` over 61 labeled blocks):
+Mutations — each applied alone and restored, **re-measured 2026-08-24 on
+the final tree of PR #45 round 1** (12 cases, 61 labeled blocks; PR #45 R2:
+the first table carried numerators from an earlier 58-label set over a
+61 denominator — every fraction below is the runner's own line, and each
+equals its numerator over 61):
 
-| mutation | what went red |
+| mutation | what went red (run metric: blocks, bounds over 61) |
 |---|---|
-| M1 `to_markdown` returns the raw slice | every `markdown` check: 6 cases `markdown differs`; blocks 61/61 — the renderer is pinned on content, not through the record |
-| M2 promoted item headings at level 3 | 5 cases (`aapl`, `msft`, `xom`, both heading cases): `got {'kind': 'heading', …, 'level': 3}` (blocks **53/61 = 0.9138**, bounds 1.0) |
-| M2b `<hN>` level + 1 | `msft-2013-blocks` window 2, `blocks-heading-index-table`: the `<h5>` at level 6 (blocks 56/61) |
-| M3 `strong` never recorded | 5 cases (blocks **48/61 = 0.8276**, bounds 61/61 — boundaries right, kinds wrong, the metric's two numbers separating as designed) |
-| M4 table blocks dropped | 9 cases: every window with a table (`3 derived vs 4 labeled`), and `blocks_sane` on all nine: `visible text outside every block at 468: 'California 94-2404110…'` (blocks **45/61 = 0.7759**, bounds 45/61) |
-| M5 block boundaries untightened | 6 cases via `blocks_sane` only: `block 57 slice is not tight: '\n\nprovide management with a comprehensiv…'` — the labeled windows hold no loose block, so the metric stays 61/61; the sanity check is the pin |
-| M6 item-heading promotion off | 5 cases: `got {'kind': 'paragraph', 'start': 24697, …}` / `{'kind': 'table', 'start': 14698, …}` (blocks 53/61) |
-| M7 promotion without the one-visible-row guard | `blocks-heading-index-table`: `got {'kind': 'heading', 'start': 54348, 'end': 55571, …}` (blocks 57/61) |
-| M8 the `blocks`/`docs` shadowing re-introduced | 6 cases: `blocks ON emitted no blocks + tables lists` (aapl-2025, aapl-2026-10q), `blocks OFF emitted a blocks/tables key; default must change nothing` (msft-2013), `no blocks in result` on the three primary-.htm goldens (blocks **28/61 = 0.4828**) |
-| M9 `<br>` does not close a block | `blocks-br-boundary` only: `1 derived vs 3 labeled in [68, 139)` — every other case stays green, which is why that case exists (blocks 58/61 = 0.9508) |
+| M1 `to_markdown` returns the raw slice | 8 cases: every `markdown` check with a `value` (the 7 cases that carry one, `ge-1994-blocks` included) `markdown differs`, and `blocks-omit-chrome` `stripped markdown still contains … (286x)`; blocks 61/61 = 1.0, bounds 61/61 — the renderer is pinned on content, not through the record |
+| M2 promoted item headings at level 3 | 5 cases (`aapl`, `msft`, `xom`, both heading cases): `got {'kind': 'heading', …, 'level': 3}` — blocks **56/61 = 0.9180**, bounds 61/61 = 1.0 |
+| M2b `<hN>` level + 1 | 2 cases (`msft-2013-blocks` window 2, `blocks-heading-index-table`): the `<h5>` at level 6 — blocks 59/61 = 0.9672, bounds 1.0 |
+| M3 `strong` never recorded | 6 cases (`aapl`, `msft`, `xom`, `br-boundary`, `bullet-paragraphs`, `two-cell-table`) — blocks **48/61 = 0.7869**, bounds 61/61 = 1.0: boundaries right, kinds wrong, the metric's two numbers separating as designed |
+| M4 table blocks dropped | 11 cases: every window with a table (`3 derived vs 4 labeled`), `blocks_sane` on every blocks case (`visible text outside every block at 468: 'California 94-2404110…'`), and `blocks-omit-chrome` (`markdown missing 'JPMorgan Chase & Co./2024 Form 10-K'` — the head lived in a table block) — blocks **48/61 = 0.7869**, bounds 48/61 = 0.7869 |
+| M5 block boundaries untightened | 7 cases via `blocks_sane` (`block 57 slice is not tight: '\n\nprovide management with a comprehensiv…'`) and one label (`blocks-br-boundary`: `got {'start': 81, …}` for the labeled 82) — blocks 60/61 = 0.9836, bounds 60/61 = 0.9836 |
+| M6 item-heading promotion off | 5 cases: `got {'kind': 'paragraph', 'start': 24697, …}` / `{'kind': 'table', 'start': 14698, …}` — blocks 56/61 = 0.9180, bounds 1.0 |
+| M7 promotion without the one-visible-row guard | 1 case, `blocks-heading-index-table`: `got {'kind': 'heading', 'start': 54348, 'end': 55571, …}` — blocks 60/61 = 0.9836, bounds 1.0 |
+| M8 the `blocks`/`docs` shadowing re-introduced | 8 cases: `blocks ON emitted no blocks + tables lists` (aapl-2025, aapl-2026-10q), `blocks OFF emitted a blocks/tables key; default must change nothing` (msft-2013), `no blocks in result` on the four primary-.htm blocks cases, and `ui-boilerplate-exclusion` (a wrapped txt fixture gets `blocks` unasked and its pane turns to Markdown) — blocks **31/61 = 0.5082**, bounds 31/61 = 0.5082 |
+| M9 `<br>` does not close a block | 1 case, `blocks-br-boundary`: `1 derived vs 3 labeled in [68, 139)` — every other case stays green, which is why that case exists — blocks 58/61 = 0.9508, bounds 58/61 = 0.9508 |
 
 `src/sec10k/markdown.py::_demo` pins the synthetic shapes the fixtures do
 not isolate (`<h2>`, a whole-bold `<div>`, a half-bold `<p>`, `<ul>`/`<ol>`
@@ -431,7 +451,7 @@ under both flags, absent `display_text` when the Markdown is the slice);
 `src/sec10k/normalize.py::_demo` and `tables.py::_demo` keep their
 three-tuple `normalize` calls green. `tasks/reviews/s9_markdown_walk.py`
 drove the inspector in headless Chromium (record
-`tasks/reviews/s9-markdown-walk.json` + three screenshots): aapl-2025 item 7
+`tasks/reviews/s9-markdown-walk.json` + three screenshots; re-run after the PR #45 R1 repair with both boxes on as `s9-markdown-walk-r1.json`: jpm-2024 item 15 renders 21 tables and 0 running heads under the header `markdown · boilerplate hidden`): aapl-2025 item 7
 renders 1 `<h2>`, 106 `<p>`, 6 `<table>`; msft-2013 item 1 renders 1 `<h2>`,
 121 `<p>`, 8 bullet tables, 14 `<b>`; ge-1994 item 1 renders one `<pre>`;
 the S3 fixture banner reads `success — 18 extracted` with the box ticked;
@@ -444,7 +464,7 @@ fallback DEGRADES as before; every `ui-*` and `repo_hygiene` case
 (contrast, layout, plumbing, ledger shape) is green with the new stylesheet
 rules and the moved wire pins.
 
-Gate after: `--suite invariant` 52/52, `--suite fast` 109/109, table fidelity
+Gate after (PR #45 round 1): `--suite invariant` 52/52, `--suite fast` 110/110, table fidelity
 cells 400/400 = 1.0, rows 31/31 = 1.0, structure fidelity blocks 61/61 = 1.0,
 bounds 61/61 = 1.0; every module self-check ok.
 

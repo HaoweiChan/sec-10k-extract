@@ -1,0 +1,47 @@
+{
+  "id": "blocks-omit-chrome",
+  "task": "sec10k",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "path": "evals/fixtures/jpm-2024/filing.htm",
+    "exclude_boilerplate": true,
+    "blocks": true
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "envelope_shape"
+      },
+      {
+        "type": "markdown",
+        "contains": [
+          "JPMorgan Chase & Co./2024 Form 10-K"
+        ]
+      },
+      {
+        "type": "markdown",
+        "omit_chrome": true,
+        "not_contains": [
+          "JPMorgan Chase & Co./2024 Form 10-K"
+        ],
+        "min_chrome_runs": 500
+      },
+      {
+        "type": "markdown",
+        "omit_chrome": true,
+        "item": "15",
+        "not_contains": [
+          "JPMorgan Chase & Co./2024 Form 10-K"
+        ]
+      },
+      {
+        "type": "boilerplate",
+        "kind": "running_head",
+        "min": 250
+      }
+    ]
+  },
+  "provenance": "PR #45 R1 (2026-08-24), hard rule 2. JPM FY2024 10-K (iXBRL, EDGAR accession 0000019617-25-000270): every page carries the running head 'JPMorgan Chase & Co./2024 Form 10-K' and a page number typeset INSIDE a two-cell <table> (e.g. ADR-026 span {start: 218110, end: 218146, kind: running_head} inside the table block [218110, 218149) 'JPMorgan Chase & Co./2024 Form 10-K\\n\\n49'), so all 572 ADR-026 chrome runs of this filing lie inside table blocks and none is a whole block. ADR-031 §b4 as first shipped left a block out of the Markdown only when it lay WHOLLY inside a chrome span, so with exclude_boilerplate=True and blocks=True the rendered Markdown of the whole document carried 286 running heads (strip_chrome leaves 0) while the inspector's header said 'boilerplate hidden' (reviewer repro: to_markdown(omit=spans) == to_markdown() byte-for-byte). Watched RED at 0f194cf — see the red line in tasks/reviews/pr45-r1-resolution.json. The rule after the repair: chrome runs inside a block are removed from its rendered text exactly as boilerplate.strip_chrome removes them (paragraph/heading slices and table cells alike); a row or block left empty disappears. The un-omitted rendering must still carry the string (second check), so the case proves the omission and not a missing head; `min_chrome_runs` pins that the envelope carried at least 500 chrome runs into the render (572 at HEAD), and the `boilerplate` check that at least 250 of them are running heads (286 at HEAD)."
+}

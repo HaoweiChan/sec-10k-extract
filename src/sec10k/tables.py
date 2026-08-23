@@ -14,16 +14,21 @@ Self-check: python3 -m src.sec10k.tables
 """
 import re
 
+from src.sec10k.boilerplate import strip_chrome
+
 _WS = re.compile(r"\s+")
 
 
-def cell_text(text, cell):
+def cell_text(text, cell, omit=()):
     """One cell as a single line: the verbatim slice with its internal
-    whitespace (a <div> inside the cell breaks the line) collapsed."""
-    return _WS.sub(" ", text[cell[0]:cell[1]]).strip()
+    whitespace (a <div> inside the cell breaks the line) collapsed. `omit`
+    (ADR-026 chrome runs, ADR-031 §b4) is removed from the slice first,
+    exactly as `strip_chrome` removes it from an item."""
+    raw = strip_chrome(text, omit, cell[0], cell[1]) if omit else text[cell[0]:cell[1]]
+    return _WS.sub(" ", raw).strip()
 
 
-def grid(text, table):
+def grid(text, table, omit=()):
     """[[str, ...], ...] — every row padded to the table's width; a colspan-n
     cell is its text followed by n-1 empty cells, so columns line up the way
     the filer's browser lined them up. rowspan is not expanded (ADR-029 §e)."""
@@ -31,20 +36,21 @@ def grid(text, table):
     for row in table["rows"]:
         out = []
         for c in row:
-            out.append(cell_text(text, c))
+            out.append(cell_text(text, c, omit))
             out.extend([""] * (c[2] - 1 if len(c) > 2 else 0))
         rows.append(out)
     width = max((len(r) for r in rows), default=0)
     return [r + [""] * (width - len(r)) for r in rows]
 
 
-def to_markdown(text, table):
+def to_markdown(text, table, omit=()):
     """GitHub-flavoured Markdown for one table record. Header = the first
     visible row (Markdown has exactly one header row, whatever `header`
     says). Rows and columns that are empty in EVERY cell — iXBRL filers'
-    column-width and spacer rows — are dropped from the VIEW only; the record
-    keeps them. `|` in a cell is escaped."""
-    g = [r for r in grid(text, table) if any(r)]
+    column-width and spacer rows, and (with `omit`) a row whose only text
+    was a chrome run — are dropped from the VIEW only; the record keeps
+    them. `|` in a cell is escaped."""
+    g = [r for r in grid(text, table, omit) if any(r)]
     if not g:
         return ""
     keep = [j for j in range(len(g[0])) if any(r[j] for r in g)]
@@ -106,6 +112,14 @@ def _demo():
     outer_cell = ntabs[0]["rows"][0][0]
     assert ntext[outer_cell[0]:outer_cell[1]] == "outer\n\ninner", ntext[outer_cell[0]:outer_cell[1]]
     assert grid(ntext, ntabs[1]) == [["inner"]] and grid(ntext, ntabs[0]) == [["outer inner", "after"]]
+    # ADR-031 §b4 / PR #45 R1: a chrome run inside a cell leaves the VIEW only
+    head = ("<table><tr><td>ACME 10-K</td><td>7</td></tr><tr><td>x</td><td>y</td></tr></table>")
+    ht, htabs, _ = normalize(head, "html", tables=True)
+    run = [{"start": ht.index("ACME"), "end": ht.index("7") + 1, "kind": "running_head"}]
+    assert ht[run[0]["start"]:run[0]["end"]] == "ACME 10-K 7"
+    assert grid(ht, htabs[0], omit=run) == [["", ""], ["x", "y"]], grid(ht, htabs[0], omit=run)
+    assert to_markdown(ht, htabs[0], omit=run) == "| x | y |\n|---|---|", to_markdown(ht, htabs[0], omit=run)
+    assert to_markdown(ht, htabs[0]) == "| ACME 10-K | 7 |\n|---|---|\n| x | y |"   # the record is untouched
     print("[tables self-check] ok")
 
 

@@ -70,6 +70,26 @@ def run(base, out):
             if not ok:
                 record["failures"].append(f"{fx} item {code}: {got}")
             record["fixtures"][fx] = {"item": code, "expect": want, **got}
+        # PR #45 R1: both boxes on, jpm-2024 item 15 — the pane must show no running
+        # head while the header says "boilerplate hidden" (ADR-031 §b4 as repaired)
+        page.goto(base + "/", wait_until="networkidle")
+        page.check("#render-md"); page.check("#exclude-bp")
+        page.select_option("#fx", "jpm-2024")
+        page.click("#go-fx")
+        page.wait_for_selector(".it", timeout=120000)
+        page.evaluate("() => [...document.querySelectorAll('.it')].find(b => b.querySelector('.code').textContent.trim() === '15').click()")
+        page.wait_for_selector("#pane .text.md", timeout=10000)
+        both = page.evaluate("""() => { const pane = document.querySelector('#pane .text.md');
+            return {running_heads_in_pane: pane.innerText.split('JPMorgan Chase & Co./2024 Form 10-K').length - 1,
+                    tables: pane.querySelectorAll('table').length,
+                    header: document.querySelector('#pane .src-hdr').innerText}; }""")
+        shot = shots / "jpm-2024-item15-markdown-exclude.png"
+        page.screenshot(path=str(shot), full_page=False, animations="disabled")
+        both["shot"] = f"{out}/{shot.name}"
+        record["both_boxes_jpm_item15"] = both
+        if not (both["running_heads_in_pane"] == 0 and "boilerplate hidden" in both["header"].lower()
+                and "markdown" in both["header"].lower()):
+            record["failures"].append(f"both boxes on, jpm-2024 item 15: {both}")
         # the S3 contract in Markdown mode: fixture banner unchanged by the checkbox
         page.goto(base + "/", wait_until="networkidle")
         page.check("#render-md")

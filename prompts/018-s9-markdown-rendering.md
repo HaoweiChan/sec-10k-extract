@@ -57,7 +57,8 @@ Post-freeze, ADR first. Ruling:
   so out loud (ADR-029 §c2 restated).** Two numbers, blocks and bounds, so a
   kind error and a boundary error read differently in the time series: strong
   never recorded is 48/61 blocks at 61/61 bounds; table blocks dropped is
-  45/61 on both.
+  48/61 on both (re-measured 2026-08-24 for PR #45 R2 — the first write-up
+  carried 58-label numerators over 61; ADR-031 §g has the runner's lines).
 
 ## Assumption → Eval contradiction → Correction
 
@@ -119,3 +120,24 @@ Post-freeze, ADR first. Ruling:
   `pe` in an 11-column table.
 - **Corrected:** cells wrap at word boundaries only and the table scrolls
   horizontally inside the pane; re-shot in the committed walk.
+
+- **Assumed:** "leave out a block lying wholly inside a chrome run" was the
+  S8 checkbox's meaning carried into Markdown mode.
+- **Eval said:** PR #45 R1 — on jpm-2024 every one of the 572 ADR-026 runs
+  sits inside a two-cell page-furniture table, so the rule omitted nothing:
+  286 running heads in the "stripped" Markdown, 0 after `strip_chrome`, and
+  the pane said "boilerplate hidden". The new case `blocks-omit-chrome`
+  was red first: `stripped markdown still contains 'JPMorgan Chase &
+  Co./2024 Form 10-K' (286x)`.
+- **Corrected:** chrome is removed from every block's rendered text exactly
+  as `strip_chrome` removes it — paragraph slices, heading slices and table
+  cells (`tables.grid`/`to_markdown` take `omit`) — and an emptied row,
+  table or block disappears; 0 running heads after, on the whole document
+  and on item 15; csco-2016's 10 in-table page numbers likewise.
+
+- **Assumed:** the mutation table could be re-denominated when three labels
+  were added.
+- **Eval said:** PR #45 R2 — the reviewer re-ran the mutations: 56/61 where
+  53/61 was written, 31/61 where 28/61 was, 48/61 on both for M4.
+- **Corrected:** every mutation re-run on the final tree and only the
+  runner's lines written (ADR-031 §g); the PR #35 lesson in numeric form.
