@@ -2,7 +2,8 @@
 
 Date: 2026-08-16. Status: accepted. Amends `specs/001-sec10k-contract.md`
 (offset rules) and **INV-S1** (scope). Closes the open question left by
-ADR-010.
+ADR-010. Amended by ADR-031 (in place 2026-08-23: where a footnote-resolved
+IBR span points — see the note under Decision).
 
 **Ruling**: `incorporated_by_reference` items carry real `start`/`end` offsets over their pointer text, and every span-level check (overlap, boundary hygiene, `verbatim`, content checks) now covers IBR spans exactly like `extracted` ones.
 **Because**: the pointer sentence is the evidence a human needs to confirm the claim, and unvalidated IBR offsets were the worst of both worlds — nothing checked them at all.
@@ -35,6 +36,15 @@ it.**
 
 `incorporated_by_reference` carries `start`/`end` pointing at the item's own
 pointer text. `missing` and `omitted` stay null — they have no span.
+
+*Amended 2026-08-23 (ADR-031 §d, D4): when the pointer is a FOOTNOTE outside
+the item's body (ba-2003 items 11/13 — a marked heading over an empty body,
+the footnote inside item 14's span), the span stays the item's own heading
+line — the marker is the in-span evidence and INV-S1 forbids pointing the span
+into another item — and the footnote's offsets are published at
+`evidence.footnote = {start, end}`. Every span-level check covers that span
+exactly as this ADR rules; the `text_contains` check gains an `evidence` key
+so the footnote slice is anchored too.*
 
 And the part that makes the first part safe: **every span-level check covers
 IBR spans.**

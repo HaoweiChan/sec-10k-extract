@@ -165,7 +165,13 @@ proxy\nstatement") — that alone mis-classified 5 items across GE 1994 and
 Textron 2001. The "stub threshold" above turned out not to exist: measured, IBR
 bodies (93–1,875 chars) and extracted bodies overlap completely in length, so
 shape decides — is the first sentence a pointer, and does it name a different
-document.
+document. **D4 (ADR-031)**: one pointer shape lives outside the body — a
+heading whose line ends in an asterisk run over an EMPTY body, resolved by a
+footnote anywhere in the document that begins with the same run, names the
+item's code and names a different document (`segment.footnote_pointer`,
+called after `classify` returns `extracted`) → `incorporated_by_reference`;
+the span stays the heading line and the footnote's offsets go to
+`evidence.footnote`. Measured: one filing (ba-2003) in 47 committed documents.
 
 **8. Structural validation** — the false-success net: a battery of
 **label-free** validators modeled on how a human sanity-checks an extraction.
