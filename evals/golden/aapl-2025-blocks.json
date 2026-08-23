@@ -1,0 +1,124 @@
+{
+  "id": "aapl-2025-blocks",
+  "task": "sec10k",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "path": "evals/fixtures/aapl-2025/filing.htm",
+    "blocks": true
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "envelope_shape"
+      },
+      {
+        "type": "blocks_sane",
+        "min": 650,
+        "max": 750
+      },
+      {
+        "type": "blocks",
+        "blocks": [
+          {
+            "kind": "heading",
+            "start": 24697,
+            "end": 24718,
+            "level": 2,
+            "item": "1A",
+            "head": "Item 1A. Risk Factors"
+          },
+          {
+            "kind": "paragraph",
+            "start": 24720,
+            "end": 25431,
+            "head": "The following summarizes factors that co",
+            "tail": "r may face in the future."
+          },
+          {
+            "kind": "paragraph",
+            "start": 25433,
+            "end": 25735,
+            "head": "This section should be read in conjuncti",
+            "tail": " Data” of this Form 10-K."
+          },
+          {
+            "kind": "paragraph",
+            "start": 25737,
+            "end": 25769,
+            "strong": true,
+            "head": "Macroeconomic and Industry Risks"
+          },
+          {
+            "kind": "paragraph",
+            "start": 25771,
+            "end": 26023,
+            "strong": true,
+            "head": "The Company’s operations and performance",
+            "tail": "ondition and stock price."
+          },
+          {
+            "kind": "paragraph",
+            "start": 26025,
+            "end": 26464,
+            "head": "The Company has international operations",
+            "tail": "onal economic conditions."
+          }
+        ]
+      },
+      {
+        "type": "markdown",
+        "start": 24697,
+        "end": 26464,
+        "value": "## Item 1A. Risk Factors\n\nThe following summarizes factors that could have a material adverse effect on the Company’s business, reputation, results of operations, financial condition and stock price. The Company may not be able to accurately predict, control or mitigate these risks. Statements in this section are based on the Company’s beliefs and opinions regarding matters that could materially adversely affect the Company in the future and are not representations as to whether such matters have or have not occurred previously. The risks and uncertainties described below are not exhaustive and should not be considered a complete statement of all potential risks or uncertainties that the Company faces or may face in the future.\n\nThis section should be read in conjunction with Part II, Item 7, “Management’s Discussion and Analysis of Financial Condition and Results of Operations” and the consolidated financial statements and accompanying notes in Part II, Item 8, “Financial Statements and Supplementary Data” of this Form 10-K.\n\n**Macroeconomic and Industry Risks**\n\n**The Company’s operations and performance depend significantly on global and regional economic conditions and adverse economic conditions can materially adversely affect the Company’s business, results of operations, financial condition and stock price.**\n\nThe Company has international operations with sales outside the U.S. representing a majority of the Company’s total net sales. In addition, the Company’s global supply chain is large and complex and a majority of the Company’s supplier facilities, including manufacturing and assembly sites, are located outside the U.S. As a result, the Company’s operations and performance depend significantly on global and regional economic conditions."
+      },
+      {
+        "type": "blocks",
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "start": 169407,
+            "end": 169431,
+            "strong": true,
+            "head": "Share-Based Compensation"
+          },
+          {
+            "kind": "paragraph",
+            "start": 169433,
+            "end": 169619,
+            "head": "The following table shows share-based co",
+            "tail": "4 and 2023 (in millions):"
+          },
+          {
+            "kind": "table",
+            "start": 169621,
+            "end": 169790,
+            "head": "2025 2024 2023\n\nShare-based compensation",
+            "tail": ",602) $ (3,350) $ (3,421)"
+          },
+          {
+            "kind": "paragraph",
+            "start": 169792,
+            "end": 169989,
+            "head": "As of September 27, 2025, the total unre",
+            "tail": "rage period of 2.5 years."
+          }
+        ]
+      },
+      {
+        "type": "markdown",
+        "start": 169407,
+        "end": 169989,
+        "value": "**Share-Based Compensation**\n\nThe following table shows share-based compensation expense and the related income tax benefit included in the Consolidated Statements of Operations for 2025, 2024 and 2023 (in millions):\n\n|  | 2025 |  | 2024 |  | 2023 |  |\n|---|---|---|---|---|---|---|\n| Share-based compensation expense | $ | 12,863 | $ | 11,688 | $ | 10,833 |\n| Income tax benefit related to share-based compensation expense | $ | (3,602) | $ | (3,350) | $ | (3,421) |\n\nAs of September 27, 2025, the total unrecognized compensation cost related to outstanding RSUs was $21.8 billion, which the Company expects to recognize over a weighted-average period of 2.5 years."
+      },
+      {
+        "type": "verbatim"
+      },
+      {
+        "type": "no_overlap_ordered"
+      }
+    ]
+  },
+  "provenance": "ADR-031 §g, the modern iXBRL shape. Apple FY2025 10-K (iXBRL, EDGAR accession 0000320193-25-000079). Two windows, transcribed by hand from the raw HTML on 2026-08-23 before comparison, offsets into normalized_text (207,482 chars; a block's offsets are its first and last visible character, the same tightening ADR-029 applies to cells). WINDOW 1 — the Item 1A opening, normalized [24697, 26464): raw bytes 201640–204500 of filing.htm. Workiva writes one <div> per paragraph with a single styled <span> inside; there are no <h1>–<h6>, <p>, <li> or <b> tags anywhere in this filing (tag census 2026-08-23: 1,330 <div>, 3,335 <span>, 415 font-weight:700 styles, 0 of each of the others). Block 1 = <div style=\"margin-top:18pt;padding-left:45pt;...\"><span style=\"...font-weight:700...\">Item 1A.&#160;&#160;&#160;&#160;Risk Factors</span></div> (text at raw 201696): the item-1A heading the segmenter identified (heading_text 'Item 1A. Risk Factors'), so it is promoted to a level-2 heading carrying item '1A' (ADR-031 §b3); its bold is subsumed by the heading kind. Block 2 = <div style=\"margin-top:9pt;text-align:justify\"><span font-weight:400>The following summarizes factors ... may face in the future.</span></div> (raw 201910) -> paragraph. Block 3 = <div margin-top:12pt><span font-weight:400>This section should be read in conjunction ... of this Form 10-K.</span></div> (raw 202804) -> paragraph; the empty <div id=\"..._55\"></div> after it emits no text and is no block. Block 4 = <div margin-top:18pt;padding-left:45pt><span font-weight:700>Macroeconomic and Industry Risks</span></div> (raw 203396) -> paragraph, strong (a styled sub-heading: bold, but no <hN> and not an item heading, so NOT a heading — ADR-031 §b2). Block 5 = <div margin-top:9pt><span style=\"...font-style:italic;font-weight:700...\">The Company&#8217;s operations and performance depend significantly ... stock price.</span></div> (raw 203616) -> paragraph, strong (italic is not recorded, ADR-031 §e). Block 6 = <div margin-top:6pt><span font-weight:400>The Company has international operations ... regional economic conditions.</span></div> (raw 204050) -> paragraph. WINDOW 2 — Note 11's share-based compensation expense table with its prose, normalized [169407, 169989): raw 1206600–1214210. Block 1 = <div><span font-weight:700>Share-Based Compensation</span></div> (text at raw 1206659; the third of three occurrences of that string in the file, the first two being the Note 11 title and the TOC) -> paragraph, strong. Block 2 = <ix:nonNumeric ...><div><span>The following table shows share-based compensation expense ... (in millions):</span></div> (raw 1207043) -> paragraph. Block 3 = the <table> at raw [1207289, 1213835) — the very table evals/golden/aapl-2025-table.json labels cell by cell (4 rows x 18 cols, colspan=3 throughout) -> a table block sitting exactly on ADR-029 record #38 (normalized [169621, 169790)). Block 4 = <div><span>As of September&#160;27, 2025, the total unrecognized compensation cost ... 2.5 years.</span></div> (raw 1214015) -> paragraph. The two markdown values are derived by hand from these labels under ADR-031 §b4: a level-2 heading is '## ' + the heading line, a strong paragraph is wrapped in '**', a plain paragraph is its slice, blocks are joined by one blank line, and the table block renders exactly as aapl-2025-table's table_markdown check already pins it (the value here contains that string verbatim). No paragraph in either window carries a Markdown-significant character at its line start or any of the inline set, so no backslash escape appears. Band 650-750 around the 698 blocks measured at HEAD (644 paragraphs + 54 tables)."
+}

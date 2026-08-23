@@ -160,17 +160,29 @@ def main():
     # ADR-029 §c: table fidelity, micro-averaged over every `table` check the
     # scored cases ran (debt excluded, like the score). None when no case in
     # this suite labels a table — reported as absent, never as a number.
+    # ADR-031 §c: structure fidelity (blocks, bounds) over every `blocks`
+    # check, the same way, reported on the next line.
     fid = {"cells": [0, 0], "rows": [0, 0]}
+    sfid = {"blocks": [0, 0], "bounds": [0, 0]}
     for r in results:
         for k, (ok, tot) in r.get("table_fidelity", {}).items():
             fid[k][0] += ok
             fid[k][1] += tot
+        for k, (ok, tot) in r.get("structure_fidelity", {}).items():
+            sfid[k][0] += ok
+            sfid[k][1] += tot
     table_metric = {f"table_{k}_fidelity": (round(ok / tot, 4) if tot else None)
                     for k, (ok, tot) in fid.items()}
+    table_metric.update({f"structure_{k}_fidelity": (round(ok / tot, 4) if tot else None)
+                         for k, (ok, tot) in sfid.items()})
     if fid["cells"][1]:
         print(f"[eval] table fidelity: cells {table_metric['table_cells_fidelity']:.4f} "
               f"({fid['cells'][0]}/{fid['cells'][1]}), rows "
               f"{table_metric['table_rows_fidelity']:.4f} ({fid['rows'][0]}/{fid['rows'][1]})")
+    if sfid["blocks"][1]:
+        print(f"[eval] structure fidelity: blocks {table_metric['structure_blocks_fidelity']:.4f} "
+              f"({sfid['blocks'][0]}/{sfid['blocks'][1]}), bounds "
+              f"{table_metric['structure_bounds_fidelity']:.4f} ({sfid['bounds'][0]}/{sfid['bounds'][1]})")
     wall_s = round(time.monotonic() - t0, 2)
 
     baseline_path = Path(args.baseline)
@@ -218,7 +230,7 @@ def main():
         "cost_usd": 0.0,
         "report": report_name,
         "debt_count": len(debt),
-        **table_metric,   # ADR-029: null on a suite with no table labels
+        **table_metric,   # ADR-029/031: null on a suite with no table/block labels
     }
     if args.dir:
         history_line["dir"] = args.dir

@@ -1,0 +1,59 @@
+{
+  "id": "blocks-heading-two-cell-table",
+  "task": "sec10k",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "path": "evals/fixtures/jnj-2016/filing.htm",
+    "blocks": true
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "blocks",
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "start": 14690,
+            "end": 14696,
+            "strong": true,
+            "head": "PART I"
+          },
+          {
+            "kind": "heading",
+            "start": 14698,
+            "end": 14715,
+            "level": 2,
+            "item": "1",
+            "head": "Item 1.\n\nBUSINESS"
+          },
+          {
+            "kind": "paragraph",
+            "start": 14717,
+            "end": 14724,
+            "strong": true,
+            "head": "General"
+          },
+          {
+            "kind": "paragraph",
+            "start": 14726,
+            "end": 15240,
+            "head": "Johnson & Johnson and its subsidiaries (",
+            "tail": "te of New Jersey in 1887."
+          }
+        ]
+      },
+      {
+        "type": "markdown",
+        "start": 14690,
+        "end": 15240,
+        "value": "**PART I**\n\n## Item 1. BUSINESS\n\n**General**\n\nJohnson & Johnson and its subsidiaries (the \"Company\") have approximately 126,400 employees worldwide engaged in the research and development, manufacture and sale of a broad range of products in the health care field. Johnson & Johnson is a holding company, which has more than 230 operating companies conducting business in virtually all countries of the world. The Company’s primary focus is products related to human health and well-being. Johnson & Johnson was incorporated in the State of New Jersey in 1887."
+      },
+      {
+        "type": "blocks_sane"
+      }
+    ]
+  },
+  "provenance": "ADR-031 §b3, the item heading typeset as a two-cell TABLE. JNJ FY2016 10-K (legacy HTML, EDGAR accession 0000200406-17-000006): every item heading is <table><tr><td width=72px></td><td></td></tr><tr><td><div><font font-weight:bold>Item 1.</font></div></td><td><div><font bold>BUSINESS</font></div></td></tr></table> (raw [82578, 83100); 'Item 1.' at raw 82899) — so heading_text is 'Item 1.' and the title sits in the next cell. Transcribed 2026-08-23; window normalized [14690, 15240): <div><font bold>PART I</font></div> -> paragraph, strong; the heading table -> a table with exactly one row carrying visible text (the first row is two empty width cells), which ADR-031 §b3 promotes to a level-2 heading with item '1' over the table's span 'Item 1.\\n\\nBUSINESS' (all 21 of this filing's span items are this shape; 135 of the corpus's 624); <div><font bold>General</font></div> (raw 83313) -> paragraph, strong; <div><font>Johnson&#160;&amp; Johnson and its subsidiaries ... in 1887.</font></div> (raw 83497) -> paragraph. The markdown value collapses the heading's internal newlines to one space under §b4: '## Item 1. BUSINESS'."
+}

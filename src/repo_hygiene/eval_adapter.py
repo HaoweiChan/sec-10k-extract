@@ -697,10 +697,12 @@ def _squash(s):
 WIRE_UI = [
     ("the excludeBp() helper reads the checkbox's own .checked",
      'function excludeBp(){ const c = $("#exclude-bp"); return !!(c && c.checked); }'),
+    # S9 (ADR-031): the Markdown checkbox rides the same three wires; the
+    # fixture/url pins moved with the body literal, deliberately
     ("the fixture mode puts the checkbox value on the wire",
-     'JSON.stringify({fixture: $("#fx").value, exclude_boilerplate: excludeBp()})'),
+     'JSON.stringify({fixture: $("#fx").value, exclude_boilerplate: excludeBp(), markdown: renderMd()})'),
     ("the url mode puts the checkbox value on the wire",
-     'JSON.stringify({url: $("#url").value, exclude_boilerplate: excludeBp()})'),
+     'JSON.stringify({url: $("#url").value, exclude_boilerplate: excludeBp(), markdown: renderMd()})'),
     ("the upload mode appends the checkbox value to its query string",
      '(excludeBp() ? "&exclude_boilerplate=1" : "")'),
     ("the pane SAYS it is hiding text — R5's defect was un-stripped text "
@@ -734,8 +736,10 @@ UNIQUE_UI = [
 ]
 
 WIRE_API = [
+    # S9 (ADR-031) added the Markdown flag to the same call; the pin moved
+    # with it deliberately, and the wire was re-checked (see the ADR)
     ("_run forwards the flag into extract_items unmodified",
-     "extract_items(path, exclude_boilerplate=exclude_boilerplate)"),
+     "extract_items(path, exclude_boilerplate=exclude_boilerplate, blocks=markdown)"),
 ]
 
 # no trailing `\)`: `@app.post("/api/extract/x", response_model=None)` is

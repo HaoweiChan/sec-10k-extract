@@ -1,0 +1,48 @@
+{
+  "id": "ge-1994-blocks",
+  "task": "sec10k",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "path": "evals/fixtures/ge-1994/filing.txt",
+    "blocks": true
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "envelope_shape"
+      },
+      {
+        "type": "blocks_sane",
+        "min": 1,
+        "max": 1
+      },
+      {
+        "type": "blocks",
+        "blocks": [
+          {
+            "kind": "pre",
+            "start": 0,
+            "end": 362717,
+            "head": "<PAGE>\n\nSECTIONS\n\nBusiness              ",
+            "tail": "                     F-47"
+          }
+        ]
+      },
+      {
+        "type": "markdown",
+        "start": 4020,
+        "end": 4420,
+        "value": "```\nItem 1. Business\n\nGeneral\n\n      Unless otherwise indicated by the context, the terms \"GE,\" \"GECS\" and\n\"GE Capital Services\" are used on the basis of consolidation described in note\n1 to the consolidated financial statements on page 45 of the 1993 Annual\nReport to Share Owners of General Electric Company.  Where appropriate for\nclarification or emphasis, GE is also referred to as \"GE except GECS.\"\n```"
+      },
+      {
+        "type": "verbatim"
+      },
+      {
+        "type": "no_overlap_ordered"
+      }
+    ]
+  },
+  "provenance": "ADR-031 §g, the txt-era shape. GE FY1993 10-K (plain-text full submission, EDGAR accession 0000040545-94-000003). A txt-era filing has no markup to recover structure from (ADR-006: the newlines ARE the document), so ADR-031 §b1 records exactly ONE block, kind pre, over the whole normalized_text: [0, 362717) at HEAD, opening '<PAGE>\\n\\nSECTIONS\\n\\nBusiness' and closing with the page mark 'F-47'. The markdown window [4020, 4420) is the Item 1 heading line and its first paragraph, verbatim from raw lines 'Item 1. Business' / 'General' / the GE-GECS consolidation note (the txt body's own layout: six leading spaces, hard-wrapped lines), and renders as that slice inside a three-backtick fence — ADR-031 §b4's pre rule, a window clipping the one block (the fence grows only if the text itself carries a backtick run, which this slice does not). Measured 2026-08-23: norm_chars 362,717; item 1 span [4020, 50949)."
+}

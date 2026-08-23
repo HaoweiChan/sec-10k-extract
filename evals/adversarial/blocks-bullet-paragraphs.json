@@ -1,0 +1,86 @@
+{
+  "id": "blocks-bullet-paragraphs",
+  "task": "sec10k",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "path": "evals/fixtures/cat-2023/filing.htm",
+    "blocks": true
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "blocks",
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "start": 17585,
+            "end": 17673,
+            "head": "The Energy & Transportation portfolio in",
+            "tail": "oducts and related parts:"
+          },
+          {
+            "kind": "paragraph",
+            "start": 17675,
+            "end": 17719,
+            "head": "•Reciprocating engine powered generator ",
+            "tail": "ne powered generator sets"
+          },
+          {
+            "kind": "paragraph",
+            "start": 17721,
+            "end": 17861,
+            "head": "•Reciprocating engines, drivetrain and i",
+            "tail": " as Caterpillar machinery"
+          },
+          {
+            "kind": "paragraph",
+            "start": 17863,
+            "end": 17943,
+            "head": "•Integrated systems and solutions used i",
+            "tail": "power generation industry"
+          },
+          {
+            "kind": "paragraph",
+            "start": 17945,
+            "end": 18004,
+            "head": "•Turbines, centrifugal gas compressors a",
+            "tail": "sors and related services"
+          },
+          {
+            "kind": "paragraph",
+            "start": 18006,
+            "end": 18119,
+            "head": "•Reciprocating engines, drivetrain and i",
+            "tail": "nd oil and gas industries"
+          },
+          {
+            "kind": "paragraph",
+            "start": 18121,
+            "end": 18209,
+            "head": "•Diesel-electric locomotives and compone",
+            "tail": "ted products and services"
+          },
+          {
+            "kind": "paragraph",
+            "start": 18211,
+            "end": 18237,
+            "strong": true,
+            "head": "Financial Products Segment"
+          }
+        ]
+      },
+      {
+        "type": "markdown",
+        "start": 17585,
+        "end": 18237,
+        "value": "The Energy & Transportation portfolio includes the following products and related parts:\n\n•Reciprocating engine powered generator sets\n\n•Reciprocating engines, drivetrain and integrated systems and solutions supplied to the industrial industry as well as Caterpillar machinery\n\n•Integrated systems and solutions used in the electric power generation industry\n\n•Turbines, centrifugal gas compressors and related services\n\n•Reciprocating engines, drivetrain and integrated systems and solutions for the marine and oil and gas industries\n\n•Diesel-electric locomotives and components and other rail-related products and services\n\n**Financial Products Segment**"
+      },
+      {
+        "type": "blocks_sane"
+      }
+    ]
+  },
+  "provenance": "ADR-031 §e, the S9 row's other adversarial shape: a list rendered with bullet characters and no <li>. Caterpillar FY2023 10-K (iXBRL, EDGAR accession 0000018230-24-000009), 103 bullet characters and zero <ul>/<ol>/<li>. Transcribed 2026-08-23; window normalized [17585, 18237), raw 811000–812400: <div><span>The Energy &amp; Transportation portfolio includes the following products and related parts:</span></div> -> paragraph; then six <div><span>&#8226;</span><span>text</span></div>, one per bullet (the first at raw 811297) -> six paragraphs each opening with the bullet glyph, NOT list_items: the annotation reads structure, not glyphs, and a bullet character in a paragraph is a paragraph; <div><span font-weight:700>Financial Products Segment</span></div> -> paragraph, strong. The <div><span><br/></span></div> spacers emit no text. The markdown value is the eight slices joined by blank lines; '•' is not an ASCII list marker, so nothing is escaped and no Markdown renderer turns these into a list — the honest rendering of what the filer typeset."
+}

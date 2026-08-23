@@ -114,6 +114,27 @@ them all); the example once showed `lenient_match`, which nothing emits.
   by `src/sec10k/tables.grid()` / `to_markdown()` and are deliberately not
   fields. `rowspan`, nested tables and txt-era SGML `<TABLE>` layout are not
   interpreted (ADR-029 §e). `envelope_shape` refuses any other shape.
+- **`blocks` (optional, ADR-031)**: present *only* when the caller passes
+  `extract_items(path, blocks=True)`, which also implies `tables=True`
+  (table blocks point into the `tables` records). A list, in document order
+  and non-overlapping, of `{"kind", "start", "end", ...}` records —
+  `start`/`end` offsets into `normalized_text` bounding one block's visible
+  text (first to last non-space character); `kind` ∈ `heading` (with
+  `level`, an int 1–6, and `item` when it is an item heading the segmenter
+  identified) | `paragraph` (with `strong: true` when the whole block was
+  bold in the HTML) | `list_item` (with `ordered`) | `table` (with `table`,
+  the index of the `tables` record whose span the block is) | `pre` (the
+  one block a txt-era filing is). A block's text **is**
+  `normalized_text[start:end]`; together the blocks cover every non-space
+  character of `normalized_text`. Same rule as `boilerplate` and `tables`:
+  an annotation, never an edit — `normalized_text`, every item offset and
+  every published figure are byte-identical with the flag on and off.
+  Carried on refusal envelopes too when asked for (no items, so no item
+  heading is promoted). The whole-document and per-item Markdown are
+  derived by `src/sec10k/markdown.to_markdown()` and are deliberately not
+  fields. Headings inferred from styling, inline emphasis, italic, nested
+  lists, definition lists and txt-era structure are not interpreted
+  (ADR-031 §e). `envelope_shape` refuses any other shape.
 
 ## Envelope rules (v2, normative)
 
