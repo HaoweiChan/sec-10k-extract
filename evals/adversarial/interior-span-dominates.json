@@ -1,0 +1,42 @@
+{
+  "id": "interior-span-dominates",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/interior-span-dominates/filing.htm"},
+  "expect": {
+    "checks": [
+      {"type": "envelope_shape"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "deterministic"},
+      {"type": "doc_status", "value": "ambiguous"},
+      {"type": "warning_present", "code": "item_dominates", "item": "1"},
+      {"type": "warning_absent", "code": "last_item_dominates"},
+      {"type": "warning_absent", "code": "expected_items_mostly_missing"},
+      {"type": "warning_absent", "code": "toc_manifest_mismatch"},
+      {"type": "warning_absent", "code": "unattributed_content"},
+      {"type": "warning_present", "code": "expected_item_missing", "item": "1A"},
+      {"type": "warning_present", "code": "expected_item_missing", "item": "3"},
+      {"type": "confidence", "max": 0.75},
+      {"type": "item_present", "item": "1", "status": "extracted"},
+      {"type": "text_contains", "item": "1", "value": "ITEM 1. BUSINESS"},
+      {"type": "text_contains", "item": "1", "value": "RISK FACTORS"},
+      {"type": "text_contains", "item": "1", "value": "LEGAL PROCEEDINGS"},
+      {"type": "min_chars", "item": "1", "value": 65000},
+      {"type": "item_present", "item": "1A", "status": "missing"},
+      {"type": "item_present", "item": "1B", "status": "missing"},
+      {"type": "item_present", "item": "2", "status": "missing"},
+      {"type": "item_present", "item": "3", "status": "missing"},
+      {"type": "item_present", "item": "4", "status": "extracted"},
+      {"type": "item_present", "item": "8", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "15", "status": "extracted"},
+      {"type": "expected_set_complete", "items": ["1", "1A", "1B", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "9A", "9B", "10", "11", "12", "13", "14", "15"]},
+      {"type": "only_items", "items": ["1", "1A", "1B", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "9A", "9B", "10", "11", "12", "13", "14", "15"]}
+    ]
+  },
+  "triage": {
+    "class": "escalation-policy",
+    "note": "D3 / ADR-030 — the successor ADR-019 §d named for the retired span-coverage row, and class 1 of the T5-5 debt row ('a 4-5-of-21 missing filing sits under MISSING_MAX with an interior span swallowing the rest'). `last_item_dominates` inspects only the LAST span, so a span anywhere else could hold most of the document and nothing in the battery would say so: ADR-015 §0's Target FY2002 failure (item 4 at 81% of the document, not the last span) reported plain `success`. This fixture is that shape with every other escalation route closed: the source filing has NO contents page (`toc_manifest` is empty at origin/main, so `toc_manifest_mismatch` cannot fire — T5-5 class 3 on the same document), exactly 4 of 20 items go missing (0.20, under MISSING_MAX = 0.25 — the same fraction axp-2008 loses through its combined Part III heading, which must NOT escalate), the last span is 9.6% of the document, and `unattributed_content` stays at the source's 12.4% (wmt-2010 is that threshold's low pin). `warning_absent` on those three codes is load-bearing: it is what keeps this case proving `item_dominates` escalates on its own, and not merely that the document is ambiguous for some reason (ADR-016 §1: asserting the consequence is not asserting the cause). `confidence max 0.75` with no item is ADR-027 §a — an ambiguous document caps every item. `min_chars 65000` + the two swallowed titles inside item 1 pin the mechanism (the span really does run over 1A–3's content: 69,555 chars at origin/main, 0.6387 of 108,893), not only the verdict."
+  },
+  "provenance": "SELF-CREATED adversarial fixture: a copy of evals/fixtures/wmt-2010/filing.htm (Wal-Mart Stores FY2010 10-K, EDGAR accession 0001193125-10-071652 — see that fixture's README row for original public-source provenance), mutated 2026-08-23 by deleting FOUR literal item labels, each of which occurs exactly once in the raw file: `ITEM&nbsp;1A.` (raw offset 188816), `ITEM&nbsp;1B.` (220074), `ITEM&nbsp;2.` (220664), `ITEM&nbsp;3.` (225581) — 50 bytes removed (343,590 -> 343,540); the title cells (RISK FACTORS, UNRESOLVED STAFF COMMENTS, PROPERTIES, LEGAL PROCEEDINGS), all markup and all prose are untouched, so each heading becomes a title-only line, the real filer style heading-unnumbered models on nvda-2024. Four labels rather than one because one is not enough to dominate: with 1A alone stripped item 1 reads 0.5174, with 1A+1B 0.5179, with 1A+1B+2 0.5477 — each below ITEM_MAX (0.55) and inside the measured band; all four measured, ADR-030 §b. The source has no contents page, so nothing else is stripped — unlike items-stripped, whose TOC rows had to go too. MEASURED AT origin/main dc3f8f0 (pipeline before ADR-030): item 1 `extracted` 0.95 over [11259, 80814) = 69,555 chars = 0.6387 of a 108,893-char document (at the unmutated source it is [11259, 42375), 0.2857); items 1A/1B/2/3 `missing` (4/20 = 0.20); warnings = expected_item_missing x4 and nothing else; doc_status success_with_warning; every extracted item 0.95, every IBR item 0.85. RED AT origin/main, runner line `[FAIL] interior-span-dominates (adversarial)`: doc_status 'success_with_warning' != 'ambiguous'; expected warning 'item_dominates', got ['expected_item_missing']; item 1 confidence 0.95 > 0.75. GREEN after ADR-030: item_dominates fires on item 1 (64%), doc_status ambiguous, every item capped at 0.75. WHY NOT A REAL FIXTURE: no committed real filing has a non-last span above 0.5336 (jnj-2016's Item 8, the legitimate financial statements, `success`); the only committed fixture above ITEM_MAX is items-stripped (0.5723), which is already `ambiguous` through expected_items_mostly_missing and so cannot prove the escalation on its own — it pins the band's upper edge (`warning_present item_dominates item 4` there), this case proves the policy. Like spans-transposed and items-stripped this models a boundary defect, not a filer style: no registrant drops four consecutive item labels. Registered in evals/bench.py SYNTHETIC and evals/fixtures/README.md; the bench artifact of record (n=41, 2026-08-23) predates it and is not re-run here — n is 42 at the next refresh. NOT yet dual-passed by extraction-auditor."
+}

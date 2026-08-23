@@ -121,7 +121,7 @@ SYNTHETIC = {"toc-titled", "heading-unnumbered", "malformed-html",
              "caps-cover-2016", "fy2021-item9c", "ibr-pointer-first",
              "truncated-download", "spans-transposed", "items-stripped",
              "ibr-security-holders", "comma-cover-2016", "amended-cover-2021",
-             "spaced-letter-heading"}
+             "spaced-letter-heading", "interior-span-dominates"}
 
 # ---------------------------------------------------------------- cost basis
 # Anthropic first-party API list price, AS OF 2026-06-24, carried forward from
