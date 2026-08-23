@@ -136,7 +136,11 @@ unmoved, which is what makes the rule discriminating rather than merely looser.
 The contract fixes the `doc_status` derivation order and says in terms that the
 ordering is not implementation-owned. The code tested `ACCEPTED_FORMS` first
 and collapse second, so a truncated download — 13 normalized chars, no
-detectable form — was reported `unsupported`.
+detectable form — was reported `unsupported`. *(13 as of this ruling's date;
+the same fixture, `truncated-download`, normalizes to **0** chars since the T3
+`<title>` skip — re-measured 2026-08-23 in
+`evals/report/20260823-185707-bench.json`, D2. The narrative stands as dated;
+the diagnosis order it rules on is unchanged.)*
 
 **Decision**: the contract's order stands and the code follows it. This is not
 pedantry about precedence. The two statuses are different diagnoses shown to a

@@ -136,7 +136,7 @@ Three candidate trigger policies, and the disposal of each:
 
 | item(s) | disposal |
 |---|---|
-| `xom-2021` item 6 | The item **is not in the document**. `Item 6` and `Selected Financial Data` occur zero times in 388,862 normalized chars — FY2021 filings no longer contain it. Nothing to find; an LLM offered this filing can only invent. **Not addressable.** |
+| `xom-2021` item 6 | The item **is not in the document**. `Item 6` and `Selected Financial Data` occur zero times in 388,862 normalized chars (as of this ADR; 388,848 since the T3 `<title>` skip — `20260823-185707-bench.json`, D2) — FY2021 filings no longer contain it. Nothing to find; an LLM offered this filing can only invent. **Not addressable.** |
 | `malformed-html` item 1A | `RISK FACTORS` occurs exactly once, in the table of contents. The body does not survive the corruption this fixture exists to model. **Not addressable.** |
 | `heading-unnumbered` item 8; `items-stripped-escalation` items 5/6/7/7A/8/9/9A/9B (9 items, 2 synthetic fixtures) | Content is present but de-numbered — and **the committed cases assert `missing` is the CORRECT answer**, with `doc_status: ambiguous` and `expected_item_missing`. These fixtures exist to prove the pipeline refuses rather than guesses (`README.md`: "it never emits a best-effort parse of a document it could not identify"). A fallback here does not fix a failure; it deletes a guarantee. **Not addressable.** |
 | `axp-2008` items 10, 11, 12, 13 | **ADDRESSABLE — and the whole of it.** A real EDGAR filing, content present, and all four are contract-reachable: the caption regions are disjoint and in order, `no_overlap_ordered` passes, `classify` returns `extracted` on each. The interleaved bullet order costs only item-10 *coverage* (item 10 keeps 956 of the block's 3,263 chars; the cost is 2,307), not the other three items' spans. See §c row 7 for what fixing them costs and why the fallback still loses. |
@@ -293,6 +293,14 @@ figures are a **chars/4 approximation** — T13 should firm them with
 | median fixture (n=37, true median) | 108,938 | ~27,000 |
 | `jpm-2024` (largest, 12.8 MB raw) | 1,213,298 | ~303,000 |
 | `bac-2006` | 705,899 | ~176,000 |
+
+*(Figures as of this ADR's date, reproduced to the character by ADR-021 §d2 on
+`20260820-031540`; re-measured 2026-08-23 in
+`evals/report/20260823-185707-bench.json` (D2, ADR-021 §g) after the `<title>`
+skip (T3) and four added fixtures: corpus 8,751,495 over 41; median 102,453;
+`jpm-2024` 1,213,284; `bac-2006` 705,848. The ruling does not move — the
+counterfactual is an order-of-magnitude argument — so the table above is left
+as the dated input it was.)*
 
 Price basis: Anthropic first-party API list price, **as of 2026-06-24** (the
 `claude-api` skill's cached model table) — `claude-opus-5` $5.00/MTok input,

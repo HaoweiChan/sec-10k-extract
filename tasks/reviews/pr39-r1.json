@@ -1,0 +1,37 @@
+{
+ "pr": 39,
+ "round": 1,
+ "date": "2026-08-23",
+ "result": "REQUEST_CHANGES",
+ "gate": "invariant 49/49; fast 97/97; table fidelity 400/400 · 31/31; bench --self-check ok (also py3.11/3.12); --check-docs 70/0 exit 0; metrics --self-check ok; baseline untouched; src/ diff = boilerplate.py comment only; every listed moved figure re-derived from the artifacts by the reviewer except R1's trio range",
+ "routing_rule": "repair = HIGH/MEDIUM and (acceptance violated | gate red | published claim dishonest); everything else debt (pr-loop scope boundary)",
+ "findings": [
+  {
+   "id": "R1",
+   "severity": "MEDIUM",
+   "route": "repair",
+   "claim": "The v5 version block attributes a cvx-2015 latency range of 0.366–0.380 s to 'the 2026-08-20 trio', but the trio reads 0.366–0.374 s; 0.380 is the 20260820-115810 artifact's value, which is not one of the three runs named.",
+   "evidence": "docs/analysis-report.md:16-19: '(on the 2026-08-20 trio those two filings read 0.366–0.380 s and 0.500–0.521 s; …)'. evals/report/20260820-031501/-031540/-031620-bench.json records[cvx-2015].median_s = 0.3656 / 0.3679 / 0.374; 20260820-115810 = 0.38 (and 024620 = 0.3739). The bac-2006 half (0.500–0.521) does reproduce from the trio (0.5002/0.5052/0.5213). The figure sits beyond --check-docs' reach (no backticked fixture name within 60 chars before it), so the instrument could not catch it.",
+   "repro": "python3 -c \"import json;[print(s,{r['fixture']:r['median_s'] for r in json.load(open(f'evals/report/{s}-bench.json'))['records']}['cvx-2015']) for s in ('20260820-031501','20260820-031540','20260820-031620','20260820-115810')]\"",
+   "acceptance": "The sentence reads 0.366–0.374 s for the trio, or names the population it actually spans (the four 2026-08-20 clean-tree runs, 0.366–0.380 s) — re-derived from the artifacts, not edited by hand."
+  },
+  {
+   "id": "R2",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "Report §3.2's warm-up sentence lists the three per-run maxima in sorted order but the fixtures in run order, so the implied pairing is wrong (1.048 is jpm-2024's, not sandston-2021's).",
+   "evidence": "docs/analysis-report.md:684-686: 'Across the three runs the maximum is 1.048 / 1.051 / 1.056 and lands on a different fixture each time (`sandston-2021`, `jpm-2024`, `ko-1997`)'. Artifacts: 185543 -> 1.0556 sandston-2021; 185626 -> 1.0482 jpm-2024; 185707 -> 1.0511 ko-1997. ADR-021 §d1 states it correctly.",
+   "repro": "python3 -c \"import json;[print(s,json.load(open(f'evals/report/20260823-{s}-bench.json'))['perf']['derived']['warmup_first_over_min_max']) for s in ('185543','185626','185707')]\"",
+   "acceptance": "Values and fixtures listed in the same order (1.056 / 1.048 / 1.051 — sandston-2021, jpm-2024, ko-1997), matching ADR-021 §d1."
+  },
+  {
+   "id": "R3",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "A DOC_ALLOW comment says ksb-2007 'first_s == min_s … (0.0026 on 185707)', but on 185707 first_s is 0.0027 and min_s 0.0026, so the equality the comment cites does not hold on the run of record.",
+   "evidence": "evals/bench.py DOC_ALLOW entry ('analysis-report.md', 'ksb-2007', '0.0025') comment; evals/report/20260823-185707-bench.json records[ksb-2007]: first_s 0.0027, min_s 0.0026, median_s 0.0026.",
+   "repro": "python3 -c \"import json;print([r for r in json.load(open('evals/report/20260823-185707-bench.json'))['records'] if r['fixture']=='ksb-2007'][0])\"",
+   "acceptance": "Comment says what 185707 actually reads (median/min 0.0026, first 0.0027) or drops the parenthetical; no behavior change."
+  }
+ ]
+}

@@ -4,6 +4,10 @@ Date: 2026-08-18. Status: accepted. Amended by: ADR-019 (§d, the span-coverage
 sentence — marked in place 2026-08-22), ADR-027 (§h: the instrument re-run and
 the population of the table below; §a: an `ambiguous` document now caps every
 item, which moves 100 items the table's population counted at 0.95/0.85/0.80).
+The table below is the 2026-08-18 measurement and stays as written; its
+re-publication after ADR-027 is `docs/analysis-report.md` §"Confidence
+calibration — before and after" **v3** (2026-08-23, D2, from
+`evals/report/20260823-185915-all.json`; ADR-021 §g).
 Implements T10/A2 (layer 9,
 `src/sec10k/validate.py`). Instrument and measured table landed first in
 `d3a28df` (metric 8 v2 + report `20260818-123114-all.json`), per T10's gate:

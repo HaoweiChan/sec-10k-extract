@@ -3,11 +3,19 @@
 Date: 2026-08-20. Status: accepted. Implements T13/A5. Adds one dev-only
 instrument, `evals/bench.py`. Changes no pipeline code, no eval case, no
 baseline. Supersedes the measurements — not the structure — of
-`docs/analysis-report.md` v3 §3, §4 and §5, which v4 replaces.
+`docs/analysis-report.md` v3 §3, §4 and §5, which v4 replaces. **Amended in
+place 2026-08-23 (D2, the re-publication):** the run of record is now
+`evals/report/20260823-185707-bench.json` (n=41, 13 synthetic, 4 refusals;
+git `ba263ee`, clean tree; the middle of three committed runs on four of six
+headlines — §b11 amendment); `20260820-031540` (n=37, `13761cc`) stays named
+as the previous run of record and its figures survive here only inside dated
+notes. What changed and why is §g; §b8, §b11, §b12, §c, §d and Verification
+carry dated amendment notes; §b13 is new (the `tables=True` column); the
+`--check-docs` fail-closed rule and its gate wiring are §b12's amendment.
 
 **Ruling**: add `evals/bench.py` (stdlib-only, dev instrument, `evals/oracle.py` precedent) as the committed, re-runnable source of every perf/cost number in `docs/analysis-report.md`; throw away v3's §3/§4/§5 figures, which cited nothing and were measured over a stale 21-fixture corpus.
 **Because**: T13's own Validation gate ("every number measured from committed `evals/report/` runs, none guessed") was not met by ad-hoc prose timing that left nothing reproducible behind.
-**Enforced by**: `evals/bench.py --self-check`, `evals/bench.py --check-docs`, `docs/analysis-report.md` v4
+**Enforced by**: `evals/bench.py --self-check` and `evals/bench.py --check-docs evals/report/20260823-185707-bench.json` — both run by `.githooks/pre-commit` and `.github/workflows/ci.yml` (unit-tests) since D2; `docs/analysis-report.md` v5
 
 ---
 
@@ -39,14 +47,15 @@ instrument that runs the real pipeline through its existing public entry point
 (`extract_items`) read-only, is never imported by `src/`, is not part of any
 scored suite, and writes `evals/report/<stamp>-bench.json`.
 
-**Twelve** measurement choices, each of which could reasonably have gone the
+**Thirteen** measurement choices, each of which could reasonably have gone the
 other way, so each is recorded rather than left in the code. (Seven at first
 draft; 8 and 9 added in PR #12 repair round 1, where the reviewer showed that
 the population boundary and the sub-millisecond ratio noise were decisions the
 code was making silently; 10 and 11 in round 2, where *which statistics are
 asserted* and *how many digits of any of them mean anything* turned out to be
 decided by accident too; 12 in round 3, when the same stale-number defect
-survived two sweeps that had both been claimed as complete.)
+survived two sweeps that had both been claimed as complete; 13 in D2,
+2026-08-23, when the re-publication added the `tables=True` column.)
 
 1. **The unit is the fixture, not the eval case.** Several cases run the same
    fixture (`aapl-2025` appears in more than one) and some carry no fixture at
@@ -63,7 +72,9 @@ survived two sweeps that had both been claimed as complete.)
    (`derived.repeat_spread_median`): **0.8% – 1.0%**. The per-run *maximum* of
    that spread is **not quoted here or anywhere else** — it ranges 2.4% / 3.1%
    / 7.5% across the three runs and always lands on whichever sub-10 ms
-   fixture the scheduler happened to interrupt (§b11).
+   fixture the scheduler happened to interrupt (§b11). *(2026-08-23 trio, D2:
+   median 0.7% – 1.3%; per-run maximum 5.3% / 20.7% / 6.6%, on a sub-50 ms
+   fixture each time — still not published.)*
 
    *(Corrected twice. PR #12 R12: this choice read "median 1.4%, worst 8%" and
    attributed it to the run of record; those were the **superseded** first
@@ -85,7 +96,8 @@ survived two sweeps that had both been claimed as complete.)
    medians.** A real batch pays per-file open and allocator churn that a
    median-of-3 loop amortizes. §5's projection divides into the *batch*
    number. On the run of record the two agree closely (batch **3.942 s** vs
-   sum-of-medians **3.925 s**), which is itself the evidence that no batch
+   sum-of-medians **3.925 s**; on the 2026-08-23 run of record, n=41, batch
+   **4.307 s** vs **4.309 s**), which is itself the evidence that no batch
    overhead is hiding.
 
    **Which rate each population divides into, precisely** — the sentence above
@@ -188,6 +200,20 @@ survived two sweeps that had both been claimed as complete.)
      `real_edgar_committed` as `projection_of_record`; the EDGAR-year sweep
      moves from ~12.6 min to **~16.9 min**.
 
+     *(Re-measured 2026-08-23, D2, `20260823-185707`: the timed population is
+     **41** (every directory `evals.oracle.iter_fixtures` yields — D1 made
+     discovery the rule, so the count is read, not quoted), of which **13**
+     are `SYNTHETIC` and **4** are refusals (`amended-cover-2021` joined the
+     three above). The 13 synthetic fixtures average 0.63 MiB against 1.87 MiB
+     for the 28 real dev filings — the ordering claim "seven of nine derive
+     from the smallest" is not re-stated for 13; the measured means are. All
+     41: 1.477 MiB mean; `real_edgar_dev` still 28 / 1.868 MiB and
+     `real_edgar_committed` still 33 / 2.104 MiB — no real filing joined the
+     corpus since — and the of-record sweep reads **~17.9 min** (1,071.9 s)
+     because the rate moved, ~6% down, not the multiplier. Sizes are still
+     read for all 33 real filings, the 5 held-out among them by `stat`
+     only.)*
+
    The `SYNTHETIC` set is nine explicit names in `evals/bench.py` rather than a
    parse of `evals/fixtures/README.md`, because that README marks only eight —
    `items-stripped` has no row there at all and its provenance lives in its
@@ -195,7 +221,10 @@ survived two sweeps that had both been claimed as complete.)
    fixture rename fails loudly instead of silently reclassifying the
    population. (Two real fixtures, `gs-2002` and `jnj-2016`, also have no
    README provenance row. That gap predates T13 and filling it properly needs
-   the source URLs, i.e. a network call; noted here, not fixed.)
+   the source URLs, i.e. a network call; noted here, not fixed.) *(The set is
+   13 names at D2 — twelve marked SELF-CREATED in the README plus
+   `items-stripped`; `len(SYNTHETIC)` is the count of record, and `run_all`'s
+   existence check is what keeps it honest.)*
 
 9. **Ratio statistics have a 1 ms floor, and the excluded rows are named.**
    Also added in repair round 1, from a defect the new `derived` fields
@@ -289,6 +318,26 @@ survived two sweeps that had both been claimed as complete.)
     projection). Chosen by that rule rather than by what it says, and the rule
     is written here so the choice can be checked.
 
+    *(Amended 2026-08-23, D2. Three new full runs on a clean tree at `ba263ee`
+    — `20260823-185543`, `-185626`, `-185707` — read per-fixture median spread
+    **1.5% at the median fixture, 6.9% at the worst** (40 fixtures above the
+    floor), and aggregates p50 0.0432–0.0435 s, p95 0.388–0.399 s, max
+    0.580–0.589 s, batch 14.04–14.23 MiB/s, corpus peak RSS 119.6–123.5 MiB.
+    The ±3% aggregate claim and the two-significant-figure rule stand. **No
+    run was the middle on all six headlines this time**: `-185707` is the
+    middle on four (max, batch rate, corpus peak RSS, sweep projection) and
+    the highest of three on p50 and p95, by 0.0002 s and 0.010 s. It is the
+    run of record under the rule applied as "middle on the most headlines",
+    and that extension is written here rather than the rule being quietly
+    satisfied. The RSS plateau index read 4, 9, 9 again and stays unpublished;
+    the per-run repeat-spread maximum read 5.3% / 20.7% / 6.6% and stays
+    unpublished. One family turned out to be **worse** than ±3% and is now
+    published as a range rather than a value: `peak_rss_mib_after_largest_only`
+    reads 94.6, 94.6, 94.6, 102.4, 95.7, 100.5, 94.6 MiB across the seven
+    committed clean-tree runs of this instrument revision — **94.6–102.4 MiB**;
+    the "stable to 0.1 MiB across all three runs" in §c was true of three and
+    false at the fourth, PR #12 R25.)*
+
     This also disposes of R15. The previous artifact of record stamped
     `30b001a…-dirty` — run while `evals/bench.py` was itself uncommitted
     mid-edit — while the report claimed a clean `20f8be0`, which was the
@@ -327,7 +376,10 @@ survived two sweeps that had both been claimed as complete.)
     ratios, percentages and prices are skipped by their adjacent symbol. The
     20 remaining legitimate non-measurements are listed in `DOC_ALLOW` with a
     reason each (`len(DOC_ALLOW)` re-measured 2026-08-23, L1, PR #12 R29 — the
-    count was first written as 14 from memory) — historical values inside their own correction notes,
+    count was first written as 14 from memory; **26 after D2**, same day: +13
+    dated entries each naming the value that superseded it, −7 that no longer
+    sat beside a fixture name or whose ledger row had moved to `DONE.md` — the
+    entries and their reasons are the list itself) — historical values inside their own correction notes,
     cross-run ranges, and quantities that merely sit beside a fixture name.
     Adding an entry there is where someone has to decide "this is history";
     it is not a way to quiet a stale number.
@@ -336,42 +388,106 @@ survived two sweeps that had both been claimed as complete.)
     were swept in full; they say the fixture-attributed numbers are checked
     mechanically and the aggregates were checked by hand.
 
+    *(Amended 2026-08-23, D2 — PR #12 R26/R27, the Debt row "Both T13
+    mechanisms claim broader coverage than they deliver", parts (a) and (b).
+    **(a) The check failed open.** `DOC_WINDOW = 0` printed "0
+    fixture-attributed decimals checked, 0 unmatched" and exited 0, and a
+    renamed `DOC_FILES` entry silently dropped that file's coverage — both
+    reproduced against the pre-D2 code before the fix, exit 0 each. Now
+    `check_docs` exits non-zero when `checked == 0` ("a vacuous run … is a
+    failure, not a pass") and when any `DOC_FILES` entry does not exist, and
+    `_demo` drives it on scratch docs for all four outcomes (match, unmatched,
+    vacuous, missing file) so `--self-check` pins the rule. **(b) Neither
+    check was wired anywhere.** Both now run in `.githooks/pre-commit` after
+    the fast suite and in `ci.yml`'s unit-tests job beside `metrics
+    --self-check`; `--check-docs` points at the run of record named in this
+    header, and the two pointers move together. On the docs as re-published it
+    reads **70 checked, 0 unmatched** against `20260823-185707` (and **35
+    unmatched** when that same artifact was checked against the docs as they
+    stood before re-derivation — the evidence that the re-derivation reached
+    what the check reaches). `DOC_ALLOW` gained 13 entries for values that are now history by
+    this ADR's own amendment — each names what superseded it — and lost 7 that
+    no longer sat beside a fixture name or whose ledger row had moved to
+    `DONE.md`. One more defect of the check surfaced in the same run and is
+    fixed with a `_demo` pin: a decimal that *straddled* the 60-character
+    window edge was sliced (`1.18×` read as `1.1`), so a literal could match —
+    or fail — as a different value; a number that starts inside the window is
+    now read whole (watched on the sliced version: `0.45` at the edge read as
+    `0.4` and matched the golden median). (d) and (e) of that row stay open,
+    re-filed as a Debt row with Origin D2: `units`' contents and `SYNTHETIC`'s
+    membership are still asserted only by the top-level key set and the
+    existence check.)*
+
+13. **The `tables=True` path is timed as a thirteenth column, in a separate
+    pass after every memory reading** (added 2026-08-23, D2; the Debt row "No
+    bench figure for `tables=True`", Origin S7). ADR-029 §f published "+20% on
+    jpm-2024" and "+6% to +20% per fixture" from its working tree — one-off
+    numbers, not a committed bench field. Each record now carries
+    `tables_median_s` (the same median-of-N loop with
+    `extract_items(path, tables=True)`) and `tables_over_default` (its ratio to
+    `median_s`), and `derived` carries the median and maximum ratio over
+    processed fixtures and the fixture that sets the maximum. Two choices: the
+    pass runs **after** the batch pass, so `peak_rss_mib_after` and the corpus
+    peak remain default-path readings comparable with every earlier artifact
+    (the annotation allocates a second envelope-sized structure; its memory is
+    deliberately *not* measured here and not claimed); and the ratio population
+    is **processed** fixtures only, because a refusal returns before any table
+    is read. On the run of record: median **1.187×**, maximum **1.295×**
+    (`wfc-2008`), `jpm-2024` 0.5821 → 0.7227 s (1.242×); across the three runs
+    the median reads 1.18–1.20 and the maximum 1.274–1.295. Pinned by the golden
+    record (`tables_median_s` 0.15, ratio 1.154) and three new `derived`
+    fields in the golden payload (1.2 / 1.3 / `ko-1997`, a maximum set by
+    neither the largest nor the slowest row), per choice 10.
+
 ## c) What the measurement falsified
 
 Four claims in v3 §3/§5 are wrong at 37 fixtures. They are corrected in v4 with
 a dated note rather than restated, on the ADR-019/ADR-020 precedent.
 
-Figures below are from the run of record
-`evals/report/20260820-031540-bench.json` — measured on a **clean tree** at
-`13761cc`, the middle of three committed runs on every headline, and quoted to
-the two significant figures the instrument's ±3% run-to-run spread supports
-(§b11). **All rates and sizes here are
-binary (MiB = 1,048,576 B); v3's were decimal MB against binary MiB/s, which
-was itself one of PR #12's findings (R8) and is part of why its throughput
-never reconciled with its own size table.**
+*(Re-measured 2026-08-23, D2, on the new run of record
+`evals/report/20260823-185707-bench.json` — n=41, clean tree at `ba263ee`, the
+middle of three committed runs on four of six headlines (§b11 amendment). The
+per-fixture figures in this section are **re-derived in place** from that
+artifact, because the four findings are what this section exists to record
+and each holds again at n=41: the same five fixtures hold the low-throughput
+end, the same two the high end, the same pair shows the 2.1× gap, and the
+memory plateau is still not set by the largest document. The 2026-08-20 values
+this section used to print — the n=37 table and its per-fixture numbers — are
+in `20260820-031540-bench.json` itself and in `docs/analysis-report.md`'s
+"Corrections to v3" table, relabelled "measured at v4"; they are not repeated
+here. One v4 sentence in this section is **withdrawn** rather than re-derived
+and is marked where it stood: "a value stable to 0.1 MiB across all three
+clean runs" for the largest-filing RSS.)*
 
-| v3 said | measured now |
+Figures below are from the run of record
+`evals/report/20260823-185707-bench.json` — measured on a **clean tree** at
+`ba263ee`, and quoted to the two significant figures the instrument's ±3%
+run-to-run spread supports (§b11). **All rates and sizes here are binary (MiB
+= 1,048,576 B); v3's were decimal MB against binary MiB/s, which was itself
+one of PR #12's findings (R8) and is part of why its throughput never
+reconciled with its own size table.**
+
+| v3 said | measured now (2026-08-23, n=41; v4's n=37 values in the report's "Corrections to v3" table) |
 |---|---|
-| aggregate throughput **18.9 MB/s** (37.8 MB in 2.00 s, 21 fixtures) | **14.8 MiB/s** (58.37 MiB in 3.942 s, 37 dev fixtures) |
-| latency **p95 0.249 s** | **p95 0.51 s** (`bac-2006`); max 0.55 s (`jpm-2024`) |
-| "throughput is roughly flat across two orders of magnitude (8–37 MB/s)" | **6.6–33.8 MiB/s** over the 34 processed fixtures — a 5.1× spread — and size explains only **R²=0.78** of the variance in elapsed time |
-| "peak RSS scales with the single largest document … 12.8 MB of raw input produced a 110 MB process peak" | the largest filing alone reaches **94.6 MiB**; the corpus plateaus at **119–124 MiB** |
+| aggregate throughput **18.9 MB/s** (37.8 MB in 2.00 s, 21 fixtures) | **14.1 MiB/s** (60.54 MiB in 4.307 s, 41 dev fixtures) |
+| latency **p95 0.249 s** | **p95 0.40 s** — 0.51 s at n=37, a rank effect (`docs/analysis-report.md` §3.2): the 39th of 41 medians is `cvx-2015`, the 36th of 37 was `bac-2006`; max `jpm-2024` 0.58 s |
+| "throughput is roughly flat across two orders of magnitude (8–37 MB/s)" | **6.2–32.2 MiB/s** over the 37 processed fixtures — a 5.2× spread — and size explains only **R²=0.78** of the variance in elapsed time |
+| "peak RSS scales with the single largest document … 12.8 MB of raw input produced a 110 MB process peak" | the largest filing alone reaches **94.6–102.4 MiB** (seven committed runs, §b11 amendment); the corpus plateaus at **119–124 MiB** |
 
 The third and fourth deserve more than a row.
 
-**Throughput is not flat.** `bac-2006` (4.31 MiB) takes 0.505 s while
-`xom-2021` (5.87 MiB) takes 0.239 s — 2.1× longer on 27% *less* input, a gap
-that holds on all three clean runs and is an order of magnitude larger than the
-±3% noise. Bytes
-are the first-order term and nothing else comes close, but v3's stronger
-reading — "cost tracks bytes, not item count or document complexity" — is not
-what the data says. The low-throughput end is normalization-heavy markup
-(`tgt-2002` 6.6, `intc-2002` 6.9, `gs-2002` 7.2, `msft-2013` 7.6, `ba-2003`
-7.6 MiB/s) and the high end is real plain-text submissions (`ibm-1997` 33.8,
-`ko-1997` 27.6 MiB/s). v3 named `msft-2013`'s source wraps as the one outlier;
-there are five, and they share a cause. The operational consequence is
-unchanged — everything is fast — so this corrects the *explanation*, not the
-capacity planning.
+**Throughput is not flat.** `bac-2006` (4.31 MiB) takes 0.536 s while
+`xom-2021` (5.87 MiB) takes 0.256 s — 2.1× longer on 27% *less* input, a gap
+that holds on all three clean runs of both trios and is an order of magnitude
+larger than the ±3% noise. Bytes are the first-order term and nothing else
+comes close, but v3's stronger reading — "cost tracks bytes, not item count or
+document complexity" — is not what the data says. The low-throughput end is
+normalization-heavy markup (`tgt-2002` 6.19, `intc-2002` 6.45, `gs-2002` 6.73,
+`ba-2003` 7.17, `msft-2013` 7.17 MiB/s) and the high end is real plain-text
+submissions (`ibm-1997` 32.16, `ko-1997` 25.98 MiB/s). v3 named `msft-2013`'s
+source wraps as the one outlier; there are five, and they share a cause. The
+operational consequence is unchanged — everything is fast — so this corrects
+the *explanation*, not the capacity planning.
 
 *(Correction, PR #12 round 1, R5. The first draft of this row published the
 range as **6.34–42.8 MB/s, a 6.7× spread**, and named `ksb-2007` at 42.8 as
@@ -379,27 +495,31 @@ its "text-like input" high end. `ksb-2007` is a Form 10-KSB: the pipeline
 **refuses** it, returning `unsupported` from `src/sec10k/extract.py` before
 segmentation, boundaries or validation ever run. The corpus's fastest number
 was therefore measuring a document that was never parsed, and it was being
-explained as though it had been. Per choice 8 the three refusals are now out of
-the rate statistics, which is where the 5.1× spread and the narrower range
-come from — the correction moved the number in the direction that makes this
+explained as though it had been. Per choice 8 the refusals are now out of the
+rate statistics, which is where the ~5× spread and the narrower range come
+from — the correction moved the number in the direction that makes this
 section's own argument **weaker**, and it stands anyway.)*
 
 **Peak RSS does not track the largest document alone.** Processing in
 descending size order, `jpm-2024` (12.25 MiB, the largest) brings the process
-high-water to **94.6 MiB** from a ~26 MiB baseline — a value stable to 0.1 MiB
-across all three clean runs. A further ~28 MiB accrues over the next several
-fixtures and the process settles at a **119–124 MiB** plateau it holds for the
-remainder — a plateau, not a leak. A per-worker budget still sits comfortably
-at 256 MiB, so the v3 sizing advice survives; the reason given for it did not.
+high-water to **94.6 MiB on the run of record** from a ~26 MiB baseline —
+~~a value stable to 0.1 MiB across all three clean runs~~ *(withdrawn
+2026-08-23, D2, PR #12 R25: 94.6 on the three `13761cc` runs and on
+`20260823-185707`, but 102.4 on `20260820-115810`, 95.7 and 100.5 on the other
+two 2026-08-23 runs — a **94.6–102.4 MiB** range, the one published family
+wider than ±3%)*. A further ~20–28 MiB accrues over the next several fixtures
+and the process settles at a **119–124 MiB** plateau it holds for the remainder
+— a plateau, not a leak. A per-worker budget still sits comfortably at 256 MiB,
+so the v3 sizing advice survives; the reason given for it did not.
 
 *(The first draft said "reaching 122.1 MB by roughly the tenth", which PR #12
 R11 showed did not match its own artifact — the tenth fixture read 121.7 and
 122.1 first appeared at the thirty-sixth. The plateau index is now a computed
 field, `derived.rss_plateau_first_index`, defined as the first index from which
 every later reading is within 0.5 MiB of the corpus peak. Across three clean
-runs it reads 4, 9, 9, so it is **not published at all** — only that a plateau
-exists and roughly where it sits, both of which are stable.)*
-
+runs it reads 4, 9, 9 — and 4, 9, 9 again on the 2026-08-23 trio — so it is
+**not published at all** — only that a plateau exists and roughly where it
+sits, both of which are stable.)*
 ## d) What the measurement confirmed
 
 Recorded because a benchmark that only ever falsifies is as suspect as one that
@@ -408,10 +528,14 @@ only ever confirms.
 1. **No warm-up effect.** Over the 36 fixtures above the 1 ms ratio floor
    (choice 9), the first-repeat vs fastest-repeat ratio has median **1.004**
    and maximum **1.02** on the run of record. Across the three clean runs the
-   maximum is 1.021 / 1.031 / 1.042 and lands on a different fixture each time
+   maximum is 1.032 / 1.021 / 1.042 (run order; first printed sorted, and the first as 1.031 — corrected 2026-08-23, PR #39 R2 class) and lands on a different fixture each time
    — it is the noise floor, which is what "no warm-up" should look like. v3
    asserted this from one filing; it holds corpus-wide, and `first_s` is in the
-   artifact so it can be re-checked rather than believed.
+   artifact so it can be re-checked rather than believed. *(2026-08-23, D2,
+   n=41: 40 fixtures above the floor, median **1.005**, maximum **1.05** on the
+   run of record; 1.056 / 1.048 / 1.051 across the trio, on `sandston-2021`,
+   `jpm-2024` and `ko-1997` respectively — a different fixture each time,
+   as before. Holds.)*
 
    **Correction, PR #12 R16 — and this is the worst single error in this
    milestone.** The round-1 draft of this item published a maximum of **1.40**,
@@ -436,6 +560,16 @@ only ever confirms.
    **108,938** (`wmt-2010`), `jpm-2024` **1,213,298**. All three match §d to
    the character. The cost counterfactual in v4 §4 is therefore not an
    inherited number.
+
+   *(Dated 2026-08-23, D2: those three are **as of `20260820-031540`**, n=37,
+   before the `<title>` skip (T3, INV-S5) shortened `normalized_text` on 18
+   of the 37 by 286 chars in total and four fixtures joined. On
+   `20260823-185707`, n=41: corpus **8,751,495**, median fixture **102,453**
+   (`amended-cover-2021` — the 21st of 41 is a synthetic derivative), largest
+   `jpm-2024` **1,213,284**. ADR-020 §d keeps its 2026-08-19 figures with a
+   dated note, per the ADR-024/027 convention; the report's §4.1 carries the
+   new ones. The "reproduces exactly" finding is a statement about two
+   2026-08-20 measurements agreeing, and it stays.)*
 
 3. **ADR-020's addressable-surface arithmetic reproduces exactly.** Recomputed
    from today's committed reports (`20260820-020944-all.json` +
@@ -572,10 +706,99 @@ is the only property that distinguishes them from the three sentences above.
   the Validation gate's "none guessed" is met by disclosure, not by deletion of
   an inconvenient observation.
 - `evals/bench.py` is a dev instrument under the same C7 rules as
-  `evals/oracle.py`: not in `requirements.txt`, not in CI, not imported by
-  `src/`. It is not a new pipeline capability and does not touch the T8 freeze.
+  `evals/oracle.py`: not in `requirements.txt`, not imported by `src/`. It is
+  not a new pipeline capability and does not touch the T8 freeze. *(Amended
+  2026-08-23, D2: "not in CI" is no longer true of its two checks —
+  `--self-check` and `--check-docs` run in CI's unit-tests job and in the
+  pre-commit hook, §b12 amendment. The timing run itself is still never in
+  CI, per choice 6.)*
+
+## g) The 2026-08-23 re-publication (D2)
+
+Added 2026-08-23. Everything above this section was written against
+`20260820-031540` and is amended in place with dated notes where a figure
+moved; this section is the record of the move itself.
+
+**Why a re-run and not an edit.** Three things made the 2026-08-20 run of
+record stale, none of them an error in it: the `<title>` skip (T3, INV-S5)
+shortened `normalized_text` on 18 of its 37 fixtures by 286 chars in total, so
+every published `normalized_chars` integer was off by the title's length; four
+synthetic fixtures joined the corpus (`ibr-security-holders`,
+`comma-cover-2016`, `amended-cover-2021`, `spaced-letter-heading`) and had no
+bench row; and ADR-029's `tables=True` path had only one-off working-tree
+numbers. Hard rule 1's spirit — never hand-edit a measurement — means the only
+honest fix is the instrument re-run, which re-measures every clock figure in
+the same pass; so every figure moves together, and they do.
+
+**Run of record**: `evals/report/20260823-185707-bench.json` — git `ba263ee`
+(D2's first commit: the instrument's `tables=True` column and fail-closed
+`--check-docs`; `src/` is `origin/main` at `9cee5be` byte-for-byte; the one later `src/` edit in D2 is a comment in `boilerplate.py`), clean tree,
+Python 3.14.6 on `macOS-26.5.2-arm64-arm-64bit-Mach-O`, median of 3 repeats,
+single process. n=41 dev fixtures, 13 synthetic, 4 refusals. Three runs
+committed (`20260823-185543`, `-185626`, `-185707`); the choice rule and its
+one honest extension are in the §b11 amendment.
+
+**What moved, old → new, by document** (the instrument's output, not
+arithmetic; aggregates to two significant figures):
+
+- Headlines: p50 0.041 → **0.044 s**; p95 0.51 → **0.40 s** — a rank effect
+  (the 36th of 37 medians at n=37, the 39th of 41 at n=41: two different
+  filings, named in §c, and both read slower today); max 0.55 → **0.58 s**
+  (the largest filing, as before); batch 14.8 → **14.1 MiB/s**
+  (60.54 MiB in 4.307 s); processed range 6.6–33.8 over 34 → **6.2–32.2 MiB/s
+  over 37**, spread 5.1× → 5.2×, R² 0.78 → 0.78; corpus peak RSS 123 → 123 MiB
+  (plateau 119–124 unchanged); largest-filing RSS "94.6, stable to 0.1" →
+  **94.6–102.4 MiB** across seven runs (§b11 amendment, PR #12 R25).
+- Projection of record (`real_edgar_committed`, n=33, 2.104 MiB — unchanged
+  membership): rate 14.6 → **13.7 MiB/s**, 1,000 filings 144 → **153 s**,
+  EDGAR year ~17 → **~18 min** (1,006 → 1,072 s). `all_dev_fixtures` 37 /
+  1.578 MiB → 41 / 1.477 MiB.
+- `normalized_chars`: corpus 8,450,478 → **8,751,495**; median fixture
+  108,938 (`wmt-2010`) → **102,453** (`amended-cover-2021`); `jpm-2024`
+  1,213,298 → **1,213,284**; the cost counterfactual's median-filing estimate
+  $0.14 → **$0.13** (opus-5), corpus $10.56 → **$10.94**; the largest-filing
+  row is unchanged at $1.52 / does-not-fit.
+- New: `tables=True` median **1.19×**, max **1.3×** (1.295, `wfc-2008`),
+  `jpm-2024` 0.58 → 0.72 s with the flag on (§b13).
+- Corpus-wide the default path reads ~5–7% slower than on 2026-08-20, outside
+  the ±3% spread. **Not attributed** here to the tree or the machine: `src/`
+  changed between the runs (T3, D1, S7 shipped) and so did the day, and this
+  instrument cannot separate the two. A clean-tree run at `9cee5be` with the
+  pre-D2 instrument would have; it was not made, and is left as the obvious
+  next measurement if anyone needs the attribution.
+
+Where each figure lives: `docs/analysis-report.md` v5 §3, §3.1, §3.2, §4.1,
+§5 and the version block; `README.md` §"Performance, cost, scalability" and
+the large-filings row; this ADR's header, §b2, §b4, §b8, §b11, §b12, §c, §d,
+§f and Verification. ADR-020 §d and ADR-010 ruling 4 carry one-line dated
+notes rather than new numbers (their figures are rulings of their date); ADR-029
+§f's one-off numbers stand as dated and point here for the committed column;
+ADR-027 §h gets a one-line "re-published" pointer and ADR-018's header a dated
+pointer to the report's calibration v3. `src/sec10k/boilerplate.py:66`'s
+"38 measurable fixtures" comment — the one `src/` edit D2 makes, and it is a
+comment — drops the absolute count for the walk command (PR #31 R14's own
+acceptance).
+
+**What is deliberately left historical**: the v4 repair-round notes in the
+report's version block and in this ADR's §b2/§b4/§d1 (their figures are the
+evidence of what each round found); the "Corrections to v3" table in report
+§3.2 (relabelled "measured at v4"); `prompts/009` throughout (a record; its
+stale values are in `DOC_ALLOW` with the round that produced them); ADR-020 §d
+and ADR-010:138 (rulings, dated notes added); `evals/report/20260820-*` (six
+artifacts, none deleted — the superseded ones are what the withdrawn figures
+were measured from). The report's §1 metrics block and §4.2/§4.3 still cite
+their own older runs and say so; D2 did not re-derive them (not named by any
+Debt row this task promoted).
+
+**Calibration v3**: `python3 -m evals.metrics evals/report/20260823-185915-all.json`
+(97 cases, `ba263ee`) → 0.95 n=184 · 0.85 n=83 · 0.8 n=5 · 0.75 n=31 ·
+0.65 n=1 · 0.4 n=2, debt 0.95 5/5, 0.4 4/4, `failed` 0 on every scored row —
+the same six rows ADR-027 §h printed from `20260822-164458`; pasted verbatim
+into the report's §1 as v3, with v1/v2 kept as history.
 
 ## Verification
+
+As of 2026-08-20 (T13, PR #12):
 
 ```
 python3 -m evals.bench --self-check      # ok (red first under all 30 mutations in §e)
@@ -584,6 +807,21 @@ python3 -m evals.bench --check-docs evals/report/20260820-031540-bench.json
 python3 -m evals.run --suite invariant   # 12/12 (+4 enumerated debt)
 python3 -m evals.run --suite fast        # 45/45 (+4 enumerated debt)
 python3 -m evals.metrics --self-check    # ok
+```
+
+As of 2026-08-23 (D2, §g; the lines the pre-commit hook and CI now run):
+
+```
+python3 -m evals.bench --self-check      # ok — now also drives check_docs on scratch docs
+                                         #   (match / unmatched / vacuous / missing file)
+python3 -m evals.bench --check-docs evals/report/20260823-185707-bench.json
+                                         # 70 checked, 0 unmatched, exit 0 (35 unmatched before re-derivation)
+                                         # DOC_WINDOW=0 -> "0 … checked" + FAILED line, exit 1 (was exit 0)
+                                         # renamed DOC_FILES entry -> "1 DOC_FILES entries missing", exit 1 (was exit 0)
+python3 -m evals.run --suite invariant   # 49/49 (+4 enumerated debt)
+python3 -m evals.run --suite fast        # 97/97 (+4 enumerated debt); table fidelity 400/400, 31/31
+python3 -m evals.metrics --self-check    # ok
+python3 -m evals.metrics evals/report/20260823-185915-all.json   # calibration v3, §g
 ```
 
 Repair round 1 (PR #12): **11 findings raised, 11 confirmed by running their

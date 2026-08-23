@@ -137,6 +137,11 @@ actually use could tell which build they were looking at. Ruling:
   one of which — `repo_hygiene` — is not a filing), the ceiling is still exactly
   35 — `jpm-2024`'s `'JPMorgan Chase & Co./2024 Form 10-K'`, with every other
   fixture topping out at 17 (`'Table of Contents'`). The premise holds.
+  *(Dated: "38 measurable (39 directories)" was the S2 working tree; the
+  merged tree already had 41 directories / 40 filings (PR #31 R14). Re-measured
+  2026-08-23, D2, over every fixture `evals.oracle.iter_fixtures` yields: 41,
+  ceiling still 35 on `jpm-2024`, next 17. The `boilerplate.py` comment now
+  carries the walk instead of a count; this record keeps its own.)*
 - **Corrected:** the reasoning stays; a trigger clause was added naming what
   re-opens it — a line passing the three repeat gates at more than 35 chars
   *and* turning out to be a false positive, since a long TRUE chrome line is the

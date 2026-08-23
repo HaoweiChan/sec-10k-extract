@@ -327,6 +327,13 @@ before and after" would be a v3 re-publication of a document this PR does not
 otherwise touch — recorded as debt with the three tables above so the next
 report pass has the numbers, not a hand-edit.
 
+*(Re-published 2026-08-23, D2: `docs/analysis-report.md` §"Confidence
+calibration — before and after" now carries the table as **v3**, pasted
+verbatim from `python3 -m evals.metrics evals/report/20260823-185915-all.json`
+(97 cases, `ba263ee`, merged tree) — 184 / 83 / 5 / 31 / 1 / 2, debt 5/5 and
+4/4, `failed` 0 on every scored row: identical to the "After this ADR" table
+above. ADR-021 §g has the re-publication record.)*
+
 ## Consequences
 
 - `extractor_version` → `0.7.0-t5d`: item confidence in ambiguous documents

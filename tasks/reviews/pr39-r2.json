@@ -1,0 +1,33 @@
+{
+ "pr": 39,
+ "round": 2,
+ "date": "2026-08-23",
+ "result": "APPROVED",
+ "scope": "repair diff 109a0a7..662f921 + standing R1-R3",
+ "gate": "invariant 49/49; fast 97/97; table fidelity 400/400 · 31/31; bench --self-check ok; --check-docs 70/0; metrics --self-check ok; sweep script 78/359/48 reproduces; no src/case/baseline change in the repair diff",
+ "standing": {
+  "R1": "resolved — 0.366–0.374 s re-derived from the three 2026-08-20 artifacts",
+  "R2": "debt row present + in-place verified (run-order pairing; see R4 on the 1.031→1.032 relabel)",
+  "R3": "debt row present + in-place verified"
+ },
+ "findings": [
+  {
+   "id": "R4",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "The repair relabels v4's 1.031 as 'a rounding slip' and publishes 1.032, but 1.031 is the correct 3-place rounding of the measured ratio; 1.032 only arises by double-rounding the 4-place derived field.",
+   "evidence": "evals/report/20260820-031501-bench.json records[ko-1997] first_s 0.0131 / min_s 0.0127 -> ratio 1.0314960 -> round(.,3) = 1.031; evals/bench.py:357,377 stores round(max, 4) = 1.0315; round(1.0315, 3) is 1.032 only because float(1.0315) = 1.03150000000000008. Sites asserting the slip: docs/analysis-report.md:688, specs/decisions/ADR-021-benchmark-instrument.md:531, tasks/TODO.md:143, tasks/reviews/pr39-r1-resolution.json fixed_this_round[2]. The R2 ordering half is a real fix; the 1.031->1.032 half is not.",
+   "repro": "python3 -c \"import json;d=json.load(open('evals/report/20260820-031501-bench.json'));r=[x for x in d['records'] if x['fixture']=='ko-1997'][0];print(r['first_s']/r['min_s'],round(r['first_s']/r['min_s'],3),d['perf']['derived']['warmup_first_over_min_max'],round(1.0315,3))\"  -> 1.0314960629921262 1.031 1.0315 1.032",
+   "acceptance": "Quote the field verbatim (1.0315 / 1.0208 / 1.0424) or keep 1.031 and drop the 'rounding slip' wording in report §3.2, ADR-021 §d1 and the Debt row; the run-order correction stands."
+  },
+  {
+   "id": "R5",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "Report §3.2's '~20–28 MiB accrues' over the seven clean-tree runs reads 20.5–28.9 MiB when all seven are differenced; the resolution's hand-check listed only four of the seven.",
+   "evidence": "docs/analysis-report.md:709-712. peak_rss_mib_corpus − peak_rss_mib_after_largest_only: 031501 28.9, 031540 28.5, 031620 24.9, 115810 20.5, 185543 23.9, 185626 23.0, 185707 28.2. tasks/reviews/pr39-r1-resolution.json population_ranges_checked_by_hand row 7 lists only the last four differences. Within the '~' and 2-sig-fig rounding, hence LOW.",
+   "repro": "python3 -c \"import json;[print(s,round(json.load(open(f'evals/report/{s}-bench.json'))['perf']['peak_rss_mib_corpus']-json.load(open(f'evals/report/{s}-bench.json'))['perf']['peak_rss_mib_after_largest_only'],1)) for s in ('20260820-031501','20260820-031540','20260820-031620','20260820-115810','20260823-185543','20260823-185626','20260823-185707')]\"",
+   "acceptance": "Sentence reads ~20–29 MiB (or 20.5–28.9) or names the population it was differenced over; no other change."
+  }
+ ]
+}
