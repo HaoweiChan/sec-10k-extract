@@ -22,6 +22,8 @@ from . import css_contrast
 from src.sec10k.web import anchor as web_anchor
 from src.sec10k.web import build_id
 from src.sec10k.web import capabilities as web_capabilities
+from src.sec10k.web.fixtures import fixture_file, list_fixtures
+from evals import oracle as eval_oracle
 from src.sec10k.web.view import DISPLAY_MAX, build_view
 from src.sec10k.extract import extract_items
 
@@ -460,14 +462,6 @@ def check_capabilities_parse(case):
     return bad, {"works_well_rows": len(works), "difficult_entries": len(diff_items)}
 
 
-def _fixture_file(d):
-    """A fixture dir's single filing file, or None if it doesn't have
-    exactly one — mirrors app.py's `_fixture_file`, without the traversal
-    guard this read-only check doesn't need."""
-    files = [f for f in d.iterdir() if f.is_file()]
-    return files[0] if len(files) == 1 else None
-
-
 def check_anchor_contract(case):
     """For every committed filing fixture, every extracted item's own
     `heading_text` must be locatable in that filing's ORIGINAL source text
@@ -495,7 +489,7 @@ def check_anchor_contract(case):
     bad = []
     checked_items = 0
     for d in sorted(p for p in fixtures_dir.iterdir() if p.is_dir()):
-        f = _fixture_file(d)
+        f = fixture_file(d)  # D1: the one predicate app.py and the oracle use
         if f is None:
             continue  # not a single-file filing fixture (e.g. repo_hygiene/)
         is_html = f.suffix.lower() in (".htm", ".html")
@@ -1155,6 +1149,87 @@ def check_build_identity(case):
     return bad
 
 
+def _single_file_dirs(root):
+    """{name: file} for every directory under `root` holding exactly one file
+    — the fixture rule, spelled out here INDEPENDENTLY of
+    `src/sec10k/web/fixtures.py` so a wrong predicate cannot certify itself."""
+    out = {}
+    for d in sorted(root.iterdir()):
+        if d.is_dir():
+            files = [f for f in d.iterdir() if f.is_file()]
+            if len(files) == 1:
+                out[d.name] = files[0]
+    return out
+
+
+# both of app.py's readers of evals/fixtures/ must ask the shared rule
+META_FIXTURES = '"fixtures": list_fixtures()'      # the listing /api/meta serves
+RESOLVE_CALL = "f = fixture_file(d)"               # _fixture_file, request time
+
+
+def check_fixture_discovery(case):
+    """D1. A fixture directory is one holding exactly one file (the filing),
+    and every reader of `evals/fixtures/` must agree on that set: the list
+    `/api/meta` serves (`list_fixtures`, hence the inspector dropdown) and
+    the (name, path) pairs `evals.oracle.iter_fixtures()` yields (hence
+    `evals/bench.py`'s timed population and `oracle.run_all`). Before D1
+    the first listed every directory, the second yielded the largest non-.md
+    file of every directory, and only the request-time `_fixture_file`
+    applied the rule — so `repo_hygiene/` (14 regression stubs) was a dead
+    dropdown entry and a would-be dev fixture.
+
+    app.py cannot be imported here (fastapi; ADR-003's no-install CI jobs),
+    so `list_fixtures` is called from the stdlib module app.py imports it
+    from, and app.py's two uses of the rule — `/api/meta`'s listing and
+    `_fixture_file`'s resolution — are pinned as live text, the way
+    `build_identity` pins `git_sha(ROOT)` (`META_FIXTURES`, `RESOLVE_CALL`).
+
+    `input.fixtures_dirs` lists the roots to check; the default is the real
+    tree plus the committed regression tree under repo_hygiene/, whose
+    `two-files/` directory is the shape the three readers disagreed on.
+    """
+    inp = case.get("input", {})
+    roots = inp.get("fixtures_dirs") or [FIXTURES,
+                                         f"{FIXTURES}/repo_hygiene/fixture-discovery"]
+    bad, info = [], {}
+    for rel in roots:
+        root = ROOT / rel
+        want = _single_file_dirs(root)
+        listed = list_fixtures(root)
+        yielded = dict(eval_oracle.iter_fixtures(root))
+        for name in sorted(set(listed) - set(want)):
+            bad.append(f"{rel}: /api/meta lists {name!r}, which does not hold "
+                       f"exactly one file")
+        for name in sorted(set(want) - set(listed)):
+            bad.append(f"{rel}: /api/meta omits fixture {name!r}")
+        for name in sorted(set(yielded) - set(want)):
+            bad.append(f"{rel}: iter_fixtures yields {name!r} -> "
+                       f"{yielded[name].name}, a directory that does not hold "
+                       f"exactly one file")
+        for name in sorted(set(want) - set(yielded)):
+            bad.append(f"{rel}: iter_fixtures omits fixture {name!r}")
+        for name, path in yielded.items():
+            if name in want and path != want[name]:
+                bad.append(f"{rel}: iter_fixtures yields {name!r} -> {path.name}, "
+                           f"not its filing {want[name].name}")
+        info[rel] = {"dirs": sum(1 for d in root.iterdir() if d.is_dir()),
+                     "single_file_dirs": len(want), "api_meta_listed": len(listed),
+                     "iter_fixtures_yielded": len(yielded)}
+    api = _live((ROOT / inp.get("api_file", API_FILE)).read_text(), "py")
+    n = _squash(api).count(_squash(META_FIXTURES))
+    if n != 1:
+        bad.append(f"app.py: /api/meta must serve the shared listing — expected "
+                   f"exactly one `{META_FIXTURES}`, found {n}")
+    n = _squash(api).count(_squash(RESOLVE_CALL))
+    if n != 1:
+        bad.append(f"app.py: _fixture_file must resolve through the shared rule — "
+                   f"expected exactly one `{RESOLVE_CALL}`, found {n}")
+    if re.search(r"def\s+(_?list_fixtures|fixture_file)\b", api):
+        bad.append("app.py defines its own fixture listing/predicate — there is "
+                   "one rule, in src/sec10k/web/fixtures.py")
+    return bad, info
+
+
 LEDGER_FILES = ["tasks/TODO.md", "evals/fixtures/README.md"]
 CODE_SPAN_RE = re.compile(r"`[^`\n]*`")
 
@@ -1220,6 +1295,7 @@ CHECKS = {
     "external_stylesheets_nonblocking": check_external_stylesheets_nonblocking,
     "build_identity": check_build_identity,
     "ledger_table_shape": check_ledger_table_shape,
+    "fixture_discovery": check_fixture_discovery,
 }
 
 

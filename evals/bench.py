@@ -21,7 +21,9 @@ Rulings behind the measurement design are in ADR-021; the short version:
 - **Unit is the fixture, not the eval case.** Cases re-run the same fixture
   (aapl-2025 appears in several) and some carry no fixture at all, so a
   per-case population double-counts big filings and is not a corpus.
-- **The timed population is the 37 DEV fixtures only.** The 5 held-out
+- **The timed population is the DEV fixtures only** — every directory
+  `evals.oracle.iter_fixtures` yields (one filing file each, D1); 37 at the
+  artifacts of record, counted rather than quoted since. The 5 held-out
   filings are not run: this module writes per-fixture `doc_status` and
   `normalized_chars` into a committed artifact, which would publish held-out
   extraction outcomes. Their file SIZES are read (`stat` only, no pipeline
@@ -81,7 +83,8 @@ sys.path.insert(0, str(ROOT))
 
 from evals.oracle import iter_fixtures  # noqa: E402 — same fixture convention
 from evals.run import git_sha  # noqa: E402 — same sha stamping as every report
-from src.sec10k.extract import extract_items  # noqa: E402 — the only src/ import; read-only
+from src.sec10k.extract import extract_items  # noqa: E402 — read-only src/ imports: the
+from src.sec10k.web.fixtures import fixture_file  # noqa: E402 — extractor + the fixture rule (D1)
 
 MIB = 1024 * 1024
 GIB = 1024 ** 3
@@ -228,11 +231,9 @@ def heldout_sizes():
     if not HELDOUT_DIR.is_dir():
         return out
     for d in sorted(HELDOUT_DIR.iterdir()):
-        if not d.is_dir():
-            continue
-        files = [f for f in d.iterdir() if f.is_file() and f.suffix.lower() != ".md"]
-        if files:
-            out[d.name] = max(f.stat().st_size for f in files)
+        f = fixture_file(d) if d.is_dir() else None  # same rule as iter_fixtures (D1)
+        if f is not None:
+            out[d.name] = f.stat().st_size
     return out
 
 

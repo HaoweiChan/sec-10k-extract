@@ -101,8 +101,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from src.sec10k.extract import extract_items  # noqa: E402 — the only src/ import; read-only
+from evals.oracle import iter_fixtures  # noqa: E402 — same fixture convention (D1: one rule)
 
-FIXTURES_DIR = ROOT / "evals" / "fixtures"
 HTML_SUFFIXES = {".htm", ".html"}
 TXT_SUFFIXES = {".txt"}
 
@@ -151,17 +151,6 @@ class _NoNetwork:
 
 
 # ------------------------------------------------------------ fixture I/O
-
-def iter_fixtures():
-    """(name, path) for the largest non-.md file in each evals/fixtures/ dir
-    — same convention evals/oracle.py uses."""
-    for d in sorted(FIXTURES_DIR.iterdir()):
-        if not d.is_dir():
-            continue
-        files = [f for f in d.iterdir() if f.is_file() and f.suffix.lower() != ".md"]
-        if files:
-            yield d.name, max(files, key=lambda f: f.stat().st_size)
-
 
 def _read_text(path):
     raw = path.read_bytes()
