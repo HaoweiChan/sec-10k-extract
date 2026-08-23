@@ -1,6 +1,6 @@
 # ADR-028 — S2: build identity is injected at build time, and never lies
 
-Date: 2026-08-22. Status: accepted. Implements S2.
+Date: 2026-08-22. Status: accepted. Implements S2. Amended in place 2026-08-23 (§g1: the post-merge gate ran; the three assumptions §g lists as unverified are closed by observation, the cached-layer mode is addressed only as far as observation can address it, and the ruling is unchanged).
 
 Renumbered 027 -> 028 on 2026-08-22 when `origin/main` merged first with its own
 ADR-027 (ambiguity caps confidence, PR #32 / T5). All four PR #31 review
@@ -170,5 +170,102 @@ Which is exactly why the S2 gate is worded as it is — "`/api/meta` reports a
 real sha **that tracks redeploys**". A sha that merely *exists* would pass a
 weaker reading of that gate while frozen by a cached layer. The check is
 `curl -s .../api/meta` after the merge **and again after a second redeploy**,
-with the requirement that the value **MOVE**; it stays `UNRUN` in the ledger
-until both observations exist.
+with the requirement that the value **MOVE**.
+
+### g1. Amendment, 2026-08-23: the gate ran, and the three fail-closed assumptions are closed by observation
+
+The gate is no longer `UNRUN` — the S2 row left the ledger for `tasks/DONE.md`
+in PR #36, whose observation record is `tasks/reviews/s2-postmerge-gate.json`.
+This section records what the readings establish for *this ADR*.
+
+**Every reading is somebody's, and this branch made none of them.** The
+attribution column is not politeness; a `curl` response cannot be re-run, so
+"who saw it" — and whether they wrote it down at the time — is the whole of the
+evidence. Only readings with a contemporaneous written record are listed.
+
+| # | `git_sha` | when | equal to | observed by |
+|---|---|---|---|---|
+| 1 | `unknown` | 2026-08-22, before PR #31 merged | — (the defect §a describes) | the S2 implementation session; recorded in §a of this ADR, in `tasks/TODO.md`'s `Origin: S2` Debt row, and in `s2-postmerge-gate.json` `not_claimed[0]` ("the only pre-S2 deployed observation on record is git_sha 'unknown' (2026-08-22)") |
+| 2 | `e6810a4339f7` | 2026-08-22 ~09:47Z, ~300 s after PR #31 merged at 09:42:29Z | `e6810a4339f73069bc214f7eebf6df0f58836d95`, the PR #31 merge commit | the S2 orchestrating session, from a bounded poll that curled every 20 s until the value stopped being `unknown`; written down the same day in commit `5ad1a0f`'s message (`git log -1 --format=%B 5ad1a0f`) |
+| 3 | `1efc457e598d` | 2026-08-23T07:47:22Z | `1efc457e598de56faa8f2d78386594427aa5a966`, the PR #34 merge commit | the PR #36 orchestrator; recorded in `s2-postmerge-gate.json` |
+| 4 | `1ed784ccf68e` | 2026-08-23T07:49:54Z and 07:51:52Z | `1ed784ccf68e1f5dde5fb1d592517cb0d29704f3`, the PR #35 merge commit | PR #36's orchestrator and implementer; `s2-postmerge-gate.json` records the 07:51:52Z one with its command, `http_status` 200 and full response body |
+
+A reading that is *not* in the table: the S2 orchestrating session also
+reports seeing `1efc457e598d` on 2026-08-22, after PR #34 merged. It is left
+out under the rule above, and under that rule alone — **no committed artifact
+records the sighting, and none records when it happened.** That is the whole
+reason; nothing here claims it did not occur, and nothing here dates it. An
+earlier draft of this section went further and placed it inside a window in
+order to derive a conflict with `5ad1a0f`. That was wrong twice over: the
+window was invented (no record gives the time), and `5ad1a0f` was written
+*before* the sighting, so it could not contradict it either way. Crediting an
+unrecorded reading far enough to time it, while ruling that such readings are
+not evidence, is the contradiction this paragraph now avoids.
+
+What `5ad1a0f` does say, and all it is cited for here, is that **as of its
+commit at 2026-08-22T18:38:20Z the second-redeploy reading had not yet run**.
+The omission costs nothing in any case: `1efc457e598d` is in the table on the
+07:47:22Z observation, which is recorded.
+
+**None of these is this branch's own.** Each of those builds had been replaced
+long before this section was written, so no reading here can be reproduced from
+here — that is a property of HTTP responses, not a shortcoming of the record.
+This branch made confirming `curl`s of its own while writing the section; they
+are deliberately **not** listed, because they were not written down in the way
+`s2-postmerge-gate.json` writes a reading down, and an unrecorded reading is
+not evidence merely because the session that made it says so. Nothing below
+rests on them.
+
+**A disagreement on the record, named rather than smoothed over.**
+`tasks/reviews/s2-postmerge-gate.json` — a committed document of record —
+says in its `not_claimed[0]` that "no `/api/meta` response ever showed
+`e6810a4`" and that `e6810a4 → 1efc457` is inferred from git's first-parent
+chain rather than seen. That is reading 2 being denied. The record's own
+`not_claimed[5]` explains how: its round 1 (R1/R3) *removed* an
+`e6810a4`-as-observed claim, and the generalisation it left behind turns "this
+session did not observe it" into "nobody did".
+
+This is not one session's word against another's. Commit `5ad1a0f` — the same
+commit ADR-029 §i cites for the corpus measurements — carries reading 2 in its
+message, dated 2026-08-22: *"Reading 2 ran: the deployed /api/meta returned
+e6810a4339f7, main's merge commit truncated to 12, which closes all three items
+ADR-028 §g listed as unverifiable"*, and in the same breath says reading 3 had
+**not** run, which is what a record written at the time looks like rather than
+one reconstructed to be tidy. That is contemporaneous, committed and checkable
+(`git log -1 --format=%B 5ad1a0f`). Both statements stay on the record; the
+artifact is scrupulous about its own limits and simply had no visibility into
+another session's poll.
+
+**What is closed.** The three assumptions **§g opens with** — that the builder
+sets `ZEABUR_GIT_COMMIT_SHA`, that it runs `build_command` in the directory the
+runtime later serves from, and that it carries the written file into the run
+image — are **closed by observation**. Any single reading of a real sha equal
+to the repo's tip closes all three at once, because `unknown` is what any one
+of them failing produces. Row 4 alone does it, and row 4 is not testimony: the
+07:51:52Z reading is committed in `tasks/reviews/s2-postmerge-gate.json` with
+its command, HTTP status and full response body, on `main`, where anyone can
+read it.
+
+**What the moving sha addresses, and how far.** Failure mode 2 above — the
+cached `build_command` layer — is the one no validation can detect from
+inside, and no single reading can touch it: a frozen-but-valid sha looks
+exactly like a current one. Only a *move* speaks to it. Taking the readings as
+attributed, the chain is `unknown → e6810a4339f7 → 1efc457e598d →
+1ed784ccf68e`: **three moves, each link seen at both ends.** On the gate
+artifact's narrower reading, which does not credit reading 2, it is one move
+(`1efc457 → 1ed784c`). Either way at least one build boundary invalidated
+correctly, and the conclusion below is written to hold on the narrow reading
+too.
+
+That establishes: **the `build_command` layer was not cached across those
+boundaries.** It does **not** establish that the layer can never be cached.
+Zeabur's cache policy is not published here, was not configured by this repo,
+and can change; build boundaries that invalidated correctly are evidence about
+those boundaries. **No observation exists of a build that *failed* to move** —
+the failure mode is excluded only by the moves that happened to be seen, never
+by a test that forced one to occur. Three seen moves strengthen that; they do
+not close it. A cached layer remains undetectable from the served value, and
+the only defence is the one the gate used: look again after the next redeploy
+and check the value against `git rev-parse origin/main`. The `Origin: S2` Debt
+row ("nothing in the eval set or CI ever observes the DEPLOYED instance")
+stays open for exactly that reason; nothing here automates the check.

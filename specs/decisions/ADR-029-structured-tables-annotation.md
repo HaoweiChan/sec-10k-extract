@@ -1,6 +1,9 @@
 # ADR-029 — S7: HTML tables are reported as offset records into an unchanged `normalized_text`; their grid and Markdown are derived; table fidelity is a gated per-run metric
 
-Date: 2026-08-23. Status: accepted. Implements S7. Sanctioned exception to the
+Date: 2026-08-23. Status: accepted. Amended in place 2026-08-23 (§i adds the
+corpus measurement behind §f2's refusal, and widens §e's nested-table survey
+from 16 fixtures to all 34 — the ruling is unchanged). Implements S7.
+Sanctioned exception to the
 T8 feature freeze (`tasks/TODO.md`, **Freeze guard**), on the pattern
 [ADR-020](ADR-020-fallback-not-justified.md) established for T12 and
 [ADR-026](ADR-026-boilerplate-chrome-exclusion.md) applied for S6.
@@ -313,3 +316,194 @@ fires) and mutation M1 applied, `python3 -m evals.run --suite fast --baseline
 (13/31)` and exits 1 with `REGRESSION: table_cells_fidelity 0.7850 < baseline
 1.0000, table_rows_fidelity 0.4194 < baseline 1.0000` (2026-08-23, restored
 after).
+
+## i. Amendment (2026-08-23, S2-close) — §f2's refusal, with the number on it
+
+§f2 refused rendering tables into `normalized_text` and said every offset
+after the first table would move. That was an argument, not a figure. A
+parallel S7 session (branch `task/S7-adr`, commit `5ad1a0f`, an orphaned
+duplicate ADR that does not ship) reached the same ruling and measured the
+corpus while doing it. **Nothing below changes the ruling** — the ruling was
+already made, and made without these numbers. What the numbers change is how
+strong §f2's refusal is allowed to sound: "essentially every offset in the
+corpus" is now a measurement, not a manner of speaking.
+
+Every figure here was re-derived against **this** tree on 2026-08-23, not
+copied from that branch. Most come straight from the shipped
+`extract_items(path, tables=True)` over the shipped selection
+(`split_documents` / `ACCEPTED_FORMS`). The four rows denominated **"of
+3,902"** cannot: `normalize.py:271` drops the 50 all-empty tables before they
+reach the envelope, so the shipped API can never return them. Those four were
+measured with **the shipped recorder and that one filter line lifted** —
+`_Plain(tables=True)`, `_tidy`, `_place_tables`, `tables.grid()`, all shipped,
+with the single list comprehension at `normalize.py:271` skipped and nothing
+else changed. The count of what that line removes was cross-checked with an
+independent `html.parser` walk (§i1). Figures that did not reproduce are named
+as such below rather than repeated.
+
+### i1. The corpus, as the shipped annotation sees it
+
+41 filing fixtures — `evals/fixtures/` holds 42 directories, and the one that
+is not a filing is `repo_hygiene`, the UI-check corpus. **34 are HTML/iXBRL
+and 7 are txt-era**; of
+the 34, **33 carry at least one table** — `truncated-download` is HTML with
+none, which is the point of that fixture. Their selected documents hold
+**3,902 `<table>` open tags, balanced with 3,902 closes on every fixture**, and
+**333,838 raw `<td>`/`<th>` tags**. §f already reports what the annotation
+records from that — 3,852 records and 332,916 cells.
+
+**The 50-table gap, and a second population that is not part of it.** 3,902 −
+3,852 = **50 HTML tables with no visible text at all**, dropped by the
+visible-text rule §b1 states; not a loss, and the two numbers are otherwise the
+same population. Separately, the 7 txt-era fixtures carry **167 SGML `<TABLE>`
+tags** across 6 of them (ge-1994 72, ibr-pointer-first 72, ibm-1997 8,
+ibr-security-holders 8, ko-1997 6, ksb-2007 1) with **zero** `<td>`/`<th>`
+between them; `normalize()` answers `[]` for the txt era (§e), so they produce
+no records and are **not** HTML tables. Counting them in gives 4,069, which is
+the wrong population for every figure in this section — an earlier draft of
+this amendment used it and said so wrongly. Every table figure below is over
+the 3,902.
+
+| measured over the 41 filing fixtures | value |
+|---|---|
+| Normalized characters, corpus-wide | **8,751,495** |
+| Of those, inside a `<table>` record | **1,584,493 — 18.1 %** |
+| Same, counting only the 34 HTML/iXBRL fixtures | 1,584,493 of 7,647,821 — **20.7 %** |
+| Per-fixture table share, over the 33 with tables | **9.7 % (spaced-letter-heading) – 35.4 % (wfc-2008); median 18.3 %** |
+| Cells carrying `colspan > 1` | **104,746 of 332,916 recorded — 31.5 %** (105,185 raw `colspan` attributes > 1, 31.5 % of 333,838) |
+| Cells carrying `rowspan > 1` | **335 — 0.10 %** |
+| Maximum `<table>` nesting depth | **1**, on all 3,902 tables of the 34 HTML/iXBRL fixtures |
+| Cell content shape | **65.3 % empty** (217,486), **6.9 %** holding only `$`, `)`, `%` or a dash (22,924), **27.8 % content** (92,506) |
+| Tables with a constant `colspan`-weighted row width | **3,733 of 3,902 — 95.7 %**; the **169** ragged ones are the shapes `grid()`'s padding exists for |
+| Tables canonicalizing to width ≤ 1 | **693 of 3,902 — 17.8 %** |
+| Single-row tables (one `<tr>`) | **1,018 of 3,902 — 26.1 %** |
+| Modal canonical width | **2**, on **1,595** of 3,902 |
+
+The `colspan`/`rowspan` counts are raw attributes read off the selected
+document, and that method reproduces §e's own per-fixture figures exactly —
+aapl-2025: 3,737 `colspan > 1` of 6,443 `<td>`/`<th>`, 12 `rowspan > 1`;
+jpm-2024: 180 `rowspan > 1` — which is why the corpus-wide totals below are
+comparable to what §e already says rather than a second, differently-counted
+population.
+
+The constant-width count is **3,733, not 3,734**: of the 50 all-empty tables
+49 have a constant expanded row width and one does not (`cat-2023`, row widths
+`[27, 15, 27, 27, 27, 27, 27, 27]`), so the source branch's 3,733 / 169 split
+is right as published and the round-1 review's 3,734 / 168 is one out.
+
+Two independent routes give that 3,902-table population, and they agree: the
+shipped recorder with `normalize.py:271`'s visible-text filter lifted, and an
+`html.parser` walk written for the purpose. The walk was falsified against the
+shipped annotation before anything was published from it — on all 3,852
+visible-text tables it returns the same table count per fixture and the same
+constant-width verdict, 0 disagreements.
+
+**Each of the last four rows uses a different procedure, so each is stated
+separately.** An earlier draft described all four as one canonicalization; two
+of them do not survive it — `grid()` pads every row to the table's width, so
+"constant width after padding" is 3,902 (100 %) by construction, and counting
+canonical rows gives 2,011, not 1,018. Follow the wording below instead and
+the published numbers come back:
+
+- **Constant `colspan`-weighted row width (3,733).** Per row, sum each cell's
+  `colspan` (the record's third element, else 1); the table counts if every
+  row's sum is equal. Measured on the record **before any padding** — padding
+  would make this true of every table.
+- **Canonical width ≤ 1 (693)** and **modal canonical width (2, on 1,595).**
+  Full canonicalization: `tables.grid()` (`colspan` expanded, `rowspan` not,
+  rows padded), then drop every row that is empty in every column, then every
+  column that is empty in every remaining row; count what is left. A table with
+  no visible text has 0 columns and so falls under "≤ 1".
+- **Single-row (1,018).** Tables whose record holds exactly one `<tr>`, counted
+  **before** canonicalization.
+
+The drop in the middle bullet is exactly what `to_markdown()` already does
+before rendering, so nothing here is a private reimplementation of it. None of
+it is what §c's fidelity metric applies — §c compares `grid()` output against
+the labeled rows with no empty-dropping at all, deliberately, since a golden is
+the truth and not a tolerance.
+
+They bear on §e's refusal to classify tables as data or layout: **17.8 % of
+`<table>` elements canonicalize to width ≤ 1 and 26.1 % have a single row**, so
+a "is it a data table?" heuristic would be sorting roughly a quarter of the
+corpus with no labels behind it, which is the ruling §e already made and now
+has a number under.
+
+Three of these settle rulings §e made on narrower evidence. The `rowspan`
+exclusion is 0.10 % of the corpus, so §e's "out" costs almost nothing and the
+one-cell-short row it leaves is rare rather than merely uncommon. The
+`colspan` inclusion is 31.5 % corpus-wide, so §e's "without it no modern table
+aligns" holds beyond the aapl-2025 count it was written from. And **§e's
+nested-table line says "zero nested tables in the 16 HTML fixtures surveyed";
+the survey is now all 34, and the answer is still zero** — depth never exceeds
+1 anywhere in the corpus, which is why no committed fixture can exercise the
+nesting path and why §e is right to call it recorded-but-unclaimed.
+
+### i2. What a text-rewriting design would have moved
+
+**On all 33 table-carrying fixtures the first in-table character sits at
+offset 0–971** — median 173, 32 of the 33 at or below 500, one (`xom-2021`)
+at exactly 0 and the maximum (`bac-2006`) at 971. Every one of these filings
+typesets its cover page as a table, so the tables start where the document
+does. Rewriting `normalized_text` therefore moves everything from that offset
+on:
+
+| | measured |
+|---|---|
+| Offset of the first in-table character | **0 – 971**, median **173**, on 33 of 33 |
+| Share of each fixture's offsets that move | **99.39 % (min, `items-stripped`) – 100.00 %; median 99.88 %** |
+
+That is the number §f2 was reaching for. The annotation route moves **zero**
+offsets, and §d asserts that equality on every run; the rejected route would
+have moved 99.4–100 % of them on **each of the 33 table-carrying HTML/iXBRL
+fixtures**.
+
+Scoped to what was actually counted, rather than to "everything": across
+`evals/golden` and `evals/adversarial` **169** `text_contains` /
+`text_not_contains` / `min_chars` / `max_chars` checks resolve to a fixture.
+**116 sit on HTML/iXBRL fixtures and would have to be re-derived; the other 53
+(31 %) sit on the 7 txt-era fixtures and would not move at all**, because
+`normalize()` answers `[]` for the txt era (§e) — those documents have no HTML
+tables to render. Two more edges the round number hides: `truncated-download`
+is HTML with no tables (above), so 0 % of *its* offsets move; and the ADR-021
+benchmark figures move only insofar as they are derived from the HTML
+fixtures' lengths. The gap that carries §f2's case is between **0 offsets
+moved** and 99.4–100 % moved on 33 fixtures — which is decisive without being
+rounded up to "every".
+
+### i3. Figures NOT published here, and why
+
+- **"a re-parse of the annotated spans is byte-identical to `normalize()` on
+  33/33"** — **not applicable to what shipped.** That measured a *rejected*
+  design: recovering structure by re-parsing the raw body, measured at §b5 of
+  the source branch and restated in its §h item 4. (Its §b6 is the
+  rejected-alternatives table, whose last row rejects the design that actually
+  shipped — an earlier draft of this amendment cited §b6 and sent readers
+  there.) §b1 records the marks during the single `normalize()` walk instead,
+  so there is no second parse to agree with anything. The shipped property in
+  its place is the on/off equality §d already states and asserts; it needs no
+  restating here.
+
+**One figure was wrongly dropped, and is now republished above.** An earlier
+draft of this amendment declared the source branch's "3,902 `<table>`
+elements" unreproducible, on the grounds that the count over *every* fixture is
+4,069 and that "the source branch's method is not recoverable from the file".
+Both halves were wrong. The method is stated one line above the figure
+(`git show 5ad1a0f:specs/decisions/ADR-029-table-structure-annotation.md`,
+§b1's table: `<table>` elements over the fixtures whose selected document is
+HTML or iXBRL), and on that population the count is **3,902 exactly**, twice
+over — 3,852 records + 50 all-empty tables, and an independent
+`html.parser` walk. Its derivatives reproduce as well and are in §i1's table. Dropping a correct measurement on a false premise is the same defect
+class as publishing a wrong one, pointed the other way; this note stays so the
+correction is on the record rather than silently absorbed.
+
+### i4. What this does not establish
+
+These are **corpus-bound counts, and the corpus is 41 hand-picked filings.**
+Nothing here is a claim about EDGAR. The nesting-depth-1 result in particular
+is a fact about these 34 documents, not about HTML: real filings elsewhere
+certainly nest tables, which is exactly why §e records nested tables rather
+than assuming they cannot occur. Nor do these figures say anything about
+whether the *records* are correct — that is `table_cells_fidelity` /
+`table_rows_fidelity` (§c) against hand labels, and its honest worth is stated
+in §c2. Counting cells is not grading them.

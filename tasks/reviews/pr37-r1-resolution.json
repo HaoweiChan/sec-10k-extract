@@ -1,0 +1,92 @@
+{
+ "pr": 37,
+ "round": 1,
+ "task": "S2-close (ADR-028 §g1 + ADR-029 §i evidence sections)",
+ "review": "tasks/reviews/pr37-r1.json",
+ "resolved_by": "implementer",
+ "date": "2026-08-23",
+ "protocol": "Every finding's repro was re-run against this tree before anything was edited, and every figure the round asserts was re-derived independently rather than taken from the review artifact. That mattered: R1's re-derived constant-width figure (3,734/168) is itself one out — the correct split is 3,733/169, which is what the source branch published. The scratch html.parser walk used for the 50 empty tables was falsified against the shipped annotation first (3,852 visible-text tables: same per-fixture table count, same constant-width verdict, 0 disagreements) before any number derived from it was published. All eight findings repaired; none rejected, none routed to debt. Scope stayed docs-only: two ADRs, INDEX.md untouched this round, plus this artifact. No src/, no evals/ cases, no tasks/TODO.md, no tasks/DONE.md.",
+ "gate_at_resolution": {
+  "invariant": "48/48 = 1.000 (+4 enumerated debt, unscored)",
+  "fast": "96/96 = 1.000 (+4 enumerated debt, unscored); table fidelity cells 1.0000 (400/400), rows 1.0000 (31/31)",
+  "baseline": "{\"fast\": 1.0, \"table_cells_fidelity\": 1.0, \"table_rows_fidelity\": 1.0}, not moved; .eval-baseline.json untouched",
+  "self_checks": "parser-vs-shipped falsification 3852/3852 agree, 0 disagree; adr-header-and-index golden green after both Status/INDEX edits"
+ },
+ "findings": [
+  {
+   "id": "R1",
+   "severity": "HIGH",
+   "status": "fixed",
+   "reproduced": true,
+   "repro_observed": "<table> open tags in the selected document of the 34 HTML/iXBRL fixtures = 3902 (regex count); independent html.parser walk = 3902 elements, of which 50 have no visible text; 3852 shipped records + 50 = 3902. Derivatives: constant colspan-weighted row width 3733 of 3902 = 95.7% (169 ragged); canonical width <= 1 = 693 = 17.8%; single-row (one <tr>) = 1018 = 26.1%; modal canonical width 2 on 1595 tables.",
+   "fix": "§i3's first bullet is deleted. 3,902 is republished in §i1 as the table population with its recovered definition (3,852 recorded + 50 all-empty), and four derivative rows are added to §i1's table: constant colspan-weighted row width 3,733/3,902 = 95.7% (169 ragged), width <= 1 = 693 = 17.8%, single-row = 1,018 = 26.1%, modal canonical width 2 on 1,595. §i3 keeps a standing note recording that a correct measurement was wrongly dropped, so the correction is on the record rather than silently absorbed. The blanket 'the source branch's method is not recoverable from the file' sentence is gone; §i3's note names where the method is stated (5ad1a0f §b1's table, the row above the figure).",
+   "correction_to_the_finding": "The review's acceptance says to publish 3,734 and note the source's 3,733 as off by one. Re-derived, the source is right and the review is one out: of the 50 all-empty tables 49 have a constant expanded row width and one does not — cat-2023, row widths [27, 15, 27, 27, 27, 27, 27, 27]. 3,684 constant among the records + 49 = 3,733, ragged 169. §i1 publishes 3,733/169 and states this reconciliation inline so the next reader does not re-derive 3,734 and think the ADR is wrong."
+  },
+  {
+   "id": "R2",
+   "severity": "HIGH",
+   "status": "fixed",
+   "reproduced": true,
+   "repro_observed": "6 txt fixtures carry SGML <TABLE> tags: ge-1994 72, ibr-pointer-first 72, ibm-1997 8, ibr-security-holders 8, ko-1997 6, ksb-2007 1 = 167 opens, 0 <td>/<th> between them, 0 records. 3902 + 167 = 4069, the amendment's old figure.",
+   "fix": "§i1 now states 3,902 as the table population and says every table figure in the section is over it. The 217-table gap is split explicitly: 50 all-empty HTML tables (visible-text rule, §b1) and, separately, 167 txt-era SGML <TABLE> tags across the 6 named fixtures that produce no records because normalize() answers [] for the txt era (§e) — stated as a different population, not part of the gap. The nesting-depth row now reads '1, on all 3,902 tables of the 34 HTML/iXBRL fixtures'. 4,069 survives only where it is named as the wrong population.",
+   "note": "The depth-1 result was correct as the review says; only its population was wrong. 5ad1a0f's own §h item 5 also states the finding over 3,902, which corroborates the corrected population."
+  },
+  {
+   "id": "R3",
+   "severity": "MEDIUM",
+   "status": "fixed",
+   "reproduced": true,
+   "repro_observed": "sed -n '181p;192p;217,218p' -> ':181 this branch made none of them' against ':192 Only the row-4 readings were made from this branch' and ':217-218 this branch made those readings itself'.",
+   "fix": "Exit taken: DROP the first-person framing and rest the closure on the readings that are committed — not the observation-record exit. §g1's row 4 now lists only the two PR #36 readings (07:49:54Z, 07:51:52Z); this branch's two unrecorded readings are removed from the table. ':181' is now simply true and a following paragraph says so explicitly, including that this branch made confirming curls of its own and is deliberately not listing them. 'What is closed' now reads 'Row 4 alone does it, and row 4 is not testimony: the 07:51:52Z reading is committed in tasks/reviews/s2-postmerge-gate.json with its command, HTTP status and full response body, on main.' Closure therefore rests on a committed observation record rather than on this session's word, which is strictly stronger than the claim the contradiction was protecting.",
+   "resolves_with": "R5"
+  },
+  {
+   "id": "R4",
+   "severity": "MEDIUM",
+   "status": "fixed",
+   "reproduced": true,
+   "repro_observed": "Across evals/golden + evals/adversarial, 169 text_contains / text_not_contains / min_chars / max_chars checks resolve to a fixture: 116 html, 53 txt (31%). By kind: text_contains 37/20, text_not_contains 28/11, min_chars 28/12, max_chars 23/10. truncated-download carries 0 such checks.",
+   "fix": "§i2's closing paragraph is rescoped. 'every HTML filing in the corpus' becomes 'each of the 33 table-carrying HTML/iXBRL fixtures'; 'every committed anchor, every min_chars/max_chars band' becomes the measured split — 116 of 169 on HTML fixtures would have to be re-derived, the other 53 (31%) sit on the 7 txt-era fixtures and would not move at all. Two edges the round number hid are named: truncated-download is HTML with no tables so 0% of its offsets move, and the ADR-021 figures move only insofar as they derive from the HTML fixtures' lengths. The closing sentence now contrasts 0 offsets moved against 99.4-100% on 33 fixtures rather than rounding up to 'every'."
+  },
+  {
+   "id": "R5",
+   "severity": "LOW",
+   "status": "fixed",
+   "reproduced": true,
+   "repro_observed": "git diff origin/main...HEAD --stat -> two ADRs, INDEX.md, history.jsonl only; grep -rn '08:20:02' --exclude-dir=.git -> only the ADR-028 line itself. No observation record for those two readings anywhere.",
+   "fix": "Same edit as R3, second exit: the two unrecorded readings are removed rather than given a record. §g1's header rule now reads 'Only readings with a contemporaneous written record are listed', and the section says plainly that an unrecorded reading is not evidence merely because the session that made it says so. No tasks/reviews/ observation record was added, so the diff stays docs-only.",
+   "resolves_with": "R3"
+  },
+  {
+   "id": "R6",
+   "severity": "LOW",
+   "status": "fixed",
+   "reproduced": true,
+   "repro_observed": "On 5ad1a0f, the 33/33 re-parse figure is at §b5 (line 181) and restated at §h item 4 (line 441). §b6 is the rejected-alternatives table whose last row rejects 'Structure recorded during normalize() instead of re-parsed' — the design that shipped.",
+   "fix": "§i3's citation now points at §b5 and names §h item 4 as the restatement, with a parenthetical recording that an earlier draft cited §b6 and what a reader landing there would have found. The substantive ruling — the figure measured a design that was not adopted, so it is inapplicable — is unchanged, as the review says it should be."
+  },
+  {
+   "id": "R7",
+   "severity": "LOW",
+   "status": "fixed",
+   "reproduced": true,
+   "repro_observed": "§g1 begins at :175 with the ledger sentence; the three assumptions are §g's opening paragraph at :149-154.",
+   "fix": "'The three assumptions this section opens with' -> 'The three assumptions §g opens with', matching the Status line's wording."
+  },
+  {
+   "id": "R8",
+   "severity": "LOW",
+   "status": "fixed",
+   "reproduced": true,
+   "repro_observed": "git log -1 --format=%B 5ad1a0f -> 'S2 -> merged, gate HALF-OBSERVED and staying UNRUN. Reading 2 ran: the deployed /api/meta returned e6810a4339f7, main's merge commit truncated to 12, which closes all three items ADR-028 §g listed as unverifiable. Reading 3 did not...' Commit date 2026-08-23T02:38:20+08:00 = 2026-08-22T18:38:20Z.",
+   "fix": "§g1's row 2 now cites 5ad1a0f's message as the contemporaneous written record of reading 2, and the disagreement paragraph opens 'This is not one session's word against another's', quotes the message, and notes it says in the same breath that reading 3 had NOT run — which is what a record written at the time looks like rather than one reconstructed to be tidy. The repro command is inline so a reader can check it.",
+   "follow_on": "Re-deriving R8 surfaced a conflict in the readings table this branch was given: row 3 attributed a sighting of 1efc457e598d to the S2 orchestrating session on 2026-08-22 shortly after PR #34 merged (18:23:02Z), but 5ad1a0f's message, committed 18:38:20Z, says reading 3 had not run. Nothing written at the time records that sighting. Applying §g1's own rule, row 3 is scoped to the recorded 07:47:22Z observation and the unrecorded earlier one is named in the text as omitted, with the reason. It costs nothing — 1efc457e598d stays in the table either way — and it keeps the table from contradicting the one contemporaneous record covering that window."
+  }
+ ],
+ "not_changed": [
+  "ADR-029's ruling, §a-§h, and the S7 decision itself — the round is an evidence-section repair and re-litigating the ruling was out of bounds.",
+  "The cache caveat in ADR-028 §g1: 'No observation exists of a build that FAILED to move' stands verbatim, and the conclusion is still written to hold on the gate artifact's narrower one-move reading.",
+  "specs/decisions/INDEX.md — both amendment cross-references were already correct and no finding touched them.",
+  "tasks/TODO.md, tasks/DONE.md: PR #36 owns S2's ledger move and the repo_hygiene debt row."
+ ]
+}
