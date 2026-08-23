@@ -1,0 +1,37 @@
+{
+ "pr": 36,
+ "round": 1,
+ "date": "2026-08-23",
+ "result": "REQUEST_CHANGES",
+ "gate": "invariant 48/48; fast 96/96; table fidelity 400/400 · 31/31; no src/evals/baseline change; ledger_table_shape passed; reviewer's own observation 2026-08-23T07:58:25Z GET /api/meta -> 1ed784ccf68e (= origin/main), 07:58:35Z POST /api/extract/fixture repo_hygiene -> 404 bad_input 'found 14'; first-parent chain and pr31 artifacts verified",
+ "routing_rule": "repair = HIGH/MEDIUM and (acceptance violated | gate red | published claim dishonest); everything else debt (pr-loop scope boundary)",
+ "findings": [
+  {
+   "id": "R1",
+   "severity": "MEDIUM",
+   "route": "repair",
+   "claim": "The gate record publishes a derived number that contradicts its own timestamps: it says PR #35 merged '92 s' before the 07:47:22Z observation, but 07:47:22Z − 07:45:55Z = 87 s.",
+   "evidence": "tasks/reviews/s2-postmerge-gate.json — observations[0].what_commit 'PR #35 had merged 92 s earlier (07:45:55Z)' and commit_chain_since_pr31_merge.reading 'NOT the one merged 92 s earlier'; the same file lists 1ed784c committed 2026-08-23T07:45:55Z and the observation at 2026-08-23T07:47:22Z (git confirms 1ed784c at 07:45:55Z).",
+   "repro": "python3 -c \"from datetime import datetime as d;print((d.fromisoformat('2026-08-23T07:47:22')-d.fromisoformat('2026-08-23T07:45:55')).total_seconds())\" -> 87.0",
+   "acceptance": "Both occurrences read 87 s (or the interval is dropped and only the two timestamps are stated); no other arithmetic in the record disagrees with its listed timestamps."
+  },
+  {
+   "id": "R2",
+   "severity": "MEDIUM",
+   "route": "repair",
+   "claim": "The S2 row was deleted from TODO.md in its UNRUN / 'awaiting human merge' form in the same commit that archives it, so the only full-row copy ADR-022 rule 1 points a reader to (the pre-split commit) still says the gate is UNRUN and the PR is unmerged — the Validation/Status cells were never updated to RAN — SATISFIED + record path before the move, which acceptance criterion 3 asks to see in the diff.",
+   "evidence": "git diff origin/main...HEAD -- tasks/TODO.md shows only a '-| S2 …' deletion; `git show HEAD^:tasks/TODO.md | grep '^| S2 '` Status cell reads '**pr — PR #31 APPROVED at round 3, awaiting human merge** … **Post-merge gate above is UNRUN**' and the Validation cell reads '— **UNRUN**, and unrunnable from here'. ADR-022 rule 1: 'the full row … stays in git history at the pre-split commit'; rule 2: disposition 'written into the row … before archival'.",
+   "repro": "git show HEAD^:tasks/TODO.md | grep '^| S2 ' | grep -o 'UNRUN\\|awaiting human merge'",
+   "acceptance": "A commit on the branch in which the S2 row is still in TODO.md with Validation reading 'RAN — SATISFIED (tasks/reviews/s2-postmerge-gate.json)' and Status 'done — merged e6810a4; gate ran 2026-08-23 …', followed by the commit that moves it to DONE.md; `git log -p -S'UNRUN' -- tasks/TODO.md` then shows the S2 row's UNRUN replaced before it leaves."
+  },
+  {
+   "id": "R3",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "The verdict presents e6810a4 as the observed start of the sha chain and flags only 6c71ca6 as unobserved, but no /api/meta response ever showed e6810a4 either — only one move (1efc457 -> 1ed784c) was seen at both ends; the e6810a4 -> 1efc457 'move one' is inferred and not_claimed omits it.",
+   "evidence": "tasks/reviews/s2-postmerge-gate.json verdict: 'sha moved e6810a4 -> (6c71ca6, not observed) -> 1efc457e598d -> 1ed784ccf68e'; not_claimed lists only 6c71ca6 and the 1efc457 non-reproduction. No curl/meta observation of e6810a4 deployed exists on record; the only pre-S2 deployed observation is git_sha 'unknown'. DONE.md line: 'i.e. e6810a4 -> 1efc457 -> 1ed784c across the push-to-main redeploys'.",
+   "repro": "grep -rn 'e6810a4' tasks specs | grep -i 'curl\\|meta\\|observ' -> (nothing besides the new record)",
+   "acceptance": "Verdict and not_claimed state that e6810a4's (and 6c71ca6's) deployed sha was never observed; the chain is written as '(e6810a4, 6c71ca6 not observed) -> 1efc457 observed -> 1ed784c observed', i.e. one move observed end-to-end, two distinct real shas observed, which still satisfies the gate's two-curl wording."
+  }
+ ]
+}
