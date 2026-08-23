@@ -7,6 +7,11 @@ fair-access policy. Re-fetch command pattern:
 curl -H "User-Agent: Haowei Chan hwchan42@gmail.com" <url> -o <dest>
 ```
 
+A fixture directory holds exactly one file, the filing — the one rule every
+reader applies (`src/sec10k/web/fixtures.py`: the inspector's `/api/meta`
+listing and fixture resolution, `evals/oracle.iter_fixtures` and so the
+bench). `repo_hygiene/` holds UI/ledger regression stubs and is not one.
+
 | Fixture | Source | Accession | Filed | Format | Bytes |
 |---|---|---|---|---|---|
 | `aapl-2025/filing.htm` | sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm | 0000320193-25-000079 | 2025-10-31 | iXBRL (2019+ era) | 1,520,208 |

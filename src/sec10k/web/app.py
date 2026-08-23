@@ -29,10 +29,9 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from src.sec10k.extract import extract_items
 from src.sec10k.web import capabilities as capabilities_mod
 from src.sec10k.web.build_id import git_sha
+from src.sec10k.web.fixtures import FIXTURES, ROOT, fixture_file, list_fixtures
 from src.sec10k.web.view import build_view
 
-ROOT = Path(__file__).resolve().parents[3]
-FIXTURES = ROOT / "evals" / "fixtures"
 STATIC = Path(__file__).resolve().parent / "static"
 EDGAR_UA = "Haowei Chan hwchan42@gmail.com"   # SEC fair-access: declare a contact
 MAX_BYTES = 25 * 1024 * 1024                  # provisional cap, both upload and URL
@@ -52,15 +51,18 @@ SOURCE_CACHE_MAX = 3
 
 
 def _fixture_file(name: str) -> Path:
-    """Resolve a fixture name to its single filing file, refusing traversal."""
+    """Resolve a fixture name to its single filing file, refusing traversal.
+    Same predicate as the /api/meta listing (fixtures.py), so a name the
+    dropdown offers always resolves here."""
     d = (FIXTURES / name).resolve()
     if d.parent != FIXTURES.resolve() or not d.is_dir():
         raise FileNotFoundError(f"unknown fixture: {name!r}")
-    files = [f for f in d.iterdir() if f.is_file()]
-    if len(files) != 1:
+    f = fixture_file(d)
+    if f is None:
         raise FileNotFoundError(
-            f"expected exactly one filing file in {d}, found {len(files)}")
-    return files[0]
+            f"expected exactly one filing file in {d}, found "
+            f"{sum(1 for p in d.iterdir() if p.is_file())}")
+    return f
 
 
 def _err(status: int, code: str, message: str, doc_status: str = "failed", **extra):
@@ -123,8 +125,7 @@ def index():
 
 @app.get("/api/meta")
 def api_meta():
-    fixtures = sorted(d.name for d in FIXTURES.iterdir() if d.is_dir())
-    return {"git_sha": git_sha(ROOT), "fixtures": fixtures,
+    return {"git_sha": git_sha(ROOT), "fixtures": list_fixtures(),
             "max_bytes": MAX_BYTES, "allowed_suffix": list(ALLOWED_SUFFIX)}
 
 
