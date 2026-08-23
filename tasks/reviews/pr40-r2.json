@@ -1,0 +1,49 @@
+{
+ "pr": 40,
+ "round": 2,
+ "task": "debt-sweep-closed-rows",
+ "branch": "task/debt-sweep-closed-rows",
+ "head": "422220c",
+ "reviewer": "groundwork:pr-reviewer, fresh context, scoped to repair diff ffaebbf..422220c plus standing R1/R2",
+ "gate_at_review": {
+  "invariant": "50/50 = 1.000",
+  "fast": "98/98 = 1.000",
+  "table_fidelity": "cells 400/400, rows 31/31",
+  "baseline": "byte-identical to origin/main (1343bf8)"
+ },
+ "result": "REQUEST_CHANGES",
+ "standing_closed": [
+  "R1",
+  "R2"
+ ],
+ "counts": {
+  "HIGH": 0,
+  "MEDIUM": 1,
+  "LOW": 1
+ },
+ "orchestrator_verification": "R3's counting claim was re-measured independently by the orchestrator before routing: c0c1958=88, dc3f8f0=92, 87dc322=95, HEAD=95. R4's was too: tasks/TODO.md:60 and :62 both begin '| **', not '| ~~'. Both confirmed.",
+ "routing_note": "R3 is MEDIUM and publishes wrong numbers in a committed artifact that R2's own acceptance requires a reader to follow -- the dishonest-published-claim clause. R4 is LOW and would normally route to debt, but it misdescribes the SAME two refusals R3's artifact counts wrongly, and fixing one while leaving the other would ship a row and an artifact that disagree about what happened. Bundled, not a severity call.",
+ "breaker_state": "Round 2 of 3. A round-3 review that does not approve trips the circuit breaker and escalates to the human.",
+ "findings": [
+  {
+   "id": "R3",
+   "severity": "MEDIUM",
+   "route": "repair",
+   "status": "new",
+   "claim": "The newly-committed audit artifact contradicts itself on the debt-row count for the same commit (88 in one sentence, 87 in the next), and every debt-row count published in the two artifacts is off by one against the tree -- including the post-merge 'correction' the implementer added in this round.",
+   "evidence": "tasks/reviews/pr40-r0-audit.json key base_drift: \"The audit's line numbers and its count of 88 debt rows were read at c0c1958 ... (87 debt rows at c0c1958, 91 at dc3f8f0)\". Same file, same commit, two different integers. Orchestrator re-measured: the tree says 88 at c0c1958 and 92 at dc3f8f0, so the parenthetical is wrong on both figures. Same class in tasks/reviews/pr40-r1-resolution.json: table_integrity says \"Debt row count unchanged at 91\" (ffaebbf actually has 92) and the round-2 post_merge_note says \"the merge brought the debt table to 94 rows, not 91\" (the merged tree has 95). The post_merge_note is the correction added this round precisely to fix stale integers, and it publishes a wrong one. The published LEDGER figure (23 struck rows) is correct and unaffected -- this is artifact-only -- but the artifact is the evidence R2's acceptance required a reader to follow.",
+   "repro": "for c in c0c1958 dc3f8f0 87dc322 HEAD; do git show \"$c\":tasks/TODO.md > /tmp/t.md; echo \"$c rows=$(( $(awk '/^## Open debt/{f=1} /^## Settled/{f=0} f' /tmp/t.md | grep -c '^| ') - 1 ))\"; done   # 88, 92, 95, 95",
+   "acceptance": "The audit artifact carries one debt-row count per commit, not two, and every count in pr40-r0-audit.json and pr40-r1-resolution.json matches `awk '/^## Open debt/{f=1} /^## Settled/{f=0} f' tasks/TODO.md | grep -c '^| '` minus one at the commit it names -- or the counts are dropped, since nothing consumes them."
+  },
+  {
+   "id": "R4",
+   "severity": "LOW",
+   "route": "repair",
+   "status": "new",
+   "claim": "The struck-row debt row's supporting sentence misdescribes its own two counterexamples: it says the strike-through is not evidence, but neither refused row is struck through, and it says five rows were 'proposed for deletion' when the audit proposed four for deletion and one for trim.",
+   "evidence": "tasks/TODO.md:146: \"For the other 22 the strike-through and the word CLOSED are not evidence on their own: two of the five rows the D2 audit proposed for deletion turned out to be **live**\". Both named rows begin '| **', not '| ~~' -- tasks/TODO.md:60 and :62, confirmed by the orchestrator -- so they are not among the 23 struck rows and cannot demonstrate anything about strike-throughs; they carried only an inline CLOSED marker. And pr40-r0-audit.json's own `proposal` says \"four to delete outright, one (the T13-mechanisms row) to trim\", so 'the five rows the D2 audit proposed for deletion' overstates by one. A reader who goes looking for the two mis-scored rows inside the 23 struck ones will not find them.",
+   "repro": "sed -n '60p;62p' tasks/TODO.md | cut -c1-4; grep -c '^| ~~' tasks/TODO.md; python3 -c \"import json;print(json.load(open('tasks/reviews/pr40-r0-audit.json'))['proposal'])\"",
+   "acceptance": "The sentence attributes the two refusals to the CLOSED marker only (not the strike-through), and says four rows were proposed for deletion plus one for trim -- matching pr40-r0-audit.json."
+  }
+ ]
+}
