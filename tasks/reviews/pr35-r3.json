@@ -1,0 +1,51 @@
+{
+ "pr": 35,
+ "round": 3,
+ "date": "2026-08-23",
+ "result": "APPROVED",
+ "scope": "repair diff f2b266e..ed8b8dd + standing R6-R8",
+ "gate": "invariant 48/48; fast 96/96; table fidelity 400/400 · 31/31; test_eval_adapter 18/18; --check-docs 56/4; ledger_table_shape passed on final ledger; regression 9 pinned; no src/ or baseline change in the repair diff",
+ "standing": {
+  "R6": "resolved — §a/§h3 reworded and true; wide sweeps re-run, no backwards reading remains anywhere",
+  "R7": "debt row present; in-place partially wrong in section labels (R12) and one moved line ref (R11)",
+  "R8": "debt row present; README sentence matches check_docs source; --check-docs unchanged"
+ },
+ "findings": [
+  {
+   "id": "R9",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "The resolution artifact says the round-2 reviewer's repro 'prints nothing' after the fix; it still prints one line.",
+   "evidence": "tasks/reviews/pr35-r2-resolution.json R6.fix: 'After: the reviewer's repro prints nothing'. Running it at HEAD: grep -n '3,263' specs/decisions/ADR-020-fallback-not-justified.md | grep -v 'keeps 956\\|takes 956' -> '557:interleaving leaves item 10 with 956 of the block's 3,263 chars — the cost is' — the §h3 rewording chose 'leaves item 10 with 956', which neither of the repro's exclusion patterns matches. The reading at :557 is correct and row 63's own verification commands are accurate, so R6 stands resolved; only this sentence about the repro's output is false — the same 'claim wider than its grep' class the round was repairing.",
+   "repro": "grep -n '3,263' specs/decisions/ADR-020-fallback-not-justified.md | grep -v 'keeps 956\\|takes 956'",
+   "acceptance": "R6.fix in pr35-r2-resolution.json says the repro prints :557 in its reworded (correct) form, or names the widened grep that does print nothing."
+  },
+  {
+   "id": "R10",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "The 'four times' residual sweep missed a live instance: docs/analysis-report.md §5 still says ADR-020's arithmetic 'was corrected four times under review', the miscount the round reworded in ADR-021 §Verification.",
+   "evidence": "docs/analysis-report.md:676-677: 'ADR-020's arithmetic, which was corrected four\\ntimes under review, reproduces exactly.' — the phrase wraps across the line break, so the sweep command recorded in row 63 (2) and the resolution cannot match it. ADR-020 header (:15-17) and §h3 (:560) say three corrections / four figures; ADR-021:444-445 was reworded to match; analysis-report.md is a live doc the same commit edited (§1), not a dated prompts/ record.",
+   "repro": "sed -n 676,677p docs/analysis-report.md; grep -rn 'four times' docs | wc -l  # 0, yet the sentence is there",
+   "acceptance": "docs/analysis-report.md:676-677 reads 'corrected three times (four figures)' like ADR-021 §Verification, or row 63 (2) names it as a left residual; the recorded sweep uses a wrap-tolerant pattern (e.g. grep -rnz or 'corrected four')."
+  },
+  {
+   "id": "R11",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "This round's own two-line insertion in docs/analysis-report.md §1 moved the 'twelve measurement choices' line from :421 to :423, leaving three `docs/analysis-report.md:421` citations stale — in the L1 Status cell (touched this round) and row 66's closure note and Where cell — while the new debt row asserts no line number in a touched closure note can move under this PR's insertions.",
+   "evidence": "git diff f2b266e..HEAD -- docs/analysis-report.md: hunk @@ -94,7 +94,9 @@ (+2 lines). grep -n 'twelve measurement choices' docs/analysis-report.md -> 423. grep -no 'analysis-report.md:421' tasks/TODO.md -> 28, 66, 66. TODO.md:130 Why cell: 'no line numbers in any closure note touched this round — they move under this PR's own insertions'. Same shape as R4 and R7.",
+   "repro": "sed -n 421p docs/analysis-report.md; grep -c 'analysis-report.md:421' tasks/TODO.md",
+   "acceptance": "The three citations read :423 or name the §4 'Input:' paragraph; or the debt-row sentence is narrowed to 'no ADR-020 line numbers'."
+  },
+  {
+   "id": "R12",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "Row 63 (6)'s wide-sweep hit list and the resolution JSON attribute three ADR-020 hits to §h and §h2 that are in §c, so the R7 in-place fix ('cite by section and paragraph') cites the wrong sections for them.",
+   "evidence": "tasks/TODO.md:63 and pr35-r2-resolution.json wide_sweep_3263_and_956: '§h item 10 `[328690,329646)` 956 chars', '§h2 Item 10 takes 956 of the block's 3,263', '§h2 it costs item-10 coverage, not items 11–13's reachability'. Actual locations: ADR-020:223, :232, :234 — all inside §c (heading at :190, §d at :282), in the paragraph headed 'Row 7's scope, and what the interleaving actually costs (round 3, R15)' (:221). §h starts at :474, §h2 at :506; neither contains those strings. The verdicts ('correct') are right; the section labels are not.",
+   "repro": "grep -n '^## ' specs/decisions/ADR-020-fallback-not-justified.md; grep -n 'takes 956\\|reachability\\|328690,329646' specs/decisions/ADR-020-fallback-not-justified.md",
+   "acceptance": "Row 63 (6) and the resolution JSON label those three hits '§c row-7 paragraph (round 3, R15)'."
+  }
+ ]
+}

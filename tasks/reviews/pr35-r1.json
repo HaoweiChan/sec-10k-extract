@@ -1,0 +1,55 @@
+{
+ "pr": 35,
+ "round": 1,
+ "date": "2026-08-23",
+ "result": "REQUEST_CHANGES",
+ "gate": "invariant 48/48 = 1.000; fast 96/96 = 1.000; table fidelity cells 400/400 rows 31/31; test_eval_adapter 18/18; at origin/main archive 46/46, 94/94; HEAD check on main TODO.md → 6 failures on :79/:84/:91/:113; malformed fixture exactly 9; README mutations behave; font-link pin 4 at HEAD / 3 at 460f739; extract_items identical main vs HEAD on 3 fixtures × {default, tables=True}; .eval-baseline.json untouched; src/sec10k/web untouched",
+ "routing_rule": "repair = HIGH/MEDIUM and (acceptance violated | gate red | published claim dishonest); everything else debt (pr-loop scope boundary)",
+ "findings": [
+  {
+   "id": "R1",
+   "severity": "HIGH",
+   "route": "repair",
+   "claim": "Row 128's R2 closure note publishes a false coverage claim: 'exercised by every committed table case, all of which run `envelope_shape`' — two of the seven table cases run no envelope_shape check at all.",
+   "evidence": "tasks/TODO.md:128 (HEAD) '… and exercised by every committed table case, all of which run `envelope_shape`'. evals/adversarial/tables-layout-bullet.json and evals/adversarial/tables-cell-div.json have input {\"tables\": true} and check types ['table','table_markdown','tables_sane'] / ['table','norm_contains','tables_sane'] — no envelope_shape; run_case (src/sec10k/eval_adapter.py:507-530) only runs the listed checks. Only 5/7 table cases (aapl-2025-table, msft-2013-table, tgt-2002-table-th, tables-refusal-path, tables-offsets-invariant) run envelope_shape. The same untrue sentence was inherited from the pre-L1 row text ('every committed table case runs both') and restated rather than re-measured.",
+   "repro": "for f in evals/golden/*table*.json evals/adversarial/tables-*.json; do printf '%s env=%s sane=%s\\n' $f $(grep -c envelope_shape $f) $(grep -c tables_sane $f); done",
+   "acceptance": "Row 128's R2 note (and the `_tables_shape` comment if it is read as a coverage claim) says five of the seven table cases run `envelope_shape` and names the two that run `tables_sane` only — or envelope_shape is added to tables-layout-bullet / tables-cell-div (green, no red-first needed for a tightening already watched red in test_eval_adapter) and the sentence becomes true as written."
+  },
+  {
+   "id": "R2",
+   "severity": "MEDIUM",
+   "route": "repair",
+   "claim": "Rows 63, 65 and 66 are listed as class E ('code edits with their own red-first watch') while each carries live one-line doc phrase/count edits that are exactly the (b) class this pass defined and closed elsewhere, so the 'stay open' classification is not honest for them.",
+   "evidence": "tasks/TODO.md:63 items (1),(2),(4),(5),(6) are doc phrase edits — (1) evals/fixtures/README.md:47 still reads 'only item 10 can be recovered without amending INV-S1'; (6) '956 of 3,263' still in specs/decisions/ADR-020-fallback-not-justified.md and docs/architecture/overview.md; only (3) is a case edit. tasks/TODO.md:66: specs/decisions/ADR-021-benchmark-instrument.md:328 still says '14 remaining legitimate non-measurements are listed in `DOC_ALLOW`' while len(DOC_ALLOW)=20; docs/analysis-report.md:421 'its ten measurement choices' vs ADR-021:42 '**Twelve** measurement choices'. tasks/TODO.md:65 (c): README.md:198 'anywhere in this repo' still live. The L1 row's own precedent (row 128 closed R1/R2 inside a bundle and left R3 open; rows 71/75/85 from PR #17/#18/#25 were closed, so the '#28–#34' origin clause was not the operative boundary) shows partial closure of a bundle's doc half was in scope.",
+   "repro": "sed -n 47p evals/fixtures/README.md | grep -c 'only item 10 can be recovered'; grep -n '14 remaining legitimate' specs/decisions/ADR-021-benchmark-instrument.md; python3 -c \"import sys;sys.path.insert(0,'.');from evals.bench import DOC_ALLOW;print(len(DOC_ALLOW))\"; grep -n 'ten measurement choices' docs/analysis-report.md; grep -rln '956 of 3,263' specs docs",
+   "acceptance": "Either the doc halves of 63/65/66 are applied (phrase/count edits, each with its verification grep in a closure note, the code halves left open the way row 128's R3 is), or the Status cell stops labelling them E and states the real reason they stay open (e.g. 'bundle left whole by decision; doc halves still open: README:47, ADR-021:328 (len(DOC_ALLOW)=20), analysis-report:421, README:198, \"956 of 3,263\" ×2')."
+  },
+  {
+   "id": "R3",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "The L1 Status cell's row inventory mislabels line 112 as the `src/sec10k/boilerplate.py` comment row; that row is 113, which the same cell files under class C.",
+   "evidence": "tasks/TODO.md:28 Status: 'E … 112 (`src/sec10k/boilerplate.py` comment)' and 'C: … 110, 113, …'. HEAD line 112 is 'Two of the three location-var assertions in `build-identity` cannot fail'; line 113 is 'The `38 measurable fixtures` corpus figure is stale' (the boilerplate.py:66 comment row).",
+   "repro": "awk 'NR==112||NR==113{print NR\": \"substr($0,1,90)}' tasks/TODO.md",
+   "acceptance": "Status cell reads '113 (`src/sec10k/boilerplate.py` comment)' in whichever class it belongs to, and 112 is listed where the location-var row actually goes."
+  },
+  {
+   "id": "R4",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "Row 109's closure note and Where cell cite 'ADR-027 §c:162' for the sandston/fy2021 pair, but this PR's own §b insertion moved that table line to :165 (:162 is now the table header).",
+   "evidence": "tasks/TODO.md:109 '§c:162 has the pair right' / Where '§c:162'; specs/decisions/ADR-027-ambiguity-caps-confidence.md:165 '| `UNATTRIBUTED_MAX` | 0.17 | (0.1242 wmt-2010, 0.2646 fy2021-item9c / 0.2648 sandston-2021)'; at origin/main the same line is :162.",
+   "repro": "grep -n 'sandston-2021)' specs/decisions/ADR-027-ambiguity-caps-confidence.md; git show origin/main:specs/decisions/ADR-027-ambiguity-caps-confidence.md | grep -n 'sandston-2021)'",
+   "acceptance": "Row 109 cites §c:165 (or §c without a line number)."
+  },
+  {
+   "id": "R5",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "The pr33-r1-resolution.json edit is not literally additions-only in `git diff` (the shared_state line is re-emitted with a trailing comma), though the JSON content diff is exactly one added key.",
+   "evidence": "git diff --numstat origin/main...HEAD -- tasks/reviews/pr33-r1-resolution.json → 2 added / 1 removed; structural compare of the two JSON documents → only findings[0].note_l1 ADDED, no CHANGED/REMOVED.",
+   "repro": "git diff origin/main...HEAD -- tasks/reviews/pr33-r1-resolution.json",
+   "acceptance": "Acknowledged as JSON-syntax-forced in the L1 row's 'additive; no sentence rewritten' wording (already effectively true); nothing else required."
+  }
+ ]
+}

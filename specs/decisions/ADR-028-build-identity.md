@@ -3,10 +3,15 @@
 Date: 2026-08-22. Status: accepted. Implements S2.
 
 Renumbered 027 -> 028 on 2026-08-22 when `origin/main` merged first with its own
-ADR-027 (ambiguity caps confidence, PR #32 / T5). `tasks/reviews/pr31-r1.json` and
-`pr31-r2.json` still cite this file as ADR-027 because that is what it was called
-when those rounds reviewed it; they are the record of a review, not of the tree,
-and are left as written per this repo's supersede-don't-retro-edit convention.
+ADR-027 (ambiguity caps confidence, PR #32 / T5). All four PR #31 review
+artifacts — `tasks/reviews/pr31-r1.json`, `pr31-r2.json`,
+`pr31-r1-resolution.json` (which also cites `ADR-027-build-identity.md §e` and
+`prompts/013-s2-build-identity.md`, the prompt record renumbered to `014` in the
+same merge) and `pr31-r2-resolution.json` (R12 "Matches ADR-027 §g") — still
+cite this file as ADR-027 because that is what it was called when those rounds
+reviewed it; they are the record of a review, not of the tree, and are left as
+written per this repo's supersede-don't-retro-edit convention. A bare `ADR-027`
+in any of them means THIS file (list completed 2026-08-23, L1, PR #31 R15).
 
 **Ruling**: `/api/meta`'s `git_sha` resolves in one fixed order — the build-injected `BUILD_SHA` file, then the `GIT_SHA` env var, then `git rev-parse --short HEAD`, then the literal `"unknown"` — and a value that is not `[0-9a-f]{7,40}` is not a build identity at any of those steps. `BUILD_SHA` is written by `zbpack.json`'s `build_command` from Zeabur's build-phase `ZEABUR_GIT_COMMIT_SHA` and is never committed.
 **Because**: the S2 row's own ruling is that "a lying build label is worse than `build unknown`", so every way a build can hand the runtime a non-sha — an empty file, an unexpanded `$ZEABUR_GIT_COMMIT_SHA`, a branch name — has to resolve to `unknown` rather than be rendered as a build identity; and only the build knows its sha is current, so nothing a human set can outrank it.

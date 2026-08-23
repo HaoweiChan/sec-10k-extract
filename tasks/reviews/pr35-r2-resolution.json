@@ -1,0 +1,75 @@
+{
+  "pr": 35,
+  "round": 2,
+  "task": "L1",
+  "review": "tasks/reviews/pr35-r2.json",
+  "resolved_by": "implementer",
+  "date": "2026-08-23",
+  "protocol": "R6 repro re-run first (the two survivors pasted below), both reworded, then a WIDE sweep for the figure itself (grep -rnw 956 and grep -rn '3,263' over specs docs README.md tasks prompts evals/adversarial) read hit by hit and recorded in row 63 with a verdict per hit. Because the recurring defect class is 'a completeness claim verified by a grep narrower than the claim', every round-0/1 closure note whose verification is a grep was re-run in a wide form (variant wordings, bare figures, every doc tree): residuals found are listed in the findings below and recorded in the rows they belong to. R7/R8 corrected in place (they sit in cells rewritten for R6), one Debt row added (Origin: PR #35 R7/R8). ledger_table_shape run last on the final ledger: green.",
+  "gate_at_resolution": {
+    "invariant": "48/48 = 1.000 (+4 enumerated debt, unscored)",
+    "fast": "96/96 = 1.000 (+4 enumerated debt, unscored); table fidelity cells 1.0000 (400/400), rows 1.0000 (31/31)",
+    "baseline": "1.000, not moved; .eval-baseline.json untouched",
+    "self_checks": "python3 -m src.sec10k.test_eval_adapter 18/18; python3 -m evals.bench --self-check ok; python3 -m evals.bench --check-docs evals/report/20260820-031540-bench.json unchanged at 56 checked / 4 unmatched; ledger_table_shape on tasks/TODO.md + evals/fixtures/README.md -> passed, [] (run last)"
+  },
+  "findings": [
+    {
+      "id": "R6",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "reproduced": true,
+      "repro_observed": "grep -n '3,263' specs/decisions/ADR-020-fallback-not-justified.md | grep -v 'keeps 956\\|takes 956' at f2b266e -> :83 'their own spans.** It costs item-10 coverage — 956 of the block's 3,263' and :557 'interleaving costs item-10 coverage — 956 chars of 3,263 — and does not put'. The round-1 grep '956 of 3,263' could not match either variant; the closure claimed completeness it had not verified.",
+      "fix": "Both reworded. ADR-020 §a ('no partition gives item 10 the complete block' paragraph): 'Item 10 keeps 956 of the block's 3,263 chars under the partition — the cost is the other 2,307, and nothing else.' ADR-020 §h3 ('The true claim is narrower' paragraph): 'The interleaving leaves item 10 with 956 of the block's 3,263 chars — the cost is 2,307 — and does not put items 11–13 beyond the contract.' After: the reviewer's repro prints nothing; grep -rn 'costs item-10 coverage — 956' specs docs README.md tasks prompts -> only row 63's own quotation of the phrase and tasks/reviews/pr35-r2.json (no live claim). Row 63 (6) rewritten: five spots, which three were round-1 and which two R6 found, the wide-sweep hit list with a verdict each, the widened verification commands; ADR-020 cited by section and paragraph anchor, not line (R7).",
+      "wide_sweep_3263_and_956": [
+        "specs/decisions/ADR-020 §a paragraph — REWORDED (round 2)",
+        "specs/decisions/ADR-020 §b row `axp-2008` items 10, 11, 12, 13 — reworded round 1, correct reading",
+        "specs/decisions/ADR-020 §h 'item 10 `[328690,329646)` 956 chars' — span length, correct",
+        "specs/decisions/ADR-020 §h2 'Item 10 takes 956 of the block's 3,263 chars' — correct reading",
+        "specs/decisions/ADR-020 §h2 'it costs item-10 coverage, not items 11–13's reachability' — no figure, correct reading",
+        "specs/decisions/ADR-020 §h3 listing 'item 10 [328690,329646) len 956 -> extracted' — correct",
+        "specs/decisions/ADR-020 §h3 paragraph — REWORDED (round 2)",
+        "docs/architecture/overview.md ADR-020 fallback paragraph — reworded round 1, correct reading",
+        "tasks/TODO.md Combined-multi-item-heading row — reworded round 1, correct reading",
+        "tasks/TODO.md L1 row and row 63 — references to the defect, not claims",
+        "evals/adversarial/axp-2008-combined-part-iii.json triage 'item 10 gets 956 of the block's 3,263 chars' — correct reading",
+        "tasks/reviews/pr35-r1.json, pr35-r1-resolution.json, pr35-r2.json — review traces, quotations",
+        "evals/fixtures/jnj-2016, xom-2021 filing bytes — unrelated '3,263' inside filing HTML"
+      ],
+      "other_closures_rechecked_wide": [
+        "'only item 10' (row 63 (1)): grep -rn 'only item 10\\|without amending INV-S1' specs docs README.md evals prompts -> only row 63's quotation. Clean.",
+        "'14 remaining legitimate' (row 66): grep -rn 'DOC_ALLOW\\|non-measurement' specs docs README.md prompts tasks/TODO.md -> ADR-021 §b12 (20, correct), row 66. Clean.",
+        "'ten measurement choices' (row 66): grep -rn 'measurement choices\\|eleven' specs docs README.md prompts -> ADR-021 :42 Twelve, analysis-report :421 twelve; every other 'eleven' hit is a different count (ADR-015/017/023 assertions, README's eleven metrics). Clean.",
+        "'anywhere in this repo' (row 65 (c)): grep -rn 'anywhere in this repo\\|every decimal\\|beside a' README.md docs specs prompts -> docs/analysis-report.md §1 'every decimal printed beside a backticked fixture name' was the same overclaim in softer words — REWORDED to the exact form; ADR-021 §b12 already exact; prompts/009:283 is a record, left.",
+        "'nine synthetic' (row 97): grep -nw nine over ADR-021, analysis-report, bench.py, README -> ADR-021 §b8 ('Nine of the 37 dev fixtures', 'SYNTHETIC set is nine explicit names') and analysis-report §5 ('9 of its 37', 'seven of the nine') still say nine — dated to the n=37 population of the ADR-021 run of record; RESIDUAL stated in row 97 and added to the Normalized-character row's Where cell (row 100), which is the re-publication that moves them; bench.py:110 'seven of the first nine' is ordering, not size.",
+        "'exactly one variable' (row 119): grep -rn over specs docs README.md tasks prompts -> row 116 (says it was never true and is not claimed), row 119 (quotation), pr33 traces. Clean.",
+        "'every committed table case' (row 128): grep -rn 'every committed table case\\|all of which run\\|every table case' specs docs README.md tasks src -> row 128 (now 5/7 -> 7/7), src/sec10k/eval_adapter.py:438 comment about tables_sane (true: every table case runs it). Clean.",
+        "'four times' (row 63 (2)): grep -rn 'four times\\|moved four' specs docs README.md prompts tasks/TODO.md -> ADR-021 §Verification 3 'The headline ADR-020 corrected four times' — same miscount, REWORDED to 'three times (four figures)'; prompts/008:241 and prompts/009:61 left (curated records of their date).",
+        "'013206' (row 63 (5)): grep -rn 013206 specs docs README.md prompts -> only the ADR-020 Verification citation, now labelled. Clean.",
+        "'Exhibit 13' (rows 98/99): grep -rn 'Exhibit 13' specs docs README.md prompts evals/adversarial -> evals/adversarial/ibr-security-holders.json provenance carried the same R5 conflation ('wmt-2010's Part II pointers name the Annual Report and classify IBR already') — REWORDED: the one Exhibit-13 mention is item 15's, the Part II IBR pointers never mention it. Recorded in row 99.",
+        "'ZERO changes' / 'offset 305' (rows 102/103): grep -rn over specs docs tasks evals/adversarial -> only the two struck rows and html-title-metadata.json's corrected 297/305 text. Clean.",
+        "ADR-026 'both an HTML fixture' (row 85): grep -rn 'both an HTML\\|txt fixture that fires\\|and a txt fixture' specs docs -> nothing. Clean.",
+        "ADR-027 flip sentence (row 109): grep -rn 'items flip\\|span items' specs docs README.md prompts -> only §b (now scoped + held-out seventh). Clean.",
+        "ADR-029 history lines (row 128 R1): grep -rn 'history.jsonl' ADR-029, docs, prompts/015 -> §c1 mechanism sentence (true), §h (now honest). Clean."
+      ],
+      "covered_by": "tasks/TODO.md row 63 (6) hit list and widened commands; rows 65, 97, 99, 100 carry the residuals; L1 Status cell's round-2 line"
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "status": "debt",
+      "reproduced": true,
+      "repro_observed": "sed -n 141p ADR-020 -> the heading-unnumbered row; grep -n 'keeps 956' ADR-020 -> 142 at f2b266e.",
+      "debt_row": "Two LOW findings from PR #35 round 2, both inside text L1 wrote",
+      "note": "Corrected in place: row 63 cites ADR-020 by section and paragraph anchor (§a 'no partition gives item 10 the complete block' paragraph, §b `axp-2008` items 10–13 row, §h3 'The true claim is narrower' paragraph); no line numbers were written into any closure note touched this round."
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "status": "debt",
+      "reproduced": true,
+      "repro_observed": "evals/bench.py check_docs: skips a decimal preceded by '$' or followed by '%', '×', 'x ' or '× '; skips (Path(rel).name, fixture, lit) in DOC_ALLOW; window = min(m.end()+60, end of line, next backticked fixture name). README.md:198-201 named the 60-char/same-line/five-files bound only.",
+      "debt_row": "Two LOW findings from PR #35 round 2, both inside text L1 wrote",
+      "note": "Corrected in place, sentence made to match the code: README.md now adds 'except decimals adjacent to `$`, `%` or `×` (prices, percentages, ratios) and the (file, fixture, value) triples evals.bench.DOC_ALLOW lists as legitimate non-measurements; the window also stops at the next backticked fixture name'. --check-docs unchanged at 56 checked / 4 unmatched (README is one of DOC_FILES; the new sentence adds no fixture-attributed decimal)."
+    }
+  ]
+}

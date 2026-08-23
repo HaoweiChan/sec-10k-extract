@@ -1155,6 +1155,52 @@ def check_build_identity(case):
     return bad
 
 
+LEDGER_FILES = ["tasks/TODO.md", "evals/fixtures/README.md"]
+CODE_SPAN_RE = re.compile(r"`[^`\n]*`")
+
+
+def check_ledger_table_shape(case):
+    """L1. Every row of every Markdown table in the ledger files has exactly
+    its header's cell count, and no code span in a table row carries a `|`.
+
+    Cells are counted on EVERY `|` in the row (one leading and one trailing
+    pipe dropped), escaped or not, inside a code span or not. That is
+    deliberately the naive rule, because it is the one every reader of these
+    tables actually applies: `src/sec10k/web/capabilities.py` splits README
+    rows with `line.strip("|").split("|")`, the PR #30 R1 repro was
+    `awk '{print gsub(/\\|/,"|")-1}'`, and the orchestrator's row inventory
+    counted the same way. GFM honours `\\|` as a literal pipe (rows 79/84/91/
+    113 of `tasks/TODO.md` at 1efc457 render as 3 cells on GitHub) but strips
+    the backslash inside a code span — so `grep 'a\\|b'` in a table cell
+    renders as `grep 'a|b'`, a different command — and an UNescaped pipe in a
+    code span splits the row on GitHub too (PR #30 R1/R8). The only shape on
+    which the naive counter, a span-aware counter and GFM all agree is: no
+    pipe anywhere in a row except the cell delimiters. A table ends at the
+    first line that does not start with `|`; strikethrough rows count like
+    any other. Pipes in fenced code blocks are out of scope (none of the
+    ledger tables sit inside one).
+    """
+    inp = case.get("input", {})
+    bad = []
+    for rel in inp.get("files", LEDGER_FILES):
+        width = None
+        for n, line in enumerate((ROOT / rel).read_text().split("\n"), 1):
+            s = line.strip()
+            if not s.startswith("|"):
+                width = None
+                continue
+            body = s[1:-1] if s.endswith("|") and len(s) > 1 else s[1:]
+            cells = body.count("|") + 1
+            if width is None:
+                width = cells
+            elif cells != width:
+                bad.append(f"{rel}:{n}: {cells} cells, header has {width}")
+            for span in CODE_SPAN_RE.findall(s):
+                if "|" in span:
+                    bad.append(f"{rel}:{n}: code span {span} carries a pipe")
+    return bad
+
+
 CHECKS = {
     "adr_headers": lambda case: check_adr_headers(),
     "adr_index": lambda case: check_index(),
@@ -1173,6 +1219,7 @@ CHECKS = {
     "boilerplate_plumbing": check_boilerplate_plumbing,
     "external_stylesheets_nonblocking": check_external_stylesheets_nonblocking,
     "build_identity": check_build_identity,
+    "ledger_table_shape": check_ledger_table_shape,
 }
 
 

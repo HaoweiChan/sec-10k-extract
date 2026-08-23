@@ -1,0 +1,23 @@
+{
+  "id": "ledger-table-shape",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "ledger_table_shape"
+    ],
+    "files": [
+      "tasks/TODO.md",
+      "evals/fixtures/README.md"
+    ]
+  },
+  "expect": {},
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "L1 (2026-08-23), closing the PR #18 debt row 'tasks/TODO.md may carry more cell-count defects than the one that was fixed'. Every row of every Markdown table in the two ledger files must have exactly its header's cell count, and no code span in a table row may carry a pipe. The cell count is the NAIVE one — every `|` in the row, one leading and one trailing dropped, escaped or not, inside a code span or not — because that is the rule every reader of these tables actually applies: src/sec10k/web/capabilities.py splits README rows with line.strip('|').split('|'), the PR #30 R1 repro was an awk gsub count, and the orchestrator's row inventory counted the same way. GFM honours a backslash-escaped pipe as a literal (the four rows named in the provenance render as 3 cells on GitHub) but strips the backslash inside a code span, so a grep BRE alternation written in a table cell renders as a different command, and an UNescaped pipe inside a code span splits the row on GitHub too (PR #30 R1/R8). The one shape all three counters agree on is: no pipe anywhere in a row except the cell delimiters. A table ends at the first line not starting with `|`; strikethrough rows count like any other. The paired ledger-table-shape-regression pins an exact failure count on a hand-made malformed file; mutations on a clean copy of evals/fixtures/README.md (a pipe inside a code span, one cell too many, one cell too few, a backslash-escaped pipe in a cell, a struck row with an extra cell) each produced 1-2 failures."
+  },
+  "provenance": "L1 ledger pass, created 2026-08-23. Watched RED against origin/main 1efc457's tasks/TODO.md (evals/fixtures/README.md was clean): 6 failures on exactly four Debt rows — :79 '7 cells, header has 3' plus 'code span `\\| Alpha row \\| Sample A1 \\| Passes fine \\|` carries a pipe'; :84 '5 cells, header has 3' (two escaped pipes outside any span, quoting an ADR-026 §g table line); :91 '4 cells, header has 3' plus 'code span `grep -rn 'build_view\\|norm_chars' specs/ docs/` carries a pipe'; :113 '4 cells, header has 3' (`INDEX\\|file`). Runner line `[FAIL] ledger-table-shape (adversarial, 0.0s)`, invariant 47/48 = 0.979, fast 95/96 = 0.990. GREEN after the four rows were rewritten without pipes (the quoted mutation rows and the §g line re-worded, the grep given `-e` patterns instead of a BRE alternation, `INDEX\\|file` → `INDEX-to-file`); no other row changed."
+}

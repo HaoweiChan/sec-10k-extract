@@ -13,8 +13,9 @@ question that `README.md`, `docs/evals/evaluation-strategy.md` metric 11 and
 ---
 
 **Corrected three times under review (PR #11, findings R1, R8 and R15) — see
-§h, §h2 and §h3.** The headline moved four times — **0 of 989 → 4 of 989 → 1 of
-768 → 4 of 768** — and three of those four figures were wrong. The final number
+§h, §h2 and §h3.** The headline carried four figures across those three
+corrections — **0 of 989 → 4 of 989 → 1 of 768 → 4 of 768** — and three of the
+four were wrong. The final number
 is **4 of 768**, and the derivation is written out below so it can be checked
 rather than trusted. The ruling is unchanged across every round, and rests on
 the escalation ladder: the same deterministic fan-out reaches all four items at
@@ -79,8 +80,8 @@ The ruling in two clauses, because one is not enough:
    block's ten caption bullets address items in the interleaved order 10, 10,
    11, 10, 11, 12, 10, 11, 13, 10, and what that interleaving forecloses is
    narrow: **no partition gives item 10 the *complete* block AND items 11–13
-   their own spans.** It costs item-10 coverage — 956 of the block's 3,263
-   chars — and nothing else. It does not put items 11–13 beyond the contract:
+   their own spans.** Item 10 keeps 956 of the block's 3,263 chars under the
+   partition — the cost is the other 2,307, and nothing else. It does not put items 11–13 beyond the contract:
    the four caption regions sit at strictly increasing, disjoint offsets,
    `no_overlap_ordered` passes on that assignment, and `segment.classify`
    returns `extracted` on each of the four bodies. A combined-heading fan-out
@@ -138,7 +139,7 @@ Three candidate trigger policies, and the disposal of each:
 | `xom-2021` item 6 | The item **is not in the document**. `Item 6` and `Selected Financial Data` occur zero times in 388,862 normalized chars — FY2021 filings no longer contain it. Nothing to find; an LLM offered this filing can only invent. **Not addressable.** |
 | `malformed-html` item 1A | `RISK FACTORS` occurs exactly once, in the table of contents. The body does not survive the corruption this fixture exists to model. **Not addressable.** |
 | `heading-unnumbered` item 8; `items-stripped-escalation` items 5/6/7/7A/8/9/9A/9B (9 items, 2 synthetic fixtures) | Content is present but de-numbered — and **the committed cases assert `missing` is the CORRECT answer**, with `doc_status: ambiguous` and `expected_item_missing`. These fixtures exist to prove the pipeline refuses rather than guesses (`README.md`: "it never emits a best-effort parse of a document it could not identify"). A fallback here does not fix a failure; it deletes a guarantee. **Not addressable.** |
-| `axp-2008` items 10, 11, 12, 13 | **ADDRESSABLE — and the whole of it.** A real EDGAR filing, content present, and all four are contract-reachable: the caption regions are disjoint and in order, `no_overlap_ordered` passes, `classify` returns `extracted` on each. The interleaved bullet order costs only item-10 *coverage* (956 of 3,263 chars), not the other three items' spans. See §c row 7 for what fixing them costs and why the fallback still loses. |
+| `axp-2008` items 10, 11, 12, 13 | **ADDRESSABLE — and the whole of it.** A real EDGAR filing, content present, and all four are contract-reachable: the caption regions are disjoint and in order, `no_overlap_ordered` passes, `classify` returns `extracted` on each. The interleaved bullet order costs only item-10 *coverage* (item 10 keeps 956 of the block's 3,263 chars; the cost is 2,307), not the other three items' spans. See §c row 7 for what fixing them costs and why the fallback still loses. |
 
 **Policy 2 — `confidence < 0.8`.** **32 items** across both sets, deduplicated
 by fixture — 31 dev (43 as a per-case sum over `results` + `debt`, 34 over
@@ -509,8 +510,11 @@ repros; none was rejected. Two changed the substance:
 
 - **R8** found that round 1's fix relocated the error instead of removing it:
   asserting `extracted` ×4 requires four items to share one span, which the debt
-  case's own `no_overlap_ordered` check forbids. **That much was correct.** What
-  I then built on it was not — see §h3.
+  case's own `no_overlap_ordered` check forbids. **That much was correct under
+  round 1's 2,000-char item-10 floor** — in general four items can each be
+  `extracted` on the disjoint spans of a four-way partition, which is why §h3
+  lowered the floor to 500 (qualified 2026-08-23, L1, PR #11 R23). What I then
+  built on it was not — see §h3.
 - **R7** found the denominator was a per-case sum labelled "deduplicated" and
   paired with a fixture column; the true distinct count is **768**, not 989.
   This one holds.
@@ -550,21 +554,22 @@ Items 12 and 13 land on precisely their own captions. INV-S1's only executable
 form checks `s2 < e1` over spans in item order and nothing else; nothing in it
 forbids this. The true claim is narrower than the one I made: **no partition
 gives item 10 the *complete* block AND items 11–13 their own spans.** The
-interleaving costs item-10 coverage — 956 chars of 3,263 — and does not put
-items 11–13 beyond the contract. The surface returns to **4 of 768**, and the
+interleaving leaves item 10 with 956 of the block's 3,263 chars — the cost is
+2,307 — and does not put items 11–13 beyond the contract. The surface returns to **4 of 768**, and the
 debt case is back to four `extracted` assertions with its item-10 floor lowered
 from 2,000 (which silently encoded the whole-block design) to 500 (cleared by
 both designs). Watched red again.
 
-**The headline has now moved four times: 0 of 989 → 4 of 989 → 1 of 768 → 4 of
-768. Three of those four figures were wrong, and three of the four corrections
-were the same error — reasoning about an executable contract in prose instead of
-running it.** Round 0: read a status rule from memory without running `classify`.
+**The headline has now carried four figures across three corrections: 0 of 989
+→ 4 of 989 → 1 of 768 → 4 of 768. Three of those four figures were wrong, and two
+of the three wrong ones — rounds 0 and 2 — were the same error: reasoning about
+an executable contract in prose instead of running it (round 1's 4 of 989 was the
+denominator, R7; counts corrected 2026-08-23, L1, PR #11 R21).** Round 0: read a status rule from memory without running `classify`.
 Round 2: read the span rule without running `no_overlap_ordered` on a candidate
 assignment. Round 3 corrected round 2 by doing the one thing neither earlier
 round did — constructing the object under discussion and executing the check
 against it. The pattern is not incidental to this ADR; it is the thing this repo
-exists to prevent, committed four times inside the document arguing that
+exists to prevent, committed twice inside the document arguing that
 correctness must be executable rather than asserted. The number in this ADR
 should be read as the fourth attempt, not as a result that arrived correctly.
 
@@ -582,7 +587,10 @@ no fix attempted, and watched red again after each of the three review re-scopes
 `[DEBT] STILL RED — combined-multi-item-heading`, **5 failures** — `item
 10/11/12/13 not extracted: missing`, plus `item has no span` from the item-10
 `min_chars` floor — with both hygiene checks green. That reproduces from the
-report of record for this commit, `evals/report/20260820-013206-fast.json`.
+report of record for this commit, `evals/report/20260820-013206-fast.json`
+(its `git_sha` is `c5af644…-dirty`, the parent commit plus the uncommitted tree
+that became this one — content reproduces exactly; labelling noted 2026-08-23,
+L1, PR #11 R24, the `a670e8b` precedent).
 *(Round 3, R16: this section previously reported the round-1 case's failure
 count, which the round-2 re-scope had already made wrong.)*
 

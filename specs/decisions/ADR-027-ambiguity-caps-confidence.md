@@ -124,8 +124,11 @@ intc-2002-shallow RED (`item 5 method 'heading_lenient' != 'heading_strict'`,
 **`method` (SD-1).** `extract.py` now emits `heading_lenient` when
 `cand["similarity"] < STRICT_SIM` and `heading_strict` otherwise — the same
 constant, so the envelope cannot say "strict" where the score says weak. Six
-span items flip on the committed corpus (ba-2003 8, jnj-2016 7, ko-1997 7
-(IBR) and 9, msft-2013 1A, textron-2001 1), nothing else. The contract now
+span items flip on the committed dev corpus (`evals/fixtures`: ba-2003 8,
+jnj-2016 7, ko-1997 7 (IBR) and 9, msft-2013 1A, textron-2001 1), nothing
+else there; on the held-out set one more flips the same way — cost-2022 item 7,
+`heading_strict` → `heading_lenient`, confidence 0.75 unchanged, offsets
+identical (PR #32 R3; re-measured 4cb2128 vs 1efc457, 2026-08-23). The contract now
 defines the enum (it never had): `heading_strict` — line-anchored heading,
 title similarity ≥ `STRICT_SIM`; `heading_lenient` — line-anchored heading,
 similarity in `[SIM_FLOOR, STRICT_SIM)`; `status_keyword` — no heading found,
@@ -303,7 +306,13 @@ After this ADR (20260822-164458-all.json, this branch's case files):
   0.95 n=184 · 0.85 n=83 · 0.8 n=5 · 0.75 n=31 · 0.65 n=1 · 0.4 n=2   debt: 0.95 5/5, 0.4 4/4
 ```
 
-Deltas main → after: 0.95 −19, 0.8 −3, 0.75 +24, population 304 → 306. The
+The "today at main" 0.95 n=203 reproduces only by joining that report against
+4cb2128's case files; the committed instrument on the committed report at any
+later tree gives n=204 (`python3 -m evals.metrics
+evals/report/20260822-162324-all.json` → `conf=0.95 n_targeted=204`), the +1
+being `ko-1997-shallow`'s item-8 pin that this PR added — all other rows
+83/8/7/1/2 and debt 5/5, 4/4 identical either way (PR #32 R2, noted 2026-08-23,
+L1). Deltas main → after: 0.95 −19, 0.8 −3, 0.75 +24, population 304 → 306. The
 +2 are the two newly item-targeted pairs (`ko-1997-shallow` item 8 via its
 `warning_absent … item 8`, and `spaced-letter-heading` item 9A), both at
 0.95 — so the 0.95 row is −21 targeted items capped in the five ambiguous

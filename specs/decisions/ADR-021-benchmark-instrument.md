@@ -325,8 +325,9 @@ survived two sweeps that had both been claimed as complete.)
     pinned inside the artifact by choice 10 and swept by hand in the prose.
     Integers are skipped (item codes, years and counts share their shape), and
     ratios, percentages and prices are skipped by their adjacent symbol. The
-    14 remaining legitimate non-measurements are listed in `DOC_ALLOW` with a
-    reason each — historical values inside their own correction notes,
+    20 remaining legitimate non-measurements are listed in `DOC_ALLOW` with a
+    reason each (`len(DOC_ALLOW)` re-measured 2026-08-23, L1, PR #12 R29 — the
+    count was first written as 14 from memory) — historical values inside their own correction notes,
     cross-run ranges, and quantities that merely sit beside a fixture name.
     Adding an entry there is where someone has to decide "this is history";
     it is not a way to quiet a stale number.
@@ -440,8 +441,8 @@ only ever confirms.
    from today's committed reports (`20260820-020944-all.json` +
    `20260820-013515-fast.json` over `evals/heldout`), keyed on (fixture, item):
    **768** distinct items, **15** `missing`, and the four improvable ones are
-   exactly `axp-2008` items 10–13. The headline ADR-020 corrected four times
-   lands where §h3 left it.
+   exactly `axp-2008` items 10–13. The headline ADR-020 corrected three times (four figures;
+   count fixed 2026-08-23, L1, PR #35 R6 sweep) lands where §h3 left it.
 
    One wording refinement, not a count change: ADR-020 §b describes the nine
    synthetic-fixture items as ones "whose own committed expectations assert

@@ -195,9 +195,14 @@ Measured, not estimated. Every figure below is a field of one committed file —
 quoted rate. **The instrument is good to about ±3%** — three full runs on a
 clean tree are committed and the spread between them is measured in
 `docs/analysis-report.md` §3.1 — so everything here is two significant figures
-and no more. Numbers printed beside a fixture name anywhere in this repo are
-checked against that artifact mechanically by
-`python3 -m evals.bench --check-docs`. Method, the full per-fixture table, the population boundaries and
+and no more. Decimals printed within 60 characters after a backticked fixture name, on the
+same line, in the five files `evals.bench.DOC_FILES` names (this README,
+`docs/analysis-report.md`, ADR-021, `tasks/TODO.md`, `prompts/009`) are checked
+against that artifact mechanically by `python3 -m evals.bench --check-docs` —
+except decimals adjacent to `$`, `%` or `×` (prices, percentages, ratios) and
+the `(file, fixture, value)` triples `evals.bench.DOC_ALLOW` lists as legitimate
+non-measurements; the window also stops at the next backticked fixture name.
+Integers, aggregates and numbers anywhere else are not checked (ADR-021 §b12). Method, the full per-fixture table, the population boundaries and
 the cost counterfactual: `docs/analysis-report.md` v4 §3–§5 and
 [ADR-021](specs/decisions/ADR-021-benchmark-instrument.md).
 

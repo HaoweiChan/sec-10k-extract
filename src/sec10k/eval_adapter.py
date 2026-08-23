@@ -426,13 +426,19 @@ def _tables_shape(result):
     tabs = result["tables"]
     if not isinstance(tabs, list):
         return f"tables is {type(tabs).__name__}, not a list"
-    n = len(result["normalized_text"])
+    n, prev = len(result["normalized_text"]), 0
     for i, tab in enumerate(tabs):
         if not isinstance(tab, dict) or set(tab) != {"start", "end", "header", "rows"}:
             return f"record {i} keys {sorted(tab) if isinstance(tab, dict) else tab!r}"
         if not (isinstance(tab["start"], int) and isinstance(tab["end"], int)
                 and 0 <= tab["start"] <= tab["end"] <= n):
             return f"record {i} start/end {tab['start']},{tab['end']} not offsets into normalized_text"
+        # PR #34 R2: the contract names document order and cell-in-span as
+        # part of the shape, so they are refused here too, not only by
+        # `tables_sane` (which every table case also runs)
+        if tab["start"] < prev:
+            return f"record {i} out of document order ({tab['start']} < {prev})"
+        prev = tab["start"]
         if not (isinstance(tab["header"], int) and 0 <= tab["header"] <= len(tab["rows"])):
             return f"record {i} header {tab['header']!r}"
         if not tab["rows"] or not all(isinstance(r, list) and r for r in tab["rows"]):
@@ -441,8 +447,9 @@ def _tables_shape(result):
             for c in r:
                 if not (isinstance(c, list) and len(c) in (2, 3)
                         and all(isinstance(x, int) for x in c)
-                        and 0 <= c[0] <= c[1] <= n and (len(c) == 2 or c[2] > 1)):
-                    return f"record {i} cell {c!r}"
+                        and tab["start"] <= c[0] <= c[1] <= tab["end"]
+                        and (len(c) == 2 or c[2] > 1)):
+                    return f"record {i} cell {c!r} (not inside [{tab['start']}, {tab['end']}] or malformed)"
     return None
 
 

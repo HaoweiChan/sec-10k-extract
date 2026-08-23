@@ -5,6 +5,7 @@
   "input": {"path": "evals/fixtures/msft-2013/filing.htm", "tables": true},
   "expect": {
     "checks": [
+      {"type": "envelope_shape"},
       {"type": "table", "anchor": "the proliferation of new computing devices", "header": 0,
        "rows": [["", "•", "", "the proliferation of new computing devices that emphasize touch and mobility functionality;"]]},
       {"type": "table_markdown", "anchor": "the proliferation of new computing devices",
