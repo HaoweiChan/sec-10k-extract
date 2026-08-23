@@ -436,7 +436,11 @@ renders 1 `<h2>`, 106 `<p>`, 6 `<table>`; msft-2013 item 1 renders 1 `<h2>`,
 121 `<p>`, 8 bullet tables, 14 `<b>`; ge-1994 item 1 renders one `<pre>`;
 the S3 fixture banner reads `success — 18 extracted` with the box ticked;
 with the box unticked the pane is the plain `<pre class="text">` and the
-header carries no `markdown` label; every `ui-*` and `repo_hygiene` case
+header carries no `markdown` label; `tasks/reviews/s3_browser_walk.py`
+re-run on this build (record `tasks/reviews/s3-browser-walk-s9.json`) drives
+the three S3 modes with the box unticked — fixture `success — 18 extracted`,
+upload `ambiguous — 4 extracted`, url `failed`, `mode_failures: []`, font
+fallback DEGRADES as before; every `ui-*` and `repo_hygiene` case
 (contrast, layout, plumbing, ledger shape) is green with the new stylesheet
 rules and the moved wire pins.
 
