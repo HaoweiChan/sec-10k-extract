@@ -44,7 +44,7 @@ def _item(code, cand, status, period_end=None):
 
 
 def _envelope(doc_status, text="", items=None, warnings=None, meta=None,
-              trace=None, t0=None, boilerplate=None, tables=None):
+              trace=None, t0=None, boilerplate=None, tables=None, images=None):
     env = {
         "normalized_text": text,
         "doc_status": doc_status,
@@ -61,10 +61,12 @@ def _envelope(doc_status, text="", items=None, warnings=None, meta=None,
         env["boilerplate"] = boilerplate
     if tables is not None:
         env["tables"] = tables   # ADR-029: same rule — present only when asked
+    if images is not None:
+        env["images"] = images   # ADR-032: same rule again
     return env
 
 
-def extract_items(path, exclude_boilerplate=False, tables=False):
+def extract_items(path, exclude_boilerplate=False, tables=False, images=False):
     """Extract items from a 10-K filing.
 
     Returns {"normalized_text": str, "doc_status": str, "items": [...], ...}
@@ -77,6 +79,11 @@ def extract_items(path, exclude_boilerplate=False, tables=False):
     `tables=True` adds ONE key, `tables` — every HTML <table> as offsets into
     `normalized_text` (ADR-029), the same annotation-not-edit rule. The
     Markdown view is derived by `src/sec10k/tables.to_markdown`, never stored.
+
+    `images=True` adds ONE key, `images` — every HTML <img> as
+    `{offset, src, alt, width, height}`, the offset into `normalized_text`
+    (ADR-032). Same annotation-not-edit rule; the image BYTES are not
+    fetched, by ruling (ADR-032 §c).
     """
     t0 = time.monotonic()
     raw_bytes = Path(path).read_bytes()
@@ -90,7 +97,8 @@ def extract_items(path, exclude_boilerplate=False, tables=False):
         raw = raw_bytes.decode("cp1252", errors="replace")
 
     trace = [{"layer": "acquisition", "path": str(path), "bytes": len(raw_bytes)}]
-    text, meta, warnings, tabs = select_and_normalize(raw, tables=tables)
+    text, meta, warnings, tabs, imgs = select_and_normalize(
+        raw, tables=tables, images=images)
     meta["input_sha256"] = sha
     trace.append({"layer": "select+normalize", **meta})
     # ADR-026 layer 3b, opt-in. Computed here, off the normalized text, and
@@ -109,7 +117,8 @@ def extract_items(path, exclude_boilerplate=False, tables=False):
             "code": "normalization_collapse", "item": None,
             "message": f"{len(raw)} raw chars normalized to {len(text)}"})
         return _envelope("failed", text, meta=meta, warnings=warnings,
-                         trace=trace, t0=t0, boilerplate=chrome, tables=tabs)
+                         trace=trace, t0=t0, boilerplate=chrome, tables=tabs,
+                         images=imgs)
 
     if meta["form_type"] not in ACCEPTED_FORMS:
         # refusal, not a best-effort parse (contract v2 envelope rules)
@@ -117,7 +126,8 @@ def extract_items(path, exclude_boilerplate=False, tables=False):
         warnings.append({"code": "unsupported_form", "item": None,
                          "message": f"not an accepted 10-K form (detected: {found})"})
         return _envelope("unsupported", text, meta=meta, warnings=warnings,
-                         trace=trace, t0=t0, boilerplate=chrome, tables=tabs)
+                         trace=trace, t0=t0, boilerplate=chrome, tables=tabs,
+                         images=imgs)
 
     expected = expected_items(meta.get("period_end"))
     # taxonomy era is the item set the filing's date implies, not its file
@@ -173,4 +183,4 @@ def extract_items(path, exclude_boilerplate=False, tables=False):
         doc_status = "success"
     return _envelope(doc_status, text, items=items, meta=meta,
                      warnings=warnings, trace=trace, t0=t0, boilerplate=chrome,
-                     tables=tabs)
+                     tables=tabs, images=imgs)

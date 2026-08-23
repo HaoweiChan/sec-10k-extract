@@ -68,8 +68,8 @@ def _demo():
             "<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr></table>"
             "<table><tr><td>&nbsp;</td></tr></table>"      # spacer: no text, dropped
             "<p>After.</p><table><tr><td>x</td></tr></table></body></html>")
-    text, tabs = normalize(html, "html", tables=True)
-    assert normalize(html, "html", tables=False) == (text, None)      # identical text
+    text, tabs, _ = normalize(html, "html", tables=True)
+    assert normalize(html, "html", tables=False) == (text, None, None)  # identical text
     assert len(tabs) == 2, tabs                                        # spacer dropped
     t = tabs[0]
     assert t["header"] == 1 and len(t["rows"]) == 4, t
@@ -101,7 +101,7 @@ def _demo():
     # span, and records come back in start order (inner closes first)
     nested = ("<table><tr><td>outer<table><tr><td>inner</td></tr></table></td>"
               "<td>after</td></tr></table>")
-    ntext, ntabs = normalize(nested, "html", tables=True)
+    ntext, ntabs, _ = normalize(nested, "html", tables=True)
     assert len(ntabs) == 2 and ntabs[0]["start"] < ntabs[1]["start"], ntabs
     outer_cell = ntabs[0]["rows"][0][0]
     assert ntext[outer_cell[0]:outer_cell[1]] == "outer\n\ninner", ntext[outer_cell[0]:outer_cell[1]]

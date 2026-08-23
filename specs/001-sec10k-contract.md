@@ -114,6 +114,24 @@ them all); the example once showed `lenient_match`, which nothing emits.
   by `src/sec10k/tables.grid()` / `to_markdown()` and are deliberately not
   fields. `rowspan`, nested tables and txt-era SGML `<TABLE>` layout are not
   interpreted (ADR-029 §e). `envelope_shape` refuses any other shape.
+- **`images` (optional, ADR-032)**: present *only* when the caller passes
+  `extract_items(path, images=True)`. A list, in document order, of one
+  record per HTML `<img>`: `{"offset", "src", "alt", "width", "height"}` —
+  `offset` is a **point** into `normalized_text` (an image emits no text, so
+  it has no span), so document order is **non-decreasing**, not strictly
+  increasing: two adjacent images share an offset. `src` and `alt` are the
+  attributes verbatim, entity-decoded, `null` when absent. `width`/`height`
+  are the declared pixel size as a positive int, from the `width=`/`height=`
+  attribute or a `width:Npx` / `height:Npx` declaration in `style`, `null`
+  when neither declares one in pixels. Same rule as `boilerplate` and
+  `tables`: an annotation, never an edit — `normalized_text`, every item
+  offset and every published figure are byte-identical with the flag on and
+  off. Carried on refusal envelopes too when asked for. The item an image
+  falls in is **derived** from offsets (the item whose span holds `offset`,
+  `null` when none does) and is deliberately not a field. The image BYTES are
+  never fetched (ADR-032 §c); `<object>`, `<embed>`, inline `<svg>` and CSS
+  background images are not recorded (ADR-032 §e). `envelope_shape` refuses
+  any other shape.
 
 ## Envelope rules (v2, normative)
 

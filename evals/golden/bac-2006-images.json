@@ -1,0 +1,89 @@
+{
+  "id": "bac-2006-images",
+  "task": "sec10k",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "path": "evals/fixtures/bac-2006/filing.htm",
+    "images": true
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "envelope_shape"
+      },
+      {
+        "type": "images_sane",
+        "min": 5,
+        "max": 5
+      },
+      {
+        "type": "image",
+        "src": "g23696g92j81.jpg",
+        "alt": "LOGO",
+        "width": null,
+        "height": null,
+        "offset": 289566,
+        "before": " largest loss was $55 million.",
+        "after": "\n\nTo evaluate risk in our trad",
+        "item": "7"
+      },
+      {
+        "type": "image",
+        "src": "g23696g26q96.jpg",
+        "alt": "LOGO",
+        "width": null,
+        "height": null,
+        "offset": 291296,
+        "before": "ated revenue and VAR for 2006.",
+        "after": "\n\nTable 28 presents average, h",
+        "item": "7"
+      },
+      {
+        "type": "image",
+        "src": "g23696g76b15.jpg",
+        "alt": "LOGO",
+        "width": null,
+        "height": null,
+        "offset": 391006,
+        "before": "stered public accounting firm.",
+        "after": "\n\nKenneth D. Lewis\n\nChairman, ",
+        "item": "8"
+      },
+      {
+        "type": "image",
+        "src": "g23696g52h61.jpg",
+        "alt": "LOGO",
+        "width": null,
+        "height": null,
+        "offset": 391006,
+        "before": "stered public accounting firm.",
+        "after": "\n\nKenneth D. Lewis\n\nChairman, ",
+        "item": "8"
+      },
+      {
+        "type": "image",
+        "src": "g23696g26d66.jpg",
+        "alt": "LOGO",
+        "width": null,
+        "height": null,
+        "offset": 396493,
+        "before": "or procedures may deteriorate.",
+        "after": "\n\nCharlotte, North Carolina\n\nF",
+        "item": "8"
+      },
+      {
+        "type": "doc_status",
+        "value": "success"
+      },
+      {
+        "type": "verbatim"
+      },
+      {
+        "type": "no_overlap_ordered"
+      }
+    ]
+  },
+  "provenance": "ADR-032 §g, the legacy-HTML image case and the ONLY one of the three goldens whose containing-item labels discriminate. Bank of America FY2006 10-K, evals/fixtures/bac-2006 (provenance in evals/fixtures/README.md), 4,517,513 raw bytes, 705,848 normalized chars, doc_status `success` with zero warnings.\n\nFive <IMG> tags, raw byte offsets 1595161, 1597827, 2719349, 2719544 and 2727411, all uppercase-tagged 1990s-style markup: `<IMG SRC=\"g23696g92j81.jpg\" ALT=\"LOGO\">`, unquoted-lowercase nowhere, no style attribute on any of them and therefore `width`/`height` null on all five -- which is the point of choosing this fixture over a modern one: it pins that a MISSING declared size is reported as null and not invented, and that html.parser's attribute-name lowercasing is what makes SRC/ALT readable at all. All five carry the same useless alt text, \"LOGO\", which is also worth pinning: the annotation reports what the filer wrote, it does not improve it.\n\nWHY THIS FIXTURE CARRIES THE ITEM LABELS. bac-2006 is the only one of the three whose segmentation is clean -- `success`, no warnings, no dominance -- so its images fall in two DIFFERENT items: the two trading-VaR charts in Item 7 (MD&A) at 289566 and 291296, and the signature/auditor-report images in Item 8 at 391006 (twice) and 396493. On xom-2021 and jpm-2024 every image lands in one dominated span, so those cases cannot tell a working containment derivation from a constant; this one can. A regression that computed containment off the wrong end of a span, or off the item list order, is red here.\n\nThe two images at 391006 share an offset: they are adjacent <IMG> tags with only markup between them, so both sit at the same point in normalized_text. That is correct and deliberate -- an <img> emits no text, so two adjacent ones are at the same place -- and the case pins it so a future implementation cannot 'fix' it by nudging offsets apart. `images_sane` is min=max=5, an EXACT count rather than the band ADR-029's table cases use, because no image is ever dropped (unlike an all-empty spacer table): the record count is the raw <IMG> count, full stop, so a drop rule sneaking in is red.\n\nHOW THE LABELS WERE MADE (ADR-032 §g). `src`, `alt`, `width` and `height` are read off the RAW HTML: every <img ...> tag matched with a plain attribute regex, entity-decoded, the pixel size taken from the width=/height= attribute if there is one and otherwise from the `style` declaration (0 of the corpus's 53 <img> carry the attribute form, 40 carry the style form -- ADR-032 §b1). That read is an INDEPENDENT second route, written for the purpose and not sharing a line with src/sec10k/normalize.py's recorder, and it is compared field by field against the shipped annotation before any label is written; a disagreement aborts the authoring script rather than being written down. `offset` is the annotation's own; it is not blindly copied, because `before` and `after` are the 30 characters of normalized_text on either side of it and those ARE hand-checkable against the raw file -- an offset that drifted by even one character would leave `before`/`after` no longer matching what the raw HTML has around the tag. `item` is derived the way ADR-029 derives an item's tables, from offsets alone (the item whose [start, end) span holds the offset, null when no span does), never from a stored field."
+}

@@ -41,9 +41,13 @@ Format per invariant:
   off. That equality is asserted, not assumed. Optional table annotation
   (ADR-029) is held to the same rule: tables are offset records into the
   text, never an edit of it, and a cell's text is a slice, not a field.
+  Optional image-reference annotation (ADR-032) likewise: an image is a POINT
+  offset into the text, no placeholder is written into it, and the item an
+  image falls in is derived from offsets rather than stored.
 - Enforced by: evals/golden/aapl-2025-structure.json,
   evals/adversarial/boilerplate-offsets-invariant.json (exclusion on vs off),
-  evals/adversarial/tables-offsets-invariant.json (tables on vs off)
+  evals/adversarial/tables-offsets-invariant.json (tables on vs off),
+  evals/adversarial/images-offsets-invariant.json (images on vs off)
 
 ## INV-S3: Only canonical item codes, valid for the filing's taxonomy era
 - Rationale: "Item 405 of Regulation S-K" and "Item 601" appear as prose in
