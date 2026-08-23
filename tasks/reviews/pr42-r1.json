@@ -1,0 +1,46 @@
+{
+ "pr": 42,
+ "round": 1,
+ "date": "2026-08-23",
+ "result": "REQUEST_CHANGES",
+ "gate": "invariant 51/51; fast 99/99 (+3 debt); table fidelity 400/400 · 31/31; self-checks ok; --check-docs 68/0; [DEBT] 3; census re-measured and reproduces; blast radius main vs HEAD over 47 docs = ba-2003 items 11/13 only; red at main reproduced (6 lines); empty-body guard pinned (items 5/10 flip when removed); marker guard removal flips nothing",
+ "routing_rule": "repair = HIGH/MEDIUM and (acceptance violated | gate red | published claim dishonest); everything else debt (pr-loop scope boundary)",
+ "findings": [
+  {
+   "id": "R1",
+   "severity": "MEDIUM",
+   "route": "repair",
+   "claim": "The footnote's extent (end offset) is published and documented (ADR-031 §c step 3 / §g: 402285–402521, 236 chars; case provenance) but no gate check pins it — the `evidence` anchor only asserts containment, and the `evidence` key is silently ignored by every other check type, so a wrong footnote slice passes the case.",
+   "evidence": "src/sec10k/eval_adapter.py:88-98 (text_contains only; `max_chars`/`text_not_contains` at :97-110 never read chk['evidence']). In-memory: evidence.footnote end ±1, or replaced by item 14's whole span {402235,402556} -> case green. Breaking `segment.PARA_END_RE` (never matches) makes `footnote_pointer` return (72070, 414197) — a DIFFERENT `*`-led line, 342,127 chars — and `ba-2003-asterisk-ibr` still passes 19/19. `{'type':'max_chars','item':'11','evidence':'footnote','value':100}` returns None (236 > 100) and `{'type':'text_not_contains','item':'11','evidence':'footnote','value':'proxy statement'}` returns None — both silently check the span instead.",
+   "repro": "python3 -B -c \"import sys,json,re;sys.path.insert(0,'.');from src.sec10k import segment;from src.sec10k.eval_adapter import run_case;segment.PARA_END_RE=re.compile(r'(?!x)x');print(run_case(json.load(open('evals/adversarial/ba-2003-asterisk-ibr.json')))['passed'])\"  # True",
+   "acceptance": "A gate check that goes red when evidence.footnote's extent is wrong (e.g. `max_chars` honouring `evidence`, or an exact-offsets/evidence-length check pinning 236 chars on items 11 and 13), watched red under the PARA_END_RE mutation; and either the other span check types honour `evidence` or the adapter refuses an `evidence` key on a check type that does not read it."
+  },
+  {
+   "id": "R2",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "Two of the rule's three conjuncts (same asterisk run on the heading; footnote names THIS code) are pinned only by `segment._demo`, not by any fast/invariant case — removing the marker guard flips nothing on all 47 documents, so the gate cannot see it.",
+   "evidence": "In-memory mutation appending `*` to every heading_text before `footnote_pointer` -> zero status changes on 47 docs, ba-2003-asterisk-ibr green. Only `_demo` (run by ci.yml, not by the eval gate) asserts the `**` vs `*` and not-named cases (src/sec10k/segment.py:862-867). ADR-031 §b4 'each is pinned (§h)' is true only via the self-check.",
+   "repro": "in-memory wrapper on extract.footnote_pointer appending '*' to every heading -> run_case passed True",
+   "acceptance": "Either ADR-031 §b4/§h say explicitly that the marker-run and named-code conjuncts are pinned by the CI self-check only (no corpus instance can pin them), or a derived fixture pins one of them in the gate."
+  },
+  {
+   "id": "R3",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "`ITEM_LIST_RE` reads a dotted or parenthesised sub-item reference as a top-level code ('Item 5.03 of Form 8-K' names '5'; 'Item 15(b)'/'Item 15(a)(3)' name '15'), which ADR-031 §i does not list; harmless on the corpus but a false-positive surface the not-claimed list omits.",
+   "evidence": "ITEM_LIST_RE on 'Item 5.03 of Form 8-K' -> {'5'}; axp-2008@326904 and xom-2021@385888 are two of the census's 11 non-external lines that carry this shape.",
+   "repro": "python3 -B -c \"import sys,re;sys.path.insert(0,'.');from src.sec10k.segment import ITEM_LIST_RE;print(ITEM_LIST_RE.findall('pursuant to Item 5.03 of Form 8-K'))\"",
+   "acceptance": "Either `\\d{1,2}[A-D]?\\b(?![.(])` (or equivalent) in ITEM_LIST_RE with a `_demo` line, or one sentence in ADR-031 §i naming sub-item references as not guarded."
+  },
+  {
+   "id": "R4",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "The triage note's 'second half' (a label-free validator flagging a near-empty `extracted` span for an item whose content cannot be trivial) is no longer tracked anywhere once the Debt row is struck — `no_empty_success` is document-total only.",
+   "evidence": "src/sec10k/eval_adapter.py:270-276 sums all extracted spans; tasks/TODO.md struck row; ADR-031 §i lists only the furniture-only body as undecided.",
+   "repro": "grep -n no_empty_success src/sec10k/eval_adapter.py; grep -n 'near-empty\\|furniture' specs/decisions/ADR-031-footnote-marker-ibr.md",
+   "acceptance": "A one-line Debt row or ADR-031 §i bullet naming the per-item near-empty-success validator as unbuilt, so the gap is visible outside the commit history."
+  }
+ ]
+}
