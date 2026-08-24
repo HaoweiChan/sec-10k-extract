@@ -1,0 +1,15 @@
+{
+  "id": "ui-cover-first",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "cover_first"
+    ]
+  },
+  "expect": {},
+  "provenance": "S11 (ADR-034). The human's direction, 2026-08-24: the cover must appear the moment Extract is clicked, with no second click, and must also be a row in the left section. Neither half is reachable from the eval harness -- there is no browser here, and importing app.py would drag fastapi into the dependency-free unit job -- so both are checked in the two files that carry the wire, the shape every ui-* check has used since S3. Five pins and three structural rules; `ui-cover-first-regression` is the proof they can fail. The pin that matters most is the SECOND one: the cover row carries `data-cover`, never `data-i`. `findAnchor`, `scrollSourceToItem` and both `ui-anchor-contract` cases index `VIEW.items` positionally, so a cover row that took index 0 would silently shift every item by one and the compare pane would anchor every item to its neighbour -- a defect with no visible symptom in the sidebar, which is where it would have been introduced. Verified live in a browser at 1600x1000 before this case was written: aapl-2025 shows COVER / Apple Inc. / 6 of 6 fields as the first row and the pane renders the field table unprompted, ge-1994 shows 5/6 with trading_symbol reading \"not on this filing's cover -- the field postdates it\", and clicking item 1 then COVER moves the selection back and forth with exactly one row aria-current at a time."
+}

@@ -394,3 +394,57 @@ All 42 fixture directories, refusals included: **0 suspect fields**, every
 committed cover region) so a document where no item carries a span cannot hand
 the whole filing to the resolver, and the `_is_name` letters rule applied to
 all three caption orientations and the positional fallback at once.
+
+
+## i. The inspector shows the cover on the first click (2026-08-24)
+
+The human's direction, after the resolver landed: *"我要我們點完 extract 第一時間就
+跳出 extracted cover 不用另外點 當然 cover 部分也是要進左邊 section"*. Two
+requirements — the cover renders without a second click, and it is a row in
+the left section.
+
+**`cover=True` is not a flag in the inspector.** `boilerplate` and `blocks`
+are checkboxes because a reader chooses those views; the cover is not a view,
+it is the first thing the reader wants. `app.py::_run` passes it
+unconditionally, and the trailing `# cover: always` marks that as a decision
+rather than a forgotten default. Cost: one pass over at most `COVER_MAX`
+characters.
+
+**The cover row is not an item, and that is load-bearing.** It carries
+`data-cover`, never `data-i`, and `build_view` publishes it under its own
+`cover` key rather than prepending it to `items`. `findAnchor`,
+`scrollSourceToItem` and both `ui-anchor-contract` cases index `VIEW.items`
+positionally: a cover row that took index 0 would shift every item by one and
+anchor each one to its neighbour in the compare pane — a defect with no
+visible symptom in the sidebar, which is exactly where it would have been
+introduced. `ui-cover-first` pins the distinction and
+`ui-cover-first-regression` proves the pin fails when it is broken.
+
+**`region_end` is display-only.** The pane shows the cover text, but the
+envelope still publishes no cover span — §e's rule is offsets per FIELD and
+nothing else. `view.py` recomputes the region from `extract._cover`'s own rule
+for rendering, the same way `display_text` is a render-point-only string
+(ADR-026 §d, ADR-032). A second published boundary would be a second thing to
+assert, and nothing asked for one.
+
+**`not_in_era` is rendered in words**, not as an empty cell: *"not on this
+filing's cover — the field postdates it"*. §c calls it a positive claim, and a
+blank cell would turn it back into "we found nothing" at the only place a
+human reads it. The pane also names the seven cut fields (§d) rather than
+letting their absence read as an oversight.
+
+### i1. Verified live before the case was written
+
+Browser, 1600x1000, all three input modes' shared render path:
+
+- **aapl-2025** — `COVER / Apple Inc. / 6 of 6 fields / 8,644 ch` is the first
+  sidebar row and is selected on arrival; the pane shows the field table with
+  every method and offset pair, then the cover text.
+- **ge-1994** — `5/6`, `trading symbol` reading the `not_in_era` sentence.
+- **aapl-2026-10q** — a REFUSED envelope (`unsupported`, zero items) still
+  shows the cover, `5/6`, with `fiscal year ended` honestly `not found` at
+  0.40: the filing's cover says "quarterly period ended". This is the
+  behaviour `cover-refusal-envelope` pinned, seen end to end.
+- Clicking item 1 and then COVER moves the selection both ways with exactly
+  one row `aria-current` at a time; no console errors (the only 404 is
+  `/favicon.ico`, which predates this change).

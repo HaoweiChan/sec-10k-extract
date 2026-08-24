@@ -737,9 +737,14 @@ UNIQUE_UI = [
 
 WIRE_API = [
     # S9 (ADR-032) added the Markdown flag to the same call; the pin moved
-    # with it deliberately, and the wire was re-checked (see the ADR)
+    # with it deliberately, and the wire was re-checked (see the ADR). S11
+    # (ADR-034) added `cover=True` the same way — and unlike the other two it
+    # is NOT a flag: the human's direction is that the cover shows on the
+    # first click, so it is pinned as a literal `cover=True` and the trailing
+    # `# cover: always` marks it as deliberate rather than a forgotten default.
     ("_run forwards the flag into extract_items unmodified",
-     "extract_items(path, exclude_boilerplate=exclude_boilerplate, blocks=markdown)"),
+     "extract_items(path, exclude_boilerplate=exclude_boilerplate,\n"
+     "                               blocks=markdown, cover=True)   # cover: always"),
 ]
 
 # no trailing `\)`: `@app.post("/api/extract/x", response_model=None)` is
@@ -1616,6 +1621,84 @@ def check_exclusion_note_trigger(case):
                      sorted(k for k in seen if seen[k] is not old_expr[k])}
 
 
+def check_cover_first(case):
+    """S11 (ADR-034), the human's direction 2026-08-24: "點完extract第一時間就跳出
+    extracted cover 不用另外點" — the cover must render on the FIRST click, and
+    it must also be a row in the left section.
+
+    Nothing here is reachable from the eval harness (no browser, and importing
+    app.py would drag fastapi into the dependency-free unit job), so it is
+    checked in the file that carries the wire — the shape every ui-* check has
+    used since S3. What it pins, and why each one is load-bearing:
+
+    1. `cover=True` is on the extract call UNCONDITIONALLY. A flag would be a
+       second click by another name.
+    2. The sidebar row is emitted BEFORE the item rows, and carries
+       `data-cover`, NOT `data-i`. That distinction is the whole reason item
+       indices did not shift: `findAnchor`, `scrollSourceToItem` and the
+       `ui-anchor-contract` cases all index `VIEW.items`, and a cover row that
+       took index 0 would silently move every one of them by one.
+    3. `render()` calls `showCover()` rather than painting the placeholder.
+       This is the "first click" requirement itself.
+    4. `showCover` is defined exactly once (a second definition hoists over the
+       first, the UNIQUE_UI attack this file already documents).
+    5. The `not_in_era` branch exists in the pane. ADR-034 §c calls that status
+       a POSITIVE claim; rendering it as an empty cell would turn "the field
+       postdates this filing" back into "we found nothing", which is the exact
+       confusion the status was introduced to remove.
+    """
+    inp = case.get("input", {})
+    ui = (ROOT / inp.get("file", UI_STYLESHEET)).read_text()
+    api = (ROOT / inp.get("api_file", "src/sec10k/web/app.py")).read_text()
+    js = _squash(_live(ui, "js"))
+    bad = []
+
+    for label, hay, lit in [
+        ("app.py: the inspector always asks for the cover", api,
+         inp.get("api_pin", "blocks=markdown, cover=True)   # cover: always")),
+        ("index.html: the cover row is a row in the left section", js,
+         inp.get("row_pin", 'data-cover="1"')),
+        ("index.html: the cover renders without a second click", js,
+         inp.get("auto_pin", "if(cov) showCover(); else")),
+        ("index.html: the era gate is rendered in words", js,
+         inp.get("era_pin", 'f.status === "not_in_era"')),
+    ]:
+        n = hay.count(_squash(lit) if hay is js else lit)
+        if n != 1:
+            bad.append(f"{label} — expected exactly one `{lit}`, found {n}. "
+                       f"If this expression changed on purpose, update its pin "
+                       f"AND re-check that the cover still reaches the pane on "
+                       f"the first click.")
+
+    # `js` is the whitespace-free form, so every literal compared against it
+    # has to be squashed too — a pin that never matches is a check that cannot
+    # go red, which this file calls its worst defect.
+    n = js.count(_squash("function showCover"))
+    if n != 1:
+        bad.append(f"`function showCover` defined {n}x — a second definition "
+                   f"hoists over the first and wins at runtime")
+
+    # the cover row must be CONCATENATED AHEAD of the item rows, not appended
+    if _squash("coverRow + items.map") not in js:
+        bad.append("the cover row is not concatenated ahead of the item rows — "
+                   "`coverRow + items.map(...)` is what puts it first in the "
+                   "left section")
+    # ...and must not be given an item index
+    # BOTH orders. The first version of this rule only looked for `data-i`
+    # AFTER `data-cover`, and the mutation fixture — which writes it before —
+    # walked straight through it. A pin that the obvious mutation evades is
+    # the "check that cannot go red" this file keeps warning about, found by
+    # watching the regression fixture come back 4 red instead of 5.
+    for m in re.finditer(r'<buttonclass="it"([^>]*)>', js):
+        attrs = m.group(1)
+        if "data-cover" in attrs and "data-i=" in attrs:
+            bad.append("the cover row carries a data-i as well as data-cover — "
+                       "it is not an item, and an index would shift every "
+                       "item's own index by one")
+    return bad
+
+
+
 CHECKS = {
     "adr_headers": lambda case: check_adr_headers(),
     "adr_index": lambda case: check_index(),
@@ -1639,6 +1722,7 @@ CHECKS = {
     "split_breakpoint": check_split_breakpoint,
     "exclusion_note": check_exclusion_note,
     "exclusion_note_trigger": check_exclusion_note_trigger,
+    "cover_first": check_cover_first,
 }
 
 

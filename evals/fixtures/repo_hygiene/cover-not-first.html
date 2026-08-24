@@ -831,14 +831,14 @@ function render(v){
   // findAnchor / scrollSourceToItem / the ui-anchor-contract cases) is
   // exactly what it was before this row existed.
   const cov = v.cover;
-  const coverRow = cov ? `<button class="it" data-cover="1">
+  const coverRow = cov ? `<button class="it" data-i="-1" data-cover="1">
       <div class="top"><span class="code">COVER</span>
       <span class="ttl">${esc(coverName(cov))}</span></div>
       <div class="badges">
         <span class="b st-extracted">${cov.resolved}/${cov.fields.length} fields</span>
         <span class="b">${cov.chars.toLocaleString()} ch</span>
       </div></button>` : "";
-  $("#sidebar").innerHTML = (coverRow || items.length) ? coverRow + items.map((it,i) => {
+  $("#sidebar").innerHTML = (coverRow || items.length) ? items.map((it,i) => {
     // flag from the evidence, not the number: confidence 0.8 is normal for an
     // omitted item and penalised for an extracted one, so the score alone
     // cannot say "look here". evidence.warnings names the validators that fired.
@@ -857,7 +857,7 @@ function render(v){
   // the human's direction (2026-08-24): the cover shows on the FIRST click,
   // without a second one. When there is no cover — a refusal with no readable
   // page — the placeholder is what it always was.
-  if(cov) showCover(); else
+  if(false) showCover(); else
     $("#pane").innerHTML = `<div class="src-hdr"><span class="lbl">extracted text</span></div>
       <div class="none" style="padding:12px">Select an item to read its extracted text.</div>`;
   $("#trace").textContent = JSON.stringify(v.trace || [], null, 1);
@@ -882,7 +882,7 @@ function showCover(){
     // a field the era cannot carry is a POSITIVE claim (ADR-034 §c), not a
     // gap, and the pane says so in words rather than showing an empty cell.
     const val = f.status === "resolved" ? esc(f.value)
-      : f.status === "not_in_era"
+      : f.status === "__never__"
         ? `<span class="none">not on this filing's cover — the field postdates it</span>`
         : `<span class="none">not found</span>`;
     const off = f.start != null ? `[${f.start.toLocaleString()}, ${f.end.toLocaleString()})` : "—";

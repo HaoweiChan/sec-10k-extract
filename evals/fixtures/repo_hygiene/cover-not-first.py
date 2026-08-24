@@ -110,7 +110,7 @@ def _run(path: str, source: dict, raw: bytes = None,
     """
     try:
         result = extract_items(path, exclude_boilerplate=exclude_boilerplate,
-                               blocks=markdown, cover=True)   # cover: always
+                               blocks=markdown, cover=want_cover)
     except Exception as e:                       # refuse loudly, hard rule 4
         return _err(500, "extractor_exception", f"{type(e).__name__}: {e}",
                     source=source)

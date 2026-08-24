@@ -13,6 +13,7 @@ Self-check: python3 -m src.sec10k.web.view
 from collections import Counter
 
 from src.sec10k.boilerplate import strip_chrome
+from src.sec10k.extract import COVER_MAX
 from src.sec10k.markdown import to_markdown
 
 # JPM 2024's Item 15 span is 1,010,422 chars. Sending that to a browser per
@@ -103,6 +104,13 @@ def build_view(result, display_max=DISPLAY_MAX):
         "items": items,
         "norm_chars": len(text),
         "counts": _counts(result.get("items", [])),
+        # S11 (ADR-034): the cover's six field records, plus the region they
+        # were read from so the pane can show the cover the way every other row
+        # shows its text. `region_end` is DISPLAY ONLY and deliberately not in
+        # the envelope — ADR-034 §e publishes offsets per FIELD and no cover
+        # span, and this must not become a second, unasserted boundary. It is
+        # recomputed here from the same rule extract._cover uses.
+        **({"cover": _cover_view(result, text)} if "cover" in result else {}),
         # so the pane can SAY it is hiding text. `chars` still reports the
         # full span, so without this the two numbers silently disagree.
         "boilerplate_excluded": spans is not None,
@@ -123,6 +131,35 @@ def build_view(result, display_max=DISPLAY_MAX):
         # `bp_applied` in the loop), so it means the same thing in both modes.
         "boilerplate_applied": bp_applied,
         "markdown": blocks is not None,
+    }
+
+
+# ADR-034 field order for the pane: identity first, then the filing's own
+# identifiers, then the era-gated column. Not alphabetical — a reader wants the
+# company before its EIN.
+COVER_ORDER = ("registrant_name", "state_of_incorporation", "ein",
+               "commission_file_number", "fiscal_year_end", "trading_symbol")
+COVER_LABEL = {"registrant_name": "registrant", "state_of_incorporation": "state of incorporation",
+               "ein": "IRS employer ID", "commission_file_number": "commission file number",
+               "fiscal_year_end": "fiscal year ended", "trading_symbol": "trading symbol"}
+
+
+def _cover_view(result, text, display_max=DISPLAY_MAX):
+    """The `cover` payload: the ADR-034 records in reading order, plus the text
+    region for the pane. Adds no facts — every value, status, confidence and
+    offset pair is copied from the envelope, never re-derived."""
+    cover = result["cover"]
+    spans = [i["start"] for i in result.get("items", []) if i.get("start") is not None]
+    end = min(min(spans) if spans else len(text), COVER_MAX)
+    body = text[:end]
+    return {
+        "fields": [dict(cover[k], field=k, label=COVER_LABEL[k])
+                   for k in COVER_ORDER if k in cover],
+        "resolved": sum(1 for k in COVER_ORDER
+                        if cover.get(k, {}).get("status") == "resolved"),
+        "chars": end,
+        "text": body[:display_max],
+        "truncated": end > display_max,
     }
 
 

@@ -23,7 +23,8 @@ Caught by evals/adversarial/ui-boilerplate-wire-values.json. Not imported.
 
 
 def _run(path, source, raw=None, exclude_boilerplate=False, markdown=False):
-    result = extract_items(path, exclude_boilerplate=exclude_boilerplate, blocks=markdown)
+    result = extract_items(path, exclude_boilerplate=exclude_boilerplate,
+                               blocks=markdown, cover=True)   # cover: always
     return JSONResponse(build_view(result))
 
 

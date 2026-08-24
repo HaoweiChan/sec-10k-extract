@@ -1,0 +1,20 @@
+{
+  "id": "ui-cover-first-regression",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "cover_first"
+    ],
+    "file": "evals/fixtures/repo_hygiene/cover-not-first.html",
+    "api_file": "evals/fixtures/repo_hygiene/cover-not-first.py"
+  },
+  "expect": {
+    "min_failures": 5,
+    "max_failures": 5
+  },
+  "provenance": "The mutation fixture for `ui-cover-first`, carrying FIVE independent severings of the direction -- each one a realistic edit rather than a scramble: (1) `if(false) showCover()`, which restores the second click while leaving every other line intact; (2) `coverRow + items.map` -> `items.map`, which drops the row from the left section while the pane still renders; (3) `data-cover=\"1\"` given a `data-i` as well, the index-shifting defect described in the sibling case's provenance; (4) the `not_in_era` branch keyed to a status nothing emits, so an era-gated field renders as an empty cell and ADR-034 s.c's positive claim silently becomes 'we found nothing'; (5) app.py's `cover=True` turned back into a flag. Watched red at 5 failures before the check was trusted -- a regression fixture that does not go red proves the check is decoration."
+}
