@@ -1,0 +1,94 @@
+{
+  "pr": 46,
+  "round": 2,
+  "branch": "task/D5",
+  "head": "d2faf12",
+  "base": "c13aa5c",
+  "reviewed": "repair diff 4d3f896..d2faf12 + the two standing findings (NOT a fresh full-diff sweep)",
+  "date": "2026-08-24",
+  "result": "APPROVED",
+  "counts": {
+    "HIGH": 0,
+    "MEDIUM": 1,
+    "LOW": 3
+  },
+  "standing_findings": {
+    "R1": "CLOSED",
+    "R2": "CLOSED for its stated claim; residual hole logged as R6"
+  },
+  "routing": {
+    "repair": [
+      "R6 (the overstating sentence only)",
+      "R7"
+    ],
+    "debt": [
+      "R6 (instrument gap)",
+      "R8",
+      "R9"
+    ]
+  },
+  "routing_rationale": {
+    "R6": "SPLIT. The instrument gap does NOT meet the repair bar: D5's acceptance is about the shipped layout, which is correct at every measured width, and the gate is green — the reviewer itself routes it to debt. But one element DOES meet the 'published claim dishonest' condition: prompts/019 calls checkVisibility 'the native API for the question actually being asked' when the question is 'on screen' and the API answers 'rendered'. That single sentence is corrected; the coverage hole becomes a debt row carrying the off-viewport and clip-path reproductions verbatim.",
+    "R7": "REPAIR, as a deliberate exception to the LOW->debt rule, recorded rather than silently taken. R7 is not new scope: it is the round-1 repair leaving its own annotation stale, pointing a reader at the wrong field inside the very diff that changed it. Correcting the repair's own comment is finishing R1, not growing the PR. The exception is bounded to this one comment.",
+    "R8": "debt — LOW. The guards work whenever any fixture is present; defanging requires editing the case's own inputs, which is a deliberate act, not a regression sneaking through.",
+    "R9": "debt — LOW and explicitly NOT reproduced on any committed fixture (42/42 have identical_shown=0). It is the PR #27 R8 ceiling inherited by a second consumer; the existing debt row is the right home."
+  },
+  "no_round_3_review": "The repair routed from this round is TEXT ONLY — one sentence in prompts/019 and one HTML comment. No behaviour, no eval case, no artifact number changes. The orchestrator re-gates it; a third review round is not opened for a comment and a sentence, and this note records that call.",
+  "reviewer_verification_of_record": "Round 2 re-measured rather than read: 42/42 fixtures re-derived for R1; the walk re-run live against d2faf12 on four separate mutations (visibility:hidden 6 failures, display:none!important 7, opacity:0 6, baseline exit 0); the off-viewport and clip-path holes reproduced with recorded rect values; all four anti-vacuity guards exercised.",
+  "findings": [
+    {
+      "id": "R1-verdict",
+      "severity": "LOW",
+      "route": "closed",
+      "claim": "CLOSED",
+      "evidence": "src/sec10k/web/view.py:81 `boilerplate_applied` + index.html:746. Independently re-derived over all 42 committed fixtures: 22 True / 20 False, and on every one of the 42 `any('display_text' in i)` equals `display_text != text` for at least one item — `identical_shown=0` everywhere, so no fixture fires the note without a visible change. The converse hole (chrome stripped with no item carrying display_text) cannot happen: strip_chrome only ever operates inside an item window, so spans outside every window change nothing the pane shows. Case red-first reproduced exactly at 4d3f896: 8 failures, the same 8 the case's `red_first` names. Guards are live: `boilerplate_applied = spans is not None` -> FAIL, `= False` -> FAIL, fixtures reduced to only-True -> FAIL, only-False -> FAIL. Browser control real: with view.py/index.html at 4d3f896 the walk exits 1 with exactly the one aapl-2025 failure recorded in d5-browser-walk-pr46-prerepair.json.",
+      "repro": "clone at d2faf12; `python3 -m evals.run --suite invariant` -> 56/56; sed the field to `spans is not None` -> ui-exclusion-note-trigger FAIL; `git checkout 4d3f896 -- src/sec10k/web/view.py src/sec10k/web/static/index.html && python3 tasks/reviews/d5_browser_walk.py --out rv-prerepair` -> exit 1, aapl-2025 note on screen",
+      "acceptance": "n/a — closed"
+    },
+    {
+      "id": "R2-verdict",
+      "severity": "LOW",
+      "route": "closed",
+      "claim": "CLOSED for its stated claim (rendering is now checked, not just rect tops); residual coverage hole logged as R6",
+      "evidence": "tasks/reviews/d5_browser_walk.py `measure()`/`vis()` + the per-width `not b['visible']` failure. Re-ran the walk against a live server at d2faf12: baseline exit 0 / failures []; `@media(max-width:1100px){#source{visibility:hidden}}` -> exit 1, 6 failures ('#source is not visible ... offsetParent=True'); `display:none!important` -> exit 1, 7 failures (box 0x0, offsetParent=False); `opacity:0` -> exit 1, 6 failures. The implementer's departure from the stated acceptance is justified by the reviewer's own measurement: under visibility:hidden the box is 349x636 and offsetParent is True, so the originally-proposed check would have passed the mutation.",
+      "repro": "append the mutation before `</style>` in src/sec10k/web/static/index.html, run `python3 tasks/reviews/d5_browser_walk.py --base http://localhost:8011 --out rv-mN`",
+      "acceptance": "n/a — closed"
+    },
+    {
+      "id": "R6",
+      "severity": "MEDIUM",
+      "route": "split: debt (instrument gap) + repair (the overstating sentence only)",
+      "claim": "The repaired walk still cannot see a compare pane that is not on screen: `checkVisibility` returns true for an element pushed off-viewport, so `#source` moved entirely outside the 1024px viewport passes the walk with `failures: []` — the same shape as R2, one mechanism over (in the repair diff, instrument-only; the shipped stylesheet does satisfy D5's acceptance, so this routes to debt rather than repair).",
+      "evidence": "tasks/reviews/d5_browser_walk.py:88-96 (`vis()`) and :183-193 (the only visibility assertion) — nothing compares the pane rect against the viewport. With `@media(min-width:1001px) and (max-width:1100px){#source{position:relative;left:-9999px}}` appended to index.html's style block, the walk records at 1024 `source: {top:582, left:-9375, width:349, height:636, visible:true, has_offset_parent:true}` while `#pane` sits at left 261 — the compare pane's right edge is at x=-9026, i.e. nothing of it is on screen — and reports `panes_visible: true`, `panes_same_row: true`, `failures: []`, exit 0. `clip-path:inset(100%)` on `#source` is likewise fully green (exit 0, 0 failures). D5's acceptance is worded 'on screen together at 1024x768+', and `checkVisibility` answers 'rendered', not 'on screen'; prompts/019-d5-inspector-layout-and-exclusion-honesty.md calls it 'the native API for the question actually being asked', which overstates it by exactly this gap.",
+      "repro": "start `uvicorn src.sec10k.web.app:app --port 8011` at d2faf12; insert `@media(min-width:1001px) and (max-width:1100px){#source{position:relative;left:-9999px}}` before `</style>` in src/sec10k/web/static/index.html; `python3 tasks/reviews/d5_browser_walk.py --base http://localhost:8011 --out rv-offscreen` -> exit 0, failures []",
+      "acceptance": "`measure()` also records whether each pane's rect intersects the viewport (e.g. `r.right > 0 && r.left < innerWidth && r.bottom > 0 && r.top < innerHeight`), and the per-width assertion fails on a non-intersecting pane; the off-viewport mutation above then reports a failure at 1024 and the walk exits 1, while the unmutated tree stays exit 0."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "route": "repair (repair-hygiene exception, see routing_rationale)",
+      "claim": "The comment directly above `#bp-note` still documents the pre-repair wiring and now contradicts the code it annotates.",
+      "evidence": "src/sec10k/web/static/index.html:302-305 — 'render() assigns .hidden from v.boilerplate_excluded, the same read-at-request-time field the pane header labels itself from'. Both clauses are false after the repair: line 746 assigns from `v.boilerplate_applied`, and that is deliberately a *different* field from the one `hdrRight` (line 736) and the `.pane-meta` boilerplate `<dd>` (line 757) read. A reader auditing the note's trigger from the markup is pointed at the wrong field.",
+      "repro": "`sed -n '300,312p;734,748p' src/sec10k/web/static/index.html`",
+      "acceptance": "The comment names `boilerplate_applied` and says explicitly that it differs from the header's `boilerplate_excluded`."
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The new case's three anti-vacuity guards are themselves gated on the fixture map being non-empty, so emptying `input.fixtures` makes `ui-exclusion-note-trigger` pass while asserting nothing about the pipeline — contradicting the case's own 'refuses to pass vacuously'.",
+      "evidence": "src/repo_hygiene/eval_adapter.py — `if inp.get(\"fixtures\"):` wraps all three guards in `check_exclusion_note_trigger`. With `evals/adversarial/ui-exclusion-note-trigger.json`'s `input.fixtures` set to `{}`, the invariant suite reports `[PASS] ui-exclusion-note-trigger` and 56/56; only the `wire` pin still runs. Only-True and only-False fixture sets do go red, so the guards work whenever any fixture is present.",
+      "repro": "`python3 -c \"import json;p='evals/adversarial/ui-exclusion-note-trigger.json';d=json.load(open(p));d['input']['fixtures']={};json.dump(d,open(p,'w'))\" && python3 -m evals.run --suite invariant | grep exclusion-note-trigger` -> PASS",
+      "acceptance": "An empty or missing `fixtures` map is itself a failure (e.g. require a minimum count), so the case cannot be defanged by deleting its inputs."
+    },
+    {
+      "id": "R9",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "`boilerplate_applied` is True whenever `display_text` exists, but `display_text` is emitted from a full-string comparison and then truncated to DISPLAY_MAX, so an item whose only chrome lies beyond character 40,000 yields a display_text byte-identical to the shown `text` and the note fires over a pane nobody can see change — the PR #27 R8 debt shape inherited by the new trigger.",
+      "evidence": "src/sec10k/web/view.py:65-66 — `if body != raw: item['display_text'] = body[:display_max]`, while the pane renders `it.display_text ?? it.text` (index.html:752), both capped at 40,000. Not reproduced on any committed fixture: all 42 were run and every fixture with `display_text` had `identical_shown=0`, so this is constructible rather than observed, and `ui-exclusion-note-trigger` would not catch it.",
+      "repro": "`python3 -c \"from src.sec10k.web.view import build_view; t='a'*100+'HEAD'; v=build_view({'normalized_text':t,'items':[{'item':'1','start':0,'end':len(t)}],'boilerplate':[{'start':100,'end':104,'kind':'running_head'}]}, display_max=50); i=v['items'][0]; print(v['boilerplate_applied'], i['display_text']==i['text'])\"` -> `True True`",
+      "acceptance": "Either the note's trigger compares the strings the pane actually renders (post-truncation), or the existing PR #27 R8 debt row is extended to name `boilerplate_applied` as a second consumer of the same ceiling."
+    }
+  ]
+}
