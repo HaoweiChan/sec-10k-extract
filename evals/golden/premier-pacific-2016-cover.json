@@ -1,0 +1,88 @@
+{
+  "id": "premier-pacific-2016-cover",
+  "task": "sec10k",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "path": "evals/fixtures/premier-pacific-2016/filing.htm",
+    "cover": true
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "cover",
+        "field": "registrant_name",
+        "status": "resolved",
+        "value": "PREMIER PACIFIC CONSTRUCTION, INC.",
+        "start": 414,
+        "end": 448,
+        "method": "caption_anchored",
+        "confidence": 0.95
+      },
+      {
+        "type": "cover",
+        "field": "state_of_incorporation",
+        "status": "resolved",
+        "value": "NEVADA",
+        "start": 506,
+        "end": 512,
+        "method": "ein_pivot",
+        "confidence": 0.95
+      },
+      {
+        "type": "cover",
+        "field": "ein",
+        "status": "resolved",
+        "value": "90-0920687",
+        "start": 514,
+        "end": 524,
+        "method": "ein_regex",
+        "confidence": 0.95
+      },
+      {
+        "type": "cover",
+        "field": "commission_file_number",
+        "status": "resolved",
+        "value": "333-192107",
+        "start": 402,
+        "end": 412,
+        "method": "caption_anchored",
+        "confidence": 0.95
+      },
+      {
+        "type": "cover",
+        "field": "fiscal_year_end",
+        "status": "resolved",
+        "value": "December 31, 2016",
+        "start": 200,
+        "end": 217,
+        "method": "cover_date_re",
+        "confidence": 0.95
+      },
+      {
+        "type": "cover",
+        "field": "trading_symbol",
+        "status": "not_in_era",
+        "value": null,
+        "start": null,
+        "end": null,
+        "method": "era_gate",
+        "confidence": 0.95
+      },
+      {
+        "type": "envelope_shape"
+      },
+      {
+        "type": "verbatim"
+      },
+      {
+        "type": "no_overlap_ordered"
+      },
+      {
+        "type": "deterministic"
+      }
+    ]
+  },
+  "provenance": "ADR-033 \u00a7g, the small-filer table family. Premier Pacific Construction FY2016 10-K, fixture already committed for premier-pacific-2016-shallow and the base of six self-created adversarial fixtures (caps-cover-2016, comma-cover-2016, items-stripped, malformed-html, toc-titled). Cover region is normalized_text[0:4336), 6.4% of the document, 2 <table>/7 <td>. The layout that is EASIEST for a caption rule and therefore proves the least on its own: values on their own separate lines ('NEVADA\\n\\n90-0920687') with the caption pair split across four lines. It is committed anyway because it is the shape five committed adversarial fixtures inherit -- if the cover resolver ever breaks on this base filing it breaks on all six at once, and this is the case that says so first. Every field except trading_symbol resolves; the 2016 cover predates the Trading Symbol column (added 2019), so it is NOT_IN_ERA."
+}

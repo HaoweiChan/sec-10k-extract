@@ -1,0 +1,34 @@
+{
+  "id": "cover-refusal-envelope",
+  "task": "sec10k",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "path": "evals/fixtures/amended-cover-2021/filing.htm",
+    "cover": true
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "doc_status",
+        "value": "unsupported"
+      },
+      {
+        "type": "cover",
+        "field": "registrant_name",
+        "status": "resolved",
+        "value": "SANDSTON CORPORATION",
+        "start": 478,
+        "end": 498,
+        "method": "caption_anchored",
+        "confidence": 0.95
+      },
+      {
+        "type": "envelope_shape"
+      }
+    ]
+  },
+  "provenance": "Cold review of the ADR-033 resolver, 2026-08-24 (secondary finding: the refusal path). MEASURED RED at the first resolver: `extract_items(path, cover=True)` on a REFUSED document returned an envelope with NO `cover` key at all, because both refusal returns in extract.py sit above the block that built it -- while `boilerplate`, `tables` and `blocks` are all threaded into those same two returns by explicit design ('which still have readable text a caller who asked for chrome is entitled to'). ADR-033's ruling sentence says the flag 'adds one envelope key', unconditionally, and `envelope_shape` treats `cover` as optional, so nothing could catch the divergence. amended-cover-2021 is the fixture that makes the inconsistency indefensible: it is a 10-K/A, refused as out of scope by ADR-024, whose cover page is completely readable and whose registrant name resolves at full confidence. The behaviour pinned here is the one the other three annotation keys already have -- the key is present whenever the caller asked."
+}

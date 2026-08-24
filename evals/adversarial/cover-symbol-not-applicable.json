@@ -1,0 +1,44 @@
+{
+  "id": "cover-symbol-not-applicable",
+  "task": "sec10k",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "path": "evals/fixtures/sgrp-2019/filing.htm",
+    "cover": true
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "cover",
+        "field": "trading_symbol",
+        "status": "missing",
+        "value": null,
+        "start": null,
+        "end": null,
+        "method": "caption_anchored",
+        "confidence": 0.4
+      },
+      {
+        "type": "cover",
+        "field": "state_of_incorporation",
+        "status": "resolved",
+        "value": "Nevada",
+        "method": "ein_pivot",
+        "confidence": 0.95
+      },
+      {
+        "type": "envelope_shape"
+      },
+      {
+        "type": "verbatim"
+      },
+      {
+        "type": "no_overlap_ordered"
+      }
+    ]
+  },
+  "provenance": "Found by the post-fix whole-corpus sweep, 2026-08-24 -- the second sweep, run because the FIRST fix round proved the four goldens were not a corpus and a fix has no right to be trusted on the cases it was written against. sgrp-2019 DOES carry the 2019 cover-page column ('Tile of each class Trading Symbol(s) Name of each exchange on which registered' -- the filer's own typo on 'Title' is in the committed bytes), so `not_in_era` would be false. The value row is 'N/A N/A N/A': the filer is saying there is no ticker. MEASURED RED after the caption-stack fix: trading_symbol resolved to 'A' at 0.95 -- SYMBOL_RE's `\\b([A-Z]{1,5})\\b(?!/A)` rejects the N of 'N/A' but then matches the A, because a word boundary sits happily after a slash. The honest answer is `missing` at BASE_MISSING: the era carries the field, the resolver found no ticker. This is the THIRD correction to the era gate (format_era -> substring -> header row -> and now the value's own shape), and each one was a confidently-wrong 0.95 that no existing check could see. spaced-letter-heading and spans-transposed are self-created derivatives of this fixture and were red identically."
+}

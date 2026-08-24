@@ -11,6 +11,7 @@ import time
 from pathlib import Path
 
 from src.sec10k.boilerplate import find_chrome
+from src.sec10k.cover import resolve as resolve_cover
 from src.sec10k.normalize import ACCEPTED_FORMS, COLLAPSE_FLOOR, select_and_normalize
 from src.sec10k.segment import (
     assign_boundaries, classify, expected_items, filter_candidates, footnote_pointer,
@@ -78,7 +79,8 @@ def _promote_item_headings(blocks, tables, items):
 
 
 def _envelope(doc_status, text="", items=None, warnings=None, meta=None,
-              trace=None, t0=None, boilerplate=None, tables=None, blocks=None):
+              trace=None, t0=None, boilerplate=None, tables=None, blocks=None,
+              cover=None):
     env = {
         "normalized_text": text,
         "doc_status": doc_status,
@@ -97,10 +99,31 @@ def _envelope(doc_status, text="", items=None, warnings=None, meta=None,
         env["tables"] = tables   # ADR-029: same rule — present only when asked
     if blocks is not None:
         env["blocks"] = blocks   # ADR-032: same rule again
+    if cover is not None:
+        env["cover"] = cover     # ADR-033: same rule again
     return env
 
 
-def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False):
+# ADR-033 (cold review): the cover region is capped, not just bounded by the
+# first item span. Without a cap, a document where NO item carries a span —
+# `ambiguous`, an envelope that still ships — hands the whole filing to the
+# resolver, and EIN_RE/COVER_DATE_RE/SYMBOL_HDR_RE then match a subsidiaries
+# exhibit's EIN or an Item 5 sentence about a trading symbol. 12,000 is 1.16x
+# the largest cover region in the committed corpus (nvda-2024, 10,384 chars).
+COVER_MAX = 12000
+
+
+def _cover(text, items):
+    """ADR-033's cover region: text[0:first item span], capped at COVER_MAX and
+    never sub-divided — ge-1994 opens with a section index and does not reach
+    its cover until ~offset 1000, which a TOC-aware split would have to know
+    about and this does not."""
+    spans = [i["start"] for i in items if i.get("start") is not None]
+    return resolve_cover(text, min(min(spans) if spans else len(text), COVER_MAX))
+
+
+def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
+                  cover=False):
     """Extract items from a 10-K filing.
 
     Returns {"normalized_text": str, "doc_status": str, "items": [...], ...}
@@ -151,7 +174,8 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False):
             "code": "normalization_collapse", "item": None,
             "message": f"{len(raw)} raw chars normalized to {len(text)}"})
         return _envelope("failed", text, meta=meta, warnings=warnings,
-                         trace=trace, t0=t0, boilerplate=chrome, tables=tabs, blocks=blks)
+                         trace=trace, t0=t0, boilerplate=chrome, tables=tabs,
+                         blocks=blks, cover=_cover(text, []) if cover else None)
 
     if meta["form_type"] not in ACCEPTED_FORMS:
         # refusal, not a best-effort parse (contract v2 envelope rules)
@@ -159,7 +183,8 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False):
         warnings.append({"code": "unsupported_form", "item": None,
                          "message": f"not an accepted 10-K form (detected: {found})"})
         return _envelope("unsupported", text, meta=meta, warnings=warnings,
-                         trace=trace, t0=t0, boilerplate=chrome, tables=tabs, blocks=blks)
+                         trace=trace, t0=t0, boilerplate=chrome, tables=tabs, blocks=blks,
+                         cover=_cover(text, []) if cover else None)
 
     expected = expected_items(meta.get("period_end"))
     # taxonomy era is the item set the filing's date implies, not its file
@@ -208,6 +233,8 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False):
     if blks is not None:
         _promote_item_headings(blks, tabs, items)
 
+    cov = _cover(text, items) if cover else None
+
     # doc_status ladder (contract v2, fixed order). Only the four validators
     # named in AMBIGUOUS_CODES may reach `ambiguous`; the rest warn and move
     # confidence, per the taxonomy's warn-don't-hard-fail policy. Decided
@@ -225,4 +252,4 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False):
         doc_status = "success"
     return _envelope(doc_status, text, items=items, meta=meta,
                      warnings=warnings, trace=trace, t0=t0, boilerplate=chrome,
-                     tables=tabs, blocks=blks)
+                     tables=tabs, blocks=blks, cover=cov)

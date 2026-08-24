@@ -4,7 +4,8 @@ Case shape:
     "input":  {"path": "evals/fixtures/<name>/<file>",
                "exclude_boilerplate": false,   # optional, ADR-026
                "tables": false,                # optional, ADR-029
-               "blocks": false}                # optional, ADR-032 (implies tables)
+               "blocks": false,                # optional, ADR-032 (implies tables)
+               "cover": false}                 # optional, ADR-033
     "expect": {"checks": [{"type": ..., ...}, ...]}
 """
 from pathlib import Path
@@ -184,9 +185,9 @@ def eval_check(result, chk, path=None):
         # normative enums are asserted here; no value is fabricated or compared.
         top = {"normalized_text", "doc_status", "warnings", "meta", "trace",
                "timings", "cost", "items"}
-        # the three optional keys: ADR-026's `boilerplate`, ADR-029's
-        # `tables`, ADR-032's `blocks`
-        extra = set(result) - top - {"boilerplate", "tables", "blocks"}
+        # the four optional keys: ADR-026's `boilerplate`, ADR-029's
+        # `tables`, ADR-032's `blocks`, ADR-033's `cover`
+        extra = set(result) - top - {"boilerplate", "tables", "blocks", "cover"}
         if not top <= set(result) or extra:
             return f"envelope keys: missing {sorted(top - set(result))}, undeclared {sorted(extra)}"
         if "tables" in result:
@@ -202,6 +203,13 @@ def eval_check(result, chk, path=None):
             why = _blocks_shape(result)
             if why:
                 return f"blocks not in contract shape: {why}"
+        if "cover" in result:
+            # ADR-033 §e, same reasoning as tables/blocks: a wrong SHAPE is red
+            # on any case that asks for the cover, not only on one that labels
+            # a field.
+            why = _cover_shape(result)
+            if why:
+                return f"cover not in contract shape: {why}"
         ds = result["doc_status"]
         if ds not in DOC_STATUSES:
             return f"doc_status {ds!r} not in contract enum"
@@ -549,6 +557,42 @@ def eval_check(result, chk, path=None):
             return "blocks OFF emitted a blocks/tables key; default must change nothing"
         if not isinstance(on.get("blocks"), list) or not isinstance(on.get("tables"), list):
             return "blocks ON emitted no blocks + tables lists"
+    elif t == "cover":
+        # ADR-033 §e/§g. The label carries value AND offsets AND status AND
+        # method AND confidence, and every one is compared — a check that
+        # asserted only the value would stay green while the offsets drifted,
+        # which is the exact failure `specs/001`'s "no separate text field"
+        # rule exists to prevent. `normalized_text[start:end] == value` is
+        # re-derived here rather than trusted (INV-S2's discipline, applied to
+        # a cover field).
+        cover = result.get("cover")
+        if cover is None:
+            return "no cover key — case asked for cover=true"
+        f = chk["field"]
+        got = cover.get(f)
+        if got is None:
+            return f"cover field {f!r} absent — INV-S4's rule: silence is not a way to report absence"
+        for key in ("status", "value", "start", "end", "method", "confidence"):
+            if key in chk and got.get(key) != chk[key]:
+                return (f"cover.{f}.{key}: expected {chk[key]!r}, got {got.get(key)!r}")
+        if got.get("status") == "resolved":
+            span = result["normalized_text"][got["start"]:got["end"]]
+            if span != got["value"]:
+                return (f"cover.{f} not verbatim: normalized_text[{got['start']}:"
+                        f"{got['end']}] is {span!r}, value says {got['value']!r}")
+    elif t == "offsets_invariant_under_cover":
+        # ADR-033 §a3, as ADR-026/029/032 state theirs: the same file both
+        # ways, DETERMINISM_FIELDS identical, the key on exactly one side.
+        from src.sec10k.extract import extract_items
+        on = extract_items(path, cover=True)
+        off = extract_items(path, cover=False)
+        for k in DETERMINISM_FIELDS:
+            if on.get(k) != off.get(k):
+                return f"{k} differs with cover on vs off — INV-S2 offsets moved"
+        if "cover" in off:
+            return "cover OFF emitted a cover key; default must change nothing"
+        if not isinstance(on.get("cover"), dict):
+            return "cover ON emitted no cover dict"
     else:
         return f"unknown check type {t!r}"
     return None
@@ -556,6 +600,37 @@ def eval_check(result, chk, path=None):
 
 BLOCK_KINDS = {"heading", "paragraph", "list_item", "table", "pre"}
 BLOCK_LABEL_KEYS = {"kind", "start", "end", "level", "ordered", "strong", "item"}
+
+
+COVER_STATUSES = {"resolved", "not_in_era", "missing"}
+COVER_METHODS = {"caption_anchored", "ein_regex", "ein_pivot", "positional",
+                 "cover_date_re", "era_gate"}
+
+
+def _cover_shape(result):
+    """None if `result['cover']` is in ADR-033's contract shape, else why."""
+    cover = result["cover"]
+    if not isinstance(cover, dict):
+        return f"cover is {type(cover).__name__}, not a dict"
+    n = len(result["normalized_text"])
+    for f, rec in cover.items():
+        if not isinstance(rec, dict) or not {"value", "start", "end", "status",
+                                             "confidence", "method"} <= set(rec):
+            return f"{f}: record missing contract keys"
+        if rec["status"] not in COVER_STATUSES:
+            return f"{f}: status {rec['status']!r} not in contract enum"
+        if rec["method"] not in COVER_METHODS:
+            return f"{f}: method {rec['method']!r} not in contract enum"
+        if not isinstance(rec["confidence"], (int, float)) or not 0 <= rec["confidence"] <= 1:
+            return f"{f}: confidence {rec['confidence']!r} outside [0,1]"
+        if rec["status"] == "resolved":
+            if not isinstance(rec["start"], int) or not isinstance(rec["end"], int):
+                return f"{f}: resolved without integer offsets"
+            if not 0 <= rec["start"] < rec["end"] <= n:
+                return f"{f}: offsets [{rec['start']},{rec['end']}) outside [0,{n})"
+        elif (rec["value"], rec["start"], rec["end"]) != (None, None, None):
+            return f"{f}: {rec['status']} must carry null value/start/end"
+    return None
 
 
 def _blocks_shape(result):
@@ -718,7 +793,8 @@ def run_case(case):
     result = extract_items(
         path, exclude_boilerplate=case["input"].get("exclude_boilerplate", False),
         tables=case["input"].get("tables", False),
-        blocks=case["input"].get("blocks", False))
+        blocks=case["input"].get("blocks", False),
+        cover=case["input"].get("cover", False))
     extracted = [i for i in result["items"] if i["status"] == "extracted"]
 
     failures = []

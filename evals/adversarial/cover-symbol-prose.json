@@ -1,0 +1,36 @@
+{
+  "id": "cover-symbol-prose",
+  "task": "sec10k",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "path": "evals/fixtures/reac-2015/filing.htm",
+    "cover": true
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "cover",
+        "field": "trading_symbol",
+        "status": "not_in_era",
+        "value": null,
+        "start": null,
+        "end": null,
+        "method": "era_gate",
+        "confidence": 0.95
+      },
+      {
+        "type": "envelope_shape"
+      },
+      {
+        "type": "verbatim"
+      },
+      {
+        "type": "no_overlap_ordered"
+      }
+    ]
+  },
+  "provenance": "Cold review of the ADR-033 resolver, 2026-08-24 (the era-gate finding). reac-2015 is a 2015 filing with NO Section 12(b) column ('Securities registered pursuant to Section 12 (b) of the Act - None'), so ADR-033 \u00a7c requires `not_in_era`. But its cover carries the market-value sentence '...held by non-affiliates and NO TRADING SYMBOL.', and the gate was a bare substring search for `trading\\s+symbol`, which the negation satisfies. MEASURED RED: trading_symbol resolved to 'K' at 0.95 -- the first \\b[A-Z]{1,5}\\b token after that sentence, which is the K of 'Form 10-K'. This is the failure the \u00a7g mutation table could not see: deleting the era gate proved it fires on covers that never say the words, and said nothing about a cover that says them in prose. `not_in_era` is called a POSITIVE CLAIM by \u00a7c, and a positive claim that a negation can flip was not being tested."
+}

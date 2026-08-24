@@ -1,0 +1,88 @@
+{
+  "id": "ge-1994-cover",
+  "task": "sec10k",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "path": "evals/fixtures/ge-1994/filing.txt",
+    "cover": true
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "cover",
+        "field": "registrant_name",
+        "status": "resolved",
+        "value": "GENERAL ELECTRIC COMPANY",
+        "start": 1750,
+        "end": 1774,
+        "method": "caption_anchored",
+        "confidence": 0.95
+      },
+      {
+        "type": "cover",
+        "field": "state_of_incorporation",
+        "status": "resolved",
+        "value": "New York",
+        "start": 1891,
+        "end": 1899,
+        "method": "ein_pivot",
+        "confidence": 0.95
+      },
+      {
+        "type": "cover",
+        "field": "ein",
+        "status": "resolved",
+        "value": "14-0689340",
+        "start": 1929,
+        "end": 1939,
+        "method": "ein_regex",
+        "confidence": 0.95
+      },
+      {
+        "type": "cover",
+        "field": "commission_file_number",
+        "status": "resolved",
+        "value": "1-35",
+        "start": 1417,
+        "end": 1421,
+        "method": "caption_anchored",
+        "confidence": 0.95
+      },
+      {
+        "type": "cover",
+        "field": "fiscal_year_end",
+        "status": "resolved",
+        "value": "December 31, 1993",
+        "start": 1374,
+        "end": 1391,
+        "method": "cover_date_re",
+        "confidence": 0.95
+      },
+      {
+        "type": "cover",
+        "field": "trading_symbol",
+        "status": "not_in_era",
+        "value": null,
+        "start": null,
+        "end": null,
+        "method": "era_gate",
+        "confidence": 0.95
+      },
+      {
+        "type": "envelope_shape"
+      },
+      {
+        "type": "verbatim"
+      },
+      {
+        "type": "no_overlap_ordered"
+      },
+      {
+        "type": "deterministic"
+      }
+    ]
+  },
+  "provenance": "ADR-033 \u00a7g, the fixed-width .txt family. GE FY1993 10-K (plain-text full submission, EDGAR accession 0000040545-94-000003), fixture already committed for ge-1994-blocks / era-label-ge-1994. Cover region is normalized_text[0:4020) and does NOT open with the cover: the filing leads with a 'SECTIONS' index and does not reach 'FORM 10-K' until ~offset 1000, which is why ADR-033 \u00a7b1 does not sub-divide the region. The interleaved-caption case: the fixed-width columns survived normalization as columns, so the caption pair reads 'New York                              14-0689340\\n(State or other jurisdiction of     (I.R.S. Employer Identi' -- the two captions share a line and each is cut mid-phrase. No caption rule reads the state here; the EIN pivot does. trading_symbol is pinned NOT_IN_ERA, and that assertion is the point of this case: a 1994 filing predates the Trading Symbol column by 25 years, so a future resolver that hallucinates a symbol out of it turns this case red (ADR-033 \u00a7c). commission_file_number '1-35' occurs 15 times in the document and is pinned at the cover occurrence 1417, immediately after 'For the fiscal year ended December 31, 1993   Commission file number'."
+}

@@ -143,6 +143,28 @@ them all); the example once showed `lenient_match`, which nothing emits.
   lists, definition lists and txt-era structure are not interpreted
   (ADR-032 §e). `envelope_shape` refuses any other shape.
 
+- **`cover` (optional, ADR-033)**: present *only* when the caller passes
+  `extract_items(path, cover=True)`. A dict keyed by field name —
+  `registrant_name`, `state_of_incorporation`, `ein`,
+  `commission_file_number`, `fiscal_year_end`, `trading_symbol` — each
+  holding `{"value", "start", "end", "status", "confidence", "method"}`.
+  `status` ∈ `resolved` | `not_in_era` | `missing`; `method` ∈
+  `caption_anchored` | `ein_regex` | `ein_pivot` | `positional` |
+  `cover_date_re` | `era_gate`. For `resolved`, `start`/`end` are offsets into
+  `normalized_text` and `normalized_text[start:end]` **must equal** `value` —
+  the same verbatim rule INV-S2 puts on an item span, so no cover fact is a
+  bare assertion. For `not_in_era` (the filing's cover predates the field —
+  `trading_symbol` on a 1994 filing) and `missing`, all three of
+  `value`/`start`/`end` are null; `not_in_era` is a **positive claim** and
+  carries a high confidence, `missing` carries `BASE_MISSING`. `confidence`
+  reuses `src/sec10k/validate.py`'s scale unchanged — no second scale exists
+  (ADR-033 §f). Same rule as `boilerplate`, `tables` and `blocks`: an
+  annotation, never an edit. **No cover pseudo-item is emitted** — the item
+  registry rule above ("Nothing else") is untouched, so every `only_items`,
+  `known_items_only` and `expected_set_complete` check is unaffected by
+  construction. Seven further cover fields were considered and cut with their
+  measurements (ADR-033 §d). `envelope_shape` refuses any other shape.
+
 ## Envelope rules (v2, normative)
 
 - `doc_status` ∈ `success` | `success_with_warning` | `ambiguous` |

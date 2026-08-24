@@ -1,0 +1,36 @@
+{
+  "id": "cover-caption-tail",
+  "task": "sec10k",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "path": "evals/fixtures/gs-2002/filing.htm",
+    "cover": true
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "cover",
+        "field": "state_of_incorporation",
+        "status": "resolved",
+        "value": "Delaware",
+        "start": 334,
+        "end": 342,
+        "method": "ein_pivot",
+        "confidence": 0.95
+      },
+      {
+        "type": "envelope_shape"
+      },
+      {
+        "type": "verbatim"
+      },
+      {
+        "type": "no_overlap_ordered"
+      }
+    ]
+  },
+  "provenance": "Cold review of the ADR-033 resolver, 2026-08-24 (finding 3 of 3, first of two fixtures in the class). gs-2002 breaks the caption across two lines and puts the EIN at the end of the SECOND one: 'Delaware\\n(State or other jurisdiction of\\nincorporation or organization) 13-4019460\\n(I.R.S. employer\\nidentification no.)'. The EIN pivot's same-line branch therefore returns the caption's TAIL. MEASURED RED: state_of_incorporation = 'incorporation or organization)' at 0.95. intc-2002 is the second member of this class and is pinned by `cover-caption-tail-intc`; both were red at the first resolver, and a fix that reads only one of them is not a fix."
+}

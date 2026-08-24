@@ -1,0 +1,36 @@
+{
+  "id": "cover-caption-tail-intc",
+  "task": "sec10k",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "path": "evals/fixtures/intc-2002/filing.htm",
+    "cover": true
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "cover",
+        "field": "state_of_incorporation",
+        "status": "resolved",
+        "value": "Delaware",
+        "start": 530,
+        "end": 538,
+        "method": "ein_pivot",
+        "confidence": 0.95
+      },
+      {
+        "type": "envelope_shape"
+      },
+      {
+        "type": "verbatim"
+      },
+      {
+        "type": "no_overlap_ordered"
+      }
+    ]
+  },
+  "provenance": "Second fixture of the `cover-caption-tail` class (see that case for the shape). intc-2002: 'Delaware\\n(State or other jurisdiction of\\nincorporation or organization) 94-1672743\\n(I.R.S. Employer Identification No.)'. MEASURED RED: state_of_incorporation = 'incorporation or organization)' at 0.95. Committed separately rather than folded into one case because the class has two independent members in the corpus and a per-fixture case is what turns red if a fix regresses only one of them."
+}

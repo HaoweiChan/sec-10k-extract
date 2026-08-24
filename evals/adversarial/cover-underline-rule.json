@@ -1,0 +1,34 @@
+{
+  "id": "cover-underline-rule",
+  "task": "sec10k",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "path": "evals/fixtures/ksb-2007/filing.txt",
+    "cover": true
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "doc_status",
+        "value": "unsupported"
+      },
+      {
+        "type": "cover",
+        "field": "registrant_name",
+        "status": "resolved",
+        "value": "24HOLDINGS INC.",
+        "start": 2024,
+        "end": 2039,
+        "method": "caption_anchored",
+        "confidence": 0.95
+      },
+      {
+        "type": "envelope_shape"
+      }
+    ]
+  },
+  "provenance": "Found while pinning `cover-refusal-envelope`, 2026-08-24 -- the defect the refusal fix EXPOSED rather than caused. MEASURED RED once the refusal path carried the key: registrant_name resolved to '---------------' at 0.95 via `caption_anchored`. ksb-2007 is a fixed-width .txt cover that UNDERLINES each value with a rule -- '24HOLDINGS INC.\\n---------------\\n(EXACT NAME OF REGISTRANT AS SPECIFIED IN ITS CHARTER)' -- so orientation A's 'the line above the caption' is the rule, not the value. The first draft of this case asserted `missing`, which was WRONG and is recorded here rather than quietly corrected: the author read the envelope's SGML wrapper ('-----BEGIN PRIVACY-ENHANCED MESSAGE-----') and concluded the filing had no cover at all, when it has a perfectly ordinary one 2,000 characters further in. The rule that fixes it is that a name -- and a state -- contains LETTERS, applied to all three caption orientations and the positional fallback at once, because the underline shape is a .txt-era convention and not a property of refused documents. This filing is a 10-KSB and is refused, so the case also proves the refusal envelope's cover is resolved over the real cover region and not over the wrapper."
+}

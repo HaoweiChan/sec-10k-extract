@@ -1,0 +1,88 @@
+{
+  "id": "msft-2013-cover",
+  "task": "sec10k",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "path": "evals/fixtures/msft-2013/filing.htm",
+    "cover": true
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "cover",
+        "field": "registrant_name",
+        "status": "resolved",
+        "value": "MICROSOFT CORPORATION",
+        "start": 397,
+        "end": 418,
+        "method": "positional",
+        "confidence": 0.75
+      },
+      {
+        "type": "cover",
+        "field": "state_of_incorporation",
+        "status": "resolved",
+        "value": "WASHINGTON",
+        "start": 420,
+        "end": 430,
+        "method": "ein_pivot",
+        "confidence": 0.95
+      },
+      {
+        "type": "cover",
+        "field": "ein",
+        "status": "resolved",
+        "value": "91-1144442",
+        "start": 431,
+        "end": 441,
+        "method": "ein_regex",
+        "confidence": 0.95
+      },
+      {
+        "type": "cover",
+        "field": "commission_file_number",
+        "status": "resolved",
+        "value": "0-14278",
+        "start": 388,
+        "end": 395,
+        "method": "caption_anchored",
+        "confidence": 0.95
+      },
+      {
+        "type": "cover",
+        "field": "fiscal_year_end",
+        "status": "resolved",
+        "value": "June 30, 2013",
+        "start": 219,
+        "end": 232,
+        "method": "cover_date_re",
+        "confidence": 0.95
+      },
+      {
+        "type": "cover",
+        "field": "trading_symbol",
+        "status": "not_in_era",
+        "value": null,
+        "start": null,
+        "end": null,
+        "method": "era_gate",
+        "confidence": 0.95
+      },
+      {
+        "type": "envelope_shape"
+      },
+      {
+        "type": "verbatim"
+      },
+      {
+        "type": "no_overlap_ordered"
+      },
+      {
+        "type": "deterministic"
+      }
+    ]
+  },
+  "provenance": "ADR-033 \u00a7g, the <p>-typeset family and the ONLY filing in 38 whose cover carries no registrant-name caption at all. Microsoft FY2013 10-K, fixture already committed for msft-2013-content/structure/blocks/table. Cover region is normalized_text[0:6369), zero <table> elements. The cover reads 'Commission File Number 0-14278\\n\\nMICROSOFT CORPORATION\\n\\nWASHINGTON 91-1144442\\n\\n(STATE OF INCORPORATION) (I.R.S. ID)': no '(Exact name of registrant...)', no '(Address of principal executive offices)', no '(Registrant's telephone number)', and the state/EIN captions self-abbreviated to wordings that appear nowhere else in the corpus. registrant_name is therefore the POSITIONAL path (ADR-033 \u00a7b3) at BASE_WEAK 0.75 -- the non-empty line between the commission file number and the EIN-pivot line -- and this case is the only place that path is exercised. It is deliberately NOT resolved at 0.95: a 1-in-38 positional guess that reads as confidently as a caption match is the dishonesty ADR-018 \u00a71 was written against. state_of_incorporation still resolves at 0.95 because the EIN pivot does not care that the caption is abbreviated."
+}
