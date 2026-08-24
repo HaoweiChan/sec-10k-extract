@@ -1,0 +1,32 @@
+{
+  "pr": 44,
+  "task": "S10",
+  "round": "3-verify (bounded, human-authorized)",
+  "date": "2026-08-24",
+  "branch": "task/S10",
+  "head": "28db0cf",
+  "base": "c13aa5c",
+  "scope": "exactly two questions — is R8 closed, is R13 closed; the pass was barred from opening new findings at any severity",
+  "result": "APPROVED",
+  "counts": {
+    "HIGH": 0,
+    "MEDIUM": 0,
+    "LOW": 0
+  },
+  "gate": {
+    "invariant": "52/52 = 1.000",
+    "fast": "105/105 = 1.000",
+    "table_fidelity": "cells 427/427, rows 34/34",
+    "baseline": "unmoved, byte-identical to origin/main",
+    "normalize_self_check": "ok",
+    "run_by": "orchestrator, on 28db0cf"
+  },
+  "orchestrator_independent_verification": {
+    "scope_held": "all five normalize.py hunks inside _demo (def at :466); no annotation code, in_table, or case labels touched",
+    "R8_counterexample": "<td><font>/s/</font><img><font>Darren W. Woods</font></td> -> offset 12, cell [9,27]: inside, mark != cell start",
+    "falsified_wordings_absent": "none of the seven falsified phrases appear in specs/, the case file or src/, except normalize.py:552 quoting the round-3 wording explicitly as the one that was falsified, beside the assertion pinning the truth",
+    "R13_corpus_split": "independent tag-depth scan: 53 images total, exactly 10 inside <table> markup (ba-2003 1, bac-2006 2, cvx-2015 4, xom-2021 3); the 6 non-cvx each have a record starting exactly +2 after the image; cvx-2015's 133962/137973/145599/166482 have no adjacent record; 0 images inside any recorded span",
+    "pins_mutation_proved": "restoring moff == mcell[0] reds; etabs != [] reds; eimgs == [] reds"
+  },
+  "findings": []
+}
