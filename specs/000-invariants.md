@@ -43,12 +43,16 @@ Format per invariant:
   text, never an edit of it, and a cell's text is a slice, not a field.
   Optional block-structure annotation (ADR-032) likewise: blocks are offset
   records, the Markdown is derived from them, and `normalized_text` is never
-  rewritten as Markdown (ADR-032 §f2 measured what that would move).
+  rewritten as Markdown (ADR-032 §f2 measured what that would move). Optional
+  image-reference annotation (ADR-033) likewise: an image is a POINT offset
+  into the text, no placeholder is written into it, and the item an image
+  falls in is derived from offsets rather than stored.
 - Enforced by: evals/golden/aapl-2025-structure.json,
   evals/adversarial/boilerplate-offsets-invariant.json (exclusion on vs off),
   evals/adversarial/tables-offsets-invariant.json (tables on vs off),
   evals/adversarial/blocks-offsets-invariant.json and
-  evals/adversarial/blocks-wrapped-invariant.json (blocks on vs off)
+  evals/adversarial/blocks-wrapped-invariant.json (blocks on vs off),
+  evals/adversarial/images-offsets-invariant.json (images on vs off)
 
 ## INV-S3: Only canonical item codes, valid for the filing's taxonomy era
 - Rationale: "Item 405 of Regulation S-K" and "Item 601" appear as prose in

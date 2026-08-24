@@ -587,6 +587,98 @@ def test_table_checks():
         assert eval_check(no, chk) is not None
 
 
+def test_image_checks():
+    # ADR-033 vocabulary on a synthetic envelope: two images, the second pair
+    # coincident at one offset (the xom-2021 shape), one inside an item span
+    # and one outside every span
+    text = "cover\n\nItem 1 body\n\ntail"
+    imgs = [{"offset": 5, "src": "logo.jpg", "alt": "LOGO", "width": None, "height": None},
+            {"offset": 18, "src": "chart.jpg", "alt": None, "width": 500, "height": 210},
+            {"offset": 18, "src": "sig.jpg", "alt": "A's sig", "width": 1, "height": 1}]
+    item = {"item": "1", "part": "I", "title": "Business", "heading_text": "Item 1",
+            "start": 7, "end": 19, "status": "extracted", "confidence": 0.9,
+            "method": "heading_strict", "evidence": {}}
+    r = {"normalized_text": text, "doc_status": "success", "warnings": [], "items": [item],
+         "meta": {"extractor_version": "x", "input_sha256": "x", "format_era": "html",
+                  "document_selected": "x", "taxonomy_era": "modern", "toc_manifest": []},
+         "trace": [], "timings": {"total_ms": 0}, "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0},
+         "images": imgs}
+    good = {"type": "image", "src": "chart.jpg", "alt": None, "width": 500, "height": 210,
+            "offset": 18, "before": "Item 1 body", "after": "\n\ntail", "item": "1"}
+    assert eval_check(r, good) is None, eval_check(r, good)
+    assert eval_check(r, {"type": "envelope_shape"}) is None, eval_check(r, {"type": "envelope_shape"})
+    assert eval_check(r, {"type": "images_sane", "min": 3, "max": 3}) is None
+    # PR #44 R1: `in_table` asserts the offset-vs-table-span relationship the
+    # ADR first got wrong. Table (7, 19) holds the chart at 18 but not the
+    # cover logo at 5, and without the tables annotation the check refuses
+    # rather than guessing.
+    tab = {"start": 7, "end": 19, "header": 0, "rows": [[[7, 13], [14, 19]]]}
+    rt = {**r, "tables": [tab]}
+    assert eval_check(rt, {"type": "image", "src": "chart.jpg", "in_table": True}) is None
+    assert eval_check(rt, {"type": "image", "src": "logo.jpg", "in_table": False}) is None
+    for src, claim, why in [("chart.jpg", False, "is inside a recorded table span"),
+                            ("logo.jpg", True, "is outside every recorded table span")]:
+        reason = eval_check(rt, {"type": "image", "src": src, "in_table": claim})
+        assert reason is not None and why in reason, (src, reason)
+    no_tab = eval_check(r, {"type": "image", "src": "chart.jpg", "in_table": False})
+    assert no_tab is not None and "needs the tables annotation" in no_tab, no_tab
+    # PR #44 R7: the span is HALF-OPEN, the same convention as the `item`
+    # derivation above -- an offset equal to `end` is the first character
+    # after the table, so an image there is outside it. 0 of the corpus's 53
+    # offsets sit on a table end, so only this assertion pins the boundary.
+    ends_at_img = {**tab, "end": 18}          # chart.jpg is at 18
+    assert eval_check({**r, "tables": [ends_at_img]},
+                      {"type": "image", "src": "chart.jpg", "in_table": False}) is None
+    starts_at_img = {**tab, "start": 18, "end": 19}
+    assert eval_check({**r, "tables": [starts_at_img]},
+                      {"type": "image", "src": "chart.jpg", "in_table": True}) is None
+
+    # the cover image falls in NO item span -- null is a label, not a miss
+    outside = {"type": "image", "src": "logo.jpg", "item": None}
+    assert eval_check(r, outside) is None, eval_check(r, outside)
+    assert eval_check(r, {**outside, "item": "1"}) is not None
+    # content: every labeled field, and both context anchors, are load-bearing
+    for bad, why in [
+        ({**good, "alt": "chart"}, "alt None != 'chart'"),
+        ({**good, "width": 501}, "width 500 != 501"),
+        ({**good, "height": None}, "height 210 != None"),
+        ({**good, "offset": 17}, "offset 18 != 17"),
+        ({**good, "before": "cover"}, "is not preceded by"),
+        ({**good, "after": "tail"}, "is not followed by"),
+        ({**good, "item": None}, "falls in item '1', labeled None"),
+        ({**good, "src": "zzz.jpg"}, "0 image(s) carry it"),
+        ({**good, "index": 1}, "wanted #1"),
+        ({"type": "images_sane", "min": 4}, "3 images < min 4"),
+        ({"type": "images_sane", "max": 2}, "3 images > max 2"),
+    ]:
+        reason = eval_check(r, bad)
+        assert reason is not None and why in reason, (why, reason)
+    # shape: a string, an offset out of bounds, a record out of DEcreasing
+    # order (equal offsets are legal -- ADR-033 §b2 -- decreasing is not), a
+    # missing/extra key, a wrong field type. All red under BOTH check types.
+    for images, via in [("[]", "envelope_shape"), ("[]", "images_sane"),
+                        ([{**imgs[0], "offset": 999}], "envelope_shape"),
+                        ([{**imgs[0], "offset": 999}], "images_sane"),
+                        ([imgs[1], imgs[0]], "envelope_shape"),
+                        ([imgs[1], imgs[0]], "images_sane"),
+                        ([{k: v for k, v in imgs[0].items() if k != "alt"}], "envelope_shape"),
+                        ([{**imgs[0], "extra": 1}], "envelope_shape"),
+                        ([{**imgs[0], "src": 7}], "envelope_shape"),
+                        ([{**imgs[0], "width": 0}], "envelope_shape"),
+                        ([{**imgs[0], "width": "500px"}], "envelope_shape")]:
+        assert eval_check({**r, "images": images}, {"type": via}) is not None, (images, via)
+    # equal offsets ARE in order, and a null src/alt/size is in shape
+    assert eval_check({**r, "images": [imgs[1], imgs[2]]}, {"type": "envelope_shape"}) is None
+    assert eval_check({**r, "images": [{"offset": 0, "src": None, "alt": None,
+                                        "width": None, "height": None}]},
+                      {"type": "envelope_shape"}) is None
+    # a missing key is the default (no flag): every image check says so
+    no = {k: v for k, v in r.items() if k != "images"}
+    assert eval_check(no, {"type": "envelope_shape"}) is None
+    for chk in (good, outside, {"type": "images_sane"}):
+        assert eval_check(no, chk) is not None
+
+
 TESTS = [
     test_item_field,
     test_ibr_spans_are_checked,
@@ -607,6 +699,7 @@ TESTS = [
     test_no_empty_success,
     test_boilerplate_checks,
     test_table_checks,
+    test_image_checks,
 ]
 
 

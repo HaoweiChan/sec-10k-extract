@@ -68,7 +68,7 @@ At the document level, `doc_status` ∈ `success` / `success_with_warning` /
 pipeline refused**; it never emits a best-effort parse of a document it could
 not identify.
 
-Three opt-in annotations add a key each and move nothing else:
+Four opt-in annotations add a key each and move nothing else:
 `extract_items(path, exclude_boilerplate=True)` reports page-chrome runs as
 offsets (ADR-026); `extract_items(path, tables=True)` reports every HTML
 `<table>` as `{start, end, header, rows}` offset records into the same
@@ -80,7 +80,12 @@ tables, or one `pre` block for a txt-era filing — as `{kind, start, end, …}`
 records, from which `src/sec10k/markdown.py` derives the whole document or any
 item as Markdown (ADR-032). The inspector's *render as Markdown* box shows that
 view; `normalized_text` itself is never rewritten — ADR-032 §f2 measures what
-that would have moved.
+that would have moved. Finally,
+`extract_items(path, images=True)` reports every `<img>` as
+`{offset, src, alt, width, height}` (ADR-033), the offset a point in the same
+text. The image *bytes* are not fetched: every image in a 10-K is an external
+reference to a sibling document in its EDGAR accession, and resolving one is a
+network call this pipeline deliberately does not make (ADR-033 §c).
 
 ## Key design decisions
 

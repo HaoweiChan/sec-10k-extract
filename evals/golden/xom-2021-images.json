@@ -1,0 +1,129 @@
+{
+  "id": "xom-2021-images",
+  "task": "sec10k",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "path": "evals/fixtures/xom-2021/filing.htm",
+    "images": true
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "envelope_shape"
+      },
+      {
+        "type": "images_sane",
+        "min": 9,
+        "max": 9
+      },
+      {
+        "type": "image",
+        "src": "xom-20211231_g1.jpg",
+        "alt": "xom-20211231_g1.jpg",
+        "width": 500,
+        "height": 210,
+        "offset": 159291,
+        "before": "nalysis\n\n(millions of dollars)",
+        "after": "\n\nPrice – Higher realizations ",
+        "item": "16"
+      },
+      {
+        "type": "image",
+        "src": "xom-20211231_g2.jpg",
+        "alt": "xom-20211231_g2.jpg",
+        "width": 500,
+        "height": 200,
+        "offset": 160166,
+        "before": "nalysis\n\n(millions of dollars)",
+        "after": "\n\nPrice – Lower realizations r",
+        "item": "16"
+      },
+      {
+        "type": "image",
+        "src": "xom-20211231_g3.jpg",
+        "alt": "xom-20211231_g3.jpg",
+        "width": 500,
+        "height": 200,
+        "offset": 170903,
+        "before": "nalysis\n\n(millions of dollars)",
+        "after": "\n\nMargins – Increased earnings",
+        "item": "16"
+      },
+      {
+        "type": "image",
+        "src": "xom-20211231_g4.jpg",
+        "alt": "xom-20211231_g4.jpg",
+        "width": 500,
+        "height": 200,
+        "offset": 171619,
+        "before": "nalysis\n\n(millions of dollars)",
+        "after": "\n\nMargins – Decreased earnings",
+        "item": "16"
+      },
+      {
+        "type": "image",
+        "src": "xom-20211231_g5.jpg",
+        "alt": "xom-20211231_g5.jpg",
+        "width": 500,
+        "height": 200,
+        "offset": 177075,
+        "before": "nalysis\n\n(millions of dollars)",
+        "after": "\n\nMargins – Stronger margins i",
+        "item": "16"
+      },
+      {
+        "type": "image",
+        "src": "xom-20211231_g6.jpg",
+        "alt": "xom-20211231_g6.jpg",
+        "width": 500,
+        "height": 200,
+        "offset": 177691,
+        "before": "nalysis\n\n(millions of dollars)",
+        "after": "\n\nMargins – Stronger margins i",
+        "item": "16"
+      },
+      {
+        "type": "image",
+        "src": "xom-20211231_g7.jpg",
+        "alt": "xom-20211231_g7.jpg",
+        "width": 120,
+        "height": 60,
+        "offset": 232186,
+        "before": "ancial Section of this report.",
+        "after": "\n\nDarren W. Woods\n\nChief Execu",
+        "item": "16"
+      },
+      {
+        "type": "image",
+        "src": "xom-20211231_g8.jpg",
+        "alt": "xom-20211231_g8.jpg",
+        "width": 133,
+        "height": 57,
+        "offset": 232186,
+        "before": "ancial Section of this report.",
+        "after": "\n\nDarren W. Woods\n\nChief Execu",
+        "item": "16"
+      },
+      {
+        "type": "image",
+        "src": "xom-20211231_g9.jpg",
+        "alt": "xom-20211231_g9.jpg",
+        "width": 165,
+        "height": 55,
+        "offset": 232186,
+        "before": "ancial Section of this report.",
+        "after": "\n\nDarren W. Woods\n\nChief Execu",
+        "item": "16"
+      },
+      {
+        "type": "verbatim"
+      },
+      {
+        "type": "no_overlap_ordered"
+      }
+    ]
+  },
+  "provenance": "ADR-033 §g, the performance-graph case -- the shape the S10 row names first ('performance graphs, charts, signatures, logos'). ExxonMobil FY2021 10-K, evals/fixtures/xom-2021 (provenance in evals/fixtures/README.md), 6,159,522 raw bytes, 388,848 normalized chars.\n\nNine <img> tags, raw byte offsets 1704772, 1708343, 1782264, 1785988, 1841274, 1844141, 2001029, 2001245, 2001461. The first six are the Earnings Factor Analysis waterfall charts -- pure image content, nothing of them in the text, which is exactly what the offline half of S10 exists to stop a reader from losing silently. Each sits immediately after its own '(millions of dollars)' caption line and immediately before the prose paragraph that discusses it, verified in the raw HTML at 1704772: '...(millions of dollars)</span></div><div><img src=\"xom-20211231_g1.jpg\" .../></div><div ...>Price...'. The last three (g7/g8/g9) are the cover-signature images.\n\nTHE SHAPE THIS FIXTURE UNIQUELY PINS: g7, g8 and g9 all report offset 232186. They are three adjacent <img> elements separated in the raw file by 216 and 216 bytes of markup that emits only whitespace, and that whitespace collapses under ADR-003's canon, so all three genuinely sit at the same point of normalized_text. Three records at one offset is therefore the CORRECT answer and the case pins it: the annotation is a list in document order, not a map keyed by position, and 'document order' means non-decreasing, not strictly increasing. An implementation that deduplicated by offset, or that inserted a placeholder into the text and so pushed them apart, is red here.\n\nWHY THE ITEM LABELS ARE ALL '16', AND WHAT THAT DOES AND DOES NOT SAY. xom-2021's doc_status is `ambiguous` and it fires `last_item_dominates`: Item 16 (FORM 10-K SUMMARY) holds [111730, 386385) of a 388,848-char document, so everything from the financial section onward falls inside it, these nine images included. The label records where the offset FALLS under the shipped segmentation; it is not a claim that a 2021 Upstream earnings chart belongs to Item 16 rather than to the MD&A. That distinction is why bac-2006-images, not this case, is the one that proves containment works -- and why a debt row (Origin: S10) records that image containment inherits whatever quality the item spans have. If the dominance debt is ever closed these labels move, and they should: the case will go red for the right reason and be re-labeled against the corrected spans.\n\nHOW THE LABELS WERE MADE (ADR-033 §g). `src`, `alt`, `width` and `height` are read off the RAW HTML: every <img ...> tag matched with a plain attribute regex, entity-decoded, the pixel size taken from the width=/height= attribute if there is one and otherwise from the `style` declaration (0 of the corpus's 53 <img> carry the attribute form, 40 carry the style form -- ADR-033 §b1). That read is an INDEPENDENT second route, written for the purpose and not sharing a line with src/sec10k/normalize.py's recorder, and it is compared field by field against the shipped annotation before any label is written; a disagreement aborts the authoring script rather than being written down. `offset` is the annotation's own; it is not blindly copied, because `before` and `after` are the 30 characters of normalized_text on either side of it and those ARE hand-checkable against the raw file -- an offset that drifted by even one character would leave `before`/`after` no longer matching what the raw HTML has around the tag. `item` is derived the way ADR-029 derives an item's tables, from offsets alone (the item whose [start, end) span holds the offset, null when no span does), never from a stored field."
+}
