@@ -15,11 +15,11 @@
   },
   "expect": {
     "min_failures": 1,
-    "max_failures": 19
+    "max_failures": 24
   },
   "triage": {
     "class": "no-mechanical-check",
-    "note": "PR #21 R1 round-1 review: the capabilities_parse check counted rows and entries only, so a README edit that keeps the same row/column/entry counts but empties every cell to a placeholder (e.g. every cell literally 'x') passed as if it were real content — the exact regression the case's own triage claimed to prevent. Watched red against the pre-fix check (evals/fixtures/repo_hygiene/capabilities-empty-cells.md — 9 works-well rows, 3 difficult entries, all placeholders — returned zero failures), green once the check also asserted no row/item has all-identical cells and every cell/term/detail clears a minimum length. Written against the V3 shape change (difficult items are {term, detail} dicts, not one fused string)."
+    "note": "PR #21 R1 round-1 review: the capabilities_parse check counted rows and entries only, so a README edit that keeps the same row/column/entry counts but empties every cell to a placeholder (e.g. every cell literally 'x') passed as if it were real content — the exact regression the case's own triage claimed to prevent. Watched red against the pre-fix check (evals/fixtures/repo_hygiene/capabilities-empty-cells.md — 9 works-well rows, 3 difficult entries, all placeholders — returned zero failures), green once the check also asserted no row/item has all-identical cells and every cell clears a minimum length. Written against the V4 shape (README simplification, 2026-08-24): `difficult` is now a flat table row-for-row like `works_well`, not bold-lead `{term, detail}` groups, so both sections are checked by the same shared row rule."
   },
-  "provenance": "PR #21 round-1 repair (R1), created 2026-08-21. Watched RED against src/repo_hygiene/eval_adapter.py's pre-fix `check_capabilities_parse` (0 failures on the fixture despite every cell/bullet being the placeholder 'x'), GREEN (19 failures: 9 identical-cell rows + 9 short-cell rows + 1 thin-difficult-items entry) after."
+  "provenance": "PR #21 round-1 repair (R1), created 2026-08-21. Watched RED against src/repo_hygiene/eval_adapter.py's pre-fix `check_capabilities_parse` (0 failures on the fixture despite every cell/bullet being the placeholder 'x'), GREEN (19 failures: 9 identical-cell rows + 9 short-cell rows + 1 thin-difficult-items entry) after. Re-shaped 2026-08-24 when the README's difficult section became a plain table (interviewer-legibility simplification) and capabilities.py/index.html were unified onto one table parser/renderer for both sections; the fixture's difficult section became a 3-row placeholder table to match, now GREEN at 24 failures (9+3 identical-cell rows and 9+3 short-cell rows, one message each)."
 }

@@ -135,68 +135,32 @@ Verified by committed cases; run `python3 -m evals.run --suite all` to reproduce
 
 ## What is difficult, unreliable, or unsupported
 
-Concrete, with the case or run that demonstrates each. Nothing here is
-speculative.
+Every row is backed by a committed case or run — nothing here is speculative.
 
-**Closed since B-freeze**
+| Limitation | Concrete case | Status |
+|---|---|---|
+| Legally-permitted omissions are reported as `missing` | Exxon FY2021 drops Item 6, allowed since a 2021 rule change, but the extractor can't tell that apart from a real gap | Known, unfixed — honest but imprecise |
+| An appendix placed after the last item inflates that item's span | JPM FY2024: the financial appendix sits after the last item's exhibit index, so that item's span swallows 83% of the document | A validator catches it and flags the filing `ambiguous` — loud, but the boundary is still wrong |
+| One validation rule can never actually fire on a real filing | Spans are built from their own heading text by construction, so the check it would catch can't occur | Proven correct in code instead of by example |
+| A handful of validation checks were recently proven able to fail, but not yet tuned | 3 of 4 checks once thought unfailable can now go red on hand-built test cases | The logic is proven; per-case sensitivity tuning is still open |
+| The "silent failure" rate is measured on a partial sample | 0% measured, but only across 109 of 490 high-confidence items — the rest weren't checked | Disclosed as a narrow measurement, not a full guarantee |
+| The historical item-numbering table was fragile around a 2002–2003 SEC rule change | Three different filings from that window broke numbering before the table was corrected | Fixed — kept here because the fragility itself is structural |
+| Out of scope by design | Non-10-K forms (10-Q, 8-K, 20-F), scanned/image/PDF filings, 10-K/A amendments, 10-KSB, and inputs with no detectable 10-K document | Refused outright — a refusal names the form and returns the raw text; it never fakes items |
 
-- **2002–2003 transitional numbering** — listed here as unfixed until T9.
-  Goldman Sachs FY2002 used the post-Sarbanes-Oxley scheme (Item 14 =
-  Controls, Item 15 = Exhibits) *ahead* of the 2003-08-14 effective date the
-  era table encoded, so Item 15 was absent from the output entirely. ADR-013
-  read it as one filer's early adoption needing an INV-S3 amendment and
-  declined the repair. Two more filings from the same window (`intc-2002`,
-  `tgt-2002`) showed it is a **regulatory era** — Release 33-8124, effective
-  2002-08-29 — and a table correction, not a conflict: `gs-2002` moved from
-  the `debt` suite into `fast` with **not one of its assertions edited**
-  (ADR-015 §1). The lesson survives the fix, and is
-  the reason it is still written down here: **the era table remains the
-  pipeline's most brittle component**, and this was its third confirmation.
+<details>
+<summary>Design-decision log for this section (collapsed — click to expand)</summary>
 
-**Fails today — known and unfixed**
+- [ADR-010](specs/decisions/ADR-010-g1-corrections.md) — fixed four bugs that were failing silently, including the 9C boundary and a date-parsing bug.
+- [ADR-013](specs/decisions/ADR-013-heading-shape-and-escalation.md) — rule for headings with no body text, and when a filing gets flagged ambiguous for missing too many items.
+- [ADR-015](specs/decisions/ADR-015-transitional-era-and-trailing-index.md) — the 2002–2003 numbering-transition fix, plus a rule for trailing index pages that echo earlier items.
+- [ADR-016](specs/decisions/ADR-016-validator-provability.md) — every validator and eval check was individually proven either fixture-testable, unit-testable, or provably-can't-fire.
+- [ADR-019](specs/decisions/ADR-019-silent-failure-rate.md) — the silent-failure rate was measured directly on a sampled, audited set of items.
+- [ADR-024](specs/decisions/ADR-024-10ka-out-of-scope.md) — 10-K/A amendments ruled out of scope, with the refusal enforced on two independent code paths.
 
-- **Permitted omissions read as `missing`.** Exxon FY2021 drops Item 6 entirely
-  — allowed since the Feb 2021 S-K amendment — and the extractor reports
-  `missing` rather than `omitted`, because only codes 16 and 9C auto-omit.
-  Honest but imprecise.
-- **Appendices after the last item.** JPM FY2024 puts its whole financial
-  appendix after the Item 15 exhibit index, so Item 15's span swallows 83% of
-  the document. The `last_item_dominates` validator catches it and the filing
-  reports `ambiguous` — the failure is loud, but the boundary is still wrong.
-  Exxon FY2021 shows the same shape on Item 16.
+Full context for any of these — the problem, the alternatives considered, the
+consequences — lives in the linked file.
 
-**Thin evidence — claimed, but not strongly demonstrated**
-
-- **1 of the 8 layer-8 codes cannot be fired by any document** —
-  `boundary_hygiene`. This list named three until T9; ADR-016 §3 closed the
-  other two with `spans-transposed`, a pure byte-transposition of `sgrp-2019`
-  (the derivation asserts `sorted(out) == sorted(raw)`) that mislabels two
-  spans without adding or deleting a character, and both
-  `numeric_density_inversion` and `keyword_fingerprint` fire on it.
-  `boundary_hygiene` is not merely unproven but unprovable from a filing:
-  spans are built from heading matches, so a span opens with its heading by
-  construction. It is proved against the layer boundary in `validate._demo`
-  instead, and ADR-016 §2 records why that is the honest place for it.
-- **Three eval checks can go red — where the honest count was zero of four.**
-  ADR-010 recorded that `no_overlap_ordered`, `verbatim`, `known_items_only`
-  and `boundary_hygiene` were structurally incapable of failing, and that
-  `verbatim` asserted bounds and never compared text. ADR-016 §5 proves the
-  first three on hand-built results and gives `verbatim` a real comparison: a
-  span must open with its own `heading_text`. The count is three and not four
-  because §2 and §5 prove **one** relation at two layers, stated that way
-  rather than double-counted. Firing a check once still proves the code path,
-  not the threshold — per-bucket calibration is T10's job.
-- **The silent-failure rate covers 22% of the confident items.** 0.0 is
-  measured over 109 audited items out of 490 confident ones: 280 are targeted
-  by no check, and 101 more sit in non-success documents and fall outside the
-  metric's definition — including the JPM span this README names as wrong.
-
-**Explicitly unsupported** — refused, never item-extracted: non-10-K forms
-(10-Q, 8-K, 20-F), scanned/image/PDF filings, inputs with no detectable 10-K
-document. 10-K/A amendments and 10-KSB are out of scope — the 10-K/A half is ruled,
-measured and dated in [ADR-024](specs/decisions/ADR-024-10ka-out-of-scope.md). The refusal names the
-form and returns the normalized text; it does not return items, and it does not
-claim the file was unreadable (ADR-016 §6).
+</details>
 
 ## Performance, cost, scalability
 

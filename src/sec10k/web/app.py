@@ -65,6 +65,20 @@ def _fixture_file(name: str) -> Path:
     return f
 
 
+DECISIONS = ROOT / "specs" / "decisions"
+
+
+def _decision_file(name: str) -> Path:
+    """Resolve an ADR filename to its file in specs/decisions/, refusing
+    traversal — same guard shape as _fixture_file. Only names capabilities.py
+    itself produced from README.md ever reach this, but the guard holds
+    regardless of caller."""
+    f = (DECISIONS / name).resolve()
+    if f.parent != DECISIONS.resolve() or not f.is_file():
+        raise FileNotFoundError(f"unknown decision doc: {name!r}")
+    return f
+
+
 def _err(status: int, code: str, message: str, doc_status: str = "failed", **extra):
     """Every refusal returns the same envelope the UI already renders, so a
     rejected request and a failed extraction look identical to the frontend."""
@@ -227,10 +241,25 @@ def api_source(token: str):
 
 @app.get("/api/capabilities")
 def api_capabilities():
-    """README.md's works-well table and difficult-section entries, parsed at
-    request time so the UI never carries a hand-copied second list (INV-S2's
+    """README.md's works-well table, difficult-section entries, and the
+    difficult section's collapsed ADR decision log, all parsed at request
+    time so the UI never carries a hand-copied second list (INV-S2's
     argument applied to docs — see src/sec10k/web/capabilities.py)."""
     return capabilities_mod.parse_readme()
+
+
+@app.get("/api/decisions/{name}")
+def api_decision(name: str):
+    """Serves one ADR file straight from specs/decisions/, so the
+    capabilities panel's decision-log links resolve wherever this is
+    deployed — README.md's own links work because GitHub renders relative
+    paths against the repo tree; the panel has none, so it needs the file."""
+    try:
+        f = _decision_file(name)
+    except FileNotFoundError as e:
+        return JSONResponse(status_code=404, content={
+            "error": "not_found", "message": str(e)})
+    return FileResponse(f, media_type="text/markdown; charset=utf-8")
 
 
 @app.get("/edgar-check")
