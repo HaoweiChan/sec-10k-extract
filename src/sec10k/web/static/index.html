@@ -737,7 +737,13 @@ function render(v){
   // D5: the note tracks the RESPONSE's exclusion state, not the checkbox's
   // current one, for the same reason the pane header does (S8) — toggling the
   // box after an extraction must not make the note lie about what is on screen.
-  $("#bp-note").hidden = !v.boilerplate_excluded;
+  // PR #46 R1: `boilerplate_applied`, NOT `boilerplate_excluded`. The latter is
+  // True whenever the flag was asked for, so on aapl-2025 (detector finds
+  // nothing) or aapl-2026-10q (`unsupported`, no items at all) the note fired
+  // above a pane byte-identical to the un-flagged one, asserting a
+  // disagreement nobody could see. The note claims a difference, so it must
+  // key off a field that means a difference exists.
+  $("#bp-note").hidden = !v.boilerplate_applied;
 
   const items = v.items || [];
   $("#sidebar").innerHTML = items.length ? items.map((it,i) => {

@@ -5,11 +5,15 @@ markup of src/sec10k/web/static/index.html. No test in that harness issues an
 HTTP request or lays anything out, so nothing there can see the RENDER. This
 script is the part only a browser can answer:
 
-  half 1 (debt row V5) — at each of 1280 / 1024 / 900 / 768, does `#pane` sit
-      in the SAME ROW as `#source`, and where they do stack, is the sync-scroll
-      control actually disabled and labelled inactive on screen?
+  half 1 (debt row V5) — at each of 1280 / 1024 / 900 / 768, is `#pane`
+      VISIBLE, is `#source` VISIBLE, and do the two sit in the SAME ROW; where
+      they do stack, is the sync-scroll control disabled and labelled inactive
+      on screen? (PR #46 R2: visibility is a separate question from geometry —
+      an invisible pane keeps its rect, its size AND its `offsetParent`.)
   half 2 (the compare-pane note) — is `#bp-note` off screen with exclusion off
-      and on screen with it on, and what does it say?
+      and on screen with it on, and what does it say? Plus one control run on a
+      fixture where exclusion is HONOURED and finds nothing, where the note
+      must stay off screen (PR #46 R1).
 
 Run:
     pip install playwright && playwright install chromium
@@ -27,6 +31,11 @@ from playwright.sync_api import sync_playwright
 HERE = pathlib.Path(__file__).resolve().parent
 SHOTS = HERE / "d5-browser-walk"
 FIXTURE = "ge-1994"        # the S8 debt row's own fixture, txt-era edgar_chrome
+# PR #46 R2/R1: a fixture where the flag is HONOURED and finds nothing — the
+# detector returns [], all 23 items come back byte-identical to the un-flagged
+# run, and the note must therefore stay off screen. The walk used only ge-1994,
+# which is why the R1 state was never observed in any of D5's own evidence.
+NO_CHROME_FIXTURE = "aapl-2025"
 SIDE_BY_SIDE = 1024        # ui-split-breakpoint's min_side_by_side
 STACK_AT = 1000            # index.html's stacking @media, pinned to the JS
 ROW_TOLERANCE = 4          # px; same row means same top, not merely closer
@@ -56,12 +65,30 @@ def shoot(page, name):
 
 
 def measure(page):
-    """Geometry and control state as the browser actually resolved them."""
+    """Geometry, VISIBILITY and control state as the browser resolved them.
+
+    PR #46 R2: this used to record rect tops only, and `in_row()` compared
+    them — so a tree carrying `@media(max-width:1100px){#source{visibility:
+    hidden}}` (the compare pane invisible at 1024, i.e. the exact defect D5
+    exists to remove) passed the walk with `failures: []` while the invariant
+    suite read 56/56. An invisible element still has a rect, still has non-zero
+    width and height, and — the trap in the finding's own suggested fix — still
+    has a NON-NULL `offsetParent`; only `display:none` clears that.
+    `checkVisibility` is the native API that answers the actual question, and
+    it covers `display:none`, `visibility:hidden`, `opacity:0` and
+    `content-visibility` in one call. `offsetParent` is recorded beside it so a
+    later reader can see where the two disagree instead of trusting the weaker.
+    """
     return page.evaluate("""() => {
+      const vis = e => e.checkVisibility
+        ? e.checkVisibility({visibilityProperty: true, opacityProperty: true,
+                             contentVisibilityAuto: true})
+        : e.offsetParent !== null;
       const box = s => { const e = document.querySelector(s);
         if(!e) return null; const r = e.getBoundingClientRect();
         return {top: Math.round(r.top + scrollY), left: Math.round(r.left),
-                width: Math.round(r.width), height: Math.round(r.height)}; };
+                width: Math.round(r.width), height: Math.round(r.height),
+                visible: vis(e), has_offset_parent: e.offsetParent !== null}; };
       const c = document.querySelector("#sync-scroll");
       const note = document.querySelector("#bp-note");
       return {
@@ -72,17 +99,16 @@ def measure(page):
                    state_label: (document.querySelector("#sync-state")||{}).textContent}
                 : null,
         note: note ? {hidden: note.hidden,
-                      // offsetParent===null is how the browser reports "not
-                      // rendered", which `hidden` alone would not prove if a
-                      // CSS rule overrode it.
-                      rendered: note.offsetParent !== null,
+                      // same question, same API as the panes above: `hidden`
+                      // alone would not prove it if a CSS rule overrode it.
+                      rendered: vis(note),
                       text: note.textContent.replace(/\\s+/g, " ").trim()}
                    : null,
         viewport: {w: innerWidth, h: innerHeight}};
     }""")
 
 
-def extract(page, exclude):
+def extract(page, exclude, fixture=FIXTURE):
     """Drive a real fixture extraction with the exclusion box in `exclude`.
 
     Reloads first: a second extraction leaves the previous run's `.it` buttons
@@ -91,7 +117,7 @@ def extract(page, exclude):
     which is the state this walk is here to observe.
     """
     page.reload(wait_until="networkidle")
-    page.select_option("#fx", FIXTURE)
+    page.select_option("#fx", fixture)
     page.set_checked("#exclude-bp", exclude)
     page.click("#go-fx")
     page.wait_for_selector(".it", timeout=30000)
@@ -139,7 +165,14 @@ def main():
             # split and pushes both panes down, so a layout that only survives
             # without it is not a layout that survives.
             same_row = in_row(off) and in_row(on)
+            # PR #46 R2. Sharing a row is worth nothing if one of the two is
+            # not on screen, and "in the same row" was the only thing this
+            # walk ever asked. Checked in BOTH exclusion states, because a
+            # rule scoped to one of them would otherwise slip through.
+            panes_visible = all(m[k] and m[k]["visible"]
+                                for m in (off, on) for k in ("pane", "source"))
             row = {"exclusion_off": off, "exclusion_on": on,
+                   "panes_visible": panes_visible,
                    "panes_same_row": same_row,
                    "pane_source_top_delta_px":
                        off["source"]["top"] - off["pane"]["top"],
@@ -148,6 +181,18 @@ def main():
             rec["widths"][str(w)] = row
 
             # --- what D5 claims, checked rather than described -------------
+            for state, m in (("exclusion off", off), ("exclusion on", on)):
+                for sel in ("#pane", "#source"):
+                    b = m[sel.lstrip("#")]
+                    if not b:
+                        failures.append(f"{w}: {sel} is not in the document ({state})")
+                    elif not b["visible"]:
+                        failures.append(
+                            f"{w}: {sel} is not visible ({state}) — box "
+                            f"{b['width']}x{b['height']} at top {b['top']}, "
+                            f"offsetParent={b['has_offset_parent']}. A pane that "
+                            f"holds its place in the grid without rendering is "
+                            f"the D5 defect, not the D5 fix")
             if w >= SIDE_BY_SIDE and not same_row:
                 failures.append(f"{w}: #pane and #source are not in the same row "
                                 f"(top delta {row['pane_source_top_delta_px']}px)")
@@ -180,6 +225,29 @@ def main():
             elif not on["note"]["rendered"]:
                 failures.append(f"{w}: the exclusion note stays off screen with "
                                 f"exclusion ON")
+
+        # --- PR #46 R1 control: exclusion HONOURED, nothing found ----------
+        # Every width above drives ge-1994, where chrome IS detected, so "the
+        # box was ticked" and "something was hidden" never came apart in D5's
+        # own evidence — which is exactly how R1 survived to review. One run at
+        # the widest viewport on a fixture where the detector returns []: the
+        # pane text is byte-identical to the un-flagged run, so the note, which
+        # ASSERTS the two panes differ, must stay off screen.
+        pg = br.new_page(viewport={"width": widths[0], "height": 860})
+        pg.goto(a.base, wait_until="networkidle")
+        extract(pg, True, NO_CHROME_FIXTURE)
+        ctl = measure(pg)
+        ctl["shot"] = shoot(pg, f"w{widths[0]}-{NO_CHROME_FIXTURE}-exclusion-on")
+        pg.close()
+        rec["no_chrome_control"] = {"fixture": NO_CHROME_FIXTURE,
+                                    "width": widths[0], "measured": ctl}
+        if ctl["note"] is None:
+            failures.append(f"{NO_CHROME_FIXTURE}: no exclusion note element at all")
+        elif ctl["note"]["rendered"]:
+            failures.append(
+                f"{NO_CHROME_FIXTURE} at {widths[0]}: exclusion was asked for and "
+                f"honoured, the detector found nothing, and the note is on screen "
+                f"anyway claiming the two panes will not agree (PR #46 R1)")
         br.close()
 
     rec["failures"] = failures

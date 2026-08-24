@@ -1,0 +1,32 @@
+{
+  "id": "ui-exclusion-note-trigger",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "exclusion_note_trigger"
+    ],
+    "trigger_field": "boilerplate_applied",
+    "wire": [
+      "$(\"#bp-note\").hidden = !v.boilerplate_applied;"
+    ],
+    "fixtures": {
+      "evals/fixtures/ge-1994/filing.txt": true,
+      "evals/fixtures/msft-2013/filing.htm": true,
+      "evals/fixtures/aapl-2025/filing.htm": false,
+      "evals/fixtures/aapl-2026-10q/filing.htm": false,
+      "evals/fixtures/truncated-download/filing.htm": false
+    }
+  },
+  "expect": {},
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "PR #46 R1. The D5 note asserts that the two panes DISAGREE. That claim is true only where exclusion actually removed something from the extracted pane, and `boilerplate_excluded` does not say that — `view.build_view` sets it from `spans is not None`, i.e. from the flag having been asked for. Measured: aapl-2025 with the flag on reports `boilerplate_excluded: true` with 0 spans, 23 items and 0 `display_text`, so the pane text is byte-identical to the un-flagged run while the note claims a difference; aapl-2026-10q (`unsupported`, 0 items) and truncated-download (`failed`, 0 items) put the note above an EMPTY pane. So the note keys off a second field, `boilerplate_applied` — asked-for versus applied — and this case runs the real pipeline rather than reading text: per fixture it pins that the field exists, that it equals `any(\"display_text\" in item)` (which is exactly \"the pane on screen differs from the verbatim slice\"), that it equals the hand-labeled expectation here, and that it is False on the un-flagged run. Globally it refuses to pass vacuously: some fixture must be True, some False, and at least one must reproduce the R1 shape itself (`boilerplate_excluded` True while nothing was applied). The five fixtures are chosen to hold both sides — ge-1994 (txt-era `edgar_chrome`, 6 of 14 items stripped) and msft-2013 (HTML `running_head`+`page_number`, 10 of 20) against aapl-2025 (modern iXBRL, detector returns []) and two zero-item refusals.",
+    "ceiling": "This one is NOT a static read — it calls `extract_items` and `build_view` on committed filings and asserts on the real payload. What it still cannot see is the RENDER: that the note element is actually off screen for an aapl-2025 response is browser evidence, and it lives in `tasks/reviews/d5-browser-walk.json`'s `no_chrome_control` block, added in this same repair because the walk previously drove only ge-1994 — which is precisely how the R1 state escaped D5's own evidence. The `wire` pin ties the JS to this field with the same pin-mechanism ceiling every other D5 pin has: it proves the source reads the field, not that the browser hides the element.",
+    "red_first": "Watched red at 4d3f896, before `boilerplate_applied` existed: 8 failures — `the view payload carries no 'boilerplate_applied'` on each of the five fixtures, then two of the three vacuity guards (`no fixture came out True` and `no fixture reproduces the R1 shape`; the `no fixture came out False` guard is itself guarded on a non-empty result map, and the per-fixture loop had recorded nothing), plus the missing wire pin. Full output in tasks/reviews/pr46-r1-resolution.json."
+  },
+  "provenance": "D5, created 2026-08-24 in the PR #46 round-1 repair, before the fix, per hard rule 2. Carries reviewer finding R1's evidence verbatim: 12 of 30 fixtures probed showed `boilerplate_excluded: true` with zero items stripped."
+}

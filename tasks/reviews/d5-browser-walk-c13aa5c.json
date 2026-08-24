@@ -11,19 +11,25 @@
      "top": 483,
      "left": 362,
      "width": 423,
-     "height": 636
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
     },
     "source": {
      "top": 483,
      "left": 799,
      "width": 423,
-     "height": 636
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
     },
     "sidebar": {
      "top": 483,
      "left": 58,
      "width": 290,
-     "height": 636
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
     },
     "sync": {
      "disabled": false,
@@ -43,19 +49,25 @@
      "top": 483,
      "left": 362,
      "width": 423,
-     "height": 636
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
     },
     "source": {
      "top": 483,
      "left": 799,
      "width": 423,
-     "height": 636
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
     },
     "sidebar": {
      "top": 483,
      "left": 58,
      "width": 290,
-     "height": 636
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
     },
     "sync": {
      "disabled": false,
@@ -69,6 +81,7 @@
     },
     "shot": "d5-browser-walk-c13aa5c/w1280-exclusion-on.png"
    },
+   "panes_visible": true,
    "panes_same_row": true,
    "pane_source_top_delta_px": 0,
    "pane_source_top_delta_px_note_on": 0
@@ -80,19 +93,25 @@
      "top": 582,
      "left": 355,
      "width": 619,
-     "height": 636
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
     },
     "source": {
      "top": 1233,
      "left": 51,
      "width": 923,
-     "height": 636
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
     },
     "sidebar": {
      "top": 582,
      "left": 51,
      "width": 290,
-     "height": 636
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
     },
     "sync": {
      "disabled": false,
@@ -112,19 +131,25 @@
      "top": 582,
      "left": 355,
      "width": 619,
-     "height": 636
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
     },
     "source": {
      "top": 1233,
      "left": 51,
      "width": 923,
-     "height": 636
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
     },
     "sidebar": {
      "top": 582,
      "left": 51,
      "width": 290,
-     "height": 636
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
     },
     "sync": {
      "disabled": false,
@@ -138,6 +163,7 @@
     },
     "shot": "d5-browser-walk-c13aa5c/w1024-exclusion-on.png"
    },
+   "panes_visible": true,
    "panes_same_row": false,
    "pane_source_top_delta_px": 651,
    "pane_source_top_delta_px_note_on": 651
@@ -149,19 +175,25 @@
      "top": 622,
      "left": 351,
      "width": 502,
-     "height": 636
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
     },
     "source": {
      "top": 1273,
      "left": 47,
      "width": 806,
-     "height": 636
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
     },
     "sidebar": {
      "top": 622,
      "left": 47,
      "width": 290,
-     "height": 636
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
     },
     "sync": {
      "disabled": false,
@@ -181,19 +213,25 @@
      "top": 622,
      "left": 351,
      "width": 502,
-     "height": 636
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
     },
     "source": {
      "top": 1273,
      "left": 47,
      "width": 806,
-     "height": 636
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
     },
     "sidebar": {
      "top": 622,
      "left": 47,
      "width": 290,
-     "height": 636
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
     },
     "sync": {
      "disabled": false,
@@ -207,6 +245,7 @@
     },
     "shot": "d5-browser-walk-c13aa5c/w900-exclusion-on.png"
    },
+   "panes_visible": true,
    "panes_same_row": false,
    "pane_source_top_delta_px": 651,
    "pane_source_top_delta_px_note_on": 651
@@ -218,19 +257,25 @@
      "top": 1340,
      "left": 43,
      "width": 682,
-     "height": 636
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
     },
     "source": {
      "top": 1991,
      "left": 43,
      "width": 682,
-     "height": 636
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
     },
     "sidebar": {
      "top": 690,
      "left": 43,
      "width": 682,
-     "height": 636
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
     },
     "sync": {
      "disabled": false,
@@ -250,19 +295,25 @@
      "top": 1340,
      "left": 43,
      "width": 682,
-     "height": 636
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
     },
     "source": {
      "top": 1991,
      "left": 43,
      "width": 682,
-     "height": 636
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
     },
     "sidebar": {
      "top": 690,
      "left": 43,
      "width": 682,
-     "height": 636
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
     },
     "sync": {
      "disabled": false,
@@ -276,9 +327,52 @@
     },
     "shot": "d5-browser-walk-c13aa5c/w768-exclusion-on.png"
    },
+   "panes_visible": true,
    "panes_same_row": false,
    "pane_source_top_delta_px": 651,
    "pane_source_top_delta_px_note_on": 651
+  }
+ },
+ "no_chrome_control": {
+  "fixture": "aapl-2025",
+  "width": 1280,
+  "measured": {
+   "split_columns": "290px 422.594px 422.594px",
+   "pane": {
+    "top": 440,
+    "left": 362,
+    "width": 423,
+    "height": 636,
+    "visible": true,
+    "has_offset_parent": true
+   },
+   "source": {
+    "top": 440,
+    "left": 799,
+    "width": 423,
+    "height": 636,
+    "visible": true,
+    "has_offset_parent": true
+   },
+   "sidebar": {
+    "top": 440,
+    "left": 58,
+    "width": 290,
+    "height": 636,
+    "visible": true,
+    "has_offset_parent": true
+   },
+   "sync": {
+    "disabled": false,
+    "checked": true,
+    "state_label": null
+   },
+   "note": null,
+   "viewport": {
+    "w": 1280,
+    "h": 860
+   },
+   "shot": "d5-browser-walk-c13aa5c/w1280-aapl-2025-exclusion-on.png"
   }
  },
  "failures": [
@@ -290,6 +384,7 @@
   "900: there is no exclusion note in the page at all \u2014 the panes disagree unexplained",
   "768: panes stacked but the sync-scroll control is not disabled",
   "768: panes stacked but nothing on screen says the sync control is inactive",
-  "768: there is no exclusion note in the page at all \u2014 the panes disagree unexplained"
+  "768: there is no exclusion note in the page at all \u2014 the panes disagree unexplained",
+  "aapl-2025: no exclusion note element at all"
  ]
 }

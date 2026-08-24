@@ -78,6 +78,15 @@ def build_view(result, display_max=DISPLAY_MAX):
         # so the pane can SAY it is hiding text. `chars` still reports the
         # full span, so without this the two numbers silently disagree.
         "boilerplate_excluded": spans is not None,
+        # PR #46 R1: ASKED FOR is not APPLIED. `boilerplate_excluded` is True
+        # whenever the caller passed the flag — including aapl-2025, where the
+        # detector returns [] and all 23 items come back byte-identical to the
+        # un-flagged run, and aapl-2026-10q, where there are no items at all.
+        # Anything that ASSERTS the pane on screen differs (the D5 compare-pane
+        # note) must key on this instead: exactly "some item's shown text is
+        # not its verbatim slice". `boilerplate_excluded` keeps its own meaning
+        # for the consumers it already has (the S8 pane header and its pins).
+        "boilerplate_applied": any("display_text" in i for i in items),
     }
 
 
@@ -167,6 +176,16 @@ def _demo():
              {"start": h2, "end": h2 + len(head), "kind": "running_head"}]
     off, on = build_view(plain), build_view(dict(plain, boilerplate=spans))
     assert off["boilerplate_excluded"] is False and on["boilerplate_excluded"] is True
+    # PR #46 R1: applied, not merely asked for. The same envelope with an EMPTY
+    # span list is the aapl-2025 shape — the flag was honoured, nothing was
+    # found, so nothing on screen differs and nothing may claim it does.
+    none_found = build_view(dict(plain, boilerplate=[]))
+    assert none_found["boilerplate_excluded"] is True
+    assert none_found["boilerplate_applied"] is False
+    assert on["boilerplate_applied"] is True and off["boilerplate_applied"] is False
+    # zero items: no pane, nothing to differ from (aapl-2026-10q, truncated-download)
+    assert build_view({"normalized_text": "", "items": [],
+                       "boilerplate": []})["boilerplate_applied"] is False
     # `text` is VERBATIM in both modes (PR #27 R1). It is not only what the
     # pane shows: findAnchor matches it against the ORIGINAL filing, which
     # still has the chrome in it, so handing that consumer a stripped string

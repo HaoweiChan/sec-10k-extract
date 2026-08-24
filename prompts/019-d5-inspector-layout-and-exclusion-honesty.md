@@ -64,3 +64,52 @@ ADR-026 §a rather than in tension with it.
   1024 panes 651px apart, no `disabled` and no inactive label at 900/768, no
   note at any width. A walk that only ever ran green after the fix would prove
   the same nothing an unwatched eval case does.
+
+## PR #46 round 1 — two MEDIUM findings, and what they were really about
+
+Both findings hit the same place from opposite sides: **the evidence had a hole
+shaped exactly like the defect.**
+
+- **R1: `boilerplate_excluded` means ASKED FOR, not APPLIED.** `view.py` sets it
+  from `spans is not None`, so it is True the moment the caller passes the flag.
+  On aapl-2025 the detector returns `[]`: 23 items, 0 `display_text`, pane text
+  byte-identical to the un-flagged run — and the note fired anyway, asserting a
+  disagreement nobody could see. On aapl-2026-10q (`unsupported`) and
+  truncated-download (`failed`) it sat above an EMPTY pane. The note is the one
+  element on the page that makes a claim ABOUT BOTH PANES, so it is the one
+  element that may not key off "someone ticked a box".
+
+  The fix is a second field, `boilerplate_applied = any("display_text" in item)`
+  — deliberately additive. Redefining `boilerplate_excluded` would have moved
+  a contract the S8 pins already depend on, and the reviewer's own scope note
+  ruled that out. Adding a field costs one line and no ADR; redefining one costs
+  an ADR and every consumer.
+
+- **R2: the walk compared rect tops and never asked whether the panes RENDER.**
+  `@media(max-width:1100px){#source{visibility:hidden}}` — the compare pane
+  invisible at 1024, i.e. verbatim the defect D5 exists to remove — passed the
+  walk with `failures: []` and the invariant suite at 56/56. Worth recording:
+  the finding's own suggested acceptance (`offsetParent !== null`, or non-zero
+  width/height) would ALSO have passed it. An element with `visibility:hidden`
+  keeps its rect, its size and its `offsetParent`; only `display:none` clears
+  that. `checkVisibility({visibilityProperty, opacityProperty,
+  contentVisibilityAuto})` is the native API for the question actually being
+  asked, and `offsetParent` is now recorded beside it so the disagreement is
+  visible rather than assumed.
+
+- **The connecting lesson: a walk that only ever drives the happy fixture
+  cannot see the unhappy state.** Every width in the original walk drove
+  ge-1994, where chrome IS detected — so "the box was ticked" and "something
+  was hidden" never came apart anywhere in D5's own evidence, which is how R1
+  survived to review. The walk now carries a `no_chrome_control` run on
+  aapl-2025 asserting the note stays OFF screen, and it was watched red against
+  this PR's own pre-repair head before the fix landed.
+
+- **Not taken, logged instead:** the S8 pane header still prints "boilerplate
+  hidden · " and the evidence panel still says "detected chrome is hidden from
+  the text above" on that same aapl-2025 response — R1's sibling, one layer
+  over. Both strings are pinned by S8's own cases (shape 9 of
+  `ui-boilerplate-exclusion-regression` exists precisely to say a pane hiding
+  text must SAY so), so moving them re-argues S8's contract rather than D5's.
+  A wrong label is milder than a wrong assertion about both panes; the note
+  went first, the label is a debt row with the measurement in it.

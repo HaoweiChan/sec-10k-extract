@@ -1480,6 +1480,81 @@ def check_exclusion_note(case):
     return bad, {"note_text": body}
 
 
+def check_exclusion_note_trigger(case):
+    """D5 PR #46 R1. The note asserts a DISAGREEMENT between the two panes.
+    That assertion is true only when exclusion actually removed something
+    from the extracted pane — and `boilerplate_excluded` does not say that.
+    `view.build_view` sets it from `spans is not None`, i.e. from the flag
+    having been ASKED FOR, so it is True on aapl-2025 (detector returns [],
+    23 items, 0 with `display_text`, pane text byte-identical to the
+    un-flagged run) and True on aapl-2026-10q (`unsupported`, 0 items), where
+    the note would sit above an empty pane claiming a difference nobody can
+    see.
+
+    So the trigger is a SECOND field, `boilerplate_applied` — asked-for vs
+    applied — and this check is the one that runs the real pipeline rather
+    than reading text. Per fixture, with the flag ON:
+      * the field exists;
+      * it equals `any("display_text" in item)`, which is exactly "the pane
+        on screen differs from the verbatim slice", the thing the note
+        claims;
+      * it equals the hand-labeled expectation in the case, so a fixture
+        that stops exercising its side of the distinction says so rather
+        than quietly re-labelling itself;
+      * with the flag OFF it is False.
+    Globally it refuses to pass vacuously: at least one fixture must come out
+    True, at least one False, and at least one must be the R1 shape itself
+    (`boilerplate_excluded` True while `boilerplate_applied` is False).
+
+    `boilerplate_excluded` keeps its meaning for every existing consumer —
+    the S8 pane header and `ui-boilerplate-exclusion`'s pins read it and are
+    untouched. This adds a field; it does not redefine one.
+    """
+    inp = case.get("input", {})
+    field = inp.get("trigger_field", "boilerplate_applied")
+    live = _live((ROOT / inp.get("file", UI_STYLESHEET)).read_text(), "js")
+    bad, seen, r1_shape = [], {}, 0
+    for rel, want in inp.get("fixtures", {}).items():
+        on = build_view(extract_items(str(ROOT / rel), exclude_boilerplate=True))
+        off = build_view(extract_items(str(ROOT / rel)))
+        if field not in on:
+            bad.append(f"{rel}: the view payload carries no {field!r} — the "
+                       f"note has nothing to key on but `boilerplate_excluded`, "
+                       f"which is True whenever the flag was merely asked for")
+            continue
+        got = on[field]
+        applied = any("display_text" in i for i in on.get("items", []))
+        seen[rel] = got
+        if got is not applied:
+            bad.append(f"{rel}: {field}={got!r} but {sum(1 for i in on['items'] if 'display_text' in i)}"
+                       f" of {len(on['items'])} items carry display_text — the "
+                       f"field does not mean 'the pane on screen differs'")
+        if got is not want:
+            bad.append(f"{rel}: {field}={got!r}, case expects {want!r}")
+        if off.get(field) is not False:
+            bad.append(f"{rel}: {field}={off.get(field)!r} on an UN-flagged run "
+                       f"— nothing was excluded, so nothing was applied")
+        if on.get("boilerplate_excluded") is True and got is False:
+            r1_shape += 1
+    if inp.get("fixtures"):
+        if not any(seen.values()):
+            bad.append("no fixture came out True — the note could never fire "
+                       "and this case would pass vacuously")
+        if all(seen.values()) and seen:
+            bad.append("no fixture came out False — the R1 distinction between "
+                       "'exclusion asked for' and 'exclusion applied' is not "
+                       "exercised by any fixture in this case")
+        if not r1_shape:
+            bad.append("no fixture reproduces the R1 shape (boilerplate_excluded "
+                       "True while nothing was applied) — the case has stopped "
+                       "covering the defect it exists for")
+    for expr in inp.get("wire", []):
+        if _squash(expr) not in _squash(live):
+            bad.append(f"missing pinned expression (the note keys off {field}, "
+                       f"not off the asked-for flag): {expr}")
+    return bad, {"applied_by_fixture": seen, "r1_shape_fixtures": r1_shape}
+
+
 CHECKS = {
     "adr_headers": lambda case: check_adr_headers(),
     "adr_index": lambda case: check_index(),
@@ -1502,6 +1577,7 @@ CHECKS = {
     "fixture_discovery": check_fixture_discovery,
     "split_breakpoint": check_split_breakpoint,
     "exclusion_note": check_exclusion_note,
+    "exclusion_note_trigger": check_exclusion_note_trigger,
 }
 
 

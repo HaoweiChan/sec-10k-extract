@@ -1,0 +1,147 @@
+{
+ "base": "http://localhost:8003",
+ "fixture": "ge-1994",
+ "side_by_side_floor": 1024,
+ "stack_breakpoint": 1000,
+ "widths": {
+  "1280": {
+   "exclusion_off": {
+    "split_columns": "290px 422.594px 422.594px",
+    "pane": {
+     "top": 483,
+     "left": 362,
+     "width": 423,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "source": {
+     "top": 483,
+     "left": 799,
+     "width": 423,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "sidebar": {
+     "top": 483,
+     "left": 58,
+     "width": 290,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "sync": {
+     "disabled": false,
+     "checked": true,
+     "state_label": ""
+    },
+    "note": {
+     "hidden": true,
+     "rendered": false,
+     "text": "Boilerplate exclusion applies to the derived normalized_text only. The compare pane serves the raw filing bytes, so it still shows every page break and running head the extracted pane drops \u2014 the two panes will not agree while this is on. There is no raw-to-normalized offset map in this pipeline (ADR-026 \u00a7a), so this is a known limit of the compare view, not a fault in either pane."
+    },
+    "viewport": {
+     "w": 1280,
+     "h": 860
+    },
+    "shot": "d5-browser-walk-pr46-prerepair/w1280-exclusion-off.png"
+   },
+   "exclusion_on": {
+    "split_columns": "290px 422.594px 422.594px",
+    "pane": {
+     "top": 573,
+     "left": 362,
+     "width": 423,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "source": {
+     "top": 573,
+     "left": 799,
+     "width": 423,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "sidebar": {
+     "top": 573,
+     "left": 58,
+     "width": 290,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "sync": {
+     "disabled": false,
+     "checked": true,
+     "state_label": ""
+    },
+    "note": {
+     "hidden": false,
+     "rendered": true,
+     "text": "Boilerplate exclusion applies to the derived normalized_text only. The compare pane serves the raw filing bytes, so it still shows every page break and running head the extracted pane drops \u2014 the two panes will not agree while this is on. There is no raw-to-normalized offset map in this pipeline (ADR-026 \u00a7a), so this is a known limit of the compare view, not a fault in either pane."
+    },
+    "viewport": {
+     "w": 1280,
+     "h": 860
+    },
+    "shot": "d5-browser-walk-pr46-prerepair/w1280-exclusion-on.png"
+   },
+   "panes_visible": true,
+   "panes_same_row": true,
+   "pane_source_top_delta_px": 0,
+   "pane_source_top_delta_px_note_on": 0
+  }
+ },
+ "no_chrome_control": {
+  "fixture": "aapl-2025",
+  "width": 1280,
+  "measured": {
+   "split_columns": "290px 422.594px 422.594px",
+   "pane": {
+    "top": 530,
+    "left": 362,
+    "width": 423,
+    "height": 636,
+    "visible": true,
+    "has_offset_parent": true
+   },
+   "source": {
+    "top": 530,
+    "left": 799,
+    "width": 423,
+    "height": 636,
+    "visible": true,
+    "has_offset_parent": true
+   },
+   "sidebar": {
+    "top": 530,
+    "left": 58,
+    "width": 290,
+    "height": 636,
+    "visible": true,
+    "has_offset_parent": true
+   },
+   "sync": {
+    "disabled": false,
+    "checked": true,
+    "state_label": ""
+   },
+   "note": {
+    "hidden": false,
+    "rendered": true,
+    "text": "Boilerplate exclusion applies to the derived normalized_text only. The compare pane serves the raw filing bytes, so it still shows every page break and running head the extracted pane drops \u2014 the two panes will not agree while this is on. There is no raw-to-normalized offset map in this pipeline (ADR-026 \u00a7a), so this is a known limit of the compare view, not a fault in either pane."
+   },
+   "viewport": {
+    "w": 1280,
+    "h": 860
+   },
+   "shot": "d5-browser-walk-pr46-prerepair/w1280-aapl-2025-exclusion-on.png"
+  }
+ },
+ "failures": [
+  "aapl-2025 at 1280: exclusion was asked for and honoured, the detector found nothing, and the note is on screen anyway claiming the two panes will not agree (PR #46 R1)"
+ ]
+}

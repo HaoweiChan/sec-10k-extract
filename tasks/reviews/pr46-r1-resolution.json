@@ -1,0 +1,47 @@
+{
+  "pr": 46,
+  "task": "D5",
+  "round": 1,
+  "date": "2026-08-24",
+  "implementer": "task/D5 round-1 repair",
+  "base": "4d3f896",
+  "gate_after_repair": {
+    "invariant": "56/56 = 1.000",
+    "fast": "104/104 = 1.000",
+    "baseline": "1.000, not moved",
+    "table_fidelity": "cells 400/400, rows 31/31",
+    "unit_self_checks": "python3 -m src.sec10k.web.view green, with two new asserts covering the R1 shape",
+    "browser_walk": "tasks/reviews/d5-browser-walk.json 0 failures (1280/1024/900/768 + the aapl-2025 no-chrome control); d5-browser-walk-c13aa5c.json 10 against a pristine c13aa5c; d5-browser-walk-pr46-prerepair.json 1 against this PR's own pre-repair head"
+  },
+  "routing_note": "R3, R4 and R5 were routed to debt by the orchestrator before this repair began and are untouched here. Their rows carry Origin: PR #46 R3/R4/R5 in tasks/TODO.md.",
+  "resolutions": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "reproduced": "Yes, exactly as reported. `python3 -c` over extract_items + build_view with exclude_boilerplate=True: aapl-2025 -> boilerplate_excluded True, 0 spans, 23 items, 0 with display_text; aapl-2026-10q -> unsupported, 0 items, boilerplate_excluded True; truncated-download -> failed, 0 items, boilerplate_excluded True. ge-1994 (6 of 14 stripped) and msft-2013 (10 of 20) are the other side. The reviewer's curl repro against a live server on this branch returned `True 0` before the fix.",
+      "covered_by": "evals/adversarial/ui-exclusion-note-trigger.json (invariant + fast), new check `exclusion_note_trigger`. NOT a static read: it runs extract_items + build_view on five committed filings and asserts, per fixture, that the trigger field exists, equals `any(\"display_text\" in item)`, equals the hand-labeled expectation, and is False on the un-flagged run — plus three global guards (some fixture True, some False, at least one reproducing the R1 shape) so it cannot pass vacuously. The browser walk gained a matching control run (aapl-2025, exclusion on, at 1280) asserting the note is NOT rendered.",
+      "red_first": "8 failures at 4d3f896 before the fix: `the view payload carries no 'boilerplate_applied'` on all five fixtures; `no fixture came out True — the note could never fire and this case would pass vacuously`; `no fixture reproduces the R1 shape (boilerplate_excluded True while nothing was applied)`; `missing pinned expression (the note keys off boilerplate_applied, not off the asked-for flag)`. Separately, the browser walk's new control run against a server on the pre-repair head 4d3f896 exits 1 with `aapl-2025 at 1280: exclusion was asked for and honoured, the detector found nothing, and the note is on screen anyway claiming the two panes will not agree` — recorded as tasks/reviews/d5-browser-walk-pr46-prerepair.json. The runner's own red report for that run is committed as evals/report/20260824-003709-fast.json (fast 101/103 = 0.981 at 10082323-dirty, ui-exclusion-note-trigger and its sibling red).",
+      "fix": "A SECOND field, not a redefinition. `view.build_view` now also emits `boilerplate_applied = any(\"display_text\" in i for i in items)` — exactly 'some item's shown text is not its verbatim slice', which is the thing the note asserts. `boilerplate_excluded` keeps its meaning for every consumer it already had (the S8 pane header and the pins in ui-boilerplate-exclusion / boilerplate_plumbing are untouched), so no existing contract moved and no ADR is needed. index.html's render() now does `$(\"#bp-note\").hidden = !v.boilerplate_applied;` and the wire pins in ui-exclusion-note.json and ui-exclusion-note-regression.json were repointed at that expression; the regression fixture's exact count stays 6. view.py's `_demo` self-check gained the aapl-2025 shape (flag honoured, empty span list -> excluded True, applied False) and the zero-item shape.",
+      "verified_after": "aapl-2025 with exclude_boilerplate:true now returns `excluded True applied False`, and the walk's control run records `note rendered: False`. ge-1994 still shows the note at all four widths."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "reproduced": "Yes. With `@media(max-width:1100px){#source{visibility:hidden}}` inserted after the 1180px block, the UNCHANGED walk exited 0 with `\"failures\": []` and `1024 same_row: True`, while `python3 -m evals.run --suite invariant` read 56/56 with ui-split-breakpoint PASS.",
+      "covered_by": "tasks/reviews/d5_browser_walk.py — `measure()` now records `visible` and `has_offset_parent` for #sidebar/#pane/#source, and main() asserts #pane and #source are visible at every width in BOTH exclusion states. The committed d5-browser-walk.json carries `panes_visible` per width and `visible` inside every pane box.",
+      "red_first": "With the reviewer's mutation still in place, the FIXED walk exits 1 with 6 failures: `1024: #source is not visible (exclusion off) — box 349x636 at top 582, offsetParent=True …` and the same at 1024-on, 900-off/on, 768-off/on.",
+      "fix": "`Element.checkVisibility({visibilityProperty, opacityProperty, contentVisibilityAuto})`, not `offsetParent`. This is a deliberate departure from the finding's own suggested acceptance: `offsetParent !== null` and non-zero width/height BOTH stay true under `visibility:hidden`, so neither would have caught the reviewer's own mutation — the failure lines above record `offsetParent=True` on every one of the six. `offsetParent` is still recorded beside `visible` so a later reader can see where the two disagree. Both mutations were then checked: `visibility:hidden` -> 6 failures; `display:none!important` -> 7 (the extra one is the row-geometry check, since a display:none pane has no rect). Note for the record: a plain `display:none` without `!important` is INERT against this stylesheet — the later `#source{…display:flex…}` rule has equal specificity and wins — so the walk correctly reported no defect for it, and the mutation needed `!important` to be a real mutation.",
+      "verified_after": "Mutation removed, walk re-run: 0 failures, `panes_visible: true` at all four widths. The c13aa5c baseline was re-generated with the strengthened instrument and now reports 10 failures (was 9; the extra one is R1's new control)."
+    }
+  ],
+  "new_debt": [
+    {
+      "origin": "D5 (PR #46 R1's untaken sibling)",
+      "row": "The S8 pane header and evidence panel still say \"boilerplate hidden\" when nothing was hidden",
+      "why_not_here": "Measured live at 1280 on aapl-2025 with the box ticked: the header reads `boilerplate hidden · Part I · extracted · conf 0.95 · via heading_strict` over text byte-identical to the un-flagged run, and the `.pane-meta` <dd> says `detected chrome is hidden from the text above`. Same asked-for-versus-applied confusion, one layer over — but both strings are pinned by S8's own cases (boilerplate_plumbing's WIRE_UI allow-list and ui-boilerplate-exclusion-regression shape 9), so moving them means re-arguing what shape 9 asserts, which is S8's contract. The reviewer scoped R1 to the note's trigger; this stays out."
+    }
+  ],
+  "rejected": []
+}
