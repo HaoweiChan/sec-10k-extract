@@ -48,37 +48,50 @@
   "merge_with_main_2": {
     "date": "2026-08-24",
     "merged": "d2f0862 (PR #44 S10 image-reference annotation + PR #48 S10-close housekeeping)",
+    "merge_commit": "db4a369, written by the orchestrator as a real two-parent commit reusing this implementer's resolution of the two ledger files verbatim. Gate on it: invariant 59/59, fast 122/122, table fidelity 427/427 cells / 34/34 rows, structure 61/61 / 61/61, view self-check green (195eec5).",
     "why": "main moved a second time; task/D5 went CONFLICTING again and a conflicting PR runs no CI.",
     "conflicts": {
       "evals/report/history.jsonl": "Append-only, interleaved by `ts`. Common base 515 lines, ours +53, theirs +55 -> 623. One line was dropped: {\"ts\": \"20260824-002657\", ... \"sha\": \"0f194cf\" ...} appeared BYTE-IDENTICALLY on both sides, i.e. one run recorded twice by the merge, not two runs. Deduplicated to exactly one occurrence; every other line kept verbatim, nothing invented, zero remaining duplicate timestamps, all 623 lines parse.",
-      "tasks/TODO.md": "Two regions. (a) The queue table: main emptied it (S10's row moved to DONE.md, line 46); our side still carried S10's stale row plus D5's. Resolved by dropping the S10 row — its destination on main is verified — and keeping D5's, which is the only open task. (b) The debt table: main appended 6 rows (Origin: S10 / PR #44), we had 12 in flight. Theirs first (they reached main first, continuing from the PR #45 rows already above), ours after. All 12 survive: 2x Origin D5, 6x PR #46 R3/R4/R5/R6/R8/R9, 2x D5 merge, 2x PR #46 R11/R13. `ledger_table_shape` run last: 0 failures."
+      "tasks/TODO.md": "Two regions. (a) The queue table: main emptied it (S10's row moved to DONE.md line 46); our side still carried S10's stale row plus D5's. Resolved by dropping the S10 row — its destination on main was verified first — and keeping D5's, the only open task. (b) The debt table: main appended 6 rows (Origin: S10 / PR #44), we had 12 in flight. Theirs first (they reached main first, continuing from the PR #45 rows already above), ours after. All 12 survive: 2x Origin D5, 6x PR #46 R3/R4/R5/R6/R8/R9, 2x D5 merge, 2x PR #46 R11/R13. `ledger_table_shape` run last: 0 failures."
     },
     "verification_1_normalize_arity": {
-      "asked": "view.py:256 unpacked a 3-tuple; main changed normalize() to return four values.",
-      "result": "Git applied main's edit — it is the ONLY change to view.py in this merge: `ntext, tabs, blks, _ = normalize(html, \"html\", blocks=True)`. Verified, not assumed: `python3 -m src.sec10k.web.view` exits 0 ([view self-check] ok), and a 3-against-4 unpack raises immediately. Swept every `= normalize(` call site in the repo (9 of them) — all are 4-arity or star-unpacked; none stale."
+      "asked": "view.py's `_demo` unpacked a 3-tuple; main changed `normalize()` to return four values.",
+      "result": "Git applied main's edit and it was the ONLY change to view.py in the merge: `ntext, tabs, blks, _ = normalize(html, \"html\", blocks=True)`. Verified rather than assumed: `python3 -m src.sec10k.web.view` exits 0 ([view self-check] ok), and a 3-against-4 unpack raises immediately. Every `= normalize(` call site in the repo was swept (9 of them) — all 4-arity or star-unpacked, none stale."
     },
     "verification_2_shell_layout": {
-      "asked": "S10 changed header/main/footer max-width 1800->1400 and h1 22px->40px with more padding. Confirm or refute with the instrument that D5's widths are unaffected.",
-      "method": "Regenerated tasks/reviews/d5-browser-walk.json against a local server on the merged tree and diffed EVERY verdict-bearing field against the pre-merge record.",
-      "confirmed": "The orchestrator's reading holds. Grid tracks are IDENTICAL at all four widths — `290px 422.594px 422.594px` at 1280, `196px 349.266px 349.281px` at 1024, `196px 596px` at 900, `681.906px` at 768 — so the 1400px cap never binds where D5 measures (94vw < 1400 at 1280 and below). Unchanged: panes_visible true everywhere; panes_same_row true/true/false/false; sync disabled false/false/true/true with the same inactive label; note not rendered with exclusion off and rendered with it on at every width; walk failures [] -> []; no_chrome_control (aapl-2025 @ 1280) note rendered false -> false.",
-      "what_moved": "Coordinates only. Every pane top +58px exactly — 1280 560->618, 1024 678->736, 900 718->776, 768 1436->1494 — a uniform shift consistent with taller shell chrome above `main` (h1 22->40px, header padding 16/16 -> 22/26, main padding 16 -> 24), not with any layout change. One sub-pixel: the 768 pane/source top delta reads 650 instead of 651 (the note-on figure was already 650). It crosses no threshold — 768 is a stacking width and ROW_TOLERANCE is 4px — and is reported rather than smoothed over.",
-      "verdict": "Nothing in D5's behaviour changed, only its coordinates. No escalation needed."
+      "asked": "S10 grew h1 22px -> 40px, added header/main padding, and narrowed header/main/footer max-width from min(1800px,94vw) to min(1400px,94vw). Confirm or refute with the INSTRUMENT that D5's four widths are unaffected.",
+      "method": "Served the merged tree locally and re-ran tasks/reviews/d5_browser_walk.py at 1280/1024/900/768, both exclusion states, including the aapl-2025 no_chrome_control. Walk exit code 0, failures []. Every field diffed against the previously committed artifact. The walk script itself was NOT modified.",
+      "unchanged": "Grid tracks identical at all four widths — 1280 `290px 422.594px 422.594px`, 1024 `196px 349.266px 349.281px`, 900 `196px 596px`, 768 `681.906px`. panes_visible true/true/true/true. panes_same_row true/true/false/false. sync disabled false/false/true/true with the same ' — inactive: panes stacked' label. Note not rendered with exclusion off and rendered with it on at every width. no_chrome_control (aapl-2025 @ 1280) note rendered false -> false.",
+      "coordinates_moved": "Every pane and source top +58px (768 source +57): 1280 560 -> 618, 1024 678 -> 736, 900 718 -> 776, 768 1436 -> 1494. A uniform shift consistent with taller shell chrome above `main`, not with any layout change.",
+      "one_of_the_five_moved": {
+        "field": "pane/source top delta at 768",
+        "before": 651,
+        "after": 650,
+        "reported_because": "The orchestrator asked for a plain statement if any of the five invariant properties moved. This one did, as printed. It was NOT fixed.",
+        "characterisation": "Measured with a separate read-only probe: the UNROUNDED gap between #pane and #source is 650.390625px at BOTH 900 and 768 — the same constant, and the same value the pre-S10 tree had, because nothing below `main`'s top edge changed. The walk publishes round(source.top) - round(pane.top), and the +58px shell shift moved the fractional parts across a rounding boundary at 768 only: 900 rounds 776.296875 -> 776 and 1426.6875 -> 1427 (651), while 768 rounds 1494.015625 -> 1494 and 2144.40625 -> 2144 (650). So the reported number moved; the geometry did not. It crosses no threshold either — 768 is a stacking width and ROW_TOLERANCE is 4px — and the note-on figure at 768 was already 650 before this merge.",
+        "not_logged_as_debt": "Deliberately. The instruction for this round was to report and stop, not to fix or absorb; whether 'the walk publishes a delta of two rounded numbers' deserves a debt row is the orchestrator's call."
+      },
+      "verdict": "No D5 behaviour changed. Four of the five invariant properties are byte-identical; the fifth moved by 1px as an artifact of rounding, with the raw geometry proven unchanged."
     },
-    "gate_after_merge": {
+    "verification_3_max_width_cap": {
+      "asked": "main's max-width is now min(1400px,94vw). Confirm the 1400 cap never binds at the four measured widths rather than assuming it.",
+      "measured": "Resolved `max-width` and border-box width of `main`, per viewport: 1280 -> 1203.2px declared / 1203.1875px actual (94vw = 1203.2); 1024 -> 962.56 / 962.546875 (94vw = 962.56); 900 -> 846 / 846 (94vw = 846); 768 -> 721.92 / 721.90625 (94vw = 721.92).",
+      "result": "94vw wins at every one of the four; the 1400px term is never selected and never binds. `cap_1400_binds` false at all four. D5's tracks are therefore measuring the same thing they measured before S10, which the identical grid-track strings independently confirm."
+    },
+    "gate": {
       "invariant": "59/59 = 1.000",
       "fast": "122/122 = 1.000",
       "table_fidelity": "cells 427/427, rows 34/34 (S10's numbers, unaffected)",
       "structure_fidelity": "blocks 61/61, bounds 61/61",
       "view_self_check": "green",
-      "extract_digests": "byte-identical vs a pristine d2f0862 on 42/42 fixtures"
+      "extract_digests": "byte-identical vs a pristine d2f0862 on 42/42 fixtures",
+      "browser_walk": "exit 0, failures []"
     },
-    "new_debt": [
-      "S5's closed row still says the inspector shell is \"1800px centred\"; S10 made it 1400 (Origin: D5 merge 2). Flagged, not fixed — it is S10's contract to restate. No eval case went stale: check_layout_centering pins that a max-width is DECLARED, never its value."
-    ],
     "not_touched": [
-      "S10's code, in any form; the shell-width change itself.",
+      "tasks/reviews/d5_browser_walk.py — the artifact and its nine screenshots were regenerated; the instrument was not edited.",
+      "S10's and S9's code, and the shell-width change itself.",
       "R8, R11, R13 — still open debt rows.",
-      "The browser walk gained no Markdown dimension (Origin: D5 merge debt row stands)."
+      "No Markdown dimension added to the walk (Origin: D5 merge debt row stands)."
     ]
   }
 }
