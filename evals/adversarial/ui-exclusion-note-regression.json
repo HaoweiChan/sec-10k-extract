@@ -18,7 +18,8 @@
       "derived normalized_text",
       "compare pane serves the raw filing bytes",
       "the two panes will not agree",
-      "no raw-to-normalized offset map in this pipeline"
+      "no raw-to-normalized offset map in this pipeline",
+      "That is what exclusion accounts for, and only that"
     ],
     "must_not_say": [
       "panes agree",
@@ -28,12 +29,12 @@
     ]
   },
   "expect": {
-    "min_failures": 6,
-    "max_failures": 6
+    "min_failures": 7,
+    "max_failures": 7
   },
   "triage": {
     "class": "no-mechanical-check",
-    "note": "Six ways the D5 half-2 note regresses, one failure each, at an EXACT count. The note element still EXISTS in this fixture and still sits above the split — that is the point: a present note can be exactly as wrong as an absent one, and worse, because it looks like the limit has been stated. The six: (1) it no longer ships `hidden`, so it stands on screen with exclusion OFF, where the panes do agree and the note is simply false; (2) its visibility is hooked to the CHECKBOX's current state (`!excludeBp()`) rather than to the response's own `boilerplate_applied`, which is the S8 read-at-request-time rule broken in the note instead of in the header; (3) it no longer says the panes will not agree; (4) it no longer says the map is absent; (5) it says 'the two panes match'; (6) it says 'once the offset map exists'. (5) and (6) are the failure the D5 task names in so many words — a note that implies the map exists, or that the panes agree, is a failure of the task rather than a shortcut — so they are pinned as forbidden wording, not merely as missing wording. Two halves of the correct text ('derived normalized_text', 'compare pane serves the raw filing bytes') are left INTACT in the fixture, so a check that blanket-failed the wording would overshoot six.",
+    "note": "Seven ways the D5 half-2 note regresses, one failure each, at an EXACT count. The note element still EXISTS in this fixture and still sits above the split — that is the point: a present note can be exactly as wrong as an absent one, and worse, because it looks like the limit has been stated. The seven: (1) it no longer ships `hidden`, so it stands on screen with exclusion OFF, where the panes do agree and the note is simply false; (2) its visibility is hooked to the CHECKBOX's current state (`!excludeBp()`) rather than to the response's own `boilerplate_applied`, which is the S8 read-at-request-time rule broken in the note instead of in the header; (3) it no longer says the panes will not agree; (4) it no longer says the map is absent; (5) it says 'the two panes match'; (6) it says 'once the offset map exists'; (7) it no longer scopes the disagreement to exclusion — added at the S9 merge, when the extracted pane gained a SECOND reason to differ from the compare pane (ADR-032's Markdown view), so a note blaming exclusion for all of it is R1's over-claim in a new place. (5) and (6) are the failure the D5 task names in so many words — a note that implies the map exists, or that the panes agree, is a failure of the task rather than a shortcut — so they are pinned as forbidden wording, not merely as missing wording. Two halves of the correct text ('derived normalized_text', 'compare pane serves the raw filing bytes') are left INTACT in the fixture, so a check that blanket-failed the wording would overshoot six. S9 MERGE: `must_say` gained \"That is what exclusion accounts for, and only that\" and the exact count moved 6 -> 7.",
     "ceiling": "Same static-read ceiling as ui-exclusion-note: text in, text out. Nothing here renders the note or ticks the box. Whether it actually appears under exclusion and stays away without it is browser evidence, in tasks/reviews/d5-browser-walk.json.",
     "red_first": "Watched red against src/repo_hygiene/eval_adapter.py's check_exclusion_note (6 failures on the fixture) on 2026-08-23, alongside ui-exclusion-note.json's own red-first run at c13aa5c."
   },

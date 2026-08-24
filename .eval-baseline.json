@@ -1,5 +1,7 @@
 {
   "fast": 1.0,
   "table_cells_fidelity": 1.0,
-  "table_rows_fidelity": 1.0
+  "table_rows_fidelity": 1.0,
+  "structure_blocks_fidelity": 1.0,
+  "structure_bounds_fidelity": 1.0
 }

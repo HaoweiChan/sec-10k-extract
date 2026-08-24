@@ -1,0 +1,22 @@
+{
+ "pr": 45,
+ "round": 3,
+ "date": "2026-08-24",
+ "result": "APPROVED",
+ "scope": "repair diff 30e46c1..50dfd2b + standing R7",
+ "gate": "invariant 52/52; fast 110/110; table fidelity 400/400 · 31/31; structure fidelity 61/61 · 61/61 (pristine clone of 50dfd2b); baseline, view.py, index.html absent from the repair diff",
+ "standing": {
+  "R7": "resolved — empty-render mutation green at 30e46c1, red at 50dfd2b with the two claimed 'stripped markdown missing' lines (fast 109/110); snippets verified once-each, chrome-disjoint, in-window; adapter hunk failure-text only; M3/M8 re-runs identical to ADR-031 §g; ledger_table_shape []"
+ },
+ "findings": [
+  {
+   "id": "R8",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "The preservation pins are blind to truncation: a renderer that returns only the first half of each stripped window passes the whole case, because both snippets sit very early in their windows (47375 in a ~1.36M-char document; 201373 is 75 chars into item 15's ~1.01M-char span).",
+   "evidence": "evals/adversarial/blocks-omit-chrome.json contains-offsets vs window extents; measured on a temp copy of 50dfd2b with `return _r[:len(_r)//2] if omit else _r` appended to src/sec10k/markdown.py::to_markdown — run_case(blocks-omit-chrome) -> passed: True.",
+   "repro": "in a temp copy, replace to_markdown's return with the half-truncating variant, then run the blocks-omit-chrome case via src.sec10k.eval_adapter.run_case",
+   "acceptance": "optional hardening only (per the round-3 scope this is a note, not a repair): a third preserved snippet from late in the document window (e.g. deep in item 15) would make the truncating renderer red"
+  }
+ ]
+}

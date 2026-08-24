@@ -3,11 +3,13 @@
 Case shape:
     "input":  {"path": "evals/fixtures/<name>/<file>",
                "exclude_boilerplate": false,   # optional, ADR-026
-               "tables": false}                # optional, ADR-029
+               "tables": false,                # optional, ADR-029
+               "blocks": false}                # optional, ADR-032 (implies tables)
     "expect": {"checks": [{"type": ..., ...}, ...]}
 """
 from pathlib import Path
 
+from src.sec10k.markdown import blocks_in, to_markdown as md_to_markdown
 from src.sec10k.tables import grid, to_markdown
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -182,8 +184,9 @@ def eval_check(result, chk, path=None):
         # normative enums are asserted here; no value is fabricated or compared.
         top = {"normalized_text", "doc_status", "warnings", "meta", "trace",
                "timings", "cost", "items"}
-        # the two optional keys: ADR-026's `boilerplate`, ADR-029's `tables`
-        extra = set(result) - top - {"boilerplate", "tables"}
+        # the three optional keys: ADR-026's `boilerplate`, ADR-029's
+        # `tables`, ADR-032's `blocks`
+        extra = set(result) - top - {"boilerplate", "tables", "blocks"}
         if not top <= set(result) or extra:
             return f"envelope keys: missing {sorted(top - set(result))}, undeclared {sorted(extra)}"
         if "tables" in result:
@@ -194,6 +197,11 @@ def eval_check(result, chk, path=None):
             why = _tables_shape(result)
             if why:
                 return f"tables not in contract shape: {why}"
+        if "blocks" in result:
+            # ADR-032 contract shape, same reasoning; `blocks` implies `tables`
+            why = _blocks_shape(result)
+            if why:
+                return f"blocks not in contract shape: {why}"
         ds = result["doc_status"]
         if ds not in DOC_STATUSES:
             return f"doc_status {ds!r} not in contract enum"
@@ -434,9 +442,191 @@ def eval_check(result, chk, path=None):
             return "tables OFF emitted a tables key; default must change nothing"
         if not isinstance(on.get("tables"), list):
             return "tables ON emitted no tables list"
+    elif t == "blocks":
+        # ADR-032 §c. A hand-labeled block sequence over the window the labels
+        # span: `blocks` is what the envelope's annotation must hold there —
+        # kind, start, end, and level/ordered/strong/item exactly as labeled
+        # (a table block's record index is not labeled; its record is checked
+        # to sit on the block). `head`/`tail` on a label are the label's own
+        # anchors into normalized_text, so a reviewer can re-derive the
+        # offsets and a mistyped label is reported as such, not as a miss.
+        # The same comparison feeds the per-run structure-fidelity metric.
+        f = structure_fidelity(result, chk)
+        if f["why"]:
+            return f["why"]
+    elif t == "markdown":
+        # the derived view itself (ADR-029's lesson restated: a check that
+        # reads only the record cannot see a no-op renderer). `value` is the
+        # exact Markdown `markdown.to_markdown` must produce for the window —
+        # an item's span (`item`), explicit `start`/`end` offsets (the same
+        # offsets a `blocks` label in the case anchors with head/tail),
+        # `anchor`..`end_anchor` (first occurrences) in normalized_text, or
+        # the whole document when none is given. `omit_chrome: true` renders
+        # with the envelope's ADR-026 runs omitted (PR #45 R1: the S8
+        # checkbox must keep its meaning in Markdown mode, on real chrome);
+        # `contains` / `not_contains` pin substrings of the rendering.
+        if "blocks" not in result:
+            return "no blocks in result (was blocks set?)"
+        text = result["normalized_text"]
+        if "item" in chk:
+            if entry is None or not has_span:
+                return f"item {chk['item']} has no span to render"
+            s, e = entry["start"], entry["end"]
+        elif "start" in chk:
+            s, e = chk["start"], chk["end"]
+        elif "anchor" in chk:
+            s = text.find(chk["anchor"])
+            if s < 0:
+                return f"anchor {chk['anchor']!r} not in normalized_text"
+            e = text.find(chk["end_anchor"], s)
+            if e < 0:
+                return f"end_anchor {chk['end_anchor']!r} not after the anchor"
+            e += len(chk["end_anchor"])
+        else:
+            s, e = 0, len(text)
+        omit = ()
+        if chk.get("omit_chrome"):
+            if "boilerplate" not in result:
+                return "omit_chrome asks for chrome, but no boilerplate in result (was exclude_boilerplate set?)"
+            omit = result["boilerplate"]
+            if len(omit) < chk.get("min_chrome_runs", 0):
+                return f"{len(omit)} chrome runs < min_chrome_runs {chk['min_chrome_runs']}"
+        got = md_to_markdown(text, result["blocks"], result.get("tables") or [], s, e, omit=omit)
+        if "value" in chk and got != chk["value"]:
+            return f"markdown differs; got:\n{got}"
+        for v in chk.get("contains", []):
+            if v not in got:
+                return f"{'stripped ' if omit else ''}markdown missing {v!r}"
+        for v in chk.get("not_contains", []):
+            if v in got:
+                return (f"{'stripped ' if omit else ''}markdown still contains {v!r} "
+                        f"({got.count(v)}x)")
+    elif t == "blocks_sane":
+        # ADR-032 §d: in bounds, document order, non-overlapping, every slice
+        # tight, every kind in the enum, a table block sitting exactly on its
+        # record, a heading carrying a level, and — the view loses nothing —
+        # every non-space character of normalized_text inside some block.
+        if not isinstance(result.get("blocks"), list):
+            return (f"blocks is {type(result['blocks']).__name__}, not a list" if "blocks" in result
+                    else "no blocks in result (was blocks set?)")
+        text, prev, tabs = result["normalized_text"], 0, result.get("tables") or []
+        covered = bytearray(len(text))
+        for n, b in enumerate(result["blocks"]):
+            if not (0 <= b["start"] < b["end"] <= len(text)):
+                return f"block {n} {b} outside normalized_text or empty"
+            if b["start"] < prev:
+                return f"block {n} {b} overlaps or is out of document order"
+            prev = b["end"]
+            if text[b["start"]:b["end"]] != text[b["start"]:b["end"]].strip():
+                return f"block {n} slice is not tight: {text[b['start']:b['end']][:40]!r}"
+            if b["kind"] not in BLOCK_KINDS:
+                return f"block {n} kind {b['kind']!r} not in {sorted(BLOCK_KINDS)}"
+            if b["kind"] == "table" and (b.get("table") is None or not 0 <= b["table"] < len(tabs)
+                                         or (tabs[b["table"]]["start"], tabs[b["table"]]["end"])
+                                         != (b["start"], b["end"])):
+                return f"block {n} table block does not sit on its record: {b}"
+            if b["kind"] == "heading" and not isinstance(b.get("level"), int):
+                return f"block {n} heading without a level: {b}"
+            covered[b["start"]:b["end"]] = b"\x01" * (b["end"] - b["start"])
+        lost = next((i for i, ch in enumerate(text) if not covered[i] and not ch.isspace()), None)
+        if lost is not None:
+            return f"visible text outside every block at {lost}: {text[lost:lost + 40]!r}"
+        if "min" in chk and len(result["blocks"]) < chk["min"]:
+            return f"{len(result['blocks'])} blocks < min {chk['min']}"
+        if "max" in chk and len(result["blocks"]) > chk["max"]:
+            return f"{len(result['blocks'])} blocks > max {chk['max']}"
+    elif t == "offsets_invariant_under_blocks":
+        # ADR-032's equality, as ADR-026/029 state theirs: the same file both
+        # ways, DETERMINISM_FIELDS identical, the key on exactly one side —
+        # and `blocks` implies `tables`, so that key rides along.
+        from src.sec10k.extract import extract_items
+        on = extract_items(path, blocks=True)
+        off = extract_items(path, blocks=False)
+        for k in DETERMINISM_FIELDS:
+            if on.get(k) != off.get(k):
+                return f"{k} differs with blocks on vs off — INV-S2 offsets moved"
+        if "blocks" in off or "tables" in off:
+            return "blocks OFF emitted a blocks/tables key; default must change nothing"
+        if not isinstance(on.get("blocks"), list) or not isinstance(on.get("tables"), list):
+            return "blocks ON emitted no blocks + tables lists"
     else:
         return f"unknown check type {t!r}"
     return None
+
+
+BLOCK_KINDS = {"heading", "paragraph", "list_item", "table", "pre"}
+BLOCK_LABEL_KEYS = {"kind", "start", "end", "level", "ordered", "strong", "item"}
+
+
+def _blocks_shape(result):
+    """None if `result['blocks']` is in ADR-032's contract shape, else why."""
+    blocks = result["blocks"]
+    if not isinstance(blocks, list):
+        return f"blocks is {type(blocks).__name__}, not a list"
+    if not isinstance(result.get("tables"), list):
+        return "blocks without a tables list (blocks imply tables)"
+    n, prev = len(result["normalized_text"]), 0
+    for i, b in enumerate(blocks):
+        if not isinstance(b, dict) or b.get("kind") not in BLOCK_KINDS:
+            return f"record {i} {b!r}: kind not in {sorted(BLOCK_KINDS)}"
+        if not (isinstance(b.get("start"), int) and isinstance(b.get("end"), int)
+                and 0 <= b["start"] < b["end"] <= n):
+            return f"record {i} start/end {b.get('start')},{b.get('end')} not offsets into normalized_text"
+        if b["start"] < prev:
+            return f"record {i} overlaps or is out of document order ({b['start']} < {prev})"
+        prev = b["end"]
+        extra = set(b) - BLOCK_LABEL_KEYS - {"table"}
+        if extra:
+            return f"record {i} undeclared keys {sorted(extra)}"
+        if b["kind"] == "heading" and not isinstance(b.get("level"), int):
+            return f"record {i} heading without an int level"
+        if b["kind"] == "table" and not (isinstance(b.get("table"), int)
+                                         and 0 <= b["table"] < len(result["tables"])):
+            return f"record {i} table block without a valid record index"
+        if b["kind"] != "table" and "table" in b:
+            return f"record {i} {b['kind']} carries a table index"
+    return None
+
+
+def structure_fidelity(result, chk):
+    """Compare the labeled block sequence with the derived one over the
+    window the labels span ([first start, last end)).
+
+    Returns {"blocks": (ok, total), "bounds": (ok, total), "why": reason|None}.
+    bounds: labeled (start, end) pairs that some derived block in the window
+    has, over the LARGER of the two counts — the boundary agreement. blocks:
+    labeled blocks reproduced exactly (kind, start, end, level, ordered,
+    strong, item — everything a label states, nothing it omits), over the
+    larger count — kind agreement on top of boundaries. An envelope without
+    blocks scores 0 over the labeled counts. Exact match of the whole
+    sequence is the pass condition; the fractions are the per-run metric
+    (ADR-032 §c), so a partial miss is measured, not only declared.
+    """
+    want = [{k: v for k, v in b.items() if k in BLOCK_LABEL_KEYS} for b in chk["blocks"]]
+    zero = {"blocks": (0, len(want)), "bounds": (0, len(want)), "why": None}
+    if "blocks" not in result:
+        return dict(zero, why="no blocks in result (was blocks set?)")
+    text = result["normalized_text"]
+    for lab in chk["blocks"]:
+        slice_ = text[lab["start"]:lab["end"]]
+        if not slice_.startswith(lab.get("head", "")) or not slice_.endswith(lab.get("tail", "")):
+            return dict(zero, why=f"LABEL does not match normalized_text at [{lab['start']}, "
+                                  f"{lab['end']}): {slice_[:60]!r}")
+    s, e = want[0]["start"], want[-1]["end"]
+    got = [{k: v for k, v in b.items() if k in BLOCK_LABEL_KEYS}
+           for b in blocks_in(result["blocks"], s, e)]
+    total = max(len(want), len(got))
+    got_bounds = {(b["start"], b["end"]) for b in got}
+    bounds_ok = sum(1 for b in want if (b["start"], b["end"]) in got_bounds)
+    blocks_ok = sum(1 for b in want if b in got)
+    out = {"blocks": (blocks_ok, total), "bounds": (bounds_ok, total), "why": None}
+    if got != want:
+        bad = next((i for i, (a, b) in enumerate(zip(want, got)) if a != b), min(len(want), len(got)))
+        out["why"] = (f"blocks differ: {len(got)} derived vs {len(want)} labeled in "
+                      f"[{s}, {e}); blocks {blocks_ok}/{total}, bounds {bounds_ok}/{total}; "
+                      f"first mismatch at #{bad}: got {got[bad] if bad < len(got) else None} "
+                      f"!= labeled {want[bad] if bad < len(want) else None}")
+    return out
 
 
 def _tables_shape(result):
@@ -527,18 +717,25 @@ def run_case(case):
     path = str(ROOT / case["input"]["path"])
     result = extract_items(
         path, exclude_boilerplate=case["input"].get("exclude_boilerplate", False),
-        tables=case["input"].get("tables", False))
+        tables=case["input"].get("tables", False),
+        blocks=case["input"].get("blocks", False))
     extracted = [i for i in result["items"] if i["status"] == "extracted"]
 
     failures = []
-    # ADR-029 §c: every `table` check's cell/row counts, summed for the run
-    cells, rows = [0, 0], [0, 0]
+    # ADR-029 §c: every `table` check's cell/row counts, summed for the run;
+    # ADR-032 §c: every `blocks` check's block/bounds counts, the same way
+    cells, rows, blks, bnds = [0, 0], [0, 0], [0, 0], [0, 0]
     for chk in case["expect"]["checks"]:
         if chk["type"] == "table":
             f = table_fidelity(result, chk)   # one comparison: the verdict AND the metric
             reason = f["why"]
             cells = [cells[0] + f["cells"][0], cells[1] + f["cells"][1]]
             rows = [rows[0] + f["rows"][0], rows[1] + f["rows"][1]]
+        elif chk["type"] == "blocks":
+            f = structure_fidelity(result, chk)
+            reason = f["why"]
+            blks = [blks[0] + f["blocks"][0], blks[1] + f["blocks"][1]]
+            bnds = [bnds[0] + f["bounds"][0], bnds[1] + f["bounds"][1]]
         else:
             reason = eval_check(result, chk, path=path)
         if reason:
@@ -556,4 +753,6 @@ def run_case(case):
     if cells[1] or rows[1]:
         # only a case that labels a table contributes to the run's fidelity
         out["table_fidelity"] = {"cells": cells, "rows": rows}
+    if blks[1] or bnds[1]:
+        out["structure_fidelity"] = {"blocks": blks, "bounds": bnds}
     return out

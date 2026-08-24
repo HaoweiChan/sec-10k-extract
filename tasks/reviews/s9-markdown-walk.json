@@ -1,0 +1,77 @@
+{
+ "base": "http://localhost:8011",
+ "fixtures": {
+  "aapl-2025": {
+   "item": "7",
+   "expect": {
+    "min_tables": 3,
+    "h2": 1,
+    "kind": "iXBRL, tables interleaved with prose"
+   },
+   "tables": 6,
+   "h2": 1,
+   "p": 106,
+   "pre": 0,
+   "b": 12,
+   "raw_pre_present": false,
+   "header": "ITEM 7 \u2014 MANAGEMENT'S DISCUSSION AND ANALYSIS OF FINANCIAL CONDITION AND RESULTS OF OPERATIONS\nMARKDOWN \u00b7 PART II \u00b7 EXTRACTED \u00b7 CONF 0.95 \u00b7 VIA HEADING_STRICT",
+   "first_text": "Item 7. Management\u2019s Discussion and Analysis of Financial Condition and Results of Operations\n\nThe following discussion should be read in conjunction with the c",
+   "banner": "doc_status: success",
+   "source_iframe": true,
+   "shot": "s9-markdown-walk/aapl-2025-item7-markdown.png",
+   "agrees": true
+  },
+  "msft-2013": {
+   "item": "1",
+   "expect": {
+    "min_tables": 8,
+    "h2": 1,
+    "kind": "legacy HTML, bullet tables"
+   },
+   "tables": 8,
+   "h2": 1,
+   "p": 121,
+   "pre": 0,
+   "b": 14,
+   "raw_pre_present": false,
+   "header": "ITEM 1 \u2014 BUSINESS\nMARKDOWN \u00b7 PART I \u00b7 EXTRACTED \u00b7 CONF 0.95 \u00b7 VIA HEADING_STRICT",
+   "first_text": "ITEM 1. BUSINESS\n\nGENERAL\n\nMicrosoft was founded in 1975. Our mission is to enable people and businesses throughout the world to realize their full potential by",
+   "banner": "doc_status: success",
+   "source_iframe": true,
+   "shot": "s9-markdown-walk/msft-2013-item1-markdown.png",
+   "agrees": true
+  },
+  "ge-1994": {
+   "item": "1",
+   "expect": {
+    "min_tables": 0,
+    "h2": 0,
+    "pre": 1,
+    "kind": "txt era, one fenced pre block"
+   },
+   "tables": 0,
+   "h2": 0,
+   "p": 0,
+   "pre": 1,
+   "b": 0,
+   "raw_pre_present": false,
+   "header": "ITEM 1 \u2014 BUSINESS\nMARKDOWN \u00b7 PART I \u00b7 EXTRACTED \u00b7 CONF 0.95 \u00b7 VIA HEADING_STRICT",
+   "first_text": "Item 1. Business\n\nGeneral\n\n      Unless otherwise indicated by the context, the terms \"GE,\" \"GECS\" and\n\"GE Capital Services\" are used on the basis of consolidat",
+   "banner": "doc_status: success_with_warning",
+   "source_iframe": true,
+   "shot": "s9-markdown-walk/ge-1994-item1-markdown.png",
+   "agrees": true
+  }
+ },
+ "failures": [],
+ "s3_fixture_banner_in_markdown_mode": {
+  "text": "doc_status: success\n\u2014 18 extracted \u00b7 5 incorporated_by_reference\nfixture: aapl-2025",
+  "cls": "s-success"
+ },
+ "default_unticked": {
+  "pre": true,
+  "md": false,
+  "header": "ITEM 7 \u2014 MANAGEMENT'S DISCUSSION AND ANALYSIS OF FINANCIAL CONDITION AND RESULTS OF OPERATIONS\nPART II \u00b7 EXTRACTED \u00b7 CONF 0.95 \u00b7 VIA HEADING_STRICT",
+  "shot": "s9-markdown-walk/aapl-2025-item7-plain.png"
+ }
+}

@@ -13,6 +13,7 @@ Self-check: python3 -m src.sec10k.web.view
 from collections import Counter
 
 from src.sec10k.boilerplate import strip_chrome
+from src.sec10k.markdown import to_markdown
 
 # JPM 2024's Item 15 span is 1,010,422 chars. Sending that to a browser per
 # item is not inspection, it is a download. Truncate for display and say so —
@@ -43,15 +44,42 @@ def build_view(result, display_max=DISPLAY_MAX):
     Only the render point may see a string that is not `normalized_text
     [start:end]`, so only the render point gets one; `display_text` is
     absent whenever it would be identical to `text`.
+
+    S9 (ADR-032): the envelope carries a `blocks` key exactly when the caller
+    passed `blocks=True`, and then `display_text` is the item's derived
+    Markdown — `markdown.to_markdown` over the blocks clipped to the item's
+    span, rendered from the first `display_max` characters of the span so
+    `truncated` keeps meaning what it meant — with any ADR-026 chrome runs
+    omitted when exclusion was asked for too. `text` stays the verbatim
+    slice for the same reason as above; `markdown` on the payload tells the
+    pane to render rather than to print.
     """
     text = result.get("normalized_text") or ""
     spans = result.get("boilerplate")     # present iff exclusion was asked for
+    blocks = result.get("blocks")         # present iff the Markdown view was asked for
+    tables = result.get("tables") or []
     items = []
+    bp_applied = False
     for i in result.get("items", []):
         s, e = i.get("start"), i.get("end")
         has_span = s is not None and e is not None
         raw = text[s:e] if has_span else ""
-        body = strip_chrome(text, spans, s, e) if has_span and spans is not None else raw
+        # ADR-026 s.d's own definition of "exclusion removed something from
+        # this item", computed whichever view is rendered. In the plain path it
+        # IS the body, so it costs nothing; in `blocks` mode it is the one extra
+        # pass that keeps `boilerplate_applied` meaning the same thing in both.
+        stripped = (strip_chrome(text, spans, s, e)
+                    if has_span and spans is not None else raw)
+        if stripped != raw:
+            bp_applied = True
+        if has_span and blocks is not None:
+            shown_end = min(e, s + display_max)
+            body = to_markdown(text, blocks, tables, s, shown_end, omit=spans or ())
+            truncated = shown_end < e
+        else:
+            body = stripped
+            truncated = len(body) > display_max
+            body = body[:display_max]
         item = {
             "item": i.get("item"), "part": i.get("part"), "title": i.get("title"),
             "status": i.get("status"), "confidence": i.get("confidence"),
@@ -59,11 +87,11 @@ def build_view(result, display_max=DISPLAY_MAX):
             "start": s, "end": e,
             "chars": len(raw) if has_span else None,
             "text": raw[:display_max],
-            "truncated": len(body) > display_max,
+            "truncated": truncated,
             "evidence": i.get("evidence") or {},
         }
-        if body != raw:
-            item["display_text"] = body[:display_max]
+        if body != raw[:display_max]:
+            item["display_text"] = body
         items.append(item)
     return {
         "doc_status": result.get("doc_status"),
@@ -83,10 +111,18 @@ def build_view(result, display_max=DISPLAY_MAX):
         # detector returns [] and all 23 items come back byte-identical to the
         # un-flagged run, and aapl-2026-10q, where there are no items at all.
         # Anything that ASSERTS the pane on screen differs (the D5 compare-pane
-        # note) must key on this instead: exactly "some item's shown text is
-        # not its verbatim slice". `boilerplate_excluded` keeps its own meaning
-        # for the consumers it already has (the S8 pane header and its pins).
-        "boilerplate_applied": any("display_text" in i for i in items),
+        # note) must key on this instead. `boilerplate_excluded` keeps its own
+        # meaning for the consumers it already has (the S8 pane header, its pins).
+        #
+        # D5/S9 MERGE: this used to read `any("display_text" in i)`, which was
+        # equivalent to "exclusion removed something" only while exclusion was
+        # that field's only producer. S9 gave it a second one — in `blocks` mode
+        # `display_text` is the derived Markdown — so the old expression is True
+        # whenever Markdown is on, boilerplate or not, which is R1 again wearing
+        # S9's clothes. It is now measured from the EXCLUSION itself (see
+        # `bp_applied` in the loop), so it means the same thing in both modes.
+        "boilerplate_applied": bp_applied,
+        "markdown": blocks is not None,
     }
 
 
@@ -209,6 +245,51 @@ def _demo():
     # elsewhere, is the same case and must also stay lean
     one = build_view(dict(plain, boilerplate=spans[:1]))
     assert "display_text" in one["items"][0] and "display_text" not in one["items"][1]
+
+    # S9: the same envelope plus ADR-032's `blocks` (+ `tables`) key renders
+    # the item as Markdown — derived from the blocks clipped to the span,
+    # `text` still the verbatim slice, offsets and chars untouched.
+    from src.sec10k.normalize import normalize
+    html = ("<html><body><p>ACME 10-K</p><p>Item 1. Business</p><p>real <b>prose</b></p>"
+            "<table><tr><td>a</td><td>b</td></tr></table>"
+            "<p>ACME 10-K</p><p>Item 7. MD&amp;A</p><p>more prose</p></body></html>")
+    ntext, tabs, blks = normalize(html, "html", blocks=True)
+    i7 = ntext.index("Item 7.")
+    env2 = {"normalized_text": ntext, "tables": tabs, "blocks": blks, "items": [
+        {"item": "1", "status": "extracted", "start": ntext.index("Item 1."), "end": i7 - len("ACME 10-K\n\n")},
+        {"item": "7", "status": "extracted", "start": i7, "end": len(ntext)}]}
+    md = build_view(env2)
+    assert md["markdown"] is True and off["markdown"] is False
+    assert md["items"][0]["text"] == ntext[env2["items"][0]["start"]:env2["items"][0]["end"]]   # verbatim
+    assert md["items"][0]["display_text"] == "Item 1. Business\n\nreal prose\n\n| a | b |\n|---|---|"
+    # ...and absent when the Markdown IS the slice (nothing to escape, no structure)
+    assert "display_text" not in md["items"][1] and md["items"][1]["text"] == "Item 7. MD&A\n\nmore prose"
+    assert md["items"][0]["truncated"] is False
+    # truncation renders the first display_max chars of the SPAN, not display_max chars of Markdown
+    cut = build_view(env2, display_max=20)
+    assert cut["items"][0]["truncated"] is True
+    assert cut["items"][0].get("display_text", cut["items"][0]["text"]) == "Item 1. Business\n\nre"
+    # with exclusion asked for as well, a chrome block is omitted from the view
+    head2 = ntext.index("ACME 10-K", 1)
+    both = build_view(dict(env2, boilerplate=[{"start": head2, "end": head2 + 9, "kind": "running_head"}]))
+    assert "display_text" not in both["items"][1]     # the head sits before item 7's span
+    assert both["items"][0]["display_text"].startswith("Item 1. Business") and both["boilerplate_excluded"] is True
+    # a chrome block INSIDE the span is left out of the view; the span itself does not move
+    item1_from0 = build_view(dict(env2, items=[dict(env2["items"][0], start=0)],
+                                  boilerplate=[{"start": 0, "end": 9, "kind": "running_head"}]))
+    assert item1_from0["items"][0]["start"] == 0
+    assert item1_from0["items"][0]["display_text"] == "Item 1. Business\n\nreal prose\n\n| a | b |\n|---|---|"
+    # D5/S9 MERGE: `boilerplate_applied` must survive S9 giving `display_text`
+    # a second producer. `md` has display_text on item 1 (the derived Markdown)
+    # and no exclusion at all, so the OLD `any("display_text" in i)` expression
+    # would report True here — the PR #46 R1 defect in S9's clothes.
+    assert md["boilerplate_applied"] is False
+    # and it is still True when exclusion actually removes something, in EITHER
+    # view: plain (`on`, above) and Markdown (`item1_from0`, head inside the span)
+    assert item1_from0["boilerplate_applied"] is True
+    # asked for, found nothing, Markdown on: still False
+    assert both["boilerplate_excluded"] is True and both["boilerplate_applied"] is False
+    json.dumps(md)
     print("[view self-check] ok")
 
 

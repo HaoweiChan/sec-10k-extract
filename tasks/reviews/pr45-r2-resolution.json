@@ -1,0 +1,29 @@
+{
+ "pr": 45,
+ "round": 2,
+ "task": "S9",
+ "review": "tasks/reviews/pr45-r2.json",
+ "resolved_by": "implementer",
+ "date": "2026-08-24",
+ "protocol": "R7's repro re-run first on 30e46c1: with `if omit: return \"\"` as the second statement of to_markdown, the enforced gate stayed fully green (the defect); then the contains pins were added to both omit_chrome checks of blocks-omit-chrome and the same mutation re-run: red on both windows; unmutated: green. The R1 mutation list M1-M9 was re-swept afterwards — all metric lines identical to the round-1 table. Gate, self-checks, ledger_table_shape last. index.html and view.py untouched, so no new browser-walk record (the orchestrator's condition).",
+ "gate_at_resolution": {
+  "invariant": "52/52 = 1.000 (+4 enumerated debt, unscored)",
+  "fast": "110/110 = 1.000 (+4 enumerated debt, unscored); table fidelity cells 1.0000 (400/400), rows 1.0000 (31/31); structure fidelity blocks 1.0000 (61/61), bounds 1.0000 (61/61)",
+  "baseline": "unchanged; .eval-baseline.json untouched",
+  "self_checks": "normalize, segment, validate, boilerplate, tables, markdown, web.view ok; test_eval_adapter 18/18; metrics --self-check ok; bench --self-check ok; bench --check-docs 68 checked / 0 unmatched; css_contrast ok; ledger_table_shape on tasks/TODO.md + evals/fixtures/README.md -> [] (run last)"
+ },
+ "findings": [
+  {
+   "id": "R7",
+   "severity": "MEDIUM",
+   "status": "fixed",
+   "reproduced": true,
+   "repro_observed": "at 30e46c1 with `if omit: return \"\"` inserted as the second statement of markdown.to_markdown: suite fast 110/110 = 1.000, table fidelity 1.0/1.0, structure fidelity 1.0/1.0 (61/61 both), suite invariant 52/52 = 1.000 — the whole enforced gate green while every omit_chrome rendering was the empty string; only markdown.py::_demo / web/view.py::_demo went red, and no gate runs them.",
+   "fix": "evals/adversarial/blocks-omit-chrome.json: both omit_chrome checks gain a `contains` on the STRIPPED rendering — whole-document window: 'The following discussion sets forth the material risk factors that could affect JPMorganChase' (item 1A's opening sentence; occurs once in normalized_text, at 47375); item-15 window: 'The Consolidated Financial Statements, the Notes thereto and the report of the Independent Registered Public Accounting Firm' (once, at 201373, inside item 15's span). Both verified offset-against-span to intersect none of the 572 ADR-026 chrome runs before labeling, so a correct strip preserves them. One-word adapter change so the failure text names the mode: the contains message carries the same 'stripped ' prefix the not_contains message already had.",
+   "red_line": "under the same mutation, after the pins: [FAIL] blocks-omit-chrome — 'stripped markdown missing 'The following discussion sets forth the material risk factors that could affect JPMorganChase'' and 'stripped markdown missing 'The Consolidated Financial Statements, the Notes thereto and the report of the Independent Registered Public Accounting Firm''; suite fast 109/110 = 0.991. Unmutated: 110/110, structure 61/61 · 61/61.",
+   "covered_by": "evals/adversarial/blocks-omit-chrome.json (fast suite, enforced by the pre-commit gate) — both directions per window: chrome absent, prose present.",
+   "regression_sweep": "M1-M9 re-run after the pins: M1 blocks 61/61 bounds 61/61 (suite 0.927), M2 56/61 (0.955), M2b 59/61 (0.982), M3 48/61 (0.945), M4 48/61 both (0.900), M5 60/61 both (0.936), M6 56/61 (0.955), M7 60/61 (0.991), M8 31/61 both (0.927), M9 58/61 both (0.991) — identical to the round-1 table in ADR-031 §g; no re-measurement needed there, the §g case-table row and the S9 row note the R7 pin in prose only.",
+   "docs": "ADR-031 §g blocks-omit-chrome row (preservation half named); S9 row Status one-line note; case provenance extended with the snippets and why they cannot be chrome."
+  }
+ ]
+}

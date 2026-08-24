@@ -1,0 +1,31 @@
+{
+  "id": "blocks-refusal-path",
+  "task": "sec10k",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "path": "evals/fixtures/aapl-2026-10q/filing.htm",
+    "blocks": true
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "doc_status",
+        "value": "unsupported"
+      },
+      {
+        "type": "envelope_shape"
+      },
+      {
+        "type": "blocks_sane",
+        "min": 250,
+        "max": 400
+      },
+      {
+        "type": "offsets_invariant_under_blocks"
+      }
+    ]
+  },
+  "provenance": "ADR-032 §b5, as tables-refusal-path states ADR-029 §b3: an `unsupported` envelope (a 10-Q) still carries the `blocks` and `tables` lists when asked — the structure was recorded during normalization, before the refusal was decided — and no items, so no heading is promoted; nothing when not asked. Band 250-400 around the 304 blocks (272 paragraphs + 32 tables) measured at HEAD."
+}

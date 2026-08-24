@@ -1,0 +1,59 @@
+{
+  "id": "blocks-heading-index-table",
+  "task": "sec10k",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "path": "evals/fixtures/bac-2006/filing.htm",
+    "blocks": true
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "blocks",
+        "blocks": [
+          {
+            "kind": "heading",
+            "start": 54146,
+            "end": 54177,
+            "level": 2,
+            "item": "6",
+            "head": "Item 6. Selected Financial Data"
+          },
+          {
+            "kind": "paragraph",
+            "start": 54179,
+            "end": 54323,
+            "head": "See Table 5 in the MD&A on page 21 and T",
+            "tail": "ated herein by reference."
+          },
+          {
+            "kind": "paragraph",
+            "start": 54325,
+            "end": 54327,
+            "head": "10"
+          },
+          {
+            "kind": "heading",
+            "start": 54329,
+            "end": 54346,
+            "level": 5,
+            "head": "Table of Contents"
+          },
+          {
+            "kind": "table",
+            "start": 54348,
+            "end": 55571,
+            "head": "Item 7. MANAGEMENT’S DISCUSSION AND ANAL",
+            "tail": "al Tables\n88\n\nGlossary\n98"
+          }
+        ]
+      },
+      {
+        "type": "blocks_sane"
+      }
+    ]
+  },
+  "provenance": "ADR-032 §b3's limit: an item heading that merely OPENS a long table is not promoted. BAC FY2006 10-K (legacy HTML, EDGAR accession 0001193125-07-042036). Transcribed 2026-08-23; window normalized [54146, 55571), raw 110500–117000. <TABLE bgcolor=#e5e5e5><TR><TD width=99%></TD></TR><TR><TD><B>Item 6. Selected Financial Data</B></TD></TR></TABLE> (raw 110545) -> one visible row, promoted: heading level 2, item '6'. <P><FONT>See Table 5 in the MD&amp;A on page 21 ... incorporated herein by reference.</FONT></P> (raw 110722) -> paragraph. <P align=center>10</P> (raw 111058) -> paragraph (page number). <h5 align=left><a href=#toc>Table of Contents</a></h5> (raw 111203) -> heading level 5. Then the <TABLE> at raw 111628 whose first cell is <B>Item 7. MANAGEMENT&#146;S DISCUSSION AND ANALYSIS ...</B> followed by 'Table of Contents' and a 'Page' column — the MD&A's own index, 72 <TR> of which 36 carry visible text (Recent Events 12, MBNA Merger Overview 13, ... Glossary 98). The item-7 span opens on it, but promoting it would swallow the whole index into an '##', so it stays a table block (the one such case among the corpus's 624 span items, ADR-032 §b3)."
+}

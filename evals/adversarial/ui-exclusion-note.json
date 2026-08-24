@@ -17,7 +17,8 @@
       "derived normalized_text",
       "compare pane serves the raw filing bytes",
       "the two panes will not agree",
-      "no raw-to-normalized offset map in this pipeline"
+      "no raw-to-normalized offset map in this pipeline",
+      "That is what exclusion accounts for, and only that"
     ],
     "must_not_say": [
       "panes agree",
