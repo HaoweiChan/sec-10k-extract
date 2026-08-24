@@ -93,9 +93,17 @@ shaped exactly like the defect.**
   width/height) would ALSO have passed it. An element with `visibility:hidden`
   keeps its rect, its size and its `offsetParent`; only `display:none` clears
   that. `checkVisibility({visibilityProperty, opacityProperty,
-  contentVisibilityAuto})` is the native API for the question actually being
-  asked, and `offsetParent` is now recorded beside it so the disagreement is
-  visible rather than assumed.
+  contentVisibilityAuto})` answers a strictly narrower question — is the element
+  RENDERED — and that is all the walk now claims. D5's acceptance is written in
+  terms of ON SCREEN, and the two are not the same: round 2 demonstrated live at
+  `d2faf12` that `position:relative;left:-9999px` gives `left -9375, width 349,
+  height 636, visible true` with nothing of the pane on screen and the walk still
+  exit 0, and that `clip-path:inset(100%)` is likewise fully green. So
+  `checkVisibility` closes display/visibility/opacity and leaves off-viewport and
+  clipped panes uncovered; that gap is a debt row (Origin: PR #46 R6) with those
+  two reproductions in it, not a claim this instrument makes. `offsetParent` is
+  recorded beside `visible` so the disagreement between the two is visible rather
+  than assumed.
 
 - **The connecting lesson: a walk that only ever drives the happy fixture
   cannot see the unhappy state.** Every width in the original walk drove

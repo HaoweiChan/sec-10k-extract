@@ -299,9 +299,12 @@ footer a{color:var(--accent)}
 
 <div id="banner" class="s-idle">No filing extracted yet.</div>
 <div id="warnings"></div>
-<!-- D5: shown only while the response that is on screen was extracted with
-     exclusion ON (render() assigns .hidden from v.boilerplate_excluded, the
-     same read-at-request-time field the pane header labels itself from). It
+<!-- D5: shown only while the response on screen actually HAD something hidden
+     — render() assigns .hidden from `v.boilerplate_applied` (PR #46 R1). That
+     is deliberately NOT the field the pane header reads: `hdrRight` and the
+     .pane-meta boilerplate <dd> below key on `boilerplate_excluded`, which is
+     True whenever the flag was merely asked for. This note ASSERTS the two
+     panes differ, so it needs the field that says one of them changed. It
      states the limit; it does not fix it, and must not read as if it did. -->
 <div id="bp-note" hidden>Boilerplate exclusion applies to the
   derived <code>normalized_text</code> only. The compare pane serves the raw

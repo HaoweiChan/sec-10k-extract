@@ -1,0 +1,38 @@
+{
+  "pr": 46,
+  "task": "D5",
+  "round": 2,
+  "date": "2026-08-24",
+  "implementer": "task/D5 round-2 repair",
+  "base": "4568c8f",
+  "scope": "TEXT ONLY. No behaviour, no eval case, no artifact number changed. The round-2 review APPROVED the PR; these two corrections are the wording that approval named.",
+  "gate_after_repair": {
+    "invariant": "56/56 = 1.000",
+    "fast": "104/104 = 1.000",
+    "baseline": "1.000, not moved",
+    "table_fidelity": "cells 400/400, rows 31/31",
+    "note": "Unchanged from d2faf12, as expected — neither diff is reachable from any check. index.html's comment is stripped by the adapter's own `_live()` before any pin is matched, and prompts/ is not read by the harness."
+  },
+  "routing_note": "R6's INSTRUMENT half, R8 and R9 are debt rows (Origin: PR #46 R6/R8/R9) and are untouched here. `display_text`'s meaning was not re-opened and no minimum-fixture-count guard was added.",
+  "resolutions": [
+    {
+      "id": "R6",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "half": "the sentence only — the instrument gap stays debt, deliberately",
+      "reproduced": "Accepted as demonstrated by the reviewer at d2faf12 rather than re-run: `@media(min-width:1001px) and (max-width:1100px){#source{position:relative;left:-9999px}}` records `source: {top:582, left:-9375, width:349, height:636, visible:true, has_offset_parent:true}` with `failures: []`, exit 0; `clip-path:inset(100%)` likewise green. Nothing in the walk compares a pane rect against the viewport.",
+      "fix": "prompts/019-d5-inspector-layout-and-exclusion-honesty.md, the R2 bullet. The claim that `checkVisibility(...)` is \"the native API for the question actually being asked\" is replaced by what the API actually delivers: it answers the strictly narrower question \"is the element RENDERED\", and that is all the walk now claims. The sentence then states the gap in the terms D5's own acceptance uses — ON SCREEN is not RENDERED — carries both of the reviewer's reproductions with their measured numbers, and points at the debt row (Origin: PR #46 R6) instead of implying the instrument covers them.",
+      "not_done_on_purpose": "tasks/reviews/d5_browser_walk.py is unchanged. The orchestrator routed the instrument gap to debt because the shipped layout is correct at every measured width and the gate is green; widening the instrument here would be a coverage change inside a text-only round."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "status": "fixed",
+      "routing_exception": "Routed to repair rather than debt by the orchestrator, recorded as a bounded exception: this is the round-1 repair leaving its own annotation stale inside the diff that changed it, so correcting it finishes R1 rather than growing the PR. Bounded to this one comment; neighbouring comments were not touched.",
+      "reproduced": "Yes, read directly. The comment above `#bp-note` claimed `render() assigns .hidden from v.boilerplate_excluded, the same read-at-request-time field the pane header labels itself from`. Both clauses were false after the round-1 repair: render() assigns from `v.boilerplate_applied`, and that is deliberately a DIFFERENT field from the one `hdrRight` and the `.pane-meta` boilerplate `<dd>` read.",
+      "fix": "src/sec10k/web/static/index.html, the comment above `#bp-note`. It now names `boilerplate_applied`, says outright that this is NOT the field the pane header reads, names the two places that do read `boilerplate_excluded` (`hdrRight` and the `.pane-meta` boilerplate `<dd>`), and gives the reason the two differ: the header LABELS, while the note ASSERTS that the panes differ, so only the note needs the field that says one of them changed. A reader auditing the trigger from the markup now lands on the field render() actually reads.",
+      "verified": "Comment text only — the adapter's `_live()` strips HTML comments before any pin is matched, so this cannot move a check either way, and the gate confirms it did not."
+    }
+  ],
+  "rejected": []
+}
