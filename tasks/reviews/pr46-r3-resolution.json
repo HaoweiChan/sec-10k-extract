@@ -1,0 +1,48 @@
+{
+  "pr": 46,
+  "task": "D5",
+  "round": 3,
+  "date": "2026-08-24",
+  "implementer": "task/D5 round-3 repair",
+  "base": "79c51b9",
+  "scope": "R10 and R12 only. R11 and R13 are debt rows (Origin: PR #46 R11/R13) and are untouched; `display_text`'s dual role was not re-opened; the browser walk was not touched and gained no Markdown dimension (that stays the `Origin: D5 merge` debt row); no S9 code was changed.",
+  "gate_after_repair": {
+    "invariant": "58/58 = 1.000",
+    "fast": "116/116 = 1.000",
+    "baseline": "1.000, not moved",
+    "table_fidelity": "cells 400/400, rows 31/31",
+    "structure_fidelity": "blocks 61/61, bounds 61/61 (S9's, unaffected)",
+    "view_self_check": "green"
+  },
+  "resolutions": [
+    {
+      "id": "R10",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "reproduced": "Yes, both halves, independently. (a) With `boilerplate_applied` reverted to the pre-merge `any(\"display_text\" in i for i in items)` on the merged tree, the gate was fully green — invariant 58/58, fast 116/116 — and only `python3 -m src.sec10k.web.view` went red; that runner is in .github/workflows/ci.yml but in neither `## Gate` nor .githooks/pre-commit. (b) `check_exclusion_note_trigger` used that same broken expression as its own oracle and never drove `blocks` mode, so it was blind to the defect, and extended to Markdown mode as written it would have reported the CORRECT field as wrong.",
+      "covered_by": "evals/adversarial/ui-exclusion-note-trigger.json, extended: `input.blocks_modes: [false, true]` drives every fixture in BOTH view modes, and the oracle is a new `_chrome_inside_items(env)` — do any of the envelope's own boilerplate spans fall inside an item's span. Five fixtures x two modes = 10 runs per gate pass.",
+      "oracle_choice": "Deliberately NOT `strip_chrome(...) != raw`, which the finding offered as the obvious candidate: that is the expression `build_view` itself now uses, so a check built on it would re-run the implementation and agree with any window bug the implementation has — the argument `check_boilerplate_exclusion` already makes about its own oracle. `_chrome_inside_items` reads the envelope's spans and the item offsets and nothing else. It satisfies the stated acceptance (not `any(\"display_text\" in i)`) and is strictly more independent.",
+      "red_first": "With the check extended and `view.py`'s `boilerplate_applied` reverted to the pre-merge expression, the case reports 5 failures, EVERY ONE a `blocks=True` run:\n  evals/fixtures/ge-1994/filing.txt blocks=True: boilerplate_applied=True on an UN-flagged run — nothing was excluded, so nothing was applied\n  evals/fixtures/msft-2013/filing.htm blocks=True: boilerplate_applied=True on an UN-flagged run — nothing was excluded, so nothing was applied\n  evals/fixtures/aapl-2025/filing.htm blocks=True: boilerplate_applied=True but the envelope's own boilerplate spans do NOT fall inside an item span — the field does not mean 'exclusion removed something the reader would see'\n  evals/fixtures/aapl-2025/filing.htm blocks=True: boilerplate_applied=True, case expects False\n  evals/fixtures/aapl-2025/filing.htm blocks=True: boilerplate_applied=True on an UN-flagged run — nothing was excluded, so nothing was applied\nThe plain-mode runs stay green under the revert. That is the finding in one line: without `blocks_modes` this case cannot see the regression.",
+      "gate_now_catches_it": "Same revert, run through the gate rather than the case: invariant 57/58 = 0.983 with [FAIL] ui-exclusion-note-trigger, fast 115/116 = 0.991 with the same [FAIL]. Restored: 58/58 and 116/116, and `git diff` on view.py is empty, so the revert left no residue. The runner's own reports for those two red runs are committed: evals/report/20260824-100816-invariant.json (57/58 = 0.983) and evals/report/20260824-100859-fast.json (115/116 = 0.991), both at 79c51b9-dirty, the dirt being exactly the one-line revert.",
+      "input_mutations": "M-a `blocks_modes` reduced to [false] -> RED (1: no run drives S9's blocks mode). M-c only-True fixtures -> RED (2: no run came out False; no run reproduces the R1 shape). M-d aapl-2025's hand label flipped to True -> RED (2, one per mode). M-e wire pin repointed at `boilerplate_excluded` -> RED (1). M-b `fixtures` emptied -> STILL GREEN: that is PR #46 R8, which this repair was told not to fix, and it is reported here rather than glossed.",
+      "guard_placement": "The new `blocks_modes` guard is placed OUTSIDE the `if inp.get(\"fixtures\")` wrapper that gates the three older vacuity guards. R8 is not fixed and no minimum-fixture-count guard was added — an empty `fixtures` map still defangs those three — but a guard written in the same repair that was told about the hole does not get to sit behind it. Verified: `fixtures: {}` AND `blocks_modes: [false]` together still go red on the modes guard.",
+      "prose_scoped": "The adapter docstring and the case triage no longer state `boilerplate_applied == any(\"display_text\" in item)` as fact. Both now say it held in PLAIN MODE ONLY, name S9/ADR-032 as the second producer, and carry the merge measurement (84 runs, old expression wrong on 14, all in blocks mode). The pre-S9 expression is still computed per run and reported in `info` as `pre_s9_expression_by_run` / `runs_where_pre_s9_expression_diverges` — a measurement, never an assertion, since how far Markdown departs from the raw slice is S9's business. On the current tree that list is exactly ['evals/fixtures/aapl-2025/filing.htm blocks=True']."
+    },
+    {
+      "id": "R12",
+      "severity": "LOW",
+      "status": "fixed",
+      "routing_exception": "Folded into this repair by the orchestrator under the same test applied to R7: an artifact contradicting ITSELF is a stale fact with one right answer, not a choice. R13 is a choice and was left alone.",
+      "reproduced": "Yes, read directly and re-run. evals/fixtures/repo_hygiene/exclusion-note-dishonest.html opened 'six ways the D5 half-2 note regresses, one failure each' and commented only (1)-(6), while the fixture produces seven and ui-exclusion-note-regression.json's min/max_failures say 7. The case's `red_first` still described only the six-failure run.",
+      "fix": "The fixture header now says SEVEN, names the S9 merge as where shape (7) arrived, and says outright that it read six until R12 caught it contradicting the case's own expect block. A comment for (7) was added beside (5)+(6): the note never scopes the disagreement to exclusion, which after S9 means taking credit for a difference ADR-032's Markdown view accounts for — R1's over-claim relocated, and the reason the real note now says 'and only that'.",
+      "red_first_recorded": "ui-exclusion-note-regression.json's `red_first` now carries BOTH states: the original six (2026-08-23, against check_exclusion_note, alongside ui-exclusion-note.json's c13aa5c run) and the seven observed at the S9 merge (710bf5b), listed in the order the check emits them — no `hidden`; wire pin missing; three `does not say`; two `says`. The count itself is unchanged at 7 and was not tuned."
+    }
+  ],
+  "rejected": [],
+  "not_touched": [
+    "R11 and R13 — debt rows, Origin: PR #46 R11/R13.",
+    "R8 — the empty-`fixtures` defang is still green and still open; no minimum-count guard added.",
+    "tasks/reviews/d5_browser_walk.py — unchanged, still plain mode only (Origin: D5 merge debt row).",
+    "`display_text`'s dual role and every line of S9's code."
+  ]
+}

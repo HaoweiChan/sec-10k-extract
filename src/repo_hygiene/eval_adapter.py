@@ -1484,6 +1484,22 @@ def check_exclusion_note(case):
     return bad, {"note_text": body}
 
 
+def _chrome_inside_items(env):
+    """ADR-026 s.d recomputed from the envelope alone: does any detected
+    chrome run intersect any item's own span? This is the oracle for
+    "exclusion removed something the reader would see", and it deliberately
+    does NOT call `strip_chrome` — that is what `build_view` itself uses, and
+    a check that re-runs the implementation agrees with any window bug the
+    implementation has (`check_boilerplate_exclusion` says the same about its
+    own oracle). Independent of which view mode rendered the payload, which
+    is the whole point after S9."""
+    spans = env.get("boilerplate") or []
+    return any(sp["start"] < i["end"] and sp["end"] > i["start"]
+               for sp in spans
+               for i in env.get("items", [])
+               if i.get("start") is not None and i.get("end") is not None)
+
+
 def check_exclusion_note_trigger(case):
     """D5 PR #46 R1. The note asserts a DISAGREEMENT between the two panes.
     That assertion is true only when exclusion actually removed something
@@ -1497,18 +1513,38 @@ def check_exclusion_note_trigger(case):
 
     So the trigger is a SECOND field, `boilerplate_applied` — asked-for vs
     applied — and this check is the one that runs the real pipeline rather
-    than reading text. Per fixture, with the flag ON:
+    than reading text. Per fixture, in EVERY view mode the case names, with
+    the flag ON:
       * the field exists;
-      * it equals `any("display_text" in item)`, which is exactly "the pane
-        on screen differs from the verbatim slice", the thing the note
-        claims;
+      * it equals `_chrome_inside_items` — ADR-026 s.d recomputed here from
+        the envelope's own spans, independently of `build_view`;
       * it equals the hand-labeled expectation in the case, so a fixture
         that stops exercising its side of the distinction says so rather
         than quietly re-labelling itself;
       * with the flag OFF it is False.
-    Globally it refuses to pass vacuously: at least one fixture must come out
-    True, at least one False, and at least one must be the R1 shape itself
-    (`boilerplate_excluded` True while `boilerplate_applied` is False).
+    Globally it refuses to pass vacuously: at least one run must come out
+    True, at least one False, at least one must be the R1 shape itself
+    (`boilerplate_excluded` True while `boilerplate_applied` is False), and
+    at least one must be in `blocks` mode.
+
+    PR #46 R10 — WHY THE MODES. The first version of this check used
+    `any("display_text" in item)` as its oracle, because before S9 that WAS
+    "the pane on screen differs from the verbatim slice": exclusion was the
+    only producer of `display_text`. S9 (ADR-032) gave it a second one — in
+    `blocks` mode `display_text` is the derived Markdown — so that equality
+    holds in PLAIN MODE ONLY, and a check asserting it in `blocks` mode would
+    report the CORRECT field as wrong. Measured at the merge: over 84 runs
+    (42 fixtures x 2 modes) the old expression disagrees with the envelope on
+    14, every one of them in `blocks` mode. The oracle is therefore computed
+    from the spans, and the divergence is reported in `info` as a measurement
+    rather than asserted, since how far Markdown departs from the raw slice
+    is S9's business, not this case's.
+
+    Deliberately NOT `strip_chrome(...) != raw` either: that is the
+    expression `build_view` itself now uses, and a check that re-runs the
+    implementation agrees with any window bug the implementation has —
+    `check_boilerplate_exclusion` makes the same argument about its own
+    oracle, for the same reason.
 
     `boilerplate_excluded` keeps its meaning for every existing consumer —
     the S8 pane header and `ui-boilerplate-exclusion`'s pins read it and are
@@ -1516,47 +1552,68 @@ def check_exclusion_note_trigger(case):
     """
     inp = case.get("input", {})
     field = inp.get("trigger_field", "boilerplate_applied")
+    modes = inp.get("blocks_modes", [False, True])
     live = _live((ROOT / inp.get("file", UI_STYLESHEET)).read_text(), "js")
-    bad, seen, r1_shape = [], {}, 0
+    bad, seen, old_expr, r1_shape = [], {}, {}, 0
     for rel, want in inp.get("fixtures", {}).items():
-        on = build_view(extract_items(str(ROOT / rel), exclude_boilerplate=True))
-        off = build_view(extract_items(str(ROOT / rel)))
-        if field not in on:
-            bad.append(f"{rel}: the view payload carries no {field!r} — the "
-                       f"note has nothing to key on but `boilerplate_excluded`, "
-                       f"which is True whenever the flag was merely asked for")
-            continue
-        got = on[field]
-        applied = any("display_text" in i for i in on.get("items", []))
-        seen[rel] = got
-        if got is not applied:
-            bad.append(f"{rel}: {field}={got!r} but {sum(1 for i in on['items'] if 'display_text' in i)}"
-                       f" of {len(on['items'])} items carry display_text — the "
-                       f"field does not mean 'the pane on screen differs'")
-        if got is not want:
-            bad.append(f"{rel}: {field}={got!r}, case expects {want!r}")
-        if off.get(field) is not False:
-            bad.append(f"{rel}: {field}={off.get(field)!r} on an UN-flagged run "
-                       f"— nothing was excluded, so nothing was applied")
-        if on.get("boilerplate_excluded") is True and got is False:
-            r1_shape += 1
+        for md in modes:
+            key = f"{rel} blocks={md}"
+            env = extract_items(str(ROOT / rel), exclude_boilerplate=True, blocks=md)
+            on = build_view(env)
+            off = build_view(extract_items(str(ROOT / rel), blocks=md))
+            if field not in on:
+                bad.append(f"{key}: the view payload carries no {field!r} — the "
+                           f"note has nothing to key on but `boilerplate_excluded`, "
+                           f"which is True whenever the flag was merely asked for")
+                continue
+            got = on[field]
+            oracle = _chrome_inside_items(env)
+            seen[key] = got
+            # reported, never asserted: the pre-S9 expression, kept visible so
+            # the mode where it diverges stays on the record, not in prose
+            old_expr[key] = any("display_text" in i for i in on.get("items", []))
+            if got is not oracle:
+                bad.append(f"{key}: {field}={got!r} but the envelope's own "
+                           f"boilerplate spans "
+                           f"{'do' if oracle else 'do NOT'} fall inside an item "
+                           f"span — the field does not mean 'exclusion removed "
+                           f"something the reader would see'")
+            if got is not want:
+                bad.append(f"{key}: {field}={got!r}, case expects {want!r}")
+            if off.get(field) is not False:
+                bad.append(f"{key}: {field}={off.get(field)!r} on an UN-flagged "
+                           f"run — nothing was excluded, so nothing was applied")
+            if on.get("boilerplate_excluded") is True and got is False:
+                r1_shape += 1
     if inp.get("fixtures"):
         if not any(seen.values()):
-            bad.append("no fixture came out True — the note could never fire "
+            bad.append("no run came out True — the note could never fire "
                        "and this case would pass vacuously")
         if all(seen.values()) and seen:
-            bad.append("no fixture came out False — the R1 distinction between "
+            bad.append("no run came out False — the R1 distinction between "
                        "'exclusion asked for' and 'exclusion applied' is not "
                        "exercised by any fixture in this case")
         if not r1_shape:
-            bad.append("no fixture reproduces the R1 shape (boilerplate_excluded "
+            bad.append("no run reproduces the R1 shape (boilerplate_excluded "
                        "True while nothing was applied) — the case has stopped "
                        "covering the defect it exists for")
+    # OUTSIDE the `fixtures` gate above, deliberately: those three guards are
+    # only reached when the case still HAS fixtures, which is the hole PR #46
+    # R8 carries as debt. R8 is not fixed here — an empty `fixtures` map still
+    # defangs them — but a guard added in the same repair that was told about
+    # the hole does not get to sit behind it.
+    if True not in modes:
+        bad.append("no run drives S9's `blocks` mode — that is the mode where "
+                   "`display_text` has a second producer, i.e. the only mode "
+                   "where the pre-S9 oracle was wrong (PR #46 R10)")
     for expr in inp.get("wire", []):
         if _squash(expr) not in _squash(live):
             bad.append(f"missing pinned expression (the note keys off {field}, "
                        f"not off the asked-for flag): {expr}")
-    return bad, {"applied_by_fixture": seen, "r1_shape_fixtures": r1_shape}
+    return bad, {"applied_by_run": seen, "r1_shape_runs": r1_shape,
+                 "pre_s9_expression_by_run": old_expr,
+                 "runs_where_pre_s9_expression_diverges":
+                     sorted(k for k in seen if seen[k] is not old_expr[k])}
 
 
 CHECKS = {

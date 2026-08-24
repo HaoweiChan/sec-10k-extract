@@ -1,7 +1,9 @@
-<!-- D5 regression fixture: six ways the D5 half-2 note regresses, one failure
-     each. The element still EXISTS and still sits above the split — the point
-     is that a present note can be exactly as wrong as an absent one, and in a
-     worse way, because it looks like the limit has been stated.
+<!-- D5 regression fixture: SEVEN ways the D5 half-2 note regresses, one
+     failure each. The element still EXISTS and still sits above the split —
+     the point is that a present note can be exactly as wrong as an absent one,
+     and in a worse way, because it looks like the limit has been stated.
+     Shape (7) arrived at the S9 merge; this header still said six until
+     PR #46 R12 caught it contradicting the case's own min/max_failures of 7.
      Caught by evals/adversarial/ui-exclusion-note-regression.json. -->
 
 <div id="warnings"></div>
@@ -12,7 +14,12 @@
      (5)+(6) worse, it says the opposite of both: "the two panes match" and
      "once the offset map exists" describe a raw<->normalized correspondence
      that this pipeline does not have and that ADR-026 s.a rules out building.
-     A reader who believes this note will read a real disagreement as a bug. -->
+     A reader who believes this note will read a real disagreement as a bug.
+     (7) it never scopes the disagreement to exclusion. After S9 the extracted
+     pane has a SECOND reason to differ from the compare pane — ADR-032's
+     Markdown view — so a note naming only exclusion takes credit for a
+     difference it does not account for. That is R1's over-claim relocated,
+     which is why the real note now says "and only that". -->
 <div id="bp-note">Boilerplate exclusion applies to the
   derived <code>normalized_text</code> only. The compare pane serves the raw
   filing bytes, and the two panes match once the offset map exists, so the
