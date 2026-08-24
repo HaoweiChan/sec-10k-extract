@@ -478,7 +478,7 @@ def eval_check(result, chk, path=None):
             return f"markdown differs; got:\n{got}"
         for v in chk.get("contains", []):
             if v not in got:
-                return f"markdown missing {v!r}"
+                return f"{'stripped ' if omit else ''}markdown missing {v!r}"
         for v in chk.get("not_contains", []):
             if v in got:
                 return (f"{'stripped ' if omit else ''}markdown still contains {v!r} "
