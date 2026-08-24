@@ -83,45 +83,61 @@ same place — and both the contract shape (`_images_shape`) and the case
 (`xom-2021-images`) pin it, so an implementation cannot "fix" it by nudging
 offsets apart. Nudging would be a text edit by another name.
 
-### b2a. An in-cell image is usually OUTSIDE its table's recorded span
+### b2a. Whether an image offset is inside a table or cell span: one comparison
 
-Corrected 2026-08-24 after PR #44 R1, and **corrected again after R7/R8**,
-which falsified the replacement rule as well. Both wrong versions were written
-from one friendly synthetic example; what follows is derived from the
-mechanism and pinned on all five shapes at once
-(`src/sec10k/normalize.py::_demo`), so it can be checked rather than believed.
+Rewritten 2026-08-24 on the human's instruction after PR #44 R8/R13, which
+falsified the **third** attempt at a narrative rule (§b1 → §b2a bullet 1 →
+§b2a's "only when…"). Each attempt was generalized from whichever example was
+in hand, and each was confirmed by a `_demo` built from that same example
+rather than tested by it. The narrative is therefore **deleted, not replaced**.
 
-**The mechanism.** An `<img>` emits nothing, so its offset is simply the
-position the text run had reached when the tag was parsed. A table's
-`start`/`end` and every cell's span are then tightened to their first/last
-**visible character** (ADR-029 §b1), and an empty cell is clamped into its
-table's tightened span. Containment is **half-open** — `start <= offset <
-end`, the same convention as an item's span (PR #44 R7), so an offset equal to
-`end` is the first character *after* the span.
+**The rule.** An image offset is inside a span exactly when
 
-It follows that an image lands inside a span **only when that span's own
-visible text begins exactly at the mark and continues past it**. "The cell
-carries text" is *not* the condition — that was R8's falsification. All five
-shapes, each pinned by an assertion:
+```
+span.start <= offset < span.end
+```
 
-| shape | result |
-|---|---|
-| `<td><img>text</td>` — image immediately followed by its cell's text | **inside** the cell (offset == cell start). The only shape that is |
-| `<td>text<img></td>` — image trails its cell's text | **outside**: the mark equals the cell's exclusive end |
-| `<td><img><div>text</div></td>` — a block emitter (`<div>`, `<p>`, `<br>`, an `&nbsp;`) intervenes | **outside its own cell**, because the cell's first visible character is now past the mark — yet still inside the **table**, if neighbouring cells' text widens the table span around it |
-| `<td><img></td>` in an image-only **leading** row | **outside the whole table**: every empty cell is clamped forward to the tightened table start while the image stays behind it |
-| `<img>` straight after `</table>` | **outside**: the mark equals the table's exclusive end |
+for cells and tables alike — half-open, the same convention as an item's span
+(PR #44 R7). That is the whole of it. No summary of its consequences appears
+here, because three have been written and three have been false.
 
-**The corpus is entirely the fourth case.** 10 of the 53 `<img>` sit inside
-`<table>` markup (cvx-2015 4 of 4, xom-2021 3 of 9, bac-2006 2 of 5, ba-2003
-1 of 3) and **0 of 53 image offsets fall inside any recorded table or cell
-span** — because a filer who typesets a graphic in a table gives it a cell of
-its own, with no text in it. The named instance is the **xom-2021 cover
-signature block**: g7/g8/g9 each have their own `<td colspan="3">` in the
-leading rows of one table, all three report offset **232186**, and the table
-is recorded at **(232188, 232373)** with every empty cell clamped to 232188 —
-the images sit two characters before the table starts. bac-2006 does the same
-at 391006 against a table at (391008, 391112).
+**Why it is not obvious.** Two facts make the offset and the span move
+independently, which is why the comparison has to be applied rather than
+predicted: an `<img>` emits nothing, so its offset is simply the position the
+text run had reached; and a table's `start`/`end` and every cell's span are
+tightened to their first/last **visible character** (ADR-029 §b1), with an
+empty cell then clamped into its table's tightened span.
+
+**Measured instances.** Not a taxonomy and not exhaustive — these are the
+shapes the rule has so far been wrongly generalized from, each pinned by an
+assertion in `src/sec10k/normalize.py::_demo` and each red if its answer
+changes.
+
+| shape | cell | table |
+|---|---|---|
+| `<td><img>text</td>` | inside (mark == cell start) | inside |
+| `<td>text<img></td>` | outside (mark == cell end, exclusive) | inside |
+| `<td><img><div>text</div></td>` | outside (mark < cell start) | inside |
+| `<td><font>/s/</font><img><font>name</font></td>` — text both sides | inside, mark strictly between start and end | inside |
+| `<td><img></td>` in an image-only **leading** row | outside | outside — empty cells are clamped forward to the tightened start, the mark stays behind it |
+| `<img>` straight after `</table>` | n/a | outside (mark == table end, exclusive) |
+| an `<img>` in a **wholly text-empty** `<table>` | n/a | **no record exists** — ADR-029 §b1 drops the table, so there is no span to compare against, while the image offset is still emitted |
+
+**The corpus, split by what actually happens.** 10 of the 53 `<img>` sit
+inside `<table>` markup, and **0 of 53 image offsets fall inside any recorded
+table or cell span** — but not for one reason, and the earlier claim that they
+were "entirely" one case was wrong twice (PR #44 R13):
+
+| | count | what happens |
+|---|---|---|
+| ba-2003 1, bac-2006 2, xom-2021 3 | **6 of 10** | image-only leading row: a table record does exist, starting exactly 2 characters after the image |
+| cvx-2015 4 of its 4 | **4 of 10** | the enclosing `<table>` has no visible text anywhere in it and is **dropped entirely**, so no record exists near the image at all — nearest records to 133962 are (127392, 128503) and (145616, 145697) |
+
+The named instance of the first group is the **xom-2021 cover signature
+block**: g7/g8/g9 each have their own `<td colspan="3">` in the leading rows
+of one table, all three report offset **232186**, and the table is recorded at
+**(232188, 232373)** with every empty cell clamped to 232188. bac-2006 does
+the same at 391006 against a table at (391008, 391112).
 
 This is not a defect and is not worked around: pulling the table span back to
 swallow the images would break ADR-029's rule that a table span is tight to
@@ -361,9 +377,9 @@ Mutations (this working tree, 2026-08-23, each applied alone and restored):
 `src/sec10k/normalize.py::_demo` pins the synthetic shapes no fixture isolates
 (a `width=`/`height=` attribute, a `50%` non-pixel size, an `<img>` with no
 `src`, an `<img>` inside `<title>` that is never recorded, an `<img>` inside a
-table, in all five positions §b2a's table enumerates (only one of which lands
-inside its own cell), an `&amp;` in `alt`, and the text
-being identical with the flag on and off) and is run by
+table, in every position §b2a's instance table records — including a wholly
+text-empty table, which yields no record at all — an `&amp;` in `alt`, and the
+text being identical with the flag on and off) and is run by
 `.github/workflows/ci.yml`'s unit-tests job.
 `src/sec10k/test_eval_adapter.py::test_image_checks` pins the check vocabulary
 itself on a synthetic envelope, including every way `_images_shape` must

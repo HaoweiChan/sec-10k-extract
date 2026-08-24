@@ -520,45 +520,62 @@ def _demo():
             "<p>FORM 10-K</p></body></html>")
     zimgs = select_and_normalize(zero, images=True)[4]
     assert [(i["width"], i["height"]) for i in zimgs] == [(None, None), (None, None)], zimgs
-    # PR #44 R1, BOTH halves. An image offset is a reading-order point; a
-    # table/cell span is tightened to VISIBLE TEXT (ADR-029 §b1) and an image
-    # contributes none. So an image in a cell that carries text does land
-    # inside that cell's span (c.jpg), and an image in a text-empty cell lands
-    # OUTSIDE its cell and outside the whole tightened table (d.jpg) — which is
-    # what every one of the 10 real in-cell images in the corpus does, because
-    # they all sit in image-only cells. Neither is a defect; the two together
-    # are the rule, and images-in-table-cell pins it on xom-2021.
-    # PR #44 R1/R7/R8 — the five in-and-around-a-table shapes, all pinned,
-    # because two rounds of review found the prose claim wrong each time it
-    # was stated from one friendly example. An <img> emits nothing, so its
-    # offset is just where the text run had got to; a table/cell span is then
-    # tightened to its first/last VISIBLE character and an empty cell clamped
-    # into the table. Containment is half-open, like an item's (R7). So an
-    # image lands inside a span only when the span's own visible text starts
-    # AT the mark and continues past it — i.e. only shape (2) below.
+    # Where an image offset sits relative to a table/cell span.
+    #
+    # THE RULE IS ONE COMPARISON: `span.start <= offset < span.end`, cells and
+    # tables alike, half-open like an item's span. There is deliberately no
+    # characterization of it here: PR #44 rounds 1-3 each wrote one ("inside
+    # its cell", "if the cell carries text", "only when the text begins at the
+    # mark") and each was false, because an <img> emits nothing while spans are
+    # tightened to visible characters and empty cells are clamped, so the
+    # offset and the span move independently. Apply the comparison.
+    #
+    # Below is not a taxonomy. It is the measured answer for every shape the
+    # rule has so far been wrongly generalized from, each red if it changes.
     by = {i["src"]: i["offset"] for i in imgs}
     c_cell, d_cell, e_cell = itabs[0]["rows"][0]
+    tab, tab2 = itabs[0], itabs[1]
     inside = lambda o, s, e: s <= o < e          # noqa: E731
-    # (1) <td>cell<img></td> — image TRAILS its cell's text: the mark equals
-    # the cell's exclusive end, so it is outside the cell it is written in.
+    # <td>cell<img></td>             mark == cell end  -> outside the CELL,
+    #                                                     inside the TABLE
     assert by["c.jpg"] == c_cell[1] and not inside(by["c.jpg"], *c_cell[:2]), (c_cell, by)
-    # (2) <td><img>adj</td> — the ONLY shape that lands inside its own cell:
-    # the cell's visible text begins exactly at the mark.
+    assert inside(by["c.jpg"], tab["start"], tab["end"]), (tab, by["c.jpg"])
+    # <td><img>adj</td>              mark == cell start -> inside the cell
     assert by["d.jpg"] == d_cell[0] and inside(by["d.jpg"], *d_cell[:2]), (d_cell, by)
-    # (3) <td><img><div>text</div></td> — a block emitter intervenes, so the
-    # cell's first visible character is past the mark: outside its own cell,
-    # yet still inside the TABLE, whose span the neighbouring cells widen.
-    assert by["e.jpg"] < e_cell[0] and inside(by["e.jpg"], itabs[0]["start"], itabs[0]["end"]), \
-        (e_cell, itabs[0]["start"], itabs[0]["end"], by)
-    # (4) an image-only LEADING row: every empty cell is clamped to the
-    # tightened table start and the image stays behind it — outside the whole
-    # table. This is what all 10 real in-cell images in the corpus do.
-    tab = itabs[1]
-    assert tab["rows"][0][0] == [tab["start"], tab["start"]], tab   # clamped, empty
-    assert by["f.jpg"] < tab["start"], (tab, by["f.jpg"])
-    # (5) an image straight after </table> sits at the exclusive end: outside.
-    assert by["g.jpg"] == tab["end"] and not inside(by["g.jpg"], tab["start"], tab["end"]), \
-        (tab, by["g.jpg"])
+    # <td><img><div>text</div></td>  mark < cell start -> outside the CELL,
+    #                                                     inside the TABLE
+    assert by["e.jpg"] < e_cell[0] and not inside(by["e.jpg"], *e_cell[:2]), (e_cell, by)
+    assert inside(by["e.jpg"], tab["start"], tab["end"]), (tab, by["e.jpg"])
+    # <td><font>/s/</font><img><font>name</font></td> — PR #44 R8: a filer's
+    # signature cell, text on BOTH sides. Inside its cell with the mark
+    # STRICTLY between start and end, which is what falsified round 3's
+    # "only when the span's text begins exactly at the mark". Pinned, not
+    # described.
+    mid = ("<html><body><p>B.</p><table><tr>"
+           "<td><font>/s/</font><img src=sig.jpg><font>Darren W. Woods</font></td>"
+           "</tr></table><p>FORM 10-K</p></body></html>")
+    mtabs, mimgs = select_and_normalize(mid, tables=True, images=True)[3:]
+    mcell, moff = mtabs[0]["rows"][0][0], mimgs[0]["offset"]
+    assert mcell[0] < moff < mcell[1], (mcell, moff)
+    # image-only LEADING row         every empty cell clamped forward to the
+    #                                tightened start, mark stays behind it
+    #                                -> outside the whole table
+    assert tab2["rows"][0][0] == [tab2["start"], tab2["start"]], tab2
+    assert by["f.jpg"] < tab2["start"], (tab2, by["f.jpg"])
+    # <img> after </table>           mark == table end -> outside
+    assert by["g.jpg"] == tab2["end"] and not inside(by["g.jpg"], tab2["start"], tab2["end"]), \
+        (tab2, by["g.jpg"])
+    # a WHOLLY text-empty <table>    NO record is emitted at all (ADR-029 §b1
+    #                                drops it), so there is no span to compare
+    #                                against — while the image offset is still
+    #                                emitted. PR #44 R13: this is cvx-2015's
+    #                                4 of 4, which any "the corpus is entirely
+    #                                the leading-row clamp" claim gets wrong.
+    empty = ("<html><body><p>B.</p><table><tr><td></td></tr>"
+             "<tr><td><div><img src=only.jpg></div></td></tr></table>"
+             "<p>FORM 10-K</p></body></html>")
+    etabs, eimgs = select_and_normalize(empty, tables=True, images=True)[3:]
+    assert etabs == [] and [i["src"] for i in eimgs] == ["only.jpg"], (etabs, eimgs)
     assert [i["offset"] for i in imgs] == sorted(i["offset"] for i in imgs), imgs
     assert select_and_normalize("<DOCUMENT>\n<TYPE>10-K\n<TEXT>\nFORM 10-K\nx\n"
                                 "</TEXT>\n</DOCUMENT>", images=True)[4] == []   # txt era
