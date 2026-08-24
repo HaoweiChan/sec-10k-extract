@@ -68,12 +68,19 @@ At the document level, `doc_status` ∈ `success` / `success_with_warning` /
 pipeline refused**; it never emits a best-effort parse of a document it could
 not identify.
 
-Two opt-in annotations add one key each and move nothing else:
+Three opt-in annotations add a key each and move nothing else:
 `extract_items(path, exclude_boilerplate=True)` reports page-chrome runs as
-offsets (ADR-026), and `extract_items(path, tables=True)` reports every HTML
+offsets (ADR-026); `extract_items(path, tables=True)` reports every HTML
 `<table>` as `{start, end, header, rows}` offset records into the same
 `normalized_text` (ADR-029) — a cell's text is a slice, exactly like an item's,
-and the Markdown rendering is derived on demand by `src/sec10k/tables.py`.
+and the Markdown rendering is derived on demand by `src/sec10k/tables.py`; and
+`extract_items(path, blocks=True)` reports the filing's block structure —
+headings (item headings promoted), paragraphs (bold flagged), list items,
+tables, or one `pre` block for a txt-era filing — as `{kind, start, end, …}`
+records, from which `src/sec10k/markdown.py` derives the whole document or any
+item as Markdown (ADR-032). The inspector's *render as Markdown* box shows that
+view; `normalized_text` itself is never rewritten — ADR-032 §f2 measures what
+that would have moved.
 
 ## Key design decisions
 
