@@ -1,0 +1,38 @@
+{
+  "id": "ui-exclusion-note",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "exclusion_note"
+    ],
+    "note_id": "bp-note",
+    "wire": [
+      "$(\"#bp-note\").hidden = !v.boilerplate_applied;"
+    ],
+    "must_say": [
+      "derived normalized_text",
+      "compare pane serves the raw filing bytes",
+      "the two panes will not agree",
+      "no raw-to-normalized offset map in this pipeline",
+      "That is what exclusion accounts for, and only that"
+    ],
+    "must_not_say": [
+      "panes agree",
+      "panes match",
+      "offset map exists",
+      "the same text"
+    ]
+  },
+  "expect": {},
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "D5 half 2, promoted from the S8 debt row. With \"exclude boilerplate\" ticked the two panes visibly disagree — the extracted pane drops the detected runs, the compare pane still serves every `<PAGE>` and running head — and nothing on screen said why. The real fix is a raw<->normalized offset map, which the debt row rules OUT as post-freeze scope creep under ADR-026 s.a, and that ruling STANDS: this case pins the NOTE only. `must_say` is the honest content (derived `normalized_text` on one side, raw filing bytes on the other, the panes will not agree, no map exists); `must_not_say` is the failure mode the task names explicitly — a note that implies the map exists or that the panes agree is a failure of this task, not a shortcut. `hidden` in the static markup plus the pinned `$(\"#bp-note\").hidden = !v.boilerplate_applied;` assignment are the two halves of \"shown when exclusion is active, and only then\": delete the element, delete the assignment, or repoint the assignment at some other state, and one of them goes red. PR #46 R1 moved the pin from `boilerplate_excluded` to `boilerplate_applied`: the former is True whenever the flag was merely asked for, so the note fired on aapl-2025 (0 spans, 0 items stripped, pane byte-identical to the un-flagged run) and above the empty pane of aapl-2026-10q. WHICH field it is, and what that field means on real filings, is `ui-exclusion-note-trigger`'s job — this case only pins that the note reads it.",
+    "ceiling": "STATIC READ. This check parses the MARKUP TEXT of src/sec10k/web/static/index.html — no test in this harness issues an HTTP request, so it does NOT observe the render. It cannot see the note appear when the box is ticked; it sees only that the element exists, ships `hidden`, and has its `hidden` assigned from the response's own `boilerplate_excluded`. The pin mechanism's documented hole applies in full here: a pinned element can be `hidden` (this one deliberately is, at rest) and still satisfy its pin, and a CSS rule could still keep it invisible with every pin green. That the note appears with exclusion on and is absent with it off is browser evidence, in tasks/reviews/d5-browser-walk.json.",
+    "red_first": "Watched red at c13aa5c, before any fix: 1 failure — `#bp-note: no note element in the markup`. The check short-circuits on a missing element (there is no text to interrogate), so the wording and wire pins only start reporting once the element exists; each is falsified separately by mutation instead (see ui-exclusion-note-regression)."
+  },
+  "provenance": "D5, created 2026-08-23 before the implementation, per hard rule 2. Carries the S8 debt row's evidence: verified live at 1280px on ge-1994; `src/sec10k/web/app.py` `api_source()` serves SOURCE_CACHE's ORIGINAL bytes to `#src-frame`, while `boilerplate` offsets index the derived `normalized_text` and `normalize.py` emits no correspondence between them. Wire pin repointed at `boilerplate_applied` in the PR #46 round-1 repair."
+}

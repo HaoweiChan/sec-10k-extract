@@ -59,16 +59,25 @@ def build_view(result, display_max=DISPLAY_MAX):
     blocks = result.get("blocks")         # present iff the Markdown view was asked for
     tables = result.get("tables") or []
     items = []
+    bp_applied = False
     for i in result.get("items", []):
         s, e = i.get("start"), i.get("end")
         has_span = s is not None and e is not None
         raw = text[s:e] if has_span else ""
+        # ADR-026 s.d's own definition of "exclusion removed something from
+        # this item", computed whichever view is rendered. In the plain path it
+        # IS the body, so it costs nothing; in `blocks` mode it is the one extra
+        # pass that keeps `boilerplate_applied` meaning the same thing in both.
+        stripped = (strip_chrome(text, spans, s, e)
+                    if has_span and spans is not None else raw)
+        if stripped != raw:
+            bp_applied = True
         if has_span and blocks is not None:
             shown_end = min(e, s + display_max)
             body = to_markdown(text, blocks, tables, s, shown_end, omit=spans or ())
             truncated = shown_end < e
         else:
-            body = strip_chrome(text, spans, s, e) if has_span and spans is not None else raw
+            body = stripped
             truncated = len(body) > display_max
             body = body[:display_max]
         item = {
@@ -97,6 +106,22 @@ def build_view(result, display_max=DISPLAY_MAX):
         # so the pane can SAY it is hiding text. `chars` still reports the
         # full span, so without this the two numbers silently disagree.
         "boilerplate_excluded": spans is not None,
+        # PR #46 R1: ASKED FOR is not APPLIED. `boilerplate_excluded` is True
+        # whenever the caller passed the flag — including aapl-2025, where the
+        # detector returns [] and all 23 items come back byte-identical to the
+        # un-flagged run, and aapl-2026-10q, where there are no items at all.
+        # Anything that ASSERTS the pane on screen differs (the D5 compare-pane
+        # note) must key on this instead. `boilerplate_excluded` keeps its own
+        # meaning for the consumers it already has (the S8 pane header, its pins).
+        #
+        # D5/S9 MERGE: this used to read `any("display_text" in i)`, which was
+        # equivalent to "exclusion removed something" only while exclusion was
+        # that field's only producer. S9 gave it a second one — in `blocks` mode
+        # `display_text` is the derived Markdown — so the old expression is True
+        # whenever Markdown is on, boilerplate or not, which is R1 again wearing
+        # S9's clothes. It is now measured from the EXCLUSION itself (see
+        # `bp_applied` in the loop), so it means the same thing in both modes.
+        "boilerplate_applied": bp_applied,
         "markdown": blocks is not None,
     }
 
@@ -187,6 +212,16 @@ def _demo():
              {"start": h2, "end": h2 + len(head), "kind": "running_head"}]
     off, on = build_view(plain), build_view(dict(plain, boilerplate=spans))
     assert off["boilerplate_excluded"] is False and on["boilerplate_excluded"] is True
+    # PR #46 R1: applied, not merely asked for. The same envelope with an EMPTY
+    # span list is the aapl-2025 shape — the flag was honoured, nothing was
+    # found, so nothing on screen differs and nothing may claim it does.
+    none_found = build_view(dict(plain, boilerplate=[]))
+    assert none_found["boilerplate_excluded"] is True
+    assert none_found["boilerplate_applied"] is False
+    assert on["boilerplate_applied"] is True and off["boilerplate_applied"] is False
+    # zero items: no pane, nothing to differ from (aapl-2026-10q, truncated-download)
+    assert build_view({"normalized_text": "", "items": [],
+                       "boilerplate": []})["boilerplate_applied"] is False
     # `text` is VERBATIM in both modes (PR #27 R1). It is not only what the
     # pane shows: findAnchor matches it against the ORIGINAL filing, which
     # still has the chrome in it, so handing that consumer a stripped string
@@ -244,6 +279,16 @@ def _demo():
                                   boilerplate=[{"start": 0, "end": 9, "kind": "running_head"}]))
     assert item1_from0["items"][0]["start"] == 0
     assert item1_from0["items"][0]["display_text"] == "Item 1. Business\n\nreal prose\n\n| a | b |\n|---|---|"
+    # D5/S9 MERGE: `boilerplate_applied` must survive S9 giving `display_text`
+    # a second producer. `md` has display_text on item 1 (the derived Markdown)
+    # and no exclusion at all, so the OLD `any("display_text" in i)` expression
+    # would report True here — the PR #46 R1 defect in S9's clothes.
+    assert md["boilerplate_applied"] is False
+    # and it is still True when exclusion actually removes something, in EITHER
+    # view: plain (`on`, above) and Markdown (`item1_from0`, head inside the span)
+    assert item1_from0["boilerplate_applied"] is True
+    # asked for, found nothing, Markdown on: still False
+    assert both["boilerplate_excluded"] is True and both["boilerplate_applied"] is False
     json.dumps(md)
     print("[view self-check] ok")
 

@@ -1,0 +1,46 @@
+<!-- D5 regression fixture: seven ways the D5 half-1 layout regresses, one
+     failure each. Everything NOT listed is correctly wired, so a check that
+     blanket-failed would overshoot the exact count rather than reach it.
+     Caught by evals/adversarial/ui-split-breakpoint-regression.json. -->
+<style>
+/* not a shape under test — `.split` must not be the FIRST rule in the block,
+   or _flat_rules reads its selector as `<style> .split` and the base-rule
+   failure below reports None instead of the two tracks it actually found. */
+.none{color:var(--dim);font-size:13px}
+/* (1) the base rule loses a track — "narrower columns" taken as "one fewer
+   pane", which stacks nothing and still hides the compare pane. */
+.split{display:grid;grid-template-columns:196px 1fr;gap:14px;align-items:start}
+/* (2) the stacking breakpoint re-raised to the pre-D5 1100px. This is the
+   original V5 defect, restored. It also breaks (3): the JS below still
+   watches 1000, so the width the layout stacks at and the width the control
+   calls itself inactive at are no longer the same number, leaving a live
+   control over stacked panes between 1001 and 1100. */
+@media(max-width:1100px){#source{grid-column:1/-1}}
+@media(max-width:820px){.split{grid-template-columns:1fr}}
+</style>
+<div class="split">
+  <div id="sidebar"></div>
+  <div id="pane"></div>
+  <div id="source">
+    <!-- (7) the "inactive" label element is gone; the checkbox goes quietly
+         disabled and still reads as a live control. -->
+    <div class="src-hdr"><span>original filing</span>
+      <label><input type="checkbox" id="sync-scroll" checked> sync scroll</label></div>
+  </div>
+</div>
+<script>
+// (4) syncOn() drops the `!c.disabled` term: a disabled control still drives
+// the sync, so disabling it changes nothing but its appearance.
+function syncOn(){ const c = $("#sync-scroll"); return !!(c && c.checked); }
+// (3) stale width — see (2).
+const STACKED = matchMedia("(max-width:1000px)");
+// (5) disables the control but says nothing: no #sync-state wording.
+function syncStacked(){
+  const c = $("#sync-scroll"); if(!c) return;
+  c.disabled = STACKED.matches;
+}
+// (6) no STACKED.addEventListener("change", syncStacked) — evaluated once at
+// load, so resizing past the breakpoint leaves the control in whatever state
+// the first paint gave it.
+syncStacked();
+</script>

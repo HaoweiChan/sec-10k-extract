@@ -1,0 +1,79 @@
+{
+  "pr": 46,
+  "task": "D5",
+  "round": 2,
+  "date": "2026-08-24",
+  "implementer": "task/D5 round-2 repair",
+  "base": "4568c8f",
+  "scope": "TEXT ONLY. No behaviour, no eval case, no artifact number changed. The round-2 review APPROVED the PR; these two corrections are the wording that approval named.",
+  "gate_after_repair": {
+    "invariant": "56/56 = 1.000",
+    "fast": "104/104 = 1.000",
+    "baseline": "1.000, not moved",
+    "table_fidelity": "cells 400/400, rows 31/31",
+    "note": "Unchanged from d2faf12, as expected — neither diff is reachable from any check. index.html's comment is stripped by the adapter's own `_live()` before any pin is matched, and prompts/ is not read by the harness."
+  },
+  "routing_note": "R6's INSTRUMENT half, R8 and R9 are debt rows (Origin: PR #46 R6/R8/R9) and are untouched here. `display_text`'s meaning was not re-opened and no minimum-fixture-count guard was added.",
+  "resolutions": [
+    {
+      "id": "R6",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "half": "the sentence only — the instrument gap stays debt, deliberately",
+      "reproduced": "Accepted as demonstrated by the reviewer at d2faf12 rather than re-run: `@media(min-width:1001px) and (max-width:1100px){#source{position:relative;left:-9999px}}` records `source: {top:582, left:-9375, width:349, height:636, visible:true, has_offset_parent:true}` with `failures: []`, exit 0; `clip-path:inset(100%)` likewise green. Nothing in the walk compares a pane rect against the viewport.",
+      "fix": "prompts/019-d5-inspector-layout-and-exclusion-honesty.md, the R2 bullet. The claim that `checkVisibility(...)` is \"the native API for the question actually being asked\" is replaced by what the API actually delivers: it answers the strictly narrower question \"is the element RENDERED\", and that is all the walk now claims. The sentence then states the gap in the terms D5's own acceptance uses — ON SCREEN is not RENDERED — carries both of the reviewer's reproductions with their measured numbers, and points at the debt row (Origin: PR #46 R6) instead of implying the instrument covers them.",
+      "not_done_on_purpose": "tasks/reviews/d5_browser_walk.py is unchanged. The orchestrator routed the instrument gap to debt because the shipped layout is correct at every measured width and the gate is green; widening the instrument here would be a coverage change inside a text-only round."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "status": "fixed",
+      "routing_exception": "Routed to repair rather than debt by the orchestrator, recorded as a bounded exception: this is the round-1 repair leaving its own annotation stale inside the diff that changed it, so correcting it finishes R1 rather than growing the PR. Bounded to this one comment; neighbouring comments were not touched.",
+      "reproduced": "Yes, read directly. The comment above `#bp-note` claimed `render() assigns .hidden from v.boilerplate_excluded, the same read-at-request-time field the pane header labels itself from`. Both clauses were false after the round-1 repair: render() assigns from `v.boilerplate_applied`, and that is deliberately a DIFFERENT field from the one `hdrRight` and the `.pane-meta` boilerplate `<dd>` read.",
+      "fix": "src/sec10k/web/static/index.html, the comment above `#bp-note`. It now names `boilerplate_applied`, says outright that this is NOT the field the pane header reads, names the two places that do read `boilerplate_excluded` (`hdrRight` and the `.pane-meta` boilerplate `<dd>`), and gives the reason the two differ: the header LABELS, while the note ASSERTS that the panes differ, so only the note needs the field that says one of them changed. A reader auditing the trigger from the markup now lands on the field render() actually reads.",
+      "verified": "Comment text only — the adapter's `_live()` strips HTML comments before any pin is matched, so this cannot move a check either way, and the gate confirms it did not."
+    }
+  ],
+  "rejected": [],
+  "merge_with_main": {
+    "date": "2026-08-24",
+    "merged": "f00b635 (PR #45, S9 — whole-document Markdown rendering)",
+    "why": "main moved under task/D5; a CONFLICTING PR runs no CI, so the evidence pack could not honestly claim anything until this was resolved.",
+    "conflicts": {
+      "evals/report/history.jsonl": "Append-only. Both sides' lines kept and interleaved by `ts`: ours 541 lines, theirs 515, common base 511, merged 545 = 511 + 30 + 4. Every line parses, zero duplicate timestamps, nothing invented.",
+      "tasks/pr-loop-ledger.jsonl": "Append-only. S9's line first (it merged to main first), our D5 line last, per the orchestrator's instruction. 21 task lines, both present.",
+      "tasks/TODO.md": "Both sides appended debt rows to the same table tail. Theirs (9 rows, Origin: S9 / PR #45) first, ours (8 rows, Origin: D5 and PR #46 R3/R4/R5/R6/R8/R9) after. S9's queue row is gone from TODO.md and present in DONE.md as their side intended; our D5 queue row survives. `ledger_table_shape` run last: 0 failures.",
+      "src/sec10k/web/view.py": "The real one — see `boilerplate_applied_re_derivation` below. Both features kept: S9's `markdown` key and Markdown body, D5's `boilerplate_applied`."
+    },
+    "boilerplate_applied_re_derivation": {
+      "problem": "S9 gave `display_text` a SECOND producer: in `blocks` mode it is the derived Markdown, not the chrome-stripped slice. D5's `any(\"display_text\" in i)` was equivalent to \"exclusion removed something\" only while exclusion was that field's only producer, so after the merge it reads True whenever Markdown is on — the PR #46 R1 defect in S9's clothes.",
+      "measured": "84 runs (42 committed fixtures x 2 view modes), each compared against an oracle recomputed independently of build_view (does any boilerplate span intersect any item span). The PRE-merge expression is wrong on 14 of 84, all 14 in Markdown mode: aapl-2025, cvx-2015, gs-2002, intc-2002, interior-span-dominates, jnj-2016, reac-2015, sgrp-2019, spaced-letter-heading, spans-transposed, spatz-2014, tgt-2002, wmt-2010, xom-2021. The MERGED expression agrees with the oracle on 84/84.",
+      "fix": "`bp_applied` is accumulated in the item loop from `strip_chrome(text, spans, s, e) != raw` — ADR-026 s.d's own definition, computed whichever view is rendered. In the plain path the stripped string IS the body, so it costs nothing; in `blocks` mode it is one extra pass. S9's rendering is untouched.",
+      "self_check": "`python3 -m src.sec10k.web.view` gained three asserts: Markdown on with no exclusion -> False (the exact shape the old expression got wrong), Markdown on with chrome inside the span -> True, Markdown on with exclusion asked for and nothing found -> False.",
+      "live": "On the merged tree: aapl-2025 with exclude+markdown returns `applied False` over 23 items that all carry `display_text`; ge-1994 with exclude+markdown returns `applied True` over 14."
+    },
+    "note_wording_narrowed": {
+      "why": "The note asserted `the compare pane ... still shows every page break and running head the extracted pane drops — the two panes will not agree while this is on`, which attributes the whole disagreement to exclusion. Under S9 the extracted pane also differs in FORM when Markdown is on, for a reason unrelated to boilerplate.",
+      "change": "Added `That is what exclusion accounts for, and only that: with Markdown rendering on the extracted pane also differs in form, which is ADR-032's separate derived view and is stated in the pane's own evidence.` The claim is true in both modes and does not restate S9's own `<dt>markdown</dt>` evidence line, it points at it.",
+      "pinned": "The clause is a new `must_say` entry in ui-exclusion-note.json and ui-exclusion-note-regression.json; the regression fixture does not contain it, so that case's EXACT count moved 6 -> 7 and its triage note carries shape (7)."
+    },
+    "browser_walk": {
+      "result": "Regenerated against a local server on the merged tree: 0 failures, exit 0, aapl-2025 no-chrome control still `note rendered: false`.",
+      "what_moved": "Absolute pane tops only: 1280 483 -> 560, 1024 582 -> 678, 900 622 -> 718, 768 1340 -> 1436. Cause: S9 added a second `<label class=\"opt\">` (`render as Markdown`) to the input fieldset above the split. Every D5 measurement is unchanged — grid tracks identical at all four widths, pane/source top delta 0/0/651/651 as before, panes visible everywhere, sync disabled at 900 and 768 and live at 1280 and 1024, note off with exclusion off and on with it on.",
+      "not_done": "The walk still never ticks S9's Markdown box. Logged as debt (Origin: D5 merge) rather than extended here — adding that dimension measures S9's feature."
+    },
+    "gate_after_merge": {
+      "invariant": "58/58 = 1.000",
+      "fast": "116/116 = 1.000",
+      "table_fidelity": "cells 400/400, rows 31/31",
+      "structure_fidelity": "blocks 61/61, bounds 61/61 (S9's, unaffected)",
+      "view_self_check": "green",
+      "extract_digests": "byte-identical vs a pristine f00b635 on 42/42 fixtures"
+    },
+    "new_debt": [
+      "The D5 browser walk never drives Markdown mode (Origin: D5 merge)",
+      "`boilerplate_applied` and the Markdown pane use two different definitions of \"removed\" (Origin: D5 merge)"
+    ],
+    "not_touched": "Nothing in S9's code was changed. `display_text`'s dual role is S9's design; D5 stopped depending on it rather than re-opening it. No S9 debt row was absorbed."
+  }
+}

@@ -1,0 +1,415 @@
+{
+ "base": "http://localhost:8041",
+ "fixture": "ge-1994",
+ "side_by_side_floor": 1024,
+ "stack_breakpoint": 1000,
+ "widths": {
+  "1280": {
+   "exclusion_off": {
+    "split_columns": "290px 422.594px 422.594px",
+    "pane": {
+     "top": 618,
+     "left": 362,
+     "width": 423,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "source": {
+     "top": 618,
+     "left": 799,
+     "width": 423,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "sidebar": {
+     "top": 618,
+     "left": 58,
+     "width": 290,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "sync": {
+     "disabled": false,
+     "checked": true,
+     "state_label": ""
+    },
+    "note": {
+     "hidden": true,
+     "rendered": false,
+     "text": "Boilerplate exclusion applies to the derived normalized_text only. The compare pane serves the raw filing bytes, so it still shows every page break and running head the extracted pane drops \u2014 the two panes will not agree while this is on. That is what exclusion accounts for, and only that: with Markdown rendering on the extracted pane also differs in form, which is ADR-032's separate derived view and is stated in the pane's own evidence. There is no raw-to-normalized offset map in this pipeline (ADR-026 \u00a7a), so this is a known limit of the compare view, not a fault in either pane."
+    },
+    "viewport": {
+     "w": 1280,
+     "h": 860
+    },
+    "shot": "d5-browser-walk/w1280-exclusion-off.png"
+   },
+   "exclusion_on": {
+    "split_columns": "290px 422.594px 422.594px",
+    "pane": {
+     "top": 729,
+     "left": 362,
+     "width": 423,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "source": {
+     "top": 729,
+     "left": 799,
+     "width": 423,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "sidebar": {
+     "top": 729,
+     "left": 58,
+     "width": 290,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "sync": {
+     "disabled": false,
+     "checked": true,
+     "state_label": ""
+    },
+    "note": {
+     "hidden": false,
+     "rendered": true,
+     "text": "Boilerplate exclusion applies to the derived normalized_text only. The compare pane serves the raw filing bytes, so it still shows every page break and running head the extracted pane drops \u2014 the two panes will not agree while this is on. That is what exclusion accounts for, and only that: with Markdown rendering on the extracted pane also differs in form, which is ADR-032's separate derived view and is stated in the pane's own evidence. There is no raw-to-normalized offset map in this pipeline (ADR-026 \u00a7a), so this is a known limit of the compare view, not a fault in either pane."
+    },
+    "viewport": {
+     "w": 1280,
+     "h": 860
+    },
+    "shot": "d5-browser-walk/w1280-exclusion-on.png"
+   },
+   "panes_visible": true,
+   "panes_same_row": true,
+   "pane_source_top_delta_px": 0,
+   "pane_source_top_delta_px_note_on": 0
+  },
+  "1024": {
+   "exclusion_off": {
+    "split_columns": "196px 349.266px 349.281px",
+    "pane": {
+     "top": 736,
+     "left": 261,
+     "width": 349,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "source": {
+     "top": 736,
+     "left": 624,
+     "width": 349,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "sidebar": {
+     "top": 736,
+     "left": 51,
+     "width": 196,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "sync": {
+     "disabled": false,
+     "checked": true,
+     "state_label": ""
+    },
+    "note": {
+     "hidden": true,
+     "rendered": false,
+     "text": "Boilerplate exclusion applies to the derived normalized_text only. The compare pane serves the raw filing bytes, so it still shows every page break and running head the extracted pane drops \u2014 the two panes will not agree while this is on. That is what exclusion accounts for, and only that: with Markdown rendering on the extracted pane also differs in form, which is ADR-032's separate derived view and is stated in the pane's own evidence. There is no raw-to-normalized offset map in this pipeline (ADR-026 \u00a7a), so this is a known limit of the compare view, not a fault in either pane."
+    },
+    "viewport": {
+     "w": 1024,
+     "h": 860
+    },
+    "shot": "d5-browser-walk/w1024-exclusion-off.png"
+   },
+   "exclusion_on": {
+    "split_columns": "196px 349.266px 349.281px",
+    "pane": {
+     "top": 887,
+     "left": 261,
+     "width": 349,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "source": {
+     "top": 887,
+     "left": 624,
+     "width": 349,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "sidebar": {
+     "top": 887,
+     "left": 51,
+     "width": 196,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "sync": {
+     "disabled": false,
+     "checked": true,
+     "state_label": ""
+    },
+    "note": {
+     "hidden": false,
+     "rendered": true,
+     "text": "Boilerplate exclusion applies to the derived normalized_text only. The compare pane serves the raw filing bytes, so it still shows every page break and running head the extracted pane drops \u2014 the two panes will not agree while this is on. That is what exclusion accounts for, and only that: with Markdown rendering on the extracted pane also differs in form, which is ADR-032's separate derived view and is stated in the pane's own evidence. There is no raw-to-normalized offset map in this pipeline (ADR-026 \u00a7a), so this is a known limit of the compare view, not a fault in either pane."
+    },
+    "viewport": {
+     "w": 1024,
+     "h": 860
+    },
+    "shot": "d5-browser-walk/w1024-exclusion-on.png"
+   },
+   "panes_visible": true,
+   "panes_same_row": true,
+   "pane_source_top_delta_px": 0,
+   "pane_source_top_delta_px_note_on": 0
+  },
+  "900": {
+   "exclusion_off": {
+    "split_columns": "196px 596px",
+    "pane": {
+     "top": 776,
+     "left": 257,
+     "width": 596,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "source": {
+     "top": 1427,
+     "left": 47,
+     "width": 806,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "sidebar": {
+     "top": 776,
+     "left": 47,
+     "width": 196,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "sync": {
+     "disabled": true,
+     "checked": true,
+     "state_label": " \u2014 inactive: panes stacked"
+    },
+    "note": {
+     "hidden": true,
+     "rendered": false,
+     "text": "Boilerplate exclusion applies to the derived normalized_text only. The compare pane serves the raw filing bytes, so it still shows every page break and running head the extracted pane drops \u2014 the two panes will not agree while this is on. That is what exclusion accounts for, and only that: with Markdown rendering on the extracted pane also differs in form, which is ADR-032's separate derived view and is stated in the pane's own evidence. There is no raw-to-normalized offset map in this pipeline (ADR-026 \u00a7a), so this is a known limit of the compare view, not a fault in either pane."
+    },
+    "viewport": {
+     "w": 900,
+     "h": 860
+    },
+    "shot": "d5-browser-walk/w900-exclusion-off.png"
+   },
+   "exclusion_on": {
+    "split_columns": "196px 596px",
+    "pane": {
+     "top": 927,
+     "left": 257,
+     "width": 596,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "source": {
+     "top": 1578,
+     "left": 47,
+     "width": 806,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "sidebar": {
+     "top": 927,
+     "left": 47,
+     "width": 196,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "sync": {
+     "disabled": true,
+     "checked": true,
+     "state_label": " \u2014 inactive: panes stacked"
+    },
+    "note": {
+     "hidden": false,
+     "rendered": true,
+     "text": "Boilerplate exclusion applies to the derived normalized_text only. The compare pane serves the raw filing bytes, so it still shows every page break and running head the extracted pane drops \u2014 the two panes will not agree while this is on. That is what exclusion accounts for, and only that: with Markdown rendering on the extracted pane also differs in form, which is ADR-032's separate derived view and is stated in the pane's own evidence. There is no raw-to-normalized offset map in this pipeline (ADR-026 \u00a7a), so this is a known limit of the compare view, not a fault in either pane."
+    },
+    "viewport": {
+     "w": 900,
+     "h": 860
+    },
+    "shot": "d5-browser-walk/w900-exclusion-on.png"
+   },
+   "panes_visible": true,
+   "panes_same_row": false,
+   "pane_source_top_delta_px": 651,
+   "pane_source_top_delta_px_note_on": 651
+  },
+  "768": {
+   "exclusion_off": {
+    "split_columns": "681.906px",
+    "pane": {
+     "top": 1494,
+     "left": 43,
+     "width": 682,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "source": {
+     "top": 2144,
+     "left": 43,
+     "width": 682,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "sidebar": {
+     "top": 844,
+     "left": 43,
+     "width": 682,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "sync": {
+     "disabled": true,
+     "checked": true,
+     "state_label": " \u2014 inactive: panes stacked"
+    },
+    "note": {
+     "hidden": true,
+     "rendered": false,
+     "text": "Boilerplate exclusion applies to the derived normalized_text only. The compare pane serves the raw filing bytes, so it still shows every page break and running head the extracted pane drops \u2014 the two panes will not agree while this is on. That is what exclusion accounts for, and only that: with Markdown rendering on the extracted pane also differs in form, which is ADR-032's separate derived view and is stated in the pane's own evidence. There is no raw-to-normalized offset map in this pipeline (ADR-026 \u00a7a), so this is a known limit of the compare view, not a fault in either pane."
+    },
+    "viewport": {
+     "w": 768,
+     "h": 860
+    },
+    "shot": "d5-browser-walk/w768-exclusion-off.png"
+   },
+   "exclusion_on": {
+    "split_columns": "681.906px",
+    "pane": {
+     "top": 1665,
+     "left": 43,
+     "width": 682,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "source": {
+     "top": 2315,
+     "left": 43,
+     "width": 682,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "sidebar": {
+     "top": 1015,
+     "left": 43,
+     "width": 682,
+     "height": 636,
+     "visible": true,
+     "has_offset_parent": true
+    },
+    "sync": {
+     "disabled": true,
+     "checked": true,
+     "state_label": " \u2014 inactive: panes stacked"
+    },
+    "note": {
+     "hidden": false,
+     "rendered": true,
+     "text": "Boilerplate exclusion applies to the derived normalized_text only. The compare pane serves the raw filing bytes, so it still shows every page break and running head the extracted pane drops \u2014 the two panes will not agree while this is on. That is what exclusion accounts for, and only that: with Markdown rendering on the extracted pane also differs in form, which is ADR-032's separate derived view and is stated in the pane's own evidence. There is no raw-to-normalized offset map in this pipeline (ADR-026 \u00a7a), so this is a known limit of the compare view, not a fault in either pane."
+    },
+    "viewport": {
+     "w": 768,
+     "h": 860
+    },
+    "shot": "d5-browser-walk/w768-exclusion-on.png"
+   },
+   "panes_visible": true,
+   "panes_same_row": false,
+   "pane_source_top_delta_px": 650,
+   "pane_source_top_delta_px_note_on": 650
+  }
+ },
+ "no_chrome_control": {
+  "fixture": "aapl-2025",
+  "width": 1280,
+  "measured": {
+   "split_columns": "290px 422.594px 422.594px",
+   "pane": {
+    "top": 575,
+    "left": 362,
+    "width": 423,
+    "height": 636,
+    "visible": true,
+    "has_offset_parent": true
+   },
+   "source": {
+    "top": 575,
+    "left": 799,
+    "width": 423,
+    "height": 636,
+    "visible": true,
+    "has_offset_parent": true
+   },
+   "sidebar": {
+    "top": 575,
+    "left": 58,
+    "width": 290,
+    "height": 636,
+    "visible": true,
+    "has_offset_parent": true
+   },
+   "sync": {
+    "disabled": false,
+    "checked": true,
+    "state_label": ""
+   },
+   "note": {
+    "hidden": true,
+    "rendered": false,
+    "text": "Boilerplate exclusion applies to the derived normalized_text only. The compare pane serves the raw filing bytes, so it still shows every page break and running head the extracted pane drops \u2014 the two panes will not agree while this is on. That is what exclusion accounts for, and only that: with Markdown rendering on the extracted pane also differs in form, which is ADR-032's separate derived view and is stated in the pane's own evidence. There is no raw-to-normalized offset map in this pipeline (ADR-026 \u00a7a), so this is a known limit of the compare view, not a fault in either pane."
+   },
+   "viewport": {
+    "w": 1280,
+    "h": 860
+   },
+   "shot": "d5-browser-walk/w1280-aapl-2025-exclusion-on.png"
+  }
+ },
+ "failures": []
+}
