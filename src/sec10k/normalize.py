@@ -59,7 +59,7 @@ def _dim(attrs, name):
     """A declared pixel size as a POSITIVE int, or None. The HTML attribute
     first, then the `style` declaration — which is where every sized image in
     the committed corpus puts it: 0 of 53 <img> carry width=/height=, 40 carry
-    style (ADR-032 §b1).
+    style (ADR-033 §b1).
 
     Anything that is not a whole positive number of pixels answers None rather
     than a wrong number: a non-pixel unit ("50%", "auto"), a zero ("width=0",
@@ -78,30 +78,85 @@ def _dim(attrs, name):
     return int(v) if v.isdigit() and int(v) > 0 else None
 
 
+H_TAGS = {"h1", "h2", "h3", "h4", "h5", "h6"}
+LIST_TAGS = {"ol", "ul"}
+# the HTML carries bold two ways: the tag, or a style on any tag (Workiva
+# iXBRL writes <span style="font-weight:700"> and never <b>; legacy filers
+# write <b>). Both count; nothing else (font-size, ALL CAPS, <u>) does.
+BOLD_RE = re.compile(r"font-weight\s*:\s*(?:bold|bolder|[6-9]00)", re.I)
+
+
 class _Plain(HTMLParser):
     """HTML -> plain text. Block tags break lines, inline tags vanish.
 
     With `tables=True` it ALSO records, in the same pass, where every
     <table>/<tr>/<td|th> starts and ends as offsets into the text it is
-    emitting (ADR-029). With `images=True` it likewise records where every
-    <img> sits — a point, not a span, because an image emits no text
-    (ADR-032). The text itself is byte-identical either way: the recorder
-    only reads `self.pos`, it never emits. Offsets are pre-_tidy here;
-    `_tidy` moves them along with the text it rewrites.
+    emitting (ADR-029). The text itself is byte-identical either way: the
+    recorder only reads `self.pos`, it never emits. Offsets are pre-_tidy
+    here; `_tidy` moves them along with the text it rewrites.
+
+    With `blocks=True` (implies tables) it also records, in the same pass,
+    the BLOCK STRUCTURE (ADR-032): one record per run of text between two
+    block-tag boundaries outside any <table> — `{kind, start, end}` with
+    kind `heading` (+`level`, from <h1>–<h6> only), `list_item` (+`ordered`,
+    inside <li>), else `paragraph`; `strong: true` when every character of
+    the block was emitted inside a bold context. Text inside a <table> is
+    the table record's, not a block's; `normalize()` adds the `table` block
+    over each record afterwards.
+
+    With `images=True` it records where every <img> sits — a point, not a
+    span, because an image emits no text (ADR-033).
+
+    Same rule for all three: read `self.pos`, never emit, so the text cannot
+    differ with any flag on or off.
     """
 
-    def __init__(self, tables=False, images=False):
+    def __init__(self, tables=False, blocks=False, images=False):
         super().__init__(convert_charrefs=True)  # entities decode here, stay Unicode
         self.parts = []
         self.pos = 0          # len("".join(parts)), kept incrementally
         self.skip_depth = 0
-        self.tables = [] if tables else None   # closed records, document order
-        self.images = [] if images else None   # ADR-032, document order
+        self.tables = [] if (tables or blocks) else None   # closed records, document order
+        self.images = [] if images else None   # ADR-033, document order
         self._open = []       # open <table> records, innermost last
+        self.blocks = [] if blocks else None
+        self._blk = None      # the open block record, or None
+        self._lists = []      # open <ol>/<ul> tag names, innermost last
+        self._hlevel = None   # inside <hN>: N
+        self._li = False      # inside <li> (cleared by </li>, </ol>, </ul>)
+        self._bold = []       # tag names that opened a bold context, innermost last
 
     def _emit(self, s):
         self.parts.append(s)
         self.pos += len(s)
+
+    # --- block recording (ADR-032 §b). A block opens on the first visible
+    # data after a block-tag boundary (outside any table) and closes at the
+    # next boundary; its kind is fixed when it opens.
+    def _blk_close(self):
+        if self._blk is not None:
+            b = self._blk
+            b["end"] = self.pos
+            if b.pop("_strong"):
+                b["strong"] = True
+            self.blocks.append(b)
+            self._blk = None
+
+    def _blk_open(self):
+        if self._hlevel:
+            b = {"kind": "heading", "start": self.pos, "end": None, "level": self._hlevel}
+        elif self._li:
+            b = {"kind": "list_item", "start": self.pos, "end": None,
+                 "ordered": bool(self._lists) and self._lists[-1] == "ol"}
+        else:
+            b = {"kind": "paragraph", "start": self.pos, "end": None}
+        b["_strong"] = True
+        self._blk = b
+
+    def close(self):
+        super().close()
+        if self.blocks is not None:
+            self._blk_close()   # text after the last tag is a block too
 
     # --- table recording (ADR-029 §b). One record per <table>: {start, end,
     # header, rows}; row = [cell...]; cell = [start, end] or [start, end,
@@ -131,6 +186,14 @@ class _Plain(HTMLParser):
             pass
         elif tag in BLOCK_TAGS:
             self._emit("\n")
+            if self.blocks is not None:
+                self._blk_close()
+                if tag in LIST_TAGS:
+                    self._lists.append(tag)
+                elif tag in H_TAGS:
+                    self._hlevel = int(tag[1])
+                elif tag == "li":
+                    self._li = True
             if self.tables is not None:
                 if tag == "table":
                     self._open.append({"start": self.pos, "end": None, "header": 0,
@@ -154,17 +217,31 @@ class _Plain(HTMLParser):
                 t["_cell"] = [self.pos + 1, None] + ([span] if span > 1 else [])
             self._emit(" ")  # cells are separate words, never one word
         elif tag == "img" and self.images is not None:
-            # ADR-032 §b1. One record per <img>, wherever it sits (inside a
+            # ADR-033 §b1. One record per <img>, wherever it sits (inside a
             # cell too); `src`/`alt` are already entity-decoded by html.parser.
             a = dict(attrs)
             self.images.append({"offset": self.pos, "src": a.get("src"),
                                 "alt": a.get("alt"), "width": _dim(a, "width"),
                                 "height": _dim(a, "height")})
+        if self.blocks is not None and not self.skip_depth and (
+                tag in ("b", "strong")
+                or any(k == "style" and v and BOLD_RE.search(v) for k, v in attrs)):
+            self._bold.append(tag)
 
     def handle_endtag(self, tag):
         if tag in SKIP_TAGS:
             self.skip_depth = max(0, self.skip_depth - 1)
         elif not self.skip_depth and tag in BLOCK_TAGS:
+            if self.blocks is not None:
+                self._blk_close()
+                if tag in LIST_TAGS:
+                    self._li = False
+                    if self._lists:
+                        self._lists.pop()
+                elif tag in H_TAGS:
+                    self._hlevel = None
+                elif tag == "li":
+                    self._li = False
             if self.tables is not None and self._open:
                 if tag == "table":
                     self._row_close()
@@ -179,9 +256,17 @@ class _Plain(HTMLParser):
             self._emit("\n")
         elif not self.skip_depth and tag in CELL_TAGS and self.tables is not None:
             self._cell_close()
+        if self.blocks is not None and tag in self._bold:
+            # the innermost open bold context of this name closes; an end
+            # tag for a name that opened none is ignored, as browsers do
+            del self._bold[len(self._bold) - 1 - self._bold[::-1].index(tag)]
 
     def handle_data(self, data):
         if not self.skip_depth:
+            if self.blocks is not None and not self._open and data.strip():
+                if self._blk is None:
+                    self._blk_open()
+                self._blk["_strong"] &= bool(self._bold)
             # ADR-006 ruling 2: collapse WITHIN the chunk, while a source
             # line-wrap is still distinguishable from a block boundary
             self._emit(re.sub(r"\s+", " ", data))
@@ -247,6 +332,34 @@ def _place_tables(tables, marks, text):
     return tables
 
 
+def _place_blocks(blocks, marks, text, tables):
+    """Rewrite the pre-_tidy block offsets through the old->new `marks` map,
+    tighten every block to its first/last non-space character, drop what is
+    empty after that, and add one `table` block per (already placed) table
+    record. Blocks come back in document order, non-overlapping: a table
+    nested inside another's span is the outer record's text (ADR-029 §e) and
+    gets no block of its own."""
+    out = []
+    for b in blocks:
+        s, e = marks[b["start"]], marks[b["end"]]
+        while s < e and text[s].isspace():
+            s += 1
+        while e > s and text[e - 1].isspace():
+            e -= 1
+        if s < e:
+            b["start"], b["end"] = s, e
+            out.append(b)
+    out += [{"kind": "table", "start": t["start"], "end": t["end"], "table": i}
+            for i, t in enumerate(tables)]
+    out.sort(key=lambda b: (b["start"], -b["end"]))
+    kept, prev_end = [], 0
+    for b in out:
+        if b["start"] >= prev_end:
+            kept.append(b)
+            prev_end = b["end"]
+    return kept
+
+
 def split_documents(raw):
     """[{type, sequence, filename, body, start}] for each <DOCUMENT> block."""
     out = []
@@ -273,36 +386,47 @@ def format_era(body):
     return "txt"  # 1993-2001 submissions carry <PAGE>/<TABLE>/<S>/<C> only
 
 
-def normalize(body, era, tables=False, images=False):
+def normalize(body, era, tables=False, blocks=False, images=False):
     """Deterministic plain text. Offsets in the contract are into this.
 
-    Returns `(text, tables, images)`: each annotation is None unless asked
-    for, else the ADR-029 table records — `{start, end, header, rows}` — and
-    the ADR-032 image records — `{offset, src, alt, width, height}` — with
-    offsets into `text`, document order. The txt era has no HTML tables (its
-    SGML <TABLE>/<S>/<C> layout is ruled out, ADR-029 §e) and no <img> at
-    all, so it answers `[]` for both. `text` is the same string whatever is
-    asked for — by construction, not by care: the recorder never emits, and
-    `_tidy` edits the text with or without offsets to carry.
+    Returns `(text, tables, blocks, images)`; each annotation is None unless
+    asked for. `tables` is the ADR-029 records — `{start, end, header, rows}`
+    with offsets into `text`, document order; the txt era has no HTML tables
+    (its SGML <TABLE>/<S>/<C> layout is ruled out, ADR-029 §e) so it answers
+    `[]`. `blocks` (asking implies `tables`) is the ADR-032 block records —
+    `{kind, start, end, ...}` in document order, non-overlapping; the txt era
+    is one `pre` block over the whole text. `images` is the ADR-033 records —
+    `{offset, src, alt, width, height}`, document order; the txt era has no
+    <img> at all, so `[]`.
+
+    The text is the same string whatever is asked for — by construction, not
+    by care: the recorders never emit, and `_tidy` edits the text with or
+    without offsets to carry.
     """
+    tables = tables or blocks
     if era == "txt":
         # newlines ARE the document here: fixed-width layout, line-anchored
         # headings, page furniture that stays in the text (ADR-006 ruling 2)
         text = body.replace("\r\n", "\n").replace("\r", "\n").strip()
-        return text, ([] if tables else None), ([] if images else None)
-    p = _Plain(tables=tables, images=images)
+        pre = [{"kind": "pre", "start": 0, "end": len(text)}] if text else []
+        return (text, ([] if tables else None), (pre if blocks else None),
+                ([] if images else None))
+    p = _Plain(tables=tables, blocks=blocks, images=images)
     p.feed(body)
     p.close()
     if not (tables or images):
-        return _tidy("".join(p.parts))[0], None, None
+        return _tidy("".join(p.parts))[0], None, None, None
+    # one mark map for all three annotations: they share the walk, so they
+    # share the _tidy rewrite too (ADR-029 §b1, ADR-032 §b1, ADR-033 §b1)
     olds = sorted({m for t in p.tables or () for m in (t["start"], t["end"])}
                   | {m for t in p.tables or () for r in t["rows"] for c in r for m in c[:2]}
+                  | {m for b in p.blocks or () for m in (b["start"], b["end"])}
                   | {im["offset"] for im in p.images or ()})
     text, news = _tidy("".join(p.parts), olds)
-    at = dict(zip(olds, news))
+    marks = dict(zip(olds, news))
     found = None
     if tables:
-        found = _place_tables(p.tables, at, text)
+        found = _place_tables(p.tables, marks, text)
         # drop a table with no visible text at all (spacer/rule tables): there
         # is no structure there for a reader to lose. Sort: a nested table
         # closes before its parent, so `p.tables` is in end order, not start.
@@ -313,9 +437,10 @@ def normalize(body, era, tables=False, images=False):
         # a point offset, moved by the same map; nothing to tighten and
         # nothing to drop — every <img> is a reference a reader would lose
         for im in p.images:
-            im["offset"] = at[im["offset"]]
+            im["offset"] = marks[im["offset"]]
         imgs = p.images
-    return text, found, imgs
+    blks = _place_blocks(p.blocks, marks, text, found) if blocks else None
+    return text, found, blks, imgs
 
 
 # period of report, best signal first: EDGAR's own SGML header, the iXBRL
@@ -389,17 +514,23 @@ def sniff_form(text):
     return form
 
 
-def select_and_normalize(raw, tables=False, images=False):
-    """Layers 2+3. Returns (normalized_text, meta, warnings, tables, images).
+def select_and_normalize(raw, tables=False, blocks=False, images=False):
+    """Layers 2+3. Returns (normalized_text, meta, warnings, tables, blocks,
+    images).
 
     meta.form_type is None when nothing identified the form — the caller
     turns that into `unsupported`; this function never decides doc_status.
-    `tables` (ADR-029) and `images` (ADR-032) are None unless asked for, both
-    opt-in: asking changes nothing else in the return value.
+    `tables` / `blocks` / `images` are None unless asked for (ADR-029 /
+    ADR-032 / ADR-033, all opt-in): asking changes nothing else in the
+    return value.
     """
     warnings = []
-    blocks = split_documents(raw)
-    chosen = next((b for b in blocks if b["type"] in ACCEPTED_FORMS), None)
+    # `docs`, not `blocks`: the parameter of that name is ADR-032's flag, and
+    # the <DOCUMENT> list shadowing it is the S7 `found` collision again —
+    # an SGML-wrapped filing got the annotation unasked, a primary .htm never
+    # got it (ADR-032 §g, pinned by blocks-offsets-invariant on both shapes)
+    docs = split_documents(raw)
+    chosen = next((b for b in docs if b["type"] in ACCEPTED_FORMS), None)
 
     # Exhibits-only or a non-10-K submission: EDGAR's own metadata says so, and
     # selection has nothing to select. This branch used to return "" — which
@@ -413,10 +544,10 @@ def select_and_normalize(raw, tables=False, images=False):
     # collapses first, which is the ordering doing its job.
     body = chosen["body"] if chosen else raw
     era = format_era(body)
-    text, found, imgs = normalize(body, era, tables, images)
+    text, found, blks, imgs = normalize(body, era, tables, blocks, images)
 
-    declared = chosen["type"] if chosen else (blocks[0]["type"] or None if blocks else None)
-    if blocks and chosen is None:
+    declared = chosen["type"] if chosen else (docs[0]["type"] or None if docs else None)
+    if docs and chosen is None:
         # ...and SAY SO. `document_selected` records it in meta, but meta is not
         # where a consumer looks for problems. The span universe on this path is
         # every <DOCUMENT> block concatenated, exhibits included, so an EX-13
@@ -429,7 +560,7 @@ def select_and_normalize(raw, tables=False, images=False):
         warnings.append({
             "code": "whole_submission_fallback", "item": None,
             "message": f"no <DOCUMENT> block declares an accepted 10-K form "
-                       f"({sorted({b['type'] or '<none>' for b in blocks})}); the whole "
+                       f"({sorted({b['type'] or '<none>' for b in docs})}); the whole "
                        f"submission was normalized, so exhibits are inside the span universe"})
     sniffed = sniff_form(text)
     form_type = declared or sniffed
@@ -451,16 +582,16 @@ def select_and_normalize(raw, tables=False, images=False):
         "form_type_declared": declared,
         "form_type_sniffed": sniffed,
         "format_era": era,
-        "n_blocks": len(blocks),
-        "block_types": sorted({b["type"] for b in blocks}) if blocks else [],
+        "n_blocks": len(docs),
+        "block_types": sorted({b["type"] for b in docs}) if docs else [],
         "document_selected": (
             f"{chosen['type']} seq={chosen['sequence']} {chosen['filename']}".strip()
-            if chosen else "whole file (no 10-K block to select)" if blocks
+            if chosen else "whole file (no 10-K block to select)" if docs
             else "whole file (no <DOCUMENT> blocks)"),
         "raw_chars": len(raw),
         "norm_chars": len(text),
     }
-    return text, meta, warnings, found, imgs
+    return text, meta, warnings, found, blks, imgs
 
 
 def _demo():
@@ -471,7 +602,7 @@ def _demo():
                 "<p>FORM 10-K</p><p>Microsoft was\nfounded in 1975. "
                 "AT&amp;T&#160;paid.</p><table><tr><td>12</td><td>34</td></tr>"
                 "</table><script>var x=1;</script></body></html>")
-    text, meta, warns, _, _ = select_and_normalize(html_doc)
+    text, meta, warns, *_ = select_and_normalize(html_doc)
     assert "us-gaap:" not in text, text                      # INV-S5
     assert "OperatingSegmentsMember" not in text, text
     assert "var x" not in text, text
@@ -481,11 +612,12 @@ def _demo():
     assert meta["form_type"] == "10-K" and meta["format_era"] == "ixbrl", meta
     # ADR-029: asking for tables changes nothing but the fourth value, and the
     # one table's cells are slices of the SAME text
-    t_on, m_on, w_on, tabs, none_imgs = select_and_normalize(html_doc, tables=True)
-    assert (t_on, m_on, w_on, none_imgs) == (text, meta, warns, None)
+    t_on, m_on, w_on, tabs, none_blks, none_imgs = select_and_normalize(
+        html_doc, tables=True)
+    assert (t_on, m_on, w_on, none_blks, none_imgs) == (text, meta, warns, None, None)
     assert len(tabs) == 1 and [text[c[0]:c[1]] for c in tabs[0]["rows"][0]] == ["12", "34"], tabs
 
-    # ADR-032: the same rule for images, and the shapes no committed fixture
+    # ADR-033: the same rule for images, and the shapes no committed fixture
     # has — a width/height ATTRIBUTE (0 of the corpus's 53 <img> carry one), a
     # non-pixel size, an <img> with no src at all, and an <img> inside skipped
     # machine metadata (never recorded). The two in-cell shapes below are the
@@ -501,7 +633,7 @@ def _demo():
                "<img src=g.jpg>"
                "<p>FORM 10-K</p></body></html>")
     plain = select_and_normalize(img_doc)[0]
-    itext, _, _, itabs, imgs = select_and_normalize(img_doc, tables=True, images=True)
+    itext, _, _, itabs, _, imgs = select_and_normalize(img_doc, tables=True, images=True)
     assert itext == plain == select_and_normalize(img_doc, images=True)[0], itext
     assert "meta.png" not in itext and [i["src"] for i in imgs] == \
         ["a.jpg", "b.jpg", None, "c.jpg", "d.jpg", "e.jpg", "f.jpg", "g.jpg"], imgs
@@ -518,7 +650,7 @@ def _demo():
     zero = ("<html><body><p>x</p><img src=z.gif width=0 height='0px'>"
             "<img src=f.gif style='width:0.75px;height:1.5px'>"
             "<p>FORM 10-K</p></body></html>")
-    zimgs = select_and_normalize(zero, images=True)[4]
+    zimgs = select_and_normalize(zero, images=True)[5]
     assert [(i["width"], i["height"]) for i in zimgs] == [(None, None), (None, None)], zimgs
     # Where an image offset sits relative to a table/cell span.
     #
@@ -554,7 +686,7 @@ def _demo():
     mid = ("<html><body><p>B.</p><table><tr>"
            "<td><font>/s/</font><img src=sig.jpg><font>Darren W. Woods</font></td>"
            "</tr></table><p>FORM 10-K</p></body></html>")
-    mtabs, mimgs = select_and_normalize(mid, tables=True, images=True)[3:]
+    mtabs, _, mimgs = select_and_normalize(mid, tables=True, images=True)[3:]
     mcell, moff = mtabs[0]["rows"][0][0], mimgs[0]["offset"]
     assert mcell[0] < moff < mcell[1], (mcell, moff)
     # image-only LEADING row         every empty cell clamped forward to the
@@ -574,16 +706,16 @@ def _demo():
     empty = ("<html><body><p>B.</p><table><tr><td></td></tr>"
              "<tr><td><div><img src=only.jpg></div></td></tr></table>"
              "<p>FORM 10-K</p></body></html>")
-    etabs, eimgs = select_and_normalize(empty, tables=True, images=True)[3:]
+    etabs, _, eimgs = select_and_normalize(empty, tables=True, images=True)[3:]
     assert etabs == [] and [i["src"] for i in eimgs] == ["only.jpg"], (etabs, eimgs)
     assert [i["offset"] for i in imgs] == sorted(i["offset"] for i in imgs), imgs
     assert select_and_normalize("<DOCUMENT>\n<TYPE>10-K\n<TEXT>\nFORM 10-K\nx\n"
-                                "</TEXT>\n</DOCUMENT>", images=True)[4] == []   # txt era
+                                "</TEXT>\n</DOCUMENT>", images=True)[5] == []   # txt era
 
     txt_doc = ("<DOCUMENT>\n<TYPE>10-K405\n<SEQUENCE>1\n<TEXT>\nFORM 10-K\n"
                "Item 1.  Business\n   fixed   width\n   lines\n</TEXT>\n</DOCUMENT>\n"
                "<DOCUMENT>\n<TYPE>EX-13\n<TEXT>\nItem 1.  Not this one\n</TEXT>\n</DOCUMENT>")
-    text, meta, warns, _, _ = select_and_normalize(txt_doc)
+    text, meta, warns, *_ = select_and_normalize(txt_doc)
     assert "Not this one" not in text, text                  # trap 5: exhibits dropped
     assert "\n   fixed   width\n" in text, repr(text)        # txt layout survives
     assert meta["format_era"] == "txt" and meta["form_type"] == "10-K405", meta
@@ -604,7 +736,7 @@ def _demo():
     # caller's collapse test fire and report `failed` on a readable file
     # (ksb-unsupported).
     ex = "<DOCUMENT>\n<TYPE>EX-21\n<TEXT>\nsubsidiaries\n</TEXT>\n</DOCUMENT>"
-    t, m, w, _, _ = select_and_normalize(ex)
+    t, m, w, *_ = select_and_normalize(ex)
     assert m["form_type"] == "EX-21" and m["form_type"] not in ACCEPTED_FORMS, m
     assert "subsidiaries" in t, t   # readable, therefore not a collapse
     assert [x["code"] for x in w] == ["whole_submission_fallback"], w
@@ -613,7 +745,7 @@ def _demo():
     # inside the span universe. It may proceed — but not in silence.
     untyped = ("<DOCUMENT>\n<TEXT>\nFORM 10-K\nItem 1. Business\nprose\n</TEXT>\n</DOCUMENT>\n"
                "<DOCUMENT>\n<TYPE>EX-13\n<TEXT>\nItem 1. Business\nexhibit\n</TEXT>\n</DOCUMENT>")
-    t2, m2, w2, _, _ = select_and_normalize(untyped)
+    t2, m2, w2, *_ = select_and_normalize(untyped)
     assert m2["form_type"] == "10-K" and m2["form_type_declared"] is None, m2
     assert "exhibit" in t2, t2
     assert "whole_submission_fallback" in [x["code"] for x in w2], w2

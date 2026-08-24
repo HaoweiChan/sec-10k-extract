@@ -1,0 +1,42 @@
+{
+  "id": "blocks-offsets-invariant",
+  "task": "sec10k",
+  "suites": [
+    "fast",
+    "invariant"
+  ],
+  "input": {
+    "path": "evals/fixtures/aapl-2025/filing.htm",
+    "blocks": true
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "offsets_invariant_under_blocks"
+      },
+      {
+        "type": "envelope_shape"
+      },
+      {
+        "type": "blocks_sane",
+        "min": 650,
+        "max": 750
+      },
+      {
+        "type": "tables_sane",
+        "min": 40,
+        "max": 70
+      },
+      {
+        "type": "verbatim"
+      },
+      {
+        "type": "no_overlap_ordered"
+      },
+      {
+        "type": "known_items_only"
+      }
+    ]
+  },
+  "provenance": "ADR-032 §d, the invariant-suite half of S9's acceptance, stated the way tables-offsets-invariant states ADR-029's: extract_items(path, blocks=True) and extract_items(path, blocks=False) on the same file, DETERMINISM_FIELDS compared field by field, no blocks/tables key without the flag, both lists with it. aapl-2025 is a PRIMARY .htm with no <DOCUMENT> wrapper — the shape on which the first build of ADR-032 returned NO blocks at all when asked (the split_documents list shadowed the `blocks` parameter, and an unwrapped filing's list is empty; ADR-032 §g). This case is red on that defect; blocks-wrapped-invariant is red on its other half. blocks_sane also asserts the coverage rule: every non-space character of normalized_text lies inside some block, so the Markdown view can lose no text. Bands around HEAD's 698 blocks and 54 tables."
+}

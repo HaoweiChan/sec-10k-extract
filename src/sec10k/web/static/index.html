@@ -187,6 +187,22 @@ button:disabled{opacity:.5;cursor:default}
 pre.text{white-space:pre-wrap;word-wrap:break-word;font:13px/1.6 var(--mono);
   background:var(--bg);border:1px solid var(--line);border-radius:var(--r);
   padding:11px 11px 42px;margin:0 14px;flex:1;min-height:0;overflow:auto}
+/* S9 (ADR-032): the Markdown-rendered item body. Same box, same flush edges
+   and bottom padding as pre.text above — it is the same pane in a second
+   mode — but proportional text, real headings, real tables. Colours are the
+   page's existing tokens only (ink, dim, line, bg): no new pair to measure. */
+.text.md{font:14px/1.6 var(--mono);color:var(--ink);background:var(--bg);border:1px solid var(--line);
+  border-radius:var(--r);padding:11px 14px 42px;margin:0 14px;flex:1;min-height:0;overflow:auto;
+  overflow-wrap:anywhere}
+.text.md p{margin:0 0 .9em}
+.text.md h1,.text.md h2,.text.md h3,.text.md h4,.text.md h5,.text.md h6{margin:1.1em 0 .5em;line-height:1.3;color:var(--ink)}
+.text.md h1{font-size:1.25em}.text.md h2{font-size:1.15em}.text.md h3,.text.md h4,.text.md h5,.text.md h6{font-size:1em}
+.text.md ul,.text.md ol{margin:0 0 .9em;padding-left:1.6em}
+.text.md table{border-collapse:collapse;margin:0 0 1em;font-size:13px;display:block;max-width:100%;overflow-x:auto}
+.text.md th,.text.md td{border:1px solid var(--line);padding:3px 8px;text-align:left;vertical-align:top;
+  overflow-wrap:normal;word-break:normal}
+.text.md th{font-weight:700}
+.text.md pre{margin:0 0 .9em;white-space:pre-wrap;word-break:break-word;font:13px/1.5 var(--mono)}
 details{margin-top:12px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel)}
 /* S5 amendment (5)+(7): heading/offsets/evidence is real evidence (INV-S2's
    proof, not jargon to delete) but meaningless to an interviewer at a
@@ -273,6 +289,11 @@ footer a{color:var(--accent)}
     <span class="hint">— hides detected running heads, page numbers and EDGAR
     table furniture from the extracted-item pane. Display only: the offsets and
     character count stay those of the full span (ADR-026).</span></label>
+  <label class="opt"><input type="checkbox" id="render-md"> render as Markdown
+    <span class="hint">— shows the extracted item as headings, paragraphs and
+    tables derived from the filing's block structure instead of the flat text
+    run. Display only: the offsets and character count stay those of the raw
+    slice, which the compare pane still shows (ADR-032).</span></label>
 </fieldset>
 
 <div id="banner" class="s-idle">No filing extracted yet.</div>
@@ -593,6 +614,53 @@ function syncOn(){ const c = $("#sync-scroll"); return c && c.checked; }
 // response's own `boilerplate_excluded`, so toggling the box after an
 // extraction cannot make the label lie about the text on screen.
 function excludeBp(){ const c = $("#exclude-bp"); return !!(c && c.checked); }
+// S9. Same rule: the pane renders from the response's own `markdown` flag.
+function renderMd(){ const c = $("#render-md"); return !!(c && c.checked); }
+
+// S9: the smallest honest renderer for exactly the Markdown subset
+// src/sec10k/markdown.py emits — ATX headings, paragraphs (a whole-paragraph
+// **strong**), `- ` / `1. ` list items, GFM tables, fenced pre blocks —
+// blocks separated by one blank line. Everything is HTML-escaped AFTER the
+// backslash escapes the renderer wrote are undone, so filing prose can never
+// become markup. No dependency, no CDN (S3-FONT lesson), nothing else parsed.
+function mdInline(s){ return esc(s.replace(/\\([\\*_`\[\]<>~#>+=|.)-])/g, "$1")); }
+function mdToHtml(md){
+  const out = [];
+  const lines = md.split("\n");
+  for(let i = 0; i < lines.length; ){
+    const ln = lines[i];
+    if(ln === ""){ i++; continue; }
+    let m;
+    if((m = ln.match(/^(`{3,})$/))){                       // fenced pre
+      const fence = m[1], buf = [];
+      for(i++; i < lines.length && lines[i] !== fence; i++) buf.push(lines[i]);
+      i++;
+      out.push("<pre>" + esc(buf.join("\n")) + "</pre>");
+    }else if((m = ln.match(/^(#{1,6}) (.*)$/))){           // ATX heading
+      out.push(`<h${m[1].length}>${mdInline(m[2])}</h${m[1].length}>`); i++;
+    }else if(ln.startsWith("|")){                         // GFM table: header, delimiter, rows
+      const rows = [];
+      for(; i < lines.length && lines[i].startsWith("|"); i++) rows.push(lines[i]);
+      const cells = r => r.replace(/^\| ?/, "").replace(/ ?\|$/, "").split(/ (?<!\\)\| /)
+        .map(c => c.replace(/\\\|/g, "|"));
+      const head = cells(rows[0]), body = rows.slice(2).map(cells);
+      out.push("<table><thead><tr>" + head.map(c => `<th>${mdInline(c)}</th>`).join("") + "</tr></thead>" +
+        (body.length ? "<tbody>" + body.map(r => "<tr>" + r.map(c => `<td>${mdInline(c)}</td>`).join("") + "</tr>").join("") + "</tbody>" : "") +
+        "</table>");
+    }else if((m = ln.match(/^(- |1\. )(.*)$/))){           // one list item per block
+      const tag = m[1] === "- " ? "ul" : "ol";
+      out.push(`<${tag}><li>${mdInline(m[2])}</li></${tag}>`); i++;
+    }else{                                                // paragraph, until the blank line
+      const buf = [];
+      for(; i < lines.length && lines[i] !== ""; i++) buf.push(lines[i]);
+      let t = buf.join("\n"), strong = false;
+      if((m = t.match(/^\*\*([\s\S]*)\*\*$/))){ t = m[1]; strong = true; }
+      const inner = mdInline(t).replace(/\n/g, "<br>");
+      out.push("<p>" + (strong ? `<b>${inner}</b>` : inner) + "</p>");
+    }
+  }
+  return out.join("");
+}
 
 function bindSourceScroll(frame){
   frame.addEventListener("load", () => {
@@ -603,7 +671,7 @@ function bindSourceScroll(frame){
     const scroller = doc.scrollingElement || doc.documentElement;
     scroller.addEventListener("scroll", () => {
       if(SYNC_GUARD || !syncOn()) return;
-      const pre = document.querySelector("#pane pre.text");
+      const pre = document.querySelector("#pane .text");
       if(!pre) return;
       const region = SEL != null ? itemRegion(doc, SEL) : null;
       const frac = region
@@ -733,7 +801,7 @@ function show(i){
   // measured live at a 1280px viewport, this band already truncates inside
   // `via heading_strict`, so a trailing marker would be invisible exactly
   // when the pane most needs to say it is hiding text.
-  const hdrRight = (VIEW.boilerplate_excluded ? "boilerplate hidden · " : "") +
+  const hdrRight = (VIEW.markdown ? "markdown · " : "") + (VIEW.boilerplate_excluded ? "boilerplate hidden · " : "") +
     `Part ${esc(it.part || "—")} · ${esc(it.status)} · conf ${it.confidence ?? "—"} · via ${esc(it.method || "—")}`;
   // The truncation notice used to be its own in-flow sibling after
   // pre.text, which is exactly the bug .pane-meta's own move to
@@ -749,18 +817,23 @@ function show(i){
       // PR #27 R1: the ONLY consumer of the stripped string. `it.text`
       // stays the verbatim slice because findAnchor above matches it
       // against the original filing, which still contains the chrome.
-      ? `<pre class="text">${esc(it.display_text ?? it.text)}</pre>`
+      // S9: in Markdown mode the same string is the derived Markdown and is
+      // RENDERED, by mdToHtml above; `it.text` is still the raw slice.
+      ? (VIEW.markdown
+          ? `<div class="text md">${mdToHtml(it.display_text ?? it.text)}</div>`
+          : `<pre class="text">${esc(it.display_text ?? it.text)}</pre>`)
       : `<div class="none" style="padding:12px">Status <b>${esc(it.status)}</b> carries no span: the item is reported as absent rather than silently dropped (INV-S4).</div>`}
     <details class="pane-meta"><summary>where this text came from</summary>
       <dl class="ev">
         ${it.truncated ? `<dt>shown</dt><dd>first ${(it.display_text ?? it.text).length.toLocaleString()} of ${it.chars.toLocaleString()} characters</dd>` : ""}
         ${VIEW.boilerplate_excluded ? `<dt>boilerplate</dt><dd>detected chrome is hidden from the text above; the offsets and character count below are still those of the full span (ADR-026)</dd>` : ""}
+        ${VIEW.markdown ? `<dt>markdown</dt><dd>rendered from the filing's block structure (headings, paragraphs, tables) as Markdown; the raw slice is what the offsets and character count describe, and what the compare pane shows (ADR-032)</dd>` : ""}
         <dt>heading matched</dt><dd>${it.heading_text ? esc(it.heading_text) : "— (no heading found)"}</dd>
         <dt>offsets</dt><dd>${it.start != null ? `[${it.start.toLocaleString()}, ${it.end.toLocaleString()})` : "null — no span for this status"}</dd>
         <dt>evidence</dt><dd>${esc(JSON.stringify(it.evidence || {}))}</dd>
       </dl>
     </details>`;
-  const pre = $("#pane pre.text");
+  const pre = $("#pane pre.text") || $("#pane .text.md");
   if(pre) bindPaneScroll(pre);
   scrollSourceToItem(i);
 }
@@ -770,16 +843,16 @@ $("#sidebar").addEventListener("click", e => {
 });
 $("#go-fx").onclick = () => call("/api/extract/fixture",
   {method:"POST", headers:{"Content-Type":"application/json"},
-   body: JSON.stringify({fixture: $("#fx").value, exclude_boilerplate: excludeBp()})});
+   body: JSON.stringify({fixture: $("#fx").value, exclude_boilerplate: excludeBp(), markdown: renderMd()})});
 $("#go-url").onclick = () => call("/api/extract/url",
   {method:"POST", headers:{"Content-Type":"application/json"},
-   body: JSON.stringify({url: $("#url").value, exclude_boilerplate: excludeBp()})});
+   body: JSON.stringify({url: $("#url").value, exclude_boilerplate: excludeBp(), markdown: renderMd()})});
 $("#go-up").onclick = () => {
   const f = $("#up").files[0];
   if(!f){ alert("Choose a .htm, .html or .txt filing first."); return; }
   // this mode's body is the filing itself, so the flag rides the query string
   call("/api/extract/upload?filename=" + encodeURIComponent(f.name) +
-       (excludeBp() ? "&exclude_boilerplate=1" : ""),
+       (excludeBp() ? "&exclude_boilerplate=1" : "") + (renderMd() ? "&markdown=1" : ""),
        {method:"POST", body: f});
 };
 boot();

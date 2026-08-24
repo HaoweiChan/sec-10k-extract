@@ -1,0 +1,64 @@
+{
+ "pr": 45,
+ "round": 1,
+ "date": "2026-08-24",
+ "result": "REQUEST_CHANGES",
+ "gate": "invariant 52/52; fast 109/109; table fidelity 400/400 · 31/31; structure fidelity 61/61 · 61/61; self-checks ok; new cases red at 145fe4a (98/109, 11 FAIL); default-flag snapshot 145fe4a vs HEAD identical on 47 fixtures; DETERMINISM_FIELDS on-vs-off identical 47/47; mutations M1/M2/M3/M4/M6/M8/M9 reproduced red; metric-only baseline + M3 -> REGRESSION exit 1",
+ "routing_rule": "repair = HIGH/MEDIUM and (acceptance violated | gate red | published claim dishonest); everything else debt (pr-loop scope boundary)",
+ "findings": [
+  {
+   "id": "R1",
+   "severity": "HIGH",
+   "route": "repair",
+   "claim": "With 'exclude boilerplate' and 'render as Markdown' both on, the Markdown pane still renders every chrome run on jpm-2024 (and csco-2016 page numbers) while the header says 'boilerplate hidden' — ADR-031 §b4's 'the S8 checkbox keeps its meaning in Markdown mode' is false and no eval case covers the omit path on real chrome.",
+   "evidence": "src/sec10k/markdown.py:175 omits a block only when it lies WHOLLY inside a chrome span; src/sec10k/web/view.py:67 passes omit=spans. On jpm-2024 all 572 ADR-026 spans (running_head + page_number) sit INSIDE table blocks (e.g. span {start:218110,end:218146,kind:running_head} inside table block [218110,218149) 'JPMorgan Chase & Co./2024 Form 10-K\\n\\n49'), so 0 of 572 are omitted: to_markdown(text, blocks, tables, omit=spans) == to_markdown(text, blocks, tables) byte-for-byte and contains 286 'JPMorgan Chase & Co./2024 Form 10-K' running heads where strip_chrome leaves 0; build_view(extract_items(jpm, exclude_boilerplate=True, blocks=True)) item 15 display_text contains 8 of them in the first 40,000 span chars with boilerplate_excluded=True and index.html:804 printing 'boilerplate hidden ·' plus the meta line 'detected chrome is hidden from the text above'. csco-2016: 10 of 261 spans (page numbers inside tables) likewise. Only view.py::_demo (synthetic, chrome as a whole paragraph block) pins omit.",
+   "repro": "python3 -c \"import sys;sys.path.insert(0,'.');from src.sec10k.extract import extract_items;from src.sec10k.markdown import to_markdown;from src.sec10k.boilerplate import strip_chrome;r=extract_items('evals/fixtures/jpm-2024/filing.htm',exclude_boilerplate=True,blocks=True);t=r['normalized_text'];s=r['boilerplate'];md=to_markdown(t,r['blocks'],r['tables'],omit=s);print(md.count('JPMorgan Chase & Co./2024 Form 10-K'), strip_chrome(t,s,0,len(t)).count('JPMorgan Chase & Co./2024 Form 10-K'), md==to_markdown(t,r['blocks'],r['tables']))\"  -> 286 0 True",
+   "acceptance": "Either the Markdown view drops chrome that is inside a block (omit on overlap / strip chrome text from table cells and paragraphs as strip_chrome does) or the pane stops claiming 'boilerplate hidden' in Markdown mode when chrome remains; plus an adversarial case on jpm-2024 (exclude_boilerplate + blocks) that is red today and asserts the rendered Markdown carries 0 running heads (or the header label matches what is shown), and ADR-031 §b4 / the S9 row corrected accordingly."
+  },
+  {
+   "id": "R2",
+   "severity": "HIGH",
+   "route": "repair",
+   "claim": "The ADR-031 §g mutation table's published metric values (and the §c2 / Debt-row / prompts/018 percentages derived from them) do not reproduce — the numerators are from an earlier 58-label set and were re-denominated to 61 without re-measurement.",
+   "evidence": "specs/decisions/ADR-031-block-structure-markdown-view.md §g: M2 'blocks 53/61 = 0.9138', M3 '48/61 = 0.8276', M4 '45/61 = 0.7759', M6 '53/61', M8 '28/61 = 0.4828' (note 53/58=0.9138, 48/58=0.8276, 45/58=0.7759, 28/58=0.4828); §c2 'strong never recorded is a 17% block loss … table blocks dropped is a 22% loss … the name collision is a 52% loss'; tasks/TODO.md Debt row 'M3 = 17% block loss … M4 = 22% on both'; prompts/018 'table blocks dropped is 45/61 on both'. Re-measured on a temp copy of HEAD with each mutation applied alone: M2 56/61 = 0.9180, M3 48/61 = 0.7869 (the number §h itself reports), M4 48/61 blocks and 48/61 bounds = 0.7869, M6 56/61, M8 31/61 = 0.5082, M9 58/61 = 0.9508 (only M9 and §h agree). Case counts also off: M1 reddens 7 markdown cases (ge-1994-blocks included) not 6, M3 reddens 6 cases not 5, M4 reddens 10 blocks cases not 9.",
+   "repro": "copy the tree to scratch; apply M3 (normalize.py _blk_close: drop the strong=True line) -> python3 -m evals.run --suite fast --no-report -> 'structure fidelity: blocks 0.7869 (48/61)'; apply M4 (drop the table-block append in _place_blocks) -> 'blocks 0.7869 (48/61), bounds 0.7869 (48/61)'; apply M2 (level=3 in extract.py) -> 'blocks 0.9180 (56/61)'; reintroduce blocks=split_documents(raw) shadowing -> 'blocks 0.5082 (31/61)'",
+   "acceptance": "ADR-031 §g table, §c2 percentages, the 'No held-out structure labels' Debt row and prompts/018 re-measured on the committed 61-label set and rewritten to the reproducible values (or the 58-label provenance stated with the date); every published fraction equals numerator/denominator."
+  },
+  {
+   "id": "R3",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "ADR-031 §f2 '44 of 46 below 25' is 43 of 46.",
+   "evidence": "Re-derived first-differing offset of to_markdown(whole doc) vs normalized_text on the 46 parseable fixtures: cvx-2015 74, intc-2002 68, tgt-2002 68 are >=25, spg-2019 22, everything else 0–19; min 0, max 74, median 0, 812/812 spans move, delta +8 … +140,040 (jpm-2024), median +4,733.5 — all other §f2 figures reproduce.",
+   "repro": "python3 over all fixtures: fd=next(i for i,(a,b) in enumerate(zip(text,md)) if a!=b); count fd<25 -> 43",
+   "acceptance": "§f2 row reads '43 of 46 below 25'."
+  },
+  {
+   "id": "R4",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "ADR-031 §b2's 'By construction … the blocks cover every non-space character' is true by corpus measurement, not by construction: text inside a <table> that yields no ADR-029 record lands outside every block and is lost from the Markdown view.",
+   "evidence": "src/sec10k/normalize.py:396 opens no block while self._open is non-empty, and normalize() keeps a table only if it has rows with visible text; '<p>a</p><table>stray text</table><p>b</p>' -> blocks [a, b], 'stray text' uncovered; '<table><tr>row text</tr></table>' and '<table><tr><td>&nbsp;</td></tr>outside</table>' likewise. 0 occurrences on the 47 fixtures (blocks_sane coverage held everywhere in my sweep), so corpus-only.",
+   "repro": "python3 -c \"import sys;sys.path.insert(0,'.');from src.sec10k.normalize import normalize;t,_,b=normalize('<p>a</p><table>stray text</table><p>b</p>','html',blocks=True);print(t,b)\"",
+   "acceptance": "Either _place_blocks emits a paragraph block for table-interior text that no record covers, or §b2 says 'measured 0 uncovered on 47 fixtures, pinned by blocks_sane' and drops 'by construction'."
+  },
+  {
+   "id": "R5",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "Bold tracking pops the innermost same-name BOLD context on any end tag of that name, so a non-bold inner element of the same tag name ends the outer bold early (<span style=bold><span>A</span> B</span> -> not strong); 0 mismatches against a stack model on all 47 fixtures, malformed-html 177 vs 79 reproduced exactly.",
+   "evidence": "src/sec10k/normalize.py:389-392 del self._bold[...index(tag)]; normalize('<p><span style=\"font-weight:700\"><span>A</span> B</span></p>','html',blocks=True) -> paragraph 'A B' without strong.",
+   "repro": "python3 -c \"import sys;sys.path.insert(0,'.');from src.sec10k.normalize import normalize;print(normalize('<p><span style=\\\"font-weight:700\\\"><span>A</span> B</span></p>','html',blocks=True)[2])\"",
+   "acceptance": "Noted in ADR-031 §b2/§e next to the unclosed-carrier leak (or a name-agnostic open-tag stack), no corpus impact today."
+  },
+  {
+   "id": "R6",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "The vocabulary-red run the ADR cites (145fe4a, 98/108, 23:14) left no committed artifact: no report and its history.jsonl line was not among the three lines curated into 7ab62a0; the red state is reproducible but rests on the ADR's word.",
+   "evidence": "git diff origin/main...HEAD -- evals/report/history.jsonl adds exactly 20260823-234743 (hook, 145fe4a dirty), -234841 (all), -234923 (fast); ADR-031 §g: 'the run's own JSON was a working-tree artifact, not kept'. Reproduced: git archive 145fe4a + the 11 new cases -> --suite fast 98/109, all 11 FAIL on unknown check type.",
+   "repro": "git archive 145fe4a | tar -x -C <scratch>; cp the 11 new cases into it; python3 -m evals.run --suite fast --no-report",
+   "acceptance": "Next time keep the red run's history line (or --report JSON) with the PR, as the recording-run lines now are."
+  }
+ ]
+}

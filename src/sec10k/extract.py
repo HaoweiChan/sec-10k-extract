@@ -50,8 +50,36 @@ def _item(code, cand, status, period_end=None, footnote=None):
     }
 
 
+def _promote_item_headings(blocks, tables, items):
+    """ADR-032 §b3: the block a span-carrying item opens with IS the heading
+    the segmenter identified (`verbatim` asserts the span opens with
+    `heading_text`), so it becomes a level-2 `heading` carrying the item
+    code — a paragraph block, or a table block with exactly one visible row
+    (jnj-2016 / spatz-2014 / wmt-2010 typeset `Item N.` | `TITLE` as a
+    two-cell table). A longer table the heading merely opens (bac-2006 item
+    7's MD&A index, 36 visible rows) stays a table: promoting it would swallow
+    the index into an `##`. Measured 2026-08-23 over the 624 span items of
+    the 34 HTML/iXBRL fixtures: 488 paragraph blocks equal to heading_text,
+    135 one-row tables, 1 multi-row table."""
+    at = {b["start"]: b for b in blocks}
+    for it in items:
+        b = at.get(it["start"])
+        if b is None:
+            continue
+        if b["kind"] == "table":
+            rows = [r for r in tables[b["table"]]["rows"] if any(c[0] < c[1] for c in r)]
+            if len(rows) != 1:
+                continue
+            del b["table"]
+        elif b["kind"] != "paragraph":
+            continue
+        b.pop("strong", None)
+        b.update(kind="heading", level=2, item=it["item"])
+
+
 def _envelope(doc_status, text="", items=None, warnings=None, meta=None,
-              trace=None, t0=None, boilerplate=None, tables=None, images=None):
+              trace=None, t0=None, boilerplate=None, tables=None, blocks=None,
+              images=None):
     env = {
         "normalized_text": text,
         "doc_status": doc_status,
@@ -68,12 +96,15 @@ def _envelope(doc_status, text="", items=None, warnings=None, meta=None,
         env["boilerplate"] = boilerplate
     if tables is not None:
         env["tables"] = tables   # ADR-029: same rule — present only when asked
+    if blocks is not None:
+        env["blocks"] = blocks   # ADR-032: same rule again
     if images is not None:
-        env["images"] = images   # ADR-032: same rule again
+        env["images"] = images   # ADR-033: and again
     return env
 
 
-def extract_items(path, exclude_boilerplate=False, tables=False, images=False):
+def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
+                  images=False):
     """Extract items from a 10-K filing.
 
     Returns {"normalized_text": str, "doc_status": str, "items": [...], ...}
@@ -87,10 +118,16 @@ def extract_items(path, exclude_boilerplate=False, tables=False, images=False):
     `normalized_text` (ADR-029), the same annotation-not-edit rule. The
     Markdown view is derived by `src/sec10k/tables.to_markdown`, never stored.
 
+    `blocks=True` adds `blocks` (and implies `tables`) — the document's block
+    structure as offsets into `normalized_text` (ADR-032): headings,
+    paragraphs, list items, tables (pointing at the `tables` record), or one
+    `pre` block for a txt-era filing. The whole-document / per-item Markdown
+    view is derived by `src/sec10k/markdown.to_markdown`, never stored.
+
     `images=True` adds ONE key, `images` — every HTML <img> as
     `{offset, src, alt, width, height}`, the offset into `normalized_text`
-    (ADR-032). Same annotation-not-edit rule; the image BYTES are not
-    fetched, by ruling (ADR-032 §c).
+    (ADR-033). Same annotation-not-edit rule; the image BYTES are not
+    fetched, by ruling (ADR-033 §c).
     """
     t0 = time.monotonic()
     raw_bytes = Path(path).read_bytes()
@@ -104,8 +141,8 @@ def extract_items(path, exclude_boilerplate=False, tables=False, images=False):
         raw = raw_bytes.decode("cp1252", errors="replace")
 
     trace = [{"layer": "acquisition", "path": str(path), "bytes": len(raw_bytes)}]
-    text, meta, warnings, tabs, imgs = select_and_normalize(
-        raw, tables=tables, images=images)
+    text, meta, warnings, tabs, blks, imgs = select_and_normalize(
+        raw, tables=tables, blocks=blocks, images=images)
     meta["input_sha256"] = sha
     trace.append({"layer": "select+normalize", **meta})
     # ADR-026 layer 3b, opt-in. Computed here, off the normalized text, and
@@ -125,7 +162,7 @@ def extract_items(path, exclude_boilerplate=False, tables=False, images=False):
             "message": f"{len(raw)} raw chars normalized to {len(text)}"})
         return _envelope("failed", text, meta=meta, warnings=warnings,
                          trace=trace, t0=t0, boilerplate=chrome, tables=tabs,
-                         images=imgs)
+                         blocks=blks, images=imgs)
 
     if meta["form_type"] not in ACCEPTED_FORMS:
         # refusal, not a best-effort parse (contract v2 envelope rules)
@@ -134,7 +171,7 @@ def extract_items(path, exclude_boilerplate=False, tables=False, images=False):
                          "message": f"not an accepted 10-K form (detected: {found})"})
         return _envelope("unsupported", text, meta=meta, warnings=warnings,
                          trace=trace, t0=t0, boilerplate=chrome, tables=tabs,
-                         images=imgs)
+                         blocks=blks, images=imgs)
 
     expected = expected_items(meta.get("period_end"))
     # taxonomy era is the item set the filing's date implies, not its file
@@ -180,6 +217,9 @@ def extract_items(path, exclude_boilerplate=False, tables=False, images=False):
     trace.append({"layer": "validate",
                   "checks_fired": [w["code"] for w in findings]})
 
+    if blks is not None:
+        _promote_item_headings(blks, tabs, items)
+
     # doc_status ladder (contract v2, fixed order). Only the four validators
     # named in AMBIGUOUS_CODES may reach `ambiguous`; the rest warn and move
     # confidence, per the taxonomy's warn-don't-hard-fail policy. Decided
@@ -197,4 +237,4 @@ def extract_items(path, exclude_boilerplate=False, tables=False, images=False):
         doc_status = "success"
     return _envelope(doc_status, text, items=items, meta=meta,
                      warnings=warnings, trace=trace, t0=t0, boilerplate=chrome,
-                     tables=tabs, images=imgs)
+                     tables=tabs, blocks=blks, images=imgs)

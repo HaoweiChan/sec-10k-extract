@@ -121,7 +121,28 @@ them all); the example once showed `lenient_match`, which nothing emits.
   by `src/sec10k/tables.grid()` / `to_markdown()` and are deliberately not
   fields. `rowspan`, nested tables and txt-era SGML `<TABLE>` layout are not
   interpreted (ADR-029 §e). `envelope_shape` refuses any other shape.
-- **`images` (optional, ADR-032)**: present *only* when the caller passes
+- **`blocks` (optional, ADR-032)**: present *only* when the caller passes
+  `extract_items(path, blocks=True)`, which also implies `tables=True`
+  (table blocks point into the `tables` records). A list, in document order
+  and non-overlapping, of `{"kind", "start", "end", ...}` records —
+  `start`/`end` offsets into `normalized_text` bounding one block's visible
+  text (first to last non-space character); `kind` ∈ `heading` (with
+  `level`, an int 1–6, and `item` when it is an item heading the segmenter
+  identified) | `paragraph` (with `strong: true` when the whole block was
+  bold in the HTML) | `list_item` (with `ordered`) | `table` (with `table`,
+  the index of the `tables` record whose span the block is) | `pre` (the
+  one block a txt-era filing is). A block's text **is**
+  `normalized_text[start:end]`; together the blocks cover every non-space
+  character of `normalized_text`. Same rule as `boilerplate` and `tables`:
+  an annotation, never an edit — `normalized_text`, every item offset and
+  every published figure are byte-identical with the flag on and off.
+  Carried on refusal envelopes too when asked for (no items, so no item
+  heading is promoted). The whole-document and per-item Markdown are
+  derived by `src/sec10k/markdown.to_markdown()` and are deliberately not
+  fields. Headings inferred from styling, inline emphasis, italic, nested
+  lists, definition lists and txt-era structure are not interpreted
+  (ADR-032 §e). `envelope_shape` refuses any other shape.
+- **`images` (optional, ADR-033)**: present *only* when the caller passes
   `extract_items(path, images=True)`. A list, in document order, of one
   record per HTML `<img>`: `{"offset", "src", "alt", "width", "height"}` —
   `offset` is a **point** into `normalized_text` (an image emits no text, so
@@ -143,10 +164,10 @@ them all); the example once showed `lenient_match`, which nothing emits.
   tightened to visible characters and empty cells are clamped, so the two move
   independently. A table with no visible text anywhere in it is not recorded
   at all, so there is no span to compare against. 0 of the corpus's 53 offsets
-  fall inside any table or cell span; ADR-032 §b2a carries the measured
+  fall inside any table or cell span; ADR-033 §b2a carries the measured
   instances and the corpus split. The image BYTES are
-  never fetched (ADR-032 §c); `<object>`, `<embed>`, inline `<svg>` and CSS
-  background images are not recorded (ADR-032 §e). `envelope_shape` refuses
+  never fetched (ADR-033 §c); `<object>`, `<embed>`, inline `<svg>` and CSS
+  background images are not recorded (ADR-033 §e). `envelope_shape` refuses
   any other shape.
 
 ## Envelope rules (v2, normative)

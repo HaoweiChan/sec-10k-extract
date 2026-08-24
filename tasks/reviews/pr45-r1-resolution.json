@@ -1,0 +1,85 @@
+{
+ "pr": 45,
+ "round": 1,
+ "task": "S9",
+ "review": "tasks/reviews/pr45-r1.json",
+ "resolved_by": "implementer",
+ "date": "2026-08-24",
+ "protocol": "Every finding's repro was re-run on 0f194cf before anything was edited; all six reproduced (R1: 286 0 True; R2: the reviewer's M2/M3/M4/M8 lines reproduced exactly; R3: 43; R4/R5: the one-line normalize() repros; R6: git diff of history.jsonl). R1: the case was written FIRST and watched red (report + history line kept, per R6), then the renderer fixed, then green. R2: every mutation M1-M9 re-run on the final tree after the R1 fix and only the runner's lines written; every fraction checked as numerator/61 before commit. R3-R6 routed to debt in one row; R3/R4/R5 also corrected in place in ADR-031 since those sections were open for R1/R2. Gate, all self-checks, then ledger_table_shape last; s9_markdown_walk.py re-run with both boxes (view.py changed).",
+ "gate_at_resolution": {
+  "invariant": "52/52 = 1.000 (+4 enumerated debt, unscored)",
+  "fast": "110/110 = 1.000 (+4 enumerated debt, unscored); table fidelity cells 1.0000 (400/400), rows 1.0000 (31/31); structure fidelity blocks 1.0000 (61/61), bounds 1.0000 (61/61)",
+  "baseline": "unchanged: fast 1.0, table 1.0/1.0, structure 1.0/1.0; .eval-baseline.json untouched",
+  "self_checks": "normalize, segment, validate, boilerplate, tables, markdown, web.view ok; test_eval_adapter 18/18; metrics --self-check ok; bench --self-check ok; bench --check-docs 68 checked / 0 unmatched; css_contrast ok; ledger_table_shape on tasks/TODO.md + evals/fixtures/README.md (+ ADR-031 for good measure) -> [] (run last)",
+  "browser": "tasks/reviews/s9_markdown_walk.py --out s9-markdown-walk-r1 -> failures []; both boxes on, jpm-2024 item 15: running_heads_in_pane 0, 21 tables, header 'MARKDOWN · BOILERPLATE HIDDEN · …'; screenshot s9-markdown-walk-r1/jpm-2024-item15-markdown-exclude.png"
+ },
+ "findings": [
+  {
+   "id": "R1",
+   "severity": "HIGH",
+   "status": "fixed",
+   "reproduced": true,
+   "repro_observed": "reviewer's one-liner at 0f194cf -> 286 0 True (286 running heads in the 'stripped' Markdown, 0 after strip_chrome, stripped == plain byte-for-byte).",
+   "case_first": "evals/adversarial/blocks-omit-chrome.json (jpm-2024, exclude_boilerplate + blocks): plain rendering must contain the running head; the chrome-omitted rendering of the whole document and of item 15 must not; >= 500 chrome runs carried, >= 250 running heads. New vocabulary in src/sec10k/eval_adapter.py's `markdown` check: `omit_chrome`, `contains`, `not_contains`, `min_chrome_runs`, and a whole-document window when no item/offsets/anchor is given.",
+   "red_line": "[FAIL] blocks-omit-chrome (adversarial, 1.13s) -> 'stripped markdown still contains 'JPMorgan Chase & Co./2024 Form 10-K' (286x)' (document) and '(285x)' (item 15); suite fast 109/110 = 0.991, REGRESSION: 0.991 < baseline 1.000 — evals/report/20260824-002657-fast.json (git_sha 0f194cf-dirty) and its history.jsonl line 20260824-002657 are committed with this repair (R6).",
+   "fix": "src/sec10k/markdown.py::to_markdown: `omit` is no longer 'leave out a block wholly inside a run'; the runs touching each block (bisect on the sorted span starts) are removed from the block's rendered slice with boilerplate.strip_chrome — paragraph and heading slices directly, table cells through tables.grid/to_markdown which now take `omit` (cell_text strips the chrome from the cell slice) — and a block, row or table left empty disappears (tables.to_markdown already drops all-empty rows). Offsets untouched: this is the view layer; normalized_text, blocks, tables and boilerplate spans are what they were.",
+   "after": "jpm-2024: running head 'JPMorgan Chase & Co./2024 Form 10-K' in the stripped whole-document Markdown 286 -> 0 (strip_chrome: 0); build_view item 15 display_text 8 -> 0 with boilerplate_excluded True, markdown True; of the 572 chrome runs, 572 sit inside table blocks, 0 still render as a cell after the fix. csco-2016 (held-out): 10 in-table chrome runs (page numbers) -> 0 still rendered; 'Table of Contents' running heads 127 -> 0. msft-2013: 0 in-table runs (its chrome is whole blocks, already omitted under the old rule); 96 -> 0 unchanged. Whole-document render with omit on jpm-2024: 0.03 s.",
+   "pins": "blocks-omit-chrome (fast); src/sec10k/markdown.py::_demo (a partial run cut out of a paragraph; a chrome run inside a table cell leaves the cell and the emptied row drops; a table whose only text was chrome vanishes; the record itself untouched); src/sec10k/tables.py::_demo (grid/to_markdown with omit); src/sec10k/web/view.py::_demo unchanged and green.",
+   "docs": "ADR-031 §b4 rewritten (the rule, and why the first rule omitted nothing on jpm-2024); §g case table + Enforced-by + 'Twelve cases'; S9 row in tasks/TODO.md; prompts/018 chain entry."
+  },
+  {
+   "id": "R2",
+   "severity": "HIGH",
+   "status": "fixed",
+   "reproduced": true,
+   "repro_observed": "ADR-031 §g at 0f194cf: M2 53/61, M3 48/61 = 0.8276, M4 45/61 = 0.7759, M6 53/61, M8 28/61 = 0.4828 — 53/58, 48/58, 45/58, 28/58 are those decimals; the numerators predate the three blocks-br-boundary labels.",
+   "remeasured_on": "the final tree of this repair (after the R1 fix; 12 cases, 61 labeled blocks — the new case carries no `blocks` label, so the denominator stayed 61), each mutation applied alone and restored, runner lines:",
+   "table": {
+    "M1 renderer no-op": "8 cases red (7 `markdown differs` incl. ge-1994-blocks + blocks-omit-chrome); structure fidelity: blocks 1.0000 (61/61), bounds 1.0000 (61/61)",
+    "M2 item heading level 3": "5 cases; blocks 0.9180 (56/61), bounds 1.0000 (61/61)",
+    "M2b <hN> level + 1": "2 cases; blocks 0.9672 (59/61), bounds 1.0000 (61/61)",
+    "M3 strong never recorded": "6 cases; blocks 0.7869 (48/61), bounds 1.0000 (61/61)",
+    "M4 table blocks dropped": "11 cases (blocks_sane on every blocks case + blocks-omit-chrome 'markdown missing'); blocks 0.7869 (48/61), bounds 0.7869 (48/61)",
+    "M5 boundaries untightened": "7 cases (blocks_sane x6 + blocks-br-boundary label); blocks 0.9836 (60/61), bounds 0.9836 (60/61)",
+    "M6 promotion off": "5 cases; blocks 0.9180 (56/61), bounds 1.0000 (61/61)",
+    "M7 promotion without row guard": "1 case; blocks 0.9836 (60/61), bounds 1.0000 (61/61)",
+    "M8 blocks/docs shadowing": "8 cases (7 sec10k + ui-boilerplate-exclusion); blocks 0.5082 (31/61), bounds 0.5082 (31/61)",
+    "M9 <br> does not close": "1 case; blocks 0.9508 (58/61), bounds 0.9508 (58/61)"
+   },
+   "arithmetic": "56/61 = 0.91803, 59/61 = 0.96721, 48/61 = 0.78689, 60/61 = 0.98361, 31/61 = 0.50820, 58/61 = 0.95082; §c2 percentages 1-48/61 = 21.3%, 1-31/61 = 49.2% — each checked before writing.",
+   "docs": "ADR-031 §g mutation table rewritten with exactly these lines and a note on the 58-over-61 defect; §c2 percentages (21%, 48/61 on both, 49%); the 'No held-out structure labels' Debt row; prompts/018 (48/61 on both + a chain entry)."
+  },
+  {
+   "id": "R3",
+   "severity": "LOW",
+   "status": "debt (corrected in place)",
+   "reproduced": true,
+   "repro_observed": "first differing offsets >= 25: cvx-2015 74, intc-2002 68, tgt-2002 68 -> 43 of 46 below 25 (spg-2019 is 22).",
+   "fix": "ADR-031 §f2 row now reads '43 of 46 below 25' and names the three; Debt row (Origin: PR #45 R3/R4/R5/R6)."
+  },
+  {
+   "id": "R4",
+   "severity": "LOW",
+   "status": "debt (wording corrected in place)",
+   "reproduced": true,
+   "repro_observed": "normalize('<p>a</p><table>stray text</table><p>b</p>', 'html', blocks=True) -> blocks [a, b], 'stray text' in no block; 0 occurrences on the 47 fixtures.",
+   "fix": "The wording option: §b2 now says the coverage is measured (0 uncovered on 47 fixtures) and pinned by blocks_sane, names the three uncovered shapes, and drops 'by construction'. The paragraph-block emission was not taken: a path no fixture exercises would be pinned only by a self-check (the ADR-029 §e standing); the Debt row says so."
+  },
+  {
+   "id": "R5",
+   "severity": "LOW",
+   "status": "debt (noted in place)",
+   "reproduced": true,
+   "repro_observed": "normalize('<p><span style=\"font-weight:700\"><span>A</span> B</span></p>', 'html', blocks=True)[2] -> [{'kind': 'paragraph', 'start': 0, 'end': 3}] without strong.",
+   "fix": "Noted in ADR-031 §b2 next to the unclosed-carrier leak and in the §e row; Debt row. No stack model: 0 corpus mismatches."
+  },
+  {
+   "id": "R6",
+   "severity": "LOW",
+   "status": "debt (not recoverable retroactively)",
+   "reproduced": true,
+   "repro_observed": "git diff origin/main...0f194cf -- evals/report/history.jsonl adds exactly the 234743 / 234841 / 234923 lines; no 23:14 artifact.",
+   "fix": "Recorded in the Debt row. Applied forward in this round: the R1 case's red run (evals/report/20260824-002657-fast.json, history line 20260824-002657, git_sha 0f194cf-dirty) is committed with the repair."
+  }
+ ]
+}

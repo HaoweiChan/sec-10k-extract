@@ -5,7 +5,7 @@ signatures, logos" — and, unusually, wrote the split into the task itself: an
 offline half that records every reference, and a fetch half that resolves the
 bytes off EDGAR, with the ADR required to rule on each separately and to decide
 whether any image bytes get committed as fixtures. Post-freeze, ADR first.
-Ruling: [ADR-032](../specs/decisions/ADR-032-image-reference-annotation.md).
+Ruling: [ADR-033](../specs/decisions/ADR-033-image-reference-annotation.md).
 
 ## The prompt decisions that mattered
 
@@ -16,7 +16,7 @@ Ruling: [ADR-032](../specs/decisions/ADR-032-image-reference-annotation.md).
   that this repository's spec — the eval set — can gate is the reference. The
   prompt's job was not to discover that; it was to refuse the temptation to
   ship a fetcher anyway and call the offline half a first step. Ruled out
-  explicitly, with the cost written on both sides (ADR-032 §c) so "not built"
+  explicitly, with the cost written on both sides (ADR-033 §c) so "not built"
   is a decision a reader can act on.
 
 - **`groundwork:cost-discipline` rule 4 and "commit an image fixture" turned
@@ -82,7 +82,7 @@ Ruling: [ADR-032](../specs/decisions/ADR-032-image-reference-annotation.md).
 - **Eval said:** "15 of 38 HTML fixtures" — the 15 and its per-fixture
   breakdown reproduce exactly, but the corpus is 42 filing fixtures of which 35
   are HTML or iXBRL, not 38.
-- **Corrected:** ADR-032 §j republishes the ratio as 15 of 35 and says which
+- **Corrected:** ADR-033 §j republishes the ratio as 15 of 35 and says which
   half of the row's figure was right, rather than repeating it or silently
   dropping it. (ADR-029 §i3's rule: dropping a correct measurement on a false
   premise is the same defect class as publishing a wrong one.)
@@ -94,7 +94,7 @@ Ruling: [ADR-032](../specs/decisions/ADR-032-image-reference-annotation.md).
   1/800th of what `tables=True` adds to the same filing. The time cost, 1.083×
   median, is not the images at all: it is the price of taking the
   marks-carrying `_tidy` branch, and a fixture with zero images pays nothing.
-- **Corrected:** ADR-032 §b4 justifies opt-in on **contract consistency** and
+- **Corrected:** ADR-033 §b4 justifies opt-in on **contract consistency** and
   says outright that ADR-029's size argument does not carry here. An inherited
   justification that the measurement does not support is worse than no
   justification.
@@ -106,7 +106,7 @@ Ruling: [ADR-032](../specs/decisions/ADR-032-image-reference-annotation.md).
   was invisible to some part of the set.
 - **Corrected:** nothing, and that is the point: the two blind spots are
   complementary by design (the invariant case asserts the equality and the
-  shape, the goldens assert the content), so the pair is recorded in ADR-032 §g
+  shape, the goldens assert the content), so the pair is recorded in ADR-033 §g
   as evidence that neither kind of case is redundant. M5 (dedupe by offset)
   added the third axis — it is red on xom-2021 and bac-2006, which have
   coincident offsets, and green on jpm-2024, which does not.

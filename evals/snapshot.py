@@ -1,5 +1,5 @@
 """Default-flag envelope snapshot — the re-runnable half of an "this changed
-nothing" claim (ADR-026 §d, ADR-029 §d, ADR-032 §d).
+nothing" claim (ADR-026 §d, ADR-029 §d, ADR-032 §d, ADR-033 §d).
 
 An opt-in annotation is only honest if the DEFAULT output is byte-identical
 before and after it. Run this against two trees and compare:

@@ -588,7 +588,7 @@ def test_table_checks():
 
 
 def test_image_checks():
-    # ADR-032 vocabulary on a synthetic envelope: two images, the second pair
+    # ADR-033 vocabulary on a synthetic envelope: two images, the second pair
     # coincident at one offset (the xom-2021 shape), one inside an item span
     # and one outside every span
     text = "cover\n\nItem 1 body\n\ntail"
@@ -654,7 +654,7 @@ def test_image_checks():
         reason = eval_check(r, bad)
         assert reason is not None and why in reason, (why, reason)
     # shape: a string, an offset out of bounds, a record out of DEcreasing
-    # order (equal offsets are legal -- ADR-032 §b2 -- decreasing is not), a
+    # order (equal offsets are legal -- ADR-033 §b2 -- decreasing is not), a
     # missing/extra key, a wrong field type. All red under BOTH check types.
     for images, via in [("[]", "envelope_shape"), ("[]", "images_sane"),
                         ([{**imgs[0], "offset": 999}], "envelope_shape"),

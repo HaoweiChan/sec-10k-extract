@@ -1,11 +1,21 @@
-# ADR-032 — S10: image REFERENCES are reported as opt-in point offsets into an unchanged `normalized_text`; fetching the image BYTES is ruled out of S10, and no image bytes are committed
+# ADR-033 — S10: image REFERENCES are reported as opt-in point offsets into an unchanged `normalized_text`; fetching the image BYTES is ruled out of S10, and no image bytes are committed
 
-Date: 2026-08-23. Status: accepted. Implements S10. Sanctioned exception to the
-T8 feature freeze (`tasks/TODO.md`, **Freeze guard**), on the pattern
+Date: 2026-08-23. Status: accepted. **Renumbered ADR-032 → ADR-033 at the PR #44
+merge with main (2026-08-24)**, on the same rule and for the same reason ADR-032
+itself records: PR #45 (S9) published its own ADR-032 (block structure and the
+Markdown view) to main first, so this one moves. Records written before the
+merge — `tasks/reviews/pr44-r1..r3.json` and their resolutions,
+`prompts/020-s10-image-references.md` (renumbered from 019 in the same merge,
+S9 having published its own 019), and every eval case provenance — cite
+this document by number, and were renumbered with it so they still resolve; the
+review artifacts are otherwise unedited. Implements S10. Sanctioned exception to
+the T8 feature freeze (`tasks/TODO.md`, **Freeze guard**), on the pattern
 [ADR-020](ADR-020-fallback-not-justified.md) established for T12 and applied by
 [ADR-026](ADR-026-boilerplate-chrome-exclusion.md) (S6),
-[ADR-029](ADR-029-structured-tables-annotation.md) (S7) and
-[ADR-030](ADR-030-non-last-span-dominance.md) (D3).
+[ADR-029](ADR-029-structured-tables-annotation.md) (S7),
+[ADR-030](ADR-030-non-last-span-dominance.md) (D3) and
+[ADR-032](ADR-032-block-structure-markdown-view.md) (S9 — the sibling
+annotation this one shares a `_Plain` pass with; see §i).
 
 **Ruling**: the S10 capability ships as its **offline half only**. `extract_items(path, images=True)` adds one envelope key, `images` — a list of `{offset, src, alt, width, height}` records, one per HTML `<img>`, in document order; `offset` is a **point** into `normalized_text` (an image emits no text, so it has no span), which is byte-identical with the flag on and off, as are every item offset, `doc_status` and `warnings`. The item an image falls in is **derived from offsets**, never stored, exactly as ADR-029 derives an item's tables. The **fetch half is ruled OUT of S10** — no network call, no cache, no inspector route — and **no image bytes are committed as fixtures**; §c names the cost of that ruling in both directions.
 **Because**: the bytes are not in the fixtures — every one of the 53 `<img>` in the committed corpus is an external reference to a sibling document in its EDGAR accession, none is an inline `data:` URI — so the only half of "extract the images" that can be gated offline, by the eval set that is this repo's spec, is the reference. Recording it costs the text run nothing it does not already have (the position counter is already there and the recorder never emits), moves no offset anywhere, and makes "on and off are identical" true by construction; fetching, by contrast, buys a network dependency, a cache, and an eval case that either hits EDGAR on every run or is mocked — and hard rule 4 forbids the second.
@@ -424,6 +434,37 @@ shape is fixed by the contract (`specs/001-sec10k-contract.md`) and by
 `_images_shape`. The placeholder S9 will want is `![alt](src)` at `offset`,
 composed the way ADR-029 §b2 composes an item body with its tables — from the
 record, by a consumer, not from a stored field.
+
+### i1. How the merge actually went (2026-08-24, S9 landed first)
+
+Recorded because the paragraph below was a prediction and predictions in this
+ADR have not had a good record. S9 merged as PR #45; S10 merged on top of it.
+The prediction held: **both capabilities kept working with no behavioural
+change to either**, and the shared `_Plain` pass now carries three
+annotations. What the merge decided, so a reader does not have to reconstruct
+it from the diff:
+
+- `_Plain.__init__(tables, blocks, images)` and `normalize(...)` returns
+  `(text, tables, blocks, images)`; `select_and_normalize` returns
+  `(text, meta, warnings, tables, blocks, images)`. `blocks` keeps the
+  positional slot S9 gave it, so their call sites did not move; `images` is
+  appended.
+- **One `_tidy` mark map for all three.** Table marks, block marks and image
+  marks are merged into a single sorted `olds` set and rewritten in one pass,
+  which is what makes "the text is identical whatever is asked for" still true
+  by construction rather than by three separate careful implementations.
+- The `<img>` branch stays *inside* `handle_starttag`'s `if/elif` chain, so
+  `elif self.skip_depth: pass` keeps guarding it — an `<img>` in `<title>` or
+  `ix:hidden` is still never recorded. S9's bold tracking is a separate
+  statement after the chain and runs for every tag, `img` included.
+- The two flags are independent: `blocks=True` implies `tables=True` (S9's
+  rule, unchanged), `images=True` implies nothing, and asking for both costs
+  one walk.
+
+Byte-identity re-derived against the merged `origin/main` (f00b635): dev
+`7c26bea0…28821be`, held-out `51de5a11…04957f3f`, `cmp` equal. Gate on the
+merge: invariant 54/54, fast 117/117, table fidelity 1.0, structure fidelity
+1.0, `.eval-baseline.json` byte-identical to main's.
 
 Both tasks touch `_Plain`. S10's edit is one `elif` branch on `img` at the end
 of `handle_starttag`'s chain plus one module-level helper (`_dim`); it adds no

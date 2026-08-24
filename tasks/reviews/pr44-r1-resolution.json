@@ -19,12 +19,12 @@
     {
       "id": "R1",
       "disposition": "fixed",
-      "summary": "Claim narrowed to what is true, and pinned on the real xom-2021 in-cell images. ADR-032 gains a new subsection b2a stating the actual rule: an image offset is a reading-order point, a table/cell span is tightened to VISIBLE TEXT (ADR-029 b1) and an image contributes none, and an empty cell is then clamped into the tightened table span -- so an image in a text-carrying cell does land inside that cell, while an image in an image-only cell that precedes the table's visible text lands outside the whole table. b1's unconditional sentence now points at b2a instead of asserting the false half, and g's synthetic-shape list says which of the two _demo pins.",
+      "summary": "Claim narrowed to what is true, and pinned on the real xom-2021 in-cell images. ADR-033 gains a new subsection b2a stating the actual rule: an image offset is a reading-order point, a table/cell span is tightened to VISIBLE TEXT (ADR-029 b1) and an image contributes none, and an empty cell is then clamped into the tightened table span -- so an image in a text-carrying cell does land inside that cell, while an image in an image-only cell that precedes the table's visible text lands outside the whole table. b1's unconditional sentence now points at b2a instead of asserting the false half, and g's synthetic-shape list says which of the two _demo pins.",
       "why_not_the_other_option": "Changing the placement so an in-cell image lands inside its cell was the acceptance's alternative and is rejected on the merits: pulling a table span back to swallow an image would break ADR-029's rule that a table span is tight to its own text (and its `tables_sane` tightness assertion), and moving the image offset would make it something other than where the image is. Both would also move committed table offsets for a frozen capability. The relationship is real and simply had to be asserted rather than assumed.",
       "covered_by": "evals/adversarial/images-in-table-cell.json (fast) -- new; plus the corrected pair in src/sec10k/normalize.py::_demo",
       "new_vocabulary": "the `image` check gains one optional key, `in_table` (src/sec10k/eval_adapter.py), asserting whether the offset lies inside some recorded table span; it refuses rather than guesses when the case did not also ask for tables. Unit-covered both ways plus the refusal in test_eval_adapter.py::test_image_checks.",
       "red_first": {
-        "command": "python3 -m evals.run --suite fast  (with evals/adversarial/images-in-table-cell.json written to assert ADR-032 b1's claim as committed, i.e. in_table=true for g7/g8/g9)",
+        "command": "python3 -m evals.run --suite fast  (with evals/adversarial/images-in-table-cell.json written to assert ADR-033 b1's claim as committed, i.e. in_table=true for g7/g8/g9)",
         "observed": "[FAIL] images-in-table-cell (adversarial, 0.33s) / [eval] suite 'fast': 104/105 = 0.990 -- 3 failures: \"image xom-20211231_g7.jpg at 232186 is outside every recorded table span, labeled in_table=True\", same for g8 and g9",
         "in_time_series": "yes -- evals/report/history.jsonl line 20260824-000828 fast 81764f7 dirty 104/105 0.9905",
         "after": "the same case with the three labels flipped to false: passed, 0 failures"
@@ -35,9 +35,9 @@
     {
       "id": "R2",
       "disposition": "fixed",
-      "summary": "_dim (src/sec10k/normalize.py) now answers null for anything that is not a whole POSITIVE number of pixels: a non-pixel unit as before, and now a zero (width=\"0\") and a fractional declaration (0.75px, 1.5px). The style regex lost its (?:\\.\\d+)? so a sub-pixel value does not match at all, and the final return is gated on int(v) > 0. Producer and contract now agree: specs/001's \"positive int\", _images_shape's refusal, and test_eval_adapter's assertion that width 0 is refused are all consistent with what the extractor can emit. ADR-032 b1's width/height row restated with all three exclusions and the R2 attribution.",
+      "summary": "_dim (src/sec10k/normalize.py) now answers null for anything that is not a whole POSITIVE number of pixels: a non-pixel unit as before, and now a zero (width=\"0\") and a fractional declaration (0.75px, 1.5px). The style regex lost its (?:\\.\\d+)? so a sub-pixel value does not match at all, and the final return is gated on int(v) > 0. Producer and contract now agree: specs/001's \"positive int\", _images_shape's refusal, and test_eval_adapter's assertion that width 0 is refused are all consistent with what the extractor can emit. ADR-033 b1's width/height row restated with all three exclusions and the R2 attribution.",
       "covered_by": "src/sec10k/normalize.py::_demo -- the acceptance's own named option, beside the existing 50% assertion; run by .github/workflows/ci.yml's unit-tests job",
-      "why_not_an_eval_case": "A gate case needs a fixture with a zero or sub-pixel <img>, and there is none among the 53 committed images. Adding a synthetic fixture for a two-line guard would move ADR-021 b8's populations, which ADR-032 f3 explicitly commits not to do. The acceptance offered the _demo route as an equal alternative and it is the one taken.",
+      "why_not_an_eval_case": "A gate case needs a fixture with a zero or sub-pixel <img>, and there is none among the 53 committed images. Adding a synthetic fixture for a two-line guard would move ADR-021 b8's populations, which ADR-033 f3 explicitly commits not to do. The acceptance offered the _demo route as an equal alternative and it is the one taken.",
       "red_first": {
         "command": "python3 -m src.sec10k.normalize  (with the new assertion added, before the _dim fix)",
         "observed": "AssertionError: [{'offset': 2, 'src': 'z.gif', 'alt': None, 'width': 0, 'height': 0}, {'offset': 2, 'src': 'f.gif', 'alt': None, 'width': 0, 'height': 1}] -- i.e. width=0/height=0px both returned 0, and style width:0.75px/height:1.5px returned 0 and 1",
@@ -60,10 +60,10 @@
     {
       "id": "R4",
       "disposition": "fixed",
-      "summary": "The acceptance's in-scope alternative was taken instead of a debt row, as the orchestrator's routing note allowed. ADR-032 g now states outright that the five red runs are NOT in evals/report/history.jsonl -- they were made in a throwaway git archive tree of 3e16f70 with the case files copied in, so the runner appended its lines to that tree's copy and they were discarded with it -- and that the claim therefore rests on the ADR plus the round-1 reviewer's independent reproduction of the 50/51 invariant result and four of the five mutations.",
+      "summary": "The acceptance's in-scope alternative was taken instead of a debt row, as the orchestrator's routing note allowed. ADR-033 g now states outright that the five red runs are NOT in evals/report/history.jsonl -- they were made in a throwaway git archive tree of 3e16f70 with the case files copied in, so the runner appended its lines to that tree's copy and they were discarded with it -- and that the claim therefore rests on the ADR plus the round-1 reviewer's independent reproduction of the 50/51 invariant result and four of the five mutations.",
       "chose_alternative_over_debt": true,
       "additional": "Round 2 does leave a genuine red line in the committed time series: 20260824-000828 fast 81764f7 dirty 104/105 0.9905, the R1 case run with ADR b1's original claim in it. ADR g cites it by timestamp. It was deliberately NOT discarded at commit time, unlike the trailing green lines of round 1.",
-      "covered_by": "specs/decisions/ADR-032-image-reference-annotation.md sec g; evals/report/history.jsonl"
+      "covered_by": "specs/decisions/ADR-033-image-reference-annotation.md sec g; evals/report/history.jsonl"
     },
     {
       "id": "R5",
@@ -80,7 +80,7 @@
   ],
   "rejected": [],
   "files_touched_this_round": [
-    "specs/decisions/ADR-032-image-reference-annotation.md (b1 corrected, b2a added, b1 width/height row restated, g honesty note + sixth case + gate readings, Enforced-by line)",
+    "specs/decisions/ADR-033-image-reference-annotation.md (b1 corrected, b2a added, b1 width/height row restated, g honesty note + sixth case + gate readings, Enforced-by line)",
     "specs/001-sec10k-contract.md (images: the offset-vs-table-span caveat)",
     "src/sec10k/normalize.py (_dim positive-whole-pixels; _demo in-cell pair rebuilt; _demo zero/sub-pixel guard)",
     "src/sec10k/eval_adapter.py (image check: in_table)",

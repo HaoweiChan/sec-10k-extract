@@ -1,0 +1,28 @@
+{
+ "pr": 45,
+ "round": 2,
+ "date": "2026-08-24",
+ "result": "APPROVED",
+ "scope": "repair diff 0f194cf..ba3b53b + standing R1-R6",
+ "orchestrator_note": "Reviewer returned APPROVED with one MEDIUM finding; the pr-loop scope rule and this repo's precedent (PR #30 R3, PR #25 R1-family: a check the gate cannot see fail is not a check) make R7 a repair finding, so the orchestrator routes it to REPAIR rather than debt. One bounded round.",
+ "gate": "invariant 52/52; fast 110/110; table fidelity 400/400 · 31/31; structure fidelity 61/61 · 61/61; .eval-baseline.json not in the diff",
+ "standing": {
+  "R1": "resolved — red reproduced at 0f194cf (286x/285x, 109/110, committed report matches), green at HEAD; token-level compare of stripped Markdown vs strip_chrome on jpm-2024/csco-2016/msft-2013 (doc + items): 0 missing / 0 extra tokens; thresholds 572>=500, 286>=250",
+  "R2": "resolved — all nine mutations re-run on a temp copy of HEAD; every red-case count and every blocks/bounds fraction equals ADR-031 §g; §c2, prompts/018 and the Debt row consistent",
+  "R3": "debt row present + in-place verified (43 of 46; cvx 74, intc 68, tgt 68)",
+  "R4": "debt row present + in-place verified",
+  "R5": "debt row present + in-place verified",
+  "R6": "debt row present, applied forward (red run's report + history line committed, git_sha matches)"
+ },
+ "findings": [
+  {
+   "id": "R7",
+   "severity": "MEDIUM",
+   "route": "repair",
+   "claim": "The preservation half of the R1 fix — non-chrome text survives the omit_chrome rendering — has no pin the enforced gate runs: a renderer that returns an empty string whenever omit is non-empty passes the entire objective gate.",
+   "evidence": "blocks-omit-chrome's stripped checks are not_contains-only; its contains check runs on the un-omitted rendering, and min_chrome_runs guards the envelope, not the rendering. Mutation `if omit: return \"\"` after line 60 of src/sec10k/markdown.py::to_markdown -> fast 110/110 = 1.000, invariant 52/52 = 1.000, structure 61/61. Only markdown.py::_demo and web/view.py::_demo go red, and .githooks/pre-commit runs neither (fast suite + bench checks only) — the repo's own standard, 'a self-check no gate runs is a claim' (comment in .githooks/pre-commit, PR #12 R27).",
+   "repro": "in a temp copy of HEAD, insert `if omit: return \"\"` as the second statement of to_markdown in src/sec10k/markdown.py, then `python3 -m evals.run --suite fast` and `--suite invariant` — both green",
+   "acceptance": "an omit_chrome check in blocks-omit-chrome also asserts a non-chrome substring (e.g. a prose snippet from jpm-2024 item 15) via contains, watched red under the empty-render mutation and green at HEAD"
+  }
+ ]
+}
