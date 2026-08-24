@@ -404,23 +404,37 @@ def check_truncated_notice_in_overlay(case):
     return bad
 
 
+def _check_capability_rows(rows, label, min_count, min_cell_chars, bad):
+    """Shared row-count and content-emptiness check for one capabilities.py
+    table (`works_well` or `difficult` — both are flat `{header: cell}`
+    dicts since the V4 README unified both sections onto one table shape).
+
+    R1: counting rows alone is blind to a mutation that keeps every row and
+    column but empties the CONTENT (every cell replaced with a same-length
+    placeholder like "x") — same shape, garbage panel, and the old check
+    stayed green. So content is checked two ways: no row may be
+    all-identical-cells (a placeholder row has one distinct value; a real
+    one does not), and every cell must clear a minimum length.
+    """
+    if len(rows) < min_count:
+        bad.append(f"{label} has {len(rows)} rows (< {min_count})")
+    for i, row in enumerate(rows):
+        vals = list(row.values())
+        if len(set(vals)) < 2:
+            bad.append(f"{label} row {i}: every cell is the identical "
+                       f"placeholder {vals[0]!r}")
+        short = [v for v in vals if len(v) < min_cell_chars]
+        if short:
+            bad.append(f"{label} row {i}: cell(s) under {min_cell_chars} "
+                       f"chars (placeholder-shaped): {short}")
+
+
 def check_capabilities_parse(case):
     """The committed README must still yield a non-trivial parse through
     capabilities.py — the check that turns a README restructure red instead
     of silently emptying the `/api/capabilities` panel (S4), the INV-S2
-    argument applied to docs.
-
-    R1: counting rows/entries alone is blind to a mutation that keeps every
-    row and column but empties the CONTENT (every cell replaced with a
-    same-length placeholder like "x") — same shape, garbage panel, and the
-    old check stayed green. Content is checked two ways: no row/item may be
-    all-identical-cells (a placeholder table has one distinct value; a real
-    one does not), and every cell/term/detail must clear a minimum length —
-    both cheap, neither requires pinning the README's literal text, and both
-    are exactly what R1's acceptance offered as options, so a legitimate
-    future README edit (not a hollowing-out) does not need this case rewired.
-    Written against the V3 shape: `difficult` items are `{term, detail}`
-    dicts, not one fused string.
+    argument applied to docs. Written against the V4 shape: `works_well`
+    and `difficult` are both flat lists of `{header: cell}` row dicts.
     """
     inp = case.get("input", {})
     readme = ROOT / inp.get("file", "README.md")
@@ -428,38 +442,12 @@ def check_capabilities_parse(case):
     min_works = inp.get("min_works_well", 8)
     min_diff = inp.get("min_difficult", 3)
     min_cell_chars = inp.get("min_cell_chars", 8)
-    min_term_chars = inp.get("min_term_chars", 6)
-    min_detail_chars = inp.get("min_detail_chars", 20)
 
-    works = data["works_well"]
-    diff_items = [it for g in data["difficult"] for it in g["items"]]
+    works, diff = data["works_well"], data["difficult"]
     bad = []
-    if len(works) < min_works:
-        bad.append(f"works_well has {len(works)} rows (< {min_works})")
-    if len(diff_items) < min_diff:
-        bad.append(f"difficult has {len(diff_items)} entries (< {min_diff})")
-
-    for i, row in enumerate(works):
-        vals = list(row.values())
-        if len(set(vals)) < 2:
-            bad.append(f"works_well row {i}: every cell is the identical "
-                       f"placeholder {vals[0]!r}")
-        short = [v for v in vals if len(v) < min_cell_chars]
-        if short:
-            bad.append(f"works_well row {i}: cell(s) under {min_cell_chars} "
-                       f"chars (placeholder-shaped): {short}")
-    # R8: a bare heading-with-inline-content group's one item has no
-    # "term" key at all (a spanning descriptive row, not a fake term/detail
-    # pair) — only check the term floor when a term is actually present.
-    thin = [it for it in diff_items
-            if ("term" in it and len(it["term"]) < min_term_chars)
-            or len(it["detail"]) < min_detail_chars]
-    if thin:
-        bad.append(f"{len(thin)} difficult item(s) with a term under "
-                   f"{min_term_chars} chars or detail under {min_detail_chars} "
-                   f"chars (placeholder-shaped): {thin}")
-
-    return bad, {"works_well_rows": len(works), "difficult_entries": len(diff_items)}
+    _check_capability_rows(works, "works_well", min_works, min_cell_chars, bad)
+    _check_capability_rows(diff, "difficult", min_diff, min_cell_chars, bad)
+    return bad, {"works_well_rows": len(works), "difficult_entries": len(diff)}
 
 
 def check_anchor_contract(case):

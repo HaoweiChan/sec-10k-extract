@@ -275,9 +275,10 @@ table.cap-t th,table.cap-t td{border:1px solid var(--line);padding:6px 8px;
   text-align:left;vertical-align:top}
 table.cap-t th{background:var(--muted);color:var(--dim);text-transform:uppercase;
   letter-spacing:.06em;font-size:11px;font-weight:600}
-table.cap-t td.grp{font-weight:700;color:var(--amber-ink);font-size:11px;
-  text-transform:uppercase;letter-spacing:.08em;background:var(--muted)}
 table.cap-diff td:first-child{width:26%;font-weight:600;color:var(--ink)}
+.cap-decisions{margin-top:2px}
+.cap-decisions ul{margin:0;padding:0 13px 10px 26px;font-size:12px;color:var(--dim)}
+.cap-decisions li{margin-bottom:4px}
 footer{max-width:min(1400px,94vw);margin-inline:auto;padding:14px 20px 40px;color:var(--dim);font-size:13px}
 footer a{color:var(--accent)}
 </style>
@@ -393,34 +394,39 @@ async function boot(){
 // by src/sec10k/web/capabilities.py — rendering them here means there is no
 // hand-copied second table in this file to drift from the README (INV-S2's
 // argument applied to docs).
+// Both README lists parse to the same flat {header: cell} row shape (V4:
+// capabilities.py unified works-well and difficult onto one table parser),
+// so one renderer covers both.
+function renderCapTable(rows, cls){
+  return rows.length
+    ? `<table class="cap-t ${cls}"><thead><tr>${Object.keys(rows[0]).map(k => `<th>${esc(k)}</th>`).join("")}</tr></thead><tbody>${
+        rows.map(r => `<tr>${Object.values(r).map(v => `<td>${esc(v)}</td>`).join("")}</tr>`).join("")
+      }</tbody></table>`
+    : `<div class="none">No data — README.md's table did not parse.</div>`;
+}
+
+// The difficult section's collapsed ADR log (README's own <details> block,
+// same source, same INV-S2 argument) — nested <details> so it stays out of
+// the way until someone goes looking for the reasoning behind a row above.
+// Rendered only when the README actually carries one; an empty section is
+// left out rather than shown as "no data" for what is optional depth.
+function renderDecisions(rows){
+  if(!rows.length) return "";
+  return `<details class="cap-decisions"><summary>design-decision log</summary><ul>${
+    rows.map(d => `<li><a href="${esc(d.url)}" target="_blank">${esc(d.id)}</a> — ${esc(d.note)}</li>`).join("")
+  }</ul></details>`;
+}
+
 async function loadCapabilities(){
   const box = $("#cap-content");
   try{
     const c = await (await fetch("/api/capabilities")).json();
-    const ww = c.works_well || [], diff = c.difficult || [];
+    const ww = c.works_well || [], diff = c.difficult || [], dec = c.decisions || [];
     let html = "<h3>what works well</h3>";
-    html += ww.length
-      ? `<table class="cap-t"><thead><tr>${Object.keys(ww[0]).map(k => `<th>${esc(k)}</th>`).join("")}</tr></thead><tbody>${
-          ww.map(r => `<tr>${Object.values(r).map(v => `<td>${esc(v)}</td>`).join("")}</tr>`).join("")
-        }</tbody></table>`
-      : `<div class="none">No data — README.md's table did not parse.</div>`;
+    html += renderCapTable(ww, "");
     html += "<h3>what is difficult, unreliable, or unsupported</h3>";
-    // V3: term and detail are real columns, not one fused paragraph cell —
-    // capabilities.py already returns them as separate {term, detail}
-    // fields. R8: a group with no `- ` bullets under it at all (just one
-    // bold-lead paragraph, e.g. "Explicitly unsupported") has no item of
-    // its own to split — capabilities.py hands back {detail} with no
-    // "term" key, rendered here as a single spanning row rather than
-    // duplicating the group band as a meaningless term.
-    html += diff.length
-      ? `<table class="cap-t cap-diff"><thead><tr><th>Issue</th><th>Detail</th></tr></thead><tbody>${diff.map(g =>
-          `<tr><td class="grp" colspan="2">${esc(g.heading)}</td></tr>` +
-          g.items.map(it => "term" in it
-            ? `<tr><td>${esc(it.term)}</td><td>${esc(it.detail)}</td></tr>`
-            : `<tr><td colspan="2">${esc(it.detail)}</td></tr>`
-          ).join("")
-        ).join("")}</tbody></table>`
-      : `<div class="none">No data — README.md's section did not parse.</div>`;
+    html += renderCapTable(diff, "cap-diff");
+    html += renderDecisions(dec);
     box.innerHTML = html;
   }catch(e){
     box.innerHTML = `<div class="none">Capabilities unavailable: ${esc(String(e))}</div>`;

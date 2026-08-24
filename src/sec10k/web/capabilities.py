@@ -51,27 +51,6 @@ def _strip_md(s):
     return re.sub(r"\s+", " ", s).strip()
 
 
-_LEAD_RE = re.compile(r"^\*\*(.+?)\*\*\s*(.*)$", re.S)
-
-
-def _split_lead(raw):
-    """A difficult-list item's leading `**Term**` -> (term, detail), both
-    markdown-stripped (V3: the panel needs term and detail as separate
-    table columns, not one fused string). Covers both shapes the README
-    uses: a `- **Term.** detail...` bullet, and a bare `**Heading** —
-    detail...` paragraph (the "Explicitly unsupported" group, which has no
-    bullets under it at all). An item with no bold lead at all — a shape
-    surprise, not a case the README currently produces — falls back to
-    (whole text, "") rather than raising.
-    """
-    m = _LEAD_RE.match(raw.strip())
-    if not m:
-        return _strip_md(raw), ""
-    term, detail = m.group(1).strip(), m.group(2).strip()
-    detail = re.sub(r"^[—\-–:]\s*", "", detail)  # the dash/colon after the lead, not content
-    return _strip_md(term), _strip_md(detail)
-
-
 def _parse_table(section):
     """The first `| a | b | c |` markdown table in `section` -> a list of
     dicts keyed by its header row. [] if no table is found."""
@@ -88,75 +67,49 @@ def _parse_table(section):
     return rows
 
 
-def _parse_difficult(section):
-    """Bold-lead paragraphs -> [{"heading": str, "items": [{"term", "detail"}, ...]}, ...].
+_DECISION_RE = re.compile(r"^-\s*\[(ADR-\d+)\]\(([^)]+)\)\s*[—\-–]\s*(.+)$")
 
-    Blank lines split the section into blocks, but the README (real
-    example: "Fails today") runs consecutive `- ` bullets back to back with
-    no blank line between them, so one block can hold several items — each
-    is split out by its own leading `- `, with a non-`- ` line folded into
-    the item above it as a wrapped continuation.
 
-    A block that does NOT open with `- ` and starts `**Text**` opens a new
-    group instead. If content follows the bold lead in that SAME block (as
-    with "Explicitly unsupported", which has no `- ` bullets under it at
-    all), the whole block is also that group's one entry. A block of plain
-    prose (the section's lead-in sentence) matches neither shape and is
-    skipped.
+def _parse_decisions(section):
+    """`- [ADR-010](url) — one-liner.` bullets anywhere in `section` (the
+    difficult section's collapsed decision log) -> [{"id", "url", "note"},
+    ...], in document order. [] if the section carries no such log.
 
-    Each item is split (via `_split_lead`) into its bolded term and the
-    detail that follows, rather than kept as one fused string (V3): the
-    panel renders these as separate table columns, so a reader can scan
-    issues without reading full paragraphs.
-
-    A bare heading-with-inline-content paragraph (no `- ` bullets under it
-    at all -- the README's "Explicitly unsupported" group is the one case
-    of this shape) has no independent term of its own: `_split_lead` would
-    hand back the group's OWN heading as "the term", duplicating the band
-    already rendered above it beside one long paragraph (R8, PR #21 round
-    3). That shape gets a `{"detail": ...}` item with no "term" key at all,
-    rendered as a single spanning descriptive row instead of a fake pair.
+    `url` is rewritten from the README-relative `specs/decisions/FILE.md`
+    path to the app route that actually serves it (`/api/decisions/FILE.md`,
+    src/sec10k/web/app.py) — the README's link works because GitHub renders
+    relative paths against the repo tree; the panel has no repo tree, so it
+    needs the file served directly, wherever this is deployed.
     """
-    blocks = re.split(r"\n\s*\n", section.strip())
-    groups, current = [], None
-    for block in blocks:
-        lines = [l.strip() for l in block.strip().splitlines() if l.strip()]
-        if not lines:
-            continue
-        if lines[0].startswith("- "):
-            items, cur = [], None
-            for line in lines:
-                if line.startswith("- "):
-                    items.append(line[2:])
-                    cur = len(items) - 1
-                elif cur is not None:
-                    items[cur] += " " + line
-            if current is not None:
-                current["items"].extend(
-                    {"term": t, "detail": d} for t, d in (_split_lead(raw) for raw in items))
-            continue
-        joined = " ".join(lines)
-        m = re.match(r"^\*\*(.+?)\*\*(.*)$", joined, re.S)
+    out = []
+    for line in section.splitlines():
+        m = _DECISION_RE.match(line.strip())
         if not m:
             continue
-        heading, rest = m.group(1).strip(), m.group(2).strip()
-        current = {"heading": heading, "items": []}
-        groups.append(current)
-        if rest:
-            current["items"].append({"detail": _strip_md(joined)})
-    return groups
+        url = m.group(2).strip()
+        if url.startswith("specs/decisions/"):
+            url = "/api/decisions/" + url[len("specs/decisions/"):]
+        out.append({"id": m.group(1), "url": url, "note": _strip_md(m.group(3))})
+    return out
 
 
 def parse_readme(path=README):
-    """-> {"works_well": [...], "difficult": [...]}. An honest empty state —
-    never fabricated rows — if the file or its sections are missing."""
+    """-> {"works_well": [...], "difficult": [...], "decisions": [...]}.
+    works_well/difficult are flat lists of dicts keyed by their table's
+    header row — one shape, one parser (`_parse_table`) for both. decisions
+    is the difficult section's collapsed `- [ADR-N](url) — note` log,
+    parsed from that SAME section so the panel's ADR references can never
+    drift from the README's. An honest empty state — never fabricated rows
+    — if the file or a section is missing."""
     try:
         text = Path(path).read_text()
     except OSError:
-        return {"works_well": [], "difficult": []}
+        return {"works_well": [], "difficult": [], "decisions": []}
+    difficult_section = _section(text, DIFFICULT_HEADING)
     return {
         "works_well": _parse_table(_section(text, WORKS_WELL_HEADING)),
-        "difficult": _parse_difficult(_section(text, DIFFICULT_HEADING)),
+        "difficult": _parse_table(difficult_section),
+        "decisions": _parse_decisions(difficult_section),
     }
 
 
@@ -177,14 +130,18 @@ blah
 
 lead-in sentence.
 
-**Group one**
+| Limitation | Detail |
+|---|---|
+| Term one | detail one, with `code`, *italic*, _also italic_, a snake_case_name that must survive, and [a link](http://x) |
+| Term two | detail two |
 
-- **Term one.** detail one, wrapped onto
-  a second line with no blank line above it.
-- **Term two.** detail two, with `code`, *italic*, _also italic_,
-  a snake_case_name that must survive, and [a link](http://x).
+<details>
+<summary>log</summary>
 
-**Group two** — inline detail, no bullets beneath it at all.
+- [ADR-001](specs/decisions/ADR-001-x.md) — one-liner with `code` and *italic*.
+- [ADR-002](specs/decisions/ADR-002-y.md) — another one-liner.
+
+</details>
 
 ## Next section
 irrelevant
@@ -198,25 +155,21 @@ irrelevant
             {"Stratum": "A", "Examples": "b, c", "Result": "x works"},
             {"Stratum": "D", "Examples": "e", "Result": "bold result"},
         ], data["works_well"]
-        assert len(data["difficult"]) == 2
-        g1, g2 = data["difficult"]
-        assert g1["heading"] == "Group one"
-        # V3: term and detail are separate fields, not one fused string
-        assert g1["items"] == [
-            {"term": "Term one.",
-             "detail": "detail one, wrapped onto a second line with no blank line above it."},
-            {"term": "Term two.",
-             "detail": "detail two, with code, italic, also italic, a snake_case_name "
-                       "that must survive, and a link."},
-        ], g1["items"]
-        assert g2["heading"] == "Group two"
-        # R8: a bare heading-with-inline-content group has no term of its
-        # own -- no "term" key at all, a single spanning descriptive row
-        assert g2["items"] == [
-            {"detail": "Group two — inline detail, no bullets beneath it at all."}]
+        assert data["difficult"] == [
+            {"Limitation": "Term one",
+             "Detail": "detail one, with code, italic, also italic, a snake_case_name "
+                       "that must survive, and a link"},
+            {"Limitation": "Term two", "Detail": "detail two"},
+        ], data["difficult"]
+        assert data["decisions"] == [
+            {"id": "ADR-001", "url": "/api/decisions/ADR-001-x.md",
+             "note": "one-liner with code and italic."},
+            {"id": "ADR-002", "url": "/api/decisions/ADR-002-y.md",
+             "note": "another one-liner."},
+        ], data["decisions"]
         # missing file -> honest empty state, never a fabricated row
         assert parse_readme(Path("/nonexistent/README.md")) == {
-            "works_well": [], "difficult": []}
+            "works_well": [], "difficult": [], "decisions": []}
     finally:
         os.unlink(p)
 
@@ -229,19 +182,15 @@ irrelevant
     # this is what the capabilities-parse eval case also asserts
     real = parse_readme()
     assert len(real["works_well"]) >= 8, real["works_well"]
-    real_items = [it for g in real["difficult"] for it in g["items"]]
-    assert len(real_items) >= 3, real_items
-    assert all(set(it) <= {"term", "detail"} and "detail" in it for it in real_items), real_items
-    # R8 regression, pinned to real content: "Explicitly unsupported" has no
-    # bullets under it, so its one item must be a spanning row (no "term")
-    unsupported = [it for g in real["difficult"] if g["heading"] == "Explicitly unsupported"
-                   for it in g["items"]]
-    assert len(unsupported) == 1 and "term" not in unsupported[0], unsupported
-    # R4 regression, pinned to real content: the README's "Closed since
-    # B-freeze" bullet contains `*ahead*` — it must come out asterisk-free
-    joined = " ".join(it["detail"] for it in real_items)
-    assert "*ahead*" not in joined and "*" not in joined, \
-        f"R4 regression: italic emphasis leaked into the panel: {joined!r}"
+    assert len(real["difficult"]) >= 3, real["difficult"]
+    assert len(real["decisions"]) >= 3, real["decisions"]
+    assert all(d["id"].startswith("ADR-") and d["url"].startswith("/api/decisions/")
+               and d["note"] for d in real["decisions"]), real["decisions"]
+    real_cells = [v for row in real["difficult"] for v in row.values()]
+    # R4 regression, pinned to real content: markdown emphasis/links/code in
+    # the difficult table must come out plain, not as literal markup chars
+    assert "*" not in " ".join(real_cells), \
+        f"R4 regression: italic emphasis leaked into the panel: {real_cells!r}"
     print("[capabilities self-check] ok")
 
 
