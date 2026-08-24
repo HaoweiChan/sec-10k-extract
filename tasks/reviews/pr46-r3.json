@@ -1,0 +1,72 @@
+{
+  "pr": 46,
+  "round": 3,
+  "branch": "task/D5",
+  "head": "c8dc899",
+  "base": "f00b635 (main after S9/PR #45)",
+  "reviewed": "the merge delta ONLY (3b858ed..c8dc899 against f00b635) — round 2's APPROVED stands for what it reviewed",
+  "date": "2026-08-24",
+  "result": "REQUEST_CHANGES",
+  "counts": {
+    "HIGH": 0,
+    "MEDIUM": 1,
+    "LOW": 3
+  },
+  "why_this_round_exists": "Main moved after round 2 approved. S9 (PR #45) gave display_text a second producer, which broke D5's boilerplate_applied and forced a material change to the exact mechanism round 2 had approved. A reviewer should see the mechanism that actually merges.",
+  "circuit_breaker": "NOT tripped. The breaker counts review rounds WITHOUT approval; round 2 returned APPROVED. Rounds 1 and 3 each found genuinely new defects, and two of the three rounds were caused by main moving under the branch rather than by the loop failing to converge.",
+  "routing": {
+    "repair": [
+      "R10",
+      "R12"
+    ],
+    "debt": [
+      "R11",
+      "R13"
+    ]
+  },
+  "routing_rationale": {
+    "R10": "repair — MEDIUM and it meets two conditions at once. (a) The repo's hard rule 2 requires every fix to be watched red in the gate suite first; ORCHESTRATOR-VERIFIED that it was not — reverting boilerplate_applied to the old broken expression leaves invariant 58/58 and fast 116/116 fully green, so the merge's correctness fix has zero gate coverage. (b) A committed artifact a reader would take as verified-correct is false: the case triage and the adapter docstring both assert the field equals any('display_text' in item), which S9 made untrue in blocks mode.",
+    "R11": "debt — LOW, constructible only, 42/42 committed fixtures agree. Same DISPLAY_MAX family as the standing R9 row.",
+    "R12": "repair, as a recorded exception to the LOW->debt rule, on the SAME test applied to R7 in round 2: the artifact contradicts itself (the fixture header says 'six ways' while the fixture produces seven), so leaving it stale ships a self-contradictory committed file. The test is deliberately narrow — R13 fails it and goes to debt.",
+    "R13": "debt — LOW. Unlike R7/R12 this is not an artifact contradicting itself; what the sentence should point at is a content decision (the pane header marker, the checkbox hint, or no pointer at all), not a stale-fact correction."
+  },
+  "orchestrator_verification": "R10's central claim was independently reproduced before routing: the old expression was substituted back into view.py on the merged tree and both suites stayed green (invariant 58/58, fast 116/116). Tree restored.",
+  "findings": [
+    {
+      "id": "R10",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The merge changed how `boilerplate_applied` is computed but added no eval case that could go red on the defect it fixes — the one case that owns the field, `ui-exclusion-note-trigger`, never drives `blocks` mode and hard-codes the *pre-merge broken expression* as its own oracle, so it is blind to the S9-shaped R1 and would report the corrected field as wrong if it were extended.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:1522 calls `extract_items(..., exclude_boilerplate=True)` with no `blocks=True`, and line 1530 sets the oracle to `applied = any(\"display_text\" in i for i in on.get(\"items\", []))` — the exact expression src/sec10k/web/view.py:117-122 says S9 broke. Measured on the case's own five fixtures with `blocks=True`: aapl-2025 gives `boilerplate_applied=False` while `any(\"display_text\" in i)=True`, so the check's `got is not applied` branch would fire against the correct value. The case's triage prose states the equality as fact (ui-exclusion-note-trigger.json:27) and the adapter docstring repeats it at 1502-1504 — both false in blocks mode, in the same diff whose view.py comment says so.",
+      "repro": "Revert `\"boilerplate_applied\": bp_applied` to `any(\"display_text\" in i for i in items)` -> invariant 58/58 GREEN and fast 116/116 GREEN. Only `python3 -m src.sec10k.web.view` goes red, and that runner is in .github/workflows/ci.yml:43, not in the gate or .githooks/pre-commit.",
+      "acceptance": "`ui-exclusion-note-trigger` (or a sibling case) drives at least one fixture with `blocks=True`, uses an oracle that is not `any(\"display_text\" in i)` (e.g. per-item `strip_chrome(...) != raw`), and goes red when `boilerplate_applied` is reverted to the old expression — watched red first. The triage/docstring sentences asserting the field equals `any(\"display_text\" in item)` are scoped to plain mode."
+    },
+    {
+      "id": "R11",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The new accumulator compares the UN-truncated stripped body, so an item whose chrome falls entirely beyond `display_max` sets `boilerplate_applied=True` while the extracted pane on screen is byte-identical to the raw slice — the R1 shape reachable through truncation instead of through Markdown.",
+      "evidence": "src/sec10k/web/view.py:71-73 computes `stripped = strip_chrome(text, spans, s, e)` over the full span and ORs `stripped != raw`, while the pane body and the `display_text` gate at line 92 both work on `[:display_max]`. Envelope: normalized_text = 'x'*100 + 'HEAD\\n' + 'y'*100, one item [0,205), boilerplate [{start:100,end:105}], display_max=50 -> `boilerplate_applied=True`, `display_text` absent, pane text == raw[:50]. Post-S9 the old expression would have been False here, so this corner is a behaviour change the merge introduced.",
+      "repro": "python3 -c \"from src.sec10k.web.view import build_view; t='x'*100+'HEAD\\n'+'y'*100; v=build_view({'normalized_text':t,'items':[{'item':'1','start':0,'end':len(t)}],'boilerplate':[{'start':100,'end':105,'kind':'running_head'}]}, display_max=50); print(v['boilerplate_applied'], 'display_text' in v['items'][0])\" -> True False. Not reachable on the committed corpus: 42/42 agree.",
+      "acceptance": "Either the accumulator is measured on the same window the reader sees (`stripped[:display_max] != raw[:display_max]`), or an adversarial case pins the current behaviour deliberately with the truncation corner named in its triage."
+    },
+    {
+      "id": "R12",
+      "severity": "LOW",
+      "route": "repair (repair-hygiene exception — the artifact contradicts itself)",
+      "claim": "The regression fixture and the case's `red_first` still describe the pre-merge six-failure state after the exact count moved to seven, so the 7-failure state has no recorded red-first run.",
+      "evidence": "evals/fixtures/repo_hygiene/exclusion-note-dishonest.html:1-5 still opens 'D5 regression fixture: six ways the D5 half-2 note regresses, one failure each' and its inline comments enumerate only (1)-(6); last touched at 93e84f5, pre-merge. evals/adversarial/ui-exclusion-note-regression.json now sets min/max_failures = 7 and its triage enumerates seven, but `red_first` still reads 'Watched red ... (6 failures on the fixture) on 2026-08-23'. The count itself is legitimate: the 7th failure is the missing new phrase, not a tuned number.",
+      "repro": "`head -5 evals/fixtures/repo_hygiene/exclusion-note-dishonest.html` -> 'six ways'; run_case on the regression JSON -> 7 failures.",
+      "acceptance": "The fixture header names seven and carries a comment for (7); `red_first` records the run at which the 7th failure was first observed."
+    },
+    {
+      "id": "R13",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The note's new sentence points the reader at 'the pane's own evidence', but at the moment the note first appears — right after an extraction, before any item is selected — the pane contains only the 'Select an item' placeholder and has no evidence block at all.",
+      "evidence": "src/sec10k/web/static/index.html:820 sets `$(\"#bp-note\").hidden = !v.boilerplate_applied;` in `render()`, and ~10 lines later `render()` resets `$(\"#pane\").innerHTML` to the placeholder; the `<details class=\"pane-meta\">` with the `markdown` <dd> (index.html:891) is written only by `show(i)` and renders collapsed. Measured live at 1280x860, ge-1994, exclude+markdown both ticked: immediately after extraction `{noteVisible: True, paneMeta: False}`; after clicking the first item `{noteVisible: True, paneMeta: True, metaOpen: False}`.",
+      "repro": "Tick both boxes, extract ge-1994, read #bp-note before selecting an item — it says the form difference 'is stated in the pane's own evidence' while `document.querySelector('#pane .pane-meta')` is null.",
+      "acceptance": "Either the cross-reference names something on screen at that moment, or the sentence drops the pointer and states the form difference itself."
+    }
+  ]
+}

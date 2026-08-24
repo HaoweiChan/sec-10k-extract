@@ -1,12 +1,12 @@
-"""Cover-page field resolution (ADR-033) — opt-in, offsets-only, no edit.
+"""Cover-page field resolution (ADR-034) — opt-in, offsets-only, no edit.
 
-`resolve(text, region_end)` returns the ADR-033 §e record dict for the cover
+`resolve(text, region_end)` returns the ADR-034 §e record dict for the cover
 region `text[0:region_end]`. Every resolved field carries the offsets of its
 value in the WHOLE `normalized_text`, so `normalized_text[start:end] == value`
 is checkable by a caller that never saw this module — the same discipline
 INV-S2 puts on an item span.
 
-The pivot is the EIN, not the caption (ADR-033 §b2). Normalization flattens
+The pivot is the EIN, not the caption (ADR-034 §b2). Normalization flattens
 the cover's two-column typesetting, so the value pair and the caption pair end
 up on different lines and in filer-specific orders — four committed filings
 produce four caption layouts. `\\d{2}-\\d{7}` produces one shape on all 38
@@ -20,14 +20,14 @@ from src.sec10k.normalize import COVER_DATE_RE, _parse_date
 from src.sec10k.validate import BASE_MISSING, BASE_STRICT, BASE_WEAK
 
 # An EIN is two digits, a hyphen, seven digits. Nothing else on a 10-K cover
-# has that shape — checked against all 38 non-refused fixtures (ADR-033 §a3).
+# has that shape — checked against all 38 non-refused fixtures (ADR-034 §a3).
 EIN_RE = re.compile(r"\b(\d{2}-\d{7})\b")
 # `Commission File Number: 001-36743` / `Commission file number 1-35` /
 # `Commission File No. 333-192107`. The value stops at whitespace-run, newline,
 # or the `or` that opens the transition-report clause.
 CFN_RE = re.compile(r"(?i)commission file (?:number|no\.?)\s*:?\s*"
                     r"([0-9][-0-9A-Za-z()]*(?:[ ][0-9A-Za-z]+)?)")
-# the name caption, in the wordings the corpus uses (ADR-033 §b3). The
+# the name caption, in the wordings the corpus uses (ADR-034 §b3). The
 # orientation is decided at the call site from the caption's own punctuation,
 # not from the wording. `small business issuer` is the pre-2008 small-filer
 # wording.
@@ -166,7 +166,7 @@ def _commission_file_number(region):
 
 
 def _registrant_name(region, ein_state, cfn):
-    """Caption in either orientation, else position (ADR-033 §b3)."""
+    """Caption in either orientation, else position (ADR-034 §b3)."""
     m = NAME_CAP_RE.search(region)
     if m:
         cap_ls, cap_le = _line_bounds(region, m.start())
@@ -221,7 +221,7 @@ def _fiscal_year_end(region):
     `normalized_text`, so there is no span to point at. Under-reporting is the
     correct answer for a COVER field — the value is already published in
     `meta.period_end`, and a cover record with no offsets would be exactly the
-    bare assertion ADR-033 §e exists to forbid. The method is named for the
+    bare assertion ADR-034 §e exists to forbid. The method is named for the
     regex it reuses and NOT `reused_meta`: this function never reads `meta`,
     and a name that says it does is the drift the check types cannot see.
 
@@ -238,7 +238,7 @@ def _trading_symbol(region):
     presence, not the filing's era and not the words alone: `format_era ==
     "ixbrl"` reports `not_in_era` on sgrp-2019, a legacy-HTML filing that has
     the column, and a bare `trading symbol` substring reports `resolved` on
-    reac-2015, whose cover says "and no trading symbol" in prose (ADR-033 §c,
+    reac-2015, whose cover says "and no trading symbol" in prose (ADR-034 §c,
     corrected twice). A header row always carries a neighbouring header cell;
     a sentence about symbols does not."""
     for cap in SYMBOL_HDR_RE.finditer(region):
@@ -259,7 +259,7 @@ def _trading_symbol(region):
 
 
 def resolve(text, region_end):
-    """ADR-033 §e's `cover` record for `text[0:region_end]`."""
+    """ADR-034 §e's `cover` record for `text[0:region_end]`."""
     region = text[:region_end]
     ein, state = _ein_and_state(region)
     cfn = _commission_file_number(region)
@@ -274,7 +274,7 @@ def resolve(text, region_end):
 
 
 def _demo():
-    # the four committed layouts, in miniature — each is the shape ADR-033 §b2
+    # the four committed layouts, in miniature — each is the shape ADR-034 §b2
     # says no caption rule reads, and the EIN pivot does.
     aapl = ("Commission File Number: 001-36743\n\nApple Inc.\n\n(Exact name of "
             "Registrant as specified in its charter)\n\nCalifornia 94-2404110\n\n"

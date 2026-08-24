@@ -1,0 +1,36 @@
+{
+  "id": "ui-exclusion-note-trigger",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "exclusion_note_trigger"
+    ],
+    "trigger_field": "boilerplate_applied",
+    "wire": [
+      "$(\"#bp-note\").hidden = !v.boilerplate_applied;"
+    ],
+    "blocks_modes": [
+      false,
+      true
+    ],
+    "fixtures": {
+      "evals/fixtures/ge-1994/filing.txt": true,
+      "evals/fixtures/msft-2013/filing.htm": true,
+      "evals/fixtures/aapl-2025/filing.htm": false,
+      "evals/fixtures/aapl-2026-10q/filing.htm": false,
+      "evals/fixtures/truncated-download/filing.htm": false
+    }
+  },
+  "expect": {},
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "PR #46 R1, extended at R10. The D5 note asserts that the two panes DISAGREE. That claim is true only where exclusion actually removed something from the extracted pane, and `boilerplate_excluded` does not say that — `view.build_view` sets it from `spans is not None`, i.e. from the flag having been asked for. Measured: aapl-2025 with the flag on reports `boilerplate_excluded: true` with 0 spans, 23 items and 0 `display_text`, so the pane text is byte-identical to the un-flagged run while the note claims a difference; aapl-2026-10q (`unsupported`, 0 items) and truncated-download (`failed`, 0 items) put the note above an EMPTY pane. So the note keys off a second field, `boilerplate_applied` — asked-for versus applied — and this case runs the real pipeline rather than reading text: per fixture AND PER VIEW MODE it pins that the field exists, that it equals the case's hand-labeled expectation, and that it is False on the un-flagged run. Globally it refuses to pass vacuously: some run must be True, some False, at least one must reproduce the R1 shape (`boilerplate_excluded` True while nothing was applied), and at least one must drive `blocks` mode. The five fixtures hold both sides — ge-1994 (txt-era `edgar_chrome`, 6 of 14 items stripped) and msft-2013 (HTML `running_head`+`page_number`, 10 of 20) against aapl-2025 (modern iXBRL, detector returns []) and two zero-item refusals. R10 — THE ORACLE. This case's first version compared the field against `any(\"display_text\" in item)`, which before S9 WAS \"the pane on screen differs from the verbatim slice\" because exclusion was that field's only producer. S9 (ADR-032) made `display_text` the derived Markdown in `blocks` mode, so that equality holds in PLAIN MODE ONLY: over 84 runs at the merge the old expression disagreed with the envelope on 14, every one in `blocks` mode, and a case asserting it there would have reported the CORRECT field as wrong. The oracle is now `_chrome_inside_items` — do any of the envelope's own boilerplate spans fall inside an item's span — computed from the envelope, not from `build_view` and not from `strip_chrome`, which is the expression `build_view` itself uses (a check that re-runs the implementation agrees with its bugs). The pre-S9 expression is still computed and reported in `info` as a measurement, never asserted.",
+    "ceiling": "This one is NOT a static read — it calls `extract_items` and `build_view` on committed filings, in both view modes, and asserts on the real payload. What it still cannot see is the RENDER: that the note element is actually off screen for an aapl-2025 response is browser evidence, in `tasks/reviews/d5-browser-walk.json`'s `no_chrome_control` block. That walk drives PLAIN mode only — a known gap, carried as a debt row (Origin: D5 merge) — so nothing here or there observes the note rendering under Markdown; what is verified in that mode is the field it keys on. The `wire` pin ties the JS to the field with the same pin-mechanism ceiling every other D5 pin has: it proves the source reads the field, not that the browser hides the element.",
+    "red_first": "Twice, both pasted in tasks/reviews/pr46-r1-resolution.json and pr46-r3-resolution.json. (1) At 4d3f896, before `boilerplate_applied` existed: 8 failures — the field absent on all five fixtures, plus two vacuity guards and the wire pin. (2) At 79c51b9 for R10, with the check extended to `blocks` mode and the span-based oracle, against a `view.py` whose `boilerplate_applied` was reverted to the pre-merge `any(\"display_text\" in i for i in items)` — the exact regression the orchestrator demonstrated the gate could not see (invariant 58/58, fast 116/116 all green with that revert in place, only the non-gate `python3 -m src.sec10k.web.view` red). The extended case reports 5 failures, EVERY ONE of them a `blocks=True` run: ge-1994 and msft-2013 report the flag True on the UN-flagged run (Markdown alone put `display_text` on their items), and aapl-2025 fails all three ways at once — against the span oracle, against its hand label, and on the un-flagged run. Restoring the merged expression returns 0. The plain-mode runs stay green under the revert, which is the finding: without `blocks_modes` this case is blind to it."
+  },
+  "provenance": "D5, created 2026-08-24 in the PR #46 round-1 repair, before the fix, per hard rule 2. Carries reviewer finding R1's evidence verbatim: 12 of 30 fixtures probed showed `boilerplate_excluded: true` with zero items stripped. Extended in the round-3 repair (R10) to drive S9's `blocks` mode and to stop using the pre-S9 expression as its own oracle."
+}

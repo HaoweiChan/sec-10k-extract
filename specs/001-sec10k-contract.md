@@ -142,8 +142,35 @@ them all); the example once showed `lenient_match`, which nothing emits.
   fields. Headings inferred from styling, inline emphasis, italic, nested
   lists, definition lists and txt-era structure are not interpreted
   (ADR-032 §e). `envelope_shape` refuses any other shape.
+- **`images` (optional, ADR-034)**: present *only* when the caller passes
+  `extract_items(path, images=True)`. A list, in document order, of one
+  record per HTML `<img>`: `{"offset", "src", "alt", "width", "height"}` —
+  `offset` is a **point** into `normalized_text` (an image emits no text, so
+  it has no span), so document order is **non-decreasing**, not strictly
+  increasing: two adjacent images share an offset. `src` and `alt` are the
+  attributes verbatim, entity-decoded, `null` when absent. `width`/`height`
+  are the declared pixel size as a positive int, from the `width=`/`height=`
+  attribute or a `width:Npx` / `height:Npx` declaration in `style`, `null`
+  when neither declares one in pixels. Same rule as `boilerplate` and
+  `tables`: an annotation, never an edit — `normalized_text`, every item
+  offset and every published figure are byte-identical with the flag on and
+  off. Carried on refusal envelopes too when asked for. The item an image
+  falls in is **derived** from offsets (the item whose span holds `offset`,
+  `null` when none does) and is deliberately not a field. An image offset is
+  **not** guaranteed to fall inside the `tables` span of a table the raw HTML
+  puts it in. The rule is one comparison — `span.start <= offset <
+  span.end`, half-open, cells and tables alike — and it has to be applied
+  rather than predicted, because an `<img>` emits nothing while spans are
+  tightened to visible characters and empty cells are clamped, so the two move
+  independently. A table with no visible text anywhere in it is not recorded
+  at all, so there is no span to compare against. 0 of the corpus's 53 offsets
+  fall inside any table or cell span; ADR-034 §b2a carries the measured
+  instances and the corpus split. The image BYTES are
+  never fetched (ADR-034 §c); `<object>`, `<embed>`, inline `<svg>` and CSS
+  background images are not recorded (ADR-034 §e). `envelope_shape` refuses
+  any other shape.
 
-- **`cover` (optional, ADR-033)**: present *only* when the caller passes
+- **`cover` (optional, ADR-034)**: present *only* when the caller passes
   `extract_items(path, cover=True)`. A dict keyed by field name —
   `registrant_name`, `state_of_incorporation`, `ein`,
   `commission_file_number`, `fiscal_year_end`, `trading_symbol` — each
@@ -158,12 +185,12 @@ them all); the example once showed `lenient_match`, which nothing emits.
   `value`/`start`/`end` are null; `not_in_era` is a **positive claim** and
   carries a high confidence, `missing` carries `BASE_MISSING`. `confidence`
   reuses `src/sec10k/validate.py`'s scale unchanged — no second scale exists
-  (ADR-033 §f). Same rule as `boilerplate`, `tables` and `blocks`: an
+  (ADR-034 §f). Same rule as `boilerplate`, `tables` and `blocks`: an
   annotation, never an edit. **No cover pseudo-item is emitted** — the item
   registry rule above ("Nothing else") is untouched, so every `only_items`,
   `known_items_only` and `expected_set_complete` check is unaffected by
   construction. Seven further cover fields were considered and cut with their
-  measurements (ADR-033 §d). `envelope_shape` refuses any other shape.
+  measurements (ADR-034 §d). `envelope_shape` refuses any other shape.
 
 ## Envelope rules (v2, normative)
 

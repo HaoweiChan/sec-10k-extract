@@ -1,0 +1,184 @@
+{
+  "id": "jpm-2024-images",
+  "task": "sec10k",
+  "suites": [
+    "fast"
+  ],
+  "input": {
+    "path": "evals/fixtures/jpm-2024/filing.htm",
+    "images": true
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "envelope_shape"
+      },
+      {
+        "type": "images_sane",
+        "min": 14,
+        "max": 14
+      },
+      {
+        "type": "image",
+        "src": "jpm-20241231_g1.jpg",
+        "alt": "1036",
+        "width": 671,
+        "height": 400,
+        "offset": 223050,
+        "before": "96\n\nDecember 31,\n\n(in dollars)",
+        "after": "\n\nJPMorgan Chase & Co./2024 Fo",
+        "item": "15"
+      },
+      {
+        "type": "image",
+        "src": "jpm-20241231_g2.jpg",
+        "alt": "25_CIB-CB consolidation_01A.jpg",
+        "width": 684,
+        "height": 308,
+        "offset": 280461,
+        "before": " reportable business segments.",
+        "after": "\n\nDescription of business segm",
+        "item": "15"
+      },
+      {
+        "type": "image",
+        "src": "jpm-20241231_g3.jpg",
+        "alt": "25_Risk Drivers_02C.jpg",
+        "width": 324,
+        "height": 111,
+        "offset": 343596,
+        "before": "of risks and impacts of risks.",
+        "after": "\n\nDrivers of risks are factors",
+        "item": "15"
+      },
+      {
+        "type": "image",
+        "src": "jpm-20241231_g4.jpg",
+        "alt": "25_Commitee Structure_01x.jpg",
+        "width": 684,
+        "height": 400,
+        "offset": 350859,
+        "before": "r described in this Form 10-K.",
+        "after": "\n\nThe Firm’s Operating Committ",
+        "item": "15"
+      },
+      {
+        "type": "image",
+        "src": "jpm-20241231_g5.jpg",
+        "alt": "25_CAP RATIO_05.jpg",
+        "width": 684,
+        "height": 365,
+        "offset": 374016,
+        "before": "III rules currently in effect.",
+        "after": "\n\nAll banking institutions are",
+        "item": "15"
+      },
+      {
+        "type": "image",
+        "src": "jpm-20241231_g6.jpg",
+        "alt": "25_4Q_TLAC_01 v2.jpg",
+        "width": 324,
+        "height": 367,
+        "offset": 397219,
+        "before": " requirements are shown below:",
+        "after": "\n\n(a)RWA is the greater of Sta",
+        "item": "15"
+      },
+      {
+        "type": "image",
+        "src": "jpm-20241231_g7.jpg",
+        "alt": "21625",
+        "width": 324,
+        "height": 233,
+        "offset": 495680,
+        "before": "cember 31, 2024\n\n(in billions)",
+        "after": "\n\nJPMorgan Chase & Co./2024 Fo",
+        "item": "15"
+      },
+      {
+        "type": "image",
+        "src": "jpm-20241231_g8.jpg",
+        "alt": "7161",
+        "width": 642,
+        "height": 99,
+        "offset": 529169,
+        "before": "aR.\n\nDaily Risk Management VaR",
+        "after": "\n\nFirst Quarter\n\n2024 Second Q",
+        "item": "15"
+      },
+      {
+        "type": "image",
+        "src": "jpm-20241231_g9.jpg",
+        "alt": "25_10K-VaR_backtesting 2024 021125_04.jpg",
+        "width": 684,
+        "height": 305,
+        "offset": 532142,
+        "before": "y Backtesting Gains and Losses",
+        "after": "\n\nJPMorgan Chase & Co./2024 Fo",
+        "item": "15"
+      },
+      {
+        "type": "image",
+        "src": "jpm-20241231_g10.jpg",
+        "alt": "Jamie Dimon Signature.jpg",
+        "width": 201,
+        "height": 102,
+        "offset": 626284,
+        "before": "r report which appears herein.",
+        "after": "\n\nJames Dimon\n\nChairman and Ch",
+        "item": "15"
+      },
+      {
+        "type": "image",
+        "src": "jpm-20241231_g11.jpg",
+        "alt": "Jeremy's eSignature.jpg",
+        "width": 270,
+        "height": 105,
+        "offset": 626335,
+        "before": "an and Chief Executive Officer",
+        "after": "\n\nJeremy Barnum\n\nExecutive Vic",
+        "item": "15"
+      },
+      {
+        "type": "image",
+        "src": "jpm-20241231_g12.jpg",
+        "alt": "pwclogoa24.jpg",
+        "width": 85,
+        "height": 65,
+        "offset": 626522,
+        "before": "istered Public Accounting Firm",
+        "after": "\n\nTo the Board of Directors an",
+        "item": "15"
+      },
+      {
+        "type": "image",
+        "src": "jpm-20241231_g13.jpg",
+        "alt": "Dan's 2024 Signature - 10K.jpg",
+        "width": 324,
+        "height": 85,
+        "offset": 639390,
+        "before": "mentioned unobservable inputs.",
+        "after": "\n\nNew York, New York\n\nFebruary",
+        "item": "15"
+      },
+      {
+        "type": "image",
+        "src": "jpm-20241231_g14.jpg",
+        "alt": "25_note27_01 v2.jpg",
+        "width": 324,
+        "height": 316,
+        "offset": 1076315,
+        "before": "vers are as illustrated below:",
+        "after": "\n\nUnder the risk-based capital",
+        "item": "15"
+      },
+      {
+        "type": "verbatim"
+      },
+      {
+        "type": "no_overlap_ordered"
+      }
+    ]
+  },
+  "provenance": "ADR-033 §g, the scale case and the alt-text case. JPMorgan Chase FY2024 10-K, evals/fixtures/jpm-2024 (provenance in evals/fixtures/README.md), the largest committed filing -- 12,849,180 raw bytes, 1,213,284 normalized chars -- and the one with the most images: 14, raw byte offsets 2056988, 2472623, 3295260, 3310164, 3370051, 3557875, 4619854, 4914551, 4921769, 5254977, 5255501, 5257677, 5279492, 11527228.\n\nWHY THIS FIXTURE: it is where `envelope_shape`'s `_images_shape` runs over the most records inside the largest normalized_text, so an offset out of bounds or out of order is caught at scale rather than only on a small file; and its alt texts are the messiest in the corpus, which is the half of the annotation most likely to be quietly mangled. The 14 alts cover every awkward shape the corpus has: a bare number ('1036', '21625', '7161' -- Workiva's internal asset ids, useless to a reader but faithfully reported), a filename with spaces and an underscore-prefixed date code ('25_10K-VaR_backtesting 2024 021125_04.jpg'), an APOSTROPHE inside the attribute value (\"Jeremy's eSignature.jpg\" and \"Dan's 2024 Signature - 10K.jpg\") which a naive quote-stripping attribute reader mangles, and a plain logo ('pwclogoa24.jpg'). All four kinds the S10 row names are present and identifiable from the record alone WITHOUT any classifier: charts (g2-g6, g9, g14), a performance graph (g1), signatures (g10, g11, g13) and a logo (g12) -- which is the evidence behind ADR-033 §e's refusal to classify: the alt text and the src already carry it when the filer bothered, and nothing recoverable carries it when they did not ('1036').\n\ng10 (626284) and g11 (626335) are 51 characters apart, on either side of James Dimon's typeset name -- the smallest real gap in the corpus, and the one that would close to zero if a future implementation rounded offsets to a line or a block.\n\nITEM LABELS: all 14 report item '15'. jpm-2024 is `ambiguous` and fires `last_item_dominates` -- Item 15 holds [201298, 1211720) of 1,213,284 chars -- so, exactly as on xom-2021, the label records where the offset falls under the shipped segmentation and is not a semantic claim. bac-2006-images is the case that proves containment discriminates.\n\nHOW THE LABELS WERE MADE (ADR-033 §g). `src`, `alt`, `width` and `height` are read off the RAW HTML: every <img ...> tag matched with a plain attribute regex, entity-decoded, the pixel size taken from the width=/height= attribute if there is one and otherwise from the `style` declaration (0 of the corpus's 53 <img> carry the attribute form, 40 carry the style form -- ADR-033 §b1). That read is an INDEPENDENT second route, written for the purpose and not sharing a line with src/sec10k/normalize.py's recorder, and it is compared field by field against the shipped annotation before any label is written; a disagreement aborts the authoring script rather than being written down. `offset` is the annotation's own; it is not blindly copied, because `before` and `after` are the 30 characters of normalized_text on either side of it and those ARE hand-checkable against the raw file -- an offset that drifted by even one character would leave `before`/`after` no longer matching what the raw HTML has around the tag. `item` is derived the way ADR-029 derives an item's tables, from offsets alone (the item whose [start, end) span holds the offset, null when no span does), never from a stored field."
+}

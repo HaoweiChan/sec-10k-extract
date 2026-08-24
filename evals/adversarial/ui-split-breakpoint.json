@@ -1,0 +1,25 @@
+{
+  "id": "ui-split-breakpoint",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "split_breakpoint"
+    ],
+    "split": ".split",
+    "stack_selector": "#source",
+    "min_side_by_side": 1024,
+    "state_label": "sync-state"
+  },
+  "expect": {},
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "D5 half 1, promoted from the PR #21 V5 debt row. `.split`'s `@media(max-width:1100px)` dropped `#source` to `grid-column:1/-1`, stacking it BELOW `#pane`, so under 1100px the compare pane and the item pane were never on screen together and sync-scroll had nothing to demonstrate itself against — while the control still rendered checked and live. The check pins BOTH halves of the debt row's own Why cell rather than choosing one: every stacking `@media` block must trigger strictly below `min_side_by_side` (1024), and the three expressions that carry the stacked state into the control (`syncOn` honouring `disabled`, `syncStacked` setting `disabled` AND the `#sync-state` wording, the `change` listener) are pinned WHOLE on the WIRE_UI allow-list argument. The CSS breakpoint and the JS `matchMedia` width are tied to the same number, so re-raising one without the other goes red twice.",
+    "ceiling": "STATIC READ. This check parses CSS and JS TEXT out of src/sec10k/web/static/index.html — no test in this harness issues an HTTP request and nothing here lays anything out, so it does NOT observe the render. It cannot see whether `#pane` and `#source` actually share a row at 1024px; it can only see that the source no longer declares the rule that stopped them. The rendered geometry is browser evidence and lives in tasks/reviews/d5-browser-walk.json (1280 / 1024 / 900 / 768). The existing pin mechanism's documented holes apply here too (a pinned element can be `hidden` and still satisfy its pin).",
+    "red_first": "Watched red at c13aa5c, before any fix: 6 failures — the 1100px stacking block reported at widths up to 1100px (>= 1024), no `matchMedia(\"(max-width:1100px)\")` in the JS, all three STACK_WIRE expressions missing (`syncOn` returned `c && c.checked` with no `disabled` term, and neither `syncStacked` nor the listener existed), and no `#sync-state` element."
+  },
+  "provenance": "D5, created 2026-08-23 before the implementation, per hard rule 2. Carries the PR #21 R1 finding V5's evidence, re-measured live at c13aa5c on 2026-08-23: at 1024x860 `.split` computed to `290px 618.547px`, `#pane` top 507, `#source` top 1157 — 650px apart on an 860px viewport."
+}

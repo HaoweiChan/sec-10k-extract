@@ -74,8 +74,8 @@ def _demo():
             "<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr></table>"
             "<table><tr><td>&nbsp;</td></tr></table>"      # spacer: no text, dropped
             "<p>After.</p><table><tr><td>x</td></tr></table></body></html>")
-    text, tabs, _ = normalize(html, "html", tables=True)
-    assert normalize(html, "html", tables=False) == (text, None, None)  # identical text
+    text, tabs, *_ = normalize(html, "html", tables=True)
+    assert normalize(html, "html", tables=False) == (text, None, None, None)  # same text
     assert len(tabs) == 2, tabs                                        # spacer dropped
     t = tabs[0]
     assert t["header"] == 1 and len(t["rows"]) == 4, t
@@ -107,14 +107,14 @@ def _demo():
     # span, and records come back in start order (inner closes first)
     nested = ("<table><tr><td>outer<table><tr><td>inner</td></tr></table></td>"
               "<td>after</td></tr></table>")
-    ntext, ntabs, _ = normalize(nested, "html", tables=True)
+    ntext, ntabs, *_ = normalize(nested, "html", tables=True)
     assert len(ntabs) == 2 and ntabs[0]["start"] < ntabs[1]["start"], ntabs
     outer_cell = ntabs[0]["rows"][0][0]
     assert ntext[outer_cell[0]:outer_cell[1]] == "outer\n\ninner", ntext[outer_cell[0]:outer_cell[1]]
     assert grid(ntext, ntabs[1]) == [["inner"]] and grid(ntext, ntabs[0]) == [["outer inner", "after"]]
     # ADR-032 §b4 / PR #45 R1: a chrome run inside a cell leaves the VIEW only
     head = ("<table><tr><td>ACME 10-K</td><td>7</td></tr><tr><td>x</td><td>y</td></tr></table>")
-    ht, htabs, _ = normalize(head, "html", tables=True)
+    ht, htabs, *_ = normalize(head, "html", tables=True)
     run = [{"start": ht.index("ACME"), "end": ht.index("7") + 1, "kind": "running_head"}]
     assert ht[run[0]["start"]:run[0]["end"]] == "ACME 10-K 7"
     assert grid(ht, htabs[0], omit=run) == [["", ""], ["x", "y"]], grid(ht, htabs[0], omit=run)

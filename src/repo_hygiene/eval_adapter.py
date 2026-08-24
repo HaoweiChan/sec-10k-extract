@@ -1280,6 +1280,342 @@ def check_ledger_table_shape(case):
     return bad
 
 
+# --- D5: inspector layout + exclusion honesty -------------------------------
+#
+# BOTH checks below are STATIC reads of the committed source — CSS text and JS
+# text. Nothing in this harness issues an HTTP request and nothing lays
+# anything out, so neither check observes the RENDER; they pin the source that
+# produces it, and the existing pin mechanism's documented holes apply (a
+# pinned element can be `hidden` and still satisfy its pin). The rendered
+# geometry is evidence only a browser can give: it lives in
+# tasks/reviews/d5-browser-walk.json, measured at 1280 / 1024 / 900 / 768.
+
+# D5 half 1. What carries "the panes are stacked" into the sync-scroll
+# control, pinned WHOLE for the reason WIRE_UI above is an allow-list: asking
+# each hop a question about itself ("does it mention disabled?") is a question
+# a broken hop can also answer correctly. A deliberate change here must update
+# the pin — that friction is the point.
+STACK_WIRE = [
+    ("syncOn() refuses to sync through a disabled control",
+     'function syncOn(){ const c = $("#sync-scroll"); return !!(c && c.checked && !c.disabled); }'),
+    ("the stacked state disables the control AND says so in words",
+     'function syncStacked(){\n'
+     '  const c = $("#sync-scroll"); if(!c) return;\n'
+     '  c.disabled = STACKED.matches;\n'
+     '  $("#sync-state").textContent = STACKED.matches ? " — inactive: panes stacked" : "";\n'
+     '}'),
+    ("crossing the breakpoint re-evaluates it, so a resize cannot leave a "
+     "live-looking control sitting over stacked panes",
+     'STACKED.addEventListener("change", syncStacked);'),
+]
+
+
+def _media_blocks(css):
+    """Yield (condition, body) for every `@media` block, braces MATCHED rather
+    than regexed — _flat_rules' own `([^{}]+)\\{([^{}]*)\\}` cannot see inside
+    one at all (it documents that hole), and a plain regex would end the block
+    at the first nested `}`."""
+    css = css_contrast._strip_comments(css)
+    for m in re.finditer(r"@media([^{]*)\{", css):
+        i, depth = m.end(), 1
+        while i < len(css) and depth:
+            if css[i] == "{":
+                depth += 1
+            elif css[i] == "}":
+                depth -= 1
+            i += 1
+        yield m.group(1).strip(), css[m.end():i - 1]
+
+
+def _without_media(css):
+    """`css` with every `@media` block removed, so `_declared_for` (which is
+    media-BLIND — it documents that hole) can be asked about the unconditional
+    cascade. Without this, `.split`'s base `grid-template-columns` reads as
+    the LAST one declared in the file, which is the narrowest breakpoint's."""
+    css = css_contrast._strip_comments(css)
+    out, last = [], 0
+    for m in re.finditer(r"@media[^{]*\{", css):
+        if m.start() < last:
+            continue
+        i, depth = m.end(), 1
+        while i < len(css) and depth:
+            if css[i] == "{":
+                depth += 1
+            elif css[i] == "}":
+                depth -= 1
+            i += 1
+        out.append(css[last:m.start()])
+        last = i
+    out.append(css[last:])
+    return "".join(out)
+
+
+def _tracks(value):
+    """Track count of a `grid-template-columns` value. Enough for the literal
+    values this stylesheet declares; a repeat()/minmax() form would need a
+    real parser and none is used here."""
+    return len(value.split())
+
+
+def check_split_breakpoint(case):
+    """D5 half 1 (debt row V5). The compare pane (`#source`) and the item pane
+    (`#pane`) must stay in ONE grid row down to `min_side_by_side` px — below
+    the old 1100px breakpoint `#source` dropped to `grid-column:1/-1` and
+    stacked BELOW `#pane`, so the two were never on screen together and
+    sync-scroll had nothing to demonstrate itself against (measured live at
+    1024x860 on c13aa5c: `#pane` top 507, `#source` top 1157). Wherever the
+    layout DOES still stack, the sync-scroll control must be disabled and
+    labelled inactive rather than left looking live.
+
+    Mechanically: `.split`'s own rule declares three tracks; every `@media`
+    block that stacks (drops `.split` below three tracks, or gives `#source` a
+    `grid-column` span) must trigger strictly below `min_side_by_side`; the JS
+    must watch a media query at EXACTLY the widest stacking breakpoint, so
+    re-raising the CSS `max-width` without moving the JS one goes red twice;
+    and the three expressions carrying "stacked" into the control are pinned
+    whole.
+
+    Text, not layout — see the block comment above this function.
+    """
+    inp = case.get("input", {})
+    text = (ROOT / inp.get("file", UI_STYLESHEET)).read_text()
+    live = _live(text, "js")   # strips /* */, // and <!-- -->; CSS + JS in one file
+    js = _squash(live)
+    split = inp.get("split", ".split")
+    stack_sel = inp.get("stack_selector", "#source")
+    floor = inp.get("min_side_by_side", 1024)
+    bad = []
+
+    base = _declared_for(_without_media(live), split, "grid-template-columns")
+    if not base or _tracks(base) < 3:
+        bad.append(f"{split}: base rule declares {base!r} — want three tracks "
+                   f"(sidebar + both compare panes) at full width")
+
+    stack_widths = []
+    for cond, body in _media_blocks(live):
+        cols = _declared_for(body, split, "grid-template-columns")
+        stacks = (cols is not None and _tracks(cols) < 3) or bool(
+            _declared_for(body, stack_sel, "grid-column"))
+        if not stacks:
+            continue
+        w = re.search(r"max-width\s*:\s*(\d+)px", cond)
+        if not w:
+            bad.append(f"@media{cond}: stacks the panes under a condition with "
+                       f"no max-width — nothing says where the stacking starts")
+            continue
+        w = int(w.group(1))
+        stack_widths.append(w)
+        if w >= floor:
+            bad.append(f"@media{cond}: stacks the panes at widths up to {w}px, "
+                       f"so {stack_sel} and #pane are not on screen together at "
+                       f"{floor}px (want a stacking breakpoint < {floor})")
+
+    if not stack_widths:
+        bad.append("no stacking @media block found at all — this check would "
+                   "pass vacuously, and the control's inactive state has no "
+                   "breakpoint to key on")
+    else:
+        want = f'matchMedia("(max-width:{max(stack_widths)}px)")'
+        if _squash(want) not in js:
+            bad.append(f"the JS does not watch {want} — the width the CSS "
+                       f"stacks at and the width the control calls itself "
+                       f"inactive at must be the same number")
+
+    for why, expr in STACK_WIRE:
+        if _squash(expr) not in js:
+            bad.append(f"missing pinned expression ({why}): {expr}")
+
+    label = inp.get("state_label", "sync-state")
+    if not re.search(r'id="' + re.escape(label) + r'"', live):
+        bad.append(f'#{label}: no element carrying the "inactive" wording — a '
+                   f"silently disabled checkbox still looks like a live control")
+    return bad, {"stack_widths": stack_widths, "split_columns": base}
+
+
+def check_exclusion_note(case):
+    """D5 half 2 (debt row: the compare pane still shows chrome while the
+    extracted pane hides it). With the box ticked the two panes visibly
+    disagree — the left drops the detected runs, the right still serves every
+    `<PAGE>` and running head — because `boilerplate` offsets index the
+    DERIVED `normalized_text` while the compare pane serves the RAW filing,
+    and no raw<->normalized offset map exists anywhere in this pipeline.
+    Building one stays ruled out as post-freeze scope creep (ADR-026 s.a);
+    this note is an honest statement of the limit, NOT a fix for it.
+
+    Pinned: the element exists; it ships `hidden`, so it cannot fire with
+    exclusion off; its visibility is assigned from the response's own
+    `boilerplate_excluded` (the same read-at-request-time field the pane
+    header labels itself from); and its wording says what IS true (raw vs
+    normalized, the panes will not agree) and none of what is not (that the
+    map exists, or that the panes match).
+
+    Text, not render — see the block comment above check_split_breakpoint.
+    """
+    inp = case.get("input", {})
+    text = (ROOT / inp.get("file", UI_STYLESHEET)).read_text()
+    live = _live(text, "js")
+    ident = inp.get("note_id", "bp-note")
+    bad = []
+    m = re.search(r'<div[^>]*\bid="' + re.escape(ident) + r'"([^>]*)>(.*?)</div>',
+                  live, re.S)
+    if not m:
+        return ([f'#{ident}: no note element in the markup — under exclusion '
+                 f"the two panes disagree with nothing on screen saying why"],
+                {"note_text": None})
+    attrs = m.group(1)
+    # tags out, whitespace collapsed: how the note happens to be wrapped in
+    # the file says nothing about what it tells the reader (_squash's argument,
+    # kept at single spaces here because the pinned wording is prose).
+    body = " ".join(re.sub(r"<[^>]+>", "", m.group(2)).split())
+    if not re.search(r"(?:^|\s)hidden(?:[=\s]|$)", attrs):
+        bad.append(f"#{ident}: does not ship `hidden` — the note would stand on "
+                   f"screen with exclusion off, where it is simply false")
+    for expr in inp.get("wire", []):
+        if _squash(expr) not in _squash(live):
+            bad.append(f"missing pinned expression (the note follows the "
+                       f"response's own exclusion state): {expr}")
+    for want in inp.get("must_say", []):
+        if want not in body:
+            bad.append(f"#{ident}: does not say {want!r}")
+    for nope in inp.get("must_not_say", []):
+        if nope in body:
+            bad.append(f"#{ident}: says {nope!r} — the panes do NOT agree and "
+                       f"no offset map exists; the note may not imply either")
+    return bad, {"note_text": body}
+
+
+def _chrome_inside_items(env):
+    """ADR-026 s.d recomputed from the envelope alone: does any detected
+    chrome run intersect any item's own span? This is the oracle for
+    "exclusion removed something the reader would see", and it deliberately
+    does NOT call `strip_chrome` — that is what `build_view` itself uses, and
+    a check that re-runs the implementation agrees with any window bug the
+    implementation has (`check_boilerplate_exclusion` says the same about its
+    own oracle). Independent of which view mode rendered the payload, which
+    is the whole point after S9."""
+    spans = env.get("boilerplate") or []
+    return any(sp["start"] < i["end"] and sp["end"] > i["start"]
+               for sp in spans
+               for i in env.get("items", [])
+               if i.get("start") is not None and i.get("end") is not None)
+
+
+def check_exclusion_note_trigger(case):
+    """D5 PR #46 R1. The note asserts a DISAGREEMENT between the two panes.
+    That assertion is true only when exclusion actually removed something
+    from the extracted pane — and `boilerplate_excluded` does not say that.
+    `view.build_view` sets it from `spans is not None`, i.e. from the flag
+    having been ASKED FOR, so it is True on aapl-2025 (detector returns [],
+    23 items, 0 with `display_text`, pane text byte-identical to the
+    un-flagged run) and True on aapl-2026-10q (`unsupported`, 0 items), where
+    the note would sit above an empty pane claiming a difference nobody can
+    see.
+
+    So the trigger is a SECOND field, `boilerplate_applied` — asked-for vs
+    applied — and this check is the one that runs the real pipeline rather
+    than reading text. Per fixture, in EVERY view mode the case names, with
+    the flag ON:
+      * the field exists;
+      * it equals `_chrome_inside_items` — ADR-026 s.d recomputed here from
+        the envelope's own spans, independently of `build_view`;
+      * it equals the hand-labeled expectation in the case, so a fixture
+        that stops exercising its side of the distinction says so rather
+        than quietly re-labelling itself;
+      * with the flag OFF it is False.
+    Globally it refuses to pass vacuously: at least one run must come out
+    True, at least one False, at least one must be the R1 shape itself
+    (`boilerplate_excluded` True while `boilerplate_applied` is False), and
+    at least one must be in `blocks` mode.
+
+    PR #46 R10 — WHY THE MODES. The first version of this check used
+    `any("display_text" in item)` as its oracle, because before S9 that WAS
+    "the pane on screen differs from the verbatim slice": exclusion was the
+    only producer of `display_text`. S9 (ADR-032) gave it a second one — in
+    `blocks` mode `display_text` is the derived Markdown — so that equality
+    holds in PLAIN MODE ONLY, and a check asserting it in `blocks` mode would
+    report the CORRECT field as wrong. Measured at the merge: over 84 runs
+    (42 fixtures x 2 modes) the old expression disagrees with the envelope on
+    14, every one of them in `blocks` mode. The oracle is therefore computed
+    from the spans, and the divergence is reported in `info` as a measurement
+    rather than asserted, since how far Markdown departs from the raw slice
+    is S9's business, not this case's.
+
+    Deliberately NOT `strip_chrome(...) != raw` either: that is the
+    expression `build_view` itself now uses, and a check that re-runs the
+    implementation agrees with any window bug the implementation has —
+    `check_boilerplate_exclusion` makes the same argument about its own
+    oracle, for the same reason.
+
+    `boilerplate_excluded` keeps its meaning for every existing consumer —
+    the S8 pane header and `ui-boilerplate-exclusion`'s pins read it and are
+    untouched. This adds a field; it does not redefine one.
+    """
+    inp = case.get("input", {})
+    field = inp.get("trigger_field", "boilerplate_applied")
+    modes = inp.get("blocks_modes", [False, True])
+    live = _live((ROOT / inp.get("file", UI_STYLESHEET)).read_text(), "js")
+    bad, seen, old_expr, r1_shape = [], {}, {}, 0
+    for rel, want in inp.get("fixtures", {}).items():
+        for md in modes:
+            key = f"{rel} blocks={md}"
+            env = extract_items(str(ROOT / rel), exclude_boilerplate=True, blocks=md)
+            on = build_view(env)
+            off = build_view(extract_items(str(ROOT / rel), blocks=md))
+            if field not in on:
+                bad.append(f"{key}: the view payload carries no {field!r} — the "
+                           f"note has nothing to key on but `boilerplate_excluded`, "
+                           f"which is True whenever the flag was merely asked for")
+                continue
+            got = on[field]
+            oracle = _chrome_inside_items(env)
+            seen[key] = got
+            # reported, never asserted: the pre-S9 expression, kept visible so
+            # the mode where it diverges stays on the record, not in prose
+            old_expr[key] = any("display_text" in i for i in on.get("items", []))
+            if got is not oracle:
+                bad.append(f"{key}: {field}={got!r} but the envelope's own "
+                           f"boilerplate spans "
+                           f"{'do' if oracle else 'do NOT'} fall inside an item "
+                           f"span — the field does not mean 'exclusion removed "
+                           f"something the reader would see'")
+            if got is not want:
+                bad.append(f"{key}: {field}={got!r}, case expects {want!r}")
+            if off.get(field) is not False:
+                bad.append(f"{key}: {field}={off.get(field)!r} on an UN-flagged "
+                           f"run — nothing was excluded, so nothing was applied")
+            if on.get("boilerplate_excluded") is True and got is False:
+                r1_shape += 1
+    if inp.get("fixtures"):
+        if not any(seen.values()):
+            bad.append("no run came out True — the note could never fire "
+                       "and this case would pass vacuously")
+        if all(seen.values()) and seen:
+            bad.append("no run came out False — the R1 distinction between "
+                       "'exclusion asked for' and 'exclusion applied' is not "
+                       "exercised by any fixture in this case")
+        if not r1_shape:
+            bad.append("no run reproduces the R1 shape (boilerplate_excluded "
+                       "True while nothing was applied) — the case has stopped "
+                       "covering the defect it exists for")
+    # OUTSIDE the `fixtures` gate above, deliberately: those three guards are
+    # only reached when the case still HAS fixtures, which is the hole PR #46
+    # R8 carries as debt. R8 is not fixed here — an empty `fixtures` map still
+    # defangs them — but a guard added in the same repair that was told about
+    # the hole does not get to sit behind it.
+    if True not in modes:
+        bad.append("no run drives S9's `blocks` mode — that is the mode where "
+                   "`display_text` has a second producer, i.e. the only mode "
+                   "where the pre-S9 oracle was wrong (PR #46 R10)")
+    for expr in inp.get("wire", []):
+        if _squash(expr) not in _squash(live):
+            bad.append(f"missing pinned expression (the note keys off {field}, "
+                       f"not off the asked-for flag): {expr}")
+    return bad, {"applied_by_run": seen, "r1_shape_runs": r1_shape,
+                 "pre_s9_expression_by_run": old_expr,
+                 "runs_where_pre_s9_expression_diverges":
+                     sorted(k for k in seen if seen[k] is not old_expr[k])}
+
+
 CHECKS = {
     "adr_headers": lambda case: check_adr_headers(),
     "adr_index": lambda case: check_index(),
@@ -1300,6 +1636,9 @@ CHECKS = {
     "build_identity": check_build_identity,
     "ledger_table_shape": check_ledger_table_shape,
     "fixture_discovery": check_fixture_discovery,
+    "split_breakpoint": check_split_breakpoint,
+    "exclusion_note": check_exclusion_note,
+    "exclusion_note_trigger": check_exclusion_note_trigger,
 }
 
 

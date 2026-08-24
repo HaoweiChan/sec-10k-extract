@@ -1,11 +1,11 @@
-# ADR-033 — S11: the 10-K cover page is reported as opt-in `{value, start, end, confidence, method}` field records into an UNCHANGED `normalized_text`; the EIN is the pivot, not the caption; six fields ship and seven are cut with their measurements
+# ADR-034 — S11: the 10-K cover page is reported as opt-in `{value, start, end, confidence, method}` field records into an UNCHANGED `normalized_text`; the EIN is the pivot, not the caption; six fields ship and seven are cut with their measurements
 
-Date: 2026-08-24. Status: accepted. Implements S11. Sanctioned exception to the
+Date: 2026-08-24. Status: accepted. **Renumbered ADR-033 → ADR-034 at the PR #49 merge with main (2026-08-24)**: PR #44 (S10, image-reference annotation) published its own ADR-033 to main first — the same collision ADR-032 hit at the PR #45 merge, and the same resolution. Implements S11. Sanctioned exception to the
 T8 feature freeze (`tasks/TODO.md`, **Freeze guard**), on the pattern
 [ADR-020](ADR-020-fallback-not-justified.md) established for T12 and
 [ADR-026](ADR-026-boilerplate-chrome-exclusion.md) /
 [ADR-029](ADR-029-structured-tables-annotation.md) /
-[ADR-032](ADR-032-block-structure-markdown-view.md) applied for S6/S7/S9 — this
+[ADR-032](ADR-032-block-structure-markdown-view.md) applied for S6/S7/S9 and ADR-033 for S10 — this
 ADR extends ADR-029's annotation-not-edit pattern from tables to the cover
 page and is read with it.
 

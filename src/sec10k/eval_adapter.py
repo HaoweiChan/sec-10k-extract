@@ -5,7 +5,8 @@ Case shape:
                "exclude_boilerplate": false,   # optional, ADR-026
                "tables": false,                # optional, ADR-029
                "blocks": false,                # optional, ADR-032 (implies tables)
-               "cover": false}                 # optional, ADR-033
+               "images": false,                # optional, ADR-033
+               "cover": false}                 # optional, ADR-034
     "expect": {"checks": [{"type": ..., ...}, ...]}
 """
 from pathlib import Path
@@ -185,11 +186,20 @@ def eval_check(result, chk, path=None):
         # normative enums are asserted here; no value is fabricated or compared.
         top = {"normalized_text", "doc_status", "warnings", "meta", "trace",
                "timings", "cost", "items"}
-        # the four optional keys: ADR-026's `boilerplate`, ADR-029's
-        # `tables`, ADR-032's `blocks`, ADR-033's `cover`
-        extra = set(result) - top - {"boilerplate", "tables", "blocks", "cover"}
+        # the five optional keys: ADR-026's `boilerplate`, ADR-029's `tables`,
+        # ADR-032's `blocks`, ADR-033's `images`, ADR-034's `cover`
+        extra = set(result) - top - {"boilerplate", "tables", "blocks",
+                                     "images", "cover"}
         if not top <= set(result) or extra:
             return f"envelope keys: missing {sorted(top - set(result))}, undeclared {sorted(extra)}"
+        if "images" in result:
+            # ADR-033 contract shape: [{offset, src, alt, width, height}],
+            # offsets into normalized_text, document order. Same rule as
+            # `tables`: a wrong SHAPE is red on any case that asks for
+            # images, not only on one that labels an image.
+            why = _images_shape(result)
+            if why:
+                return f"images not in contract shape: {why}"
         if "tables" in result:
             # ADR-029 contract shape: [{start, end, header, rows: [[[s, e] |
             # [s, e, colspan>1], ...], ...]}], offsets into normalized_text,
@@ -204,7 +214,7 @@ def eval_check(result, chk, path=None):
             if why:
                 return f"blocks not in contract shape: {why}"
         if "cover" in result:
-            # ADR-033 §e, same reasoning as tables/blocks: a wrong SHAPE is red
+            # ADR-034 §e, same reasoning as tables/blocks: a wrong SHAPE is red
             # on any case that asks for the cover, not only on one that labels
             # a field.
             why = _cover_shape(result)
@@ -450,6 +460,79 @@ def eval_check(result, chk, path=None):
             return "tables OFF emitted a tables key; default must change nothing"
         if not isinstance(on.get("tables"), list):
             return "tables ON emitted no tables list"
+    elif t == "image":
+        # ADR-033 §c. A hand-labeled image reference, located by `src`
+        # (`index` picks a later one when a filing reuses a src). Every other
+        # key is optional and asserted exactly when present: `alt`, `width`,
+        # `height`, `offset`; `before`/`after` pin what the offset SITS
+        # BETWEEN, which is the half a bare integer cannot show is right;
+        # `item` is the code of the item whose span holds the offset, derived
+        # the way ADR-029 derives an item's tables — from offsets, not from a
+        # stored field — with null meaning "inside no item's span".
+        if "images" not in result:
+            return "no images in result (was images set?)"
+        hits = [im for im in result["images"] if im["src"] == chk["src"]]
+        k = chk.get("index", 0)
+        if len(hits) <= k:
+            return f"src {chk['src']!r}: {len(hits)} image(s) carry it, wanted #{k}"
+        im, text = hits[k], result["normalized_text"]
+        for f in ("alt", "width", "height", "offset"):
+            if f in chk and im[f] != chk[f]:
+                return f"image {chk['src']} {f} {im[f]!r} != {chk[f]!r}"
+        if "before" in chk and not text[:im["offset"]].endswith(chk["before"]):
+            return (f"image {chk['src']} at {im['offset']} is not preceded by "
+                    f"{chk['before']!r}: {text[max(0, im['offset'] - 60):im['offset']]!r}")
+        if "after" in chk and not text[im["offset"]:].startswith(chk["after"]):
+            return (f"image {chk['src']} at {im['offset']} is not followed by "
+                    f"{chk['after']!r}: {text[im['offset']:im['offset'] + 60]!r}")
+        if "item" in chk:
+            got = next((i["item"] for i in result["items"]
+                        if i["status"] in SPAN_STATUSES
+                        and i["start"] <= im["offset"] < i["end"]), None)
+            if got != chk["item"]:
+                return f"image {chk['src']} falls in item {got!r}, labeled {chk['item']!r}"
+        if "in_table" in chk:
+            # PR #44 R1: whether the offset lies inside a recorded ADR-029
+            # table span. It usually does NOT even for an image the raw HTML
+            # puts inside a <td>, because a table span is tightened to the
+            # table's visible TEXT and an image contributes none — so this
+            # relationship has to be asserted, not assumed (ADR-033 §b2a).
+            # HALF-OPEN, the same convention as the `item` derivation above
+            # (PR #44 R7): an offset equal to `end` is the first character
+            # AFTER the table, so an image there — e.g. one that follows
+            # </table> — is outside it.
+            if "tables" not in result:
+                return "in_table needs the tables annotation too (set \"tables\": true)"
+            got = any(t["start"] <= im["offset"] < t["end"] for t in result["tables"])
+            if got != chk["in_table"]:
+                return (f"image {chk['src']} at {im['offset']} is "
+                        f"{'inside a' if got else 'outside every'} recorded table span, "
+                        f"labeled in_table={chk['in_table']}")
+    elif t == "images_sane":
+        # ADR-033 §d, the counterpart to `tables_sane`: the contract shape
+        # (offsets in bounds, document order, field types) plus a count band.
+        if "images" not in result:
+            return "no images in result (was images set?)"
+        why = _images_shape(result)
+        if why:
+            return why
+        n = len(result["images"])
+        if "min" in chk and n < chk["min"]:
+            return f"{n} images < min {chk['min']}"
+        if "max" in chk and n > chk["max"]:
+            return f"{n} images > max {chk['max']}"
+    elif t == "offsets_invariant_under_images":
+        # ADR-033's equality, stated as ADR-026's and ADR-029's are.
+        from src.sec10k.extract import extract_items
+        on = extract_items(path, images=True)
+        off = extract_items(path, images=False)
+        for k in DETERMINISM_FIELDS:
+            if on.get(k) != off.get(k):
+                return f"{k} differs with images on vs off — INV-S2 offsets moved"
+        if "images" in off:
+            return "images OFF emitted an images key; default must change nothing"
+        if not isinstance(on.get("images"), list):
+            return "images ON emitted no images list"
     elif t == "blocks":
         # ADR-032 §c. A hand-labeled block sequence over the window the labels
         # span: `blocks` is what the envelope's annotation must hold there —
@@ -558,7 +641,7 @@ def eval_check(result, chk, path=None):
         if not isinstance(on.get("blocks"), list) or not isinstance(on.get("tables"), list):
             return "blocks ON emitted no blocks + tables lists"
     elif t == "cover":
-        # ADR-033 §e/§g. The label carries value AND offsets AND status AND
+        # ADR-034 §e/§g. The label carries value AND offsets AND status AND
         # method AND confidence, and every one is compared — a check that
         # asserted only the value would stay green while the offsets drifted,
         # which is the exact failure `specs/001`'s "no separate text field"
@@ -581,7 +664,7 @@ def eval_check(result, chk, path=None):
                 return (f"cover.{f} not verbatim: normalized_text[{got['start']}:"
                         f"{got['end']}] is {span!r}, value says {got['value']!r}")
     elif t == "offsets_invariant_under_cover":
-        # ADR-033 §a3, as ADR-026/029/032 state theirs: the same file both
+        # ADR-034 §a3, as ADR-026/029/032 state theirs: the same file both
         # ways, DETERMINISM_FIELDS identical, the key on exactly one side.
         from src.sec10k.extract import extract_items
         on = extract_items(path, cover=True)
@@ -608,7 +691,7 @@ COVER_METHODS = {"caption_anchored", "ein_regex", "ein_pivot", "positional",
 
 
 def _cover_shape(result):
-    """None if `result['cover']` is in ADR-033's contract shape, else why."""
+    """None if `result['cover']` is in ADR-034's contract shape, else why."""
     cover = result["cover"]
     if not isinstance(cover, dict):
         return f"cover is {type(cover).__name__}, not a dict"
@@ -736,6 +819,29 @@ def _tables_shape(result):
     return None
 
 
+def _images_shape(result):
+    """None if `result['images']` is in ADR-034's contract shape, else why."""
+    imgs = result["images"]
+    if not isinstance(imgs, list):
+        return f"images is {type(imgs).__name__}, not a list"
+    n, prev = len(result["normalized_text"]), 0
+    for i, im in enumerate(imgs):
+        if not isinstance(im, dict) or set(im) != {"offset", "src", "alt", "width", "height"}:
+            return f"record {i} keys {sorted(im) if isinstance(im, dict) else im!r}"
+        if not (isinstance(im["offset"], int) and 0 <= im["offset"] <= n):
+            return f"record {i} offset {im['offset']!r} is not an offset into normalized_text"
+        if im["offset"] < prev:
+            return f"record {i} out of document order ({im['offset']} < {prev})"
+        prev = im["offset"]
+        for k in ("src", "alt"):
+            if not (im[k] is None or isinstance(im[k], str)):
+                return f"record {i} {k} {im[k]!r} is not a string or null"
+        for k in ("width", "height"):
+            if not (im[k] is None or (isinstance(im[k], int) and im[k] > 0)):
+                return f"record {i} {k} {im[k]!r} is not a positive int or null"
+    return None
+
+
 def _locate_table(result, chk):
     """(record, None) for the `index`-th record (default first) whose slice
     holds `anchor`, else (None, reason)."""
@@ -794,6 +900,7 @@ def run_case(case):
         path, exclude_boilerplate=case["input"].get("exclude_boilerplate", False),
         tables=case["input"].get("tables", False),
         blocks=case["input"].get("blocks", False),
+        images=case["input"].get("images", False),
         cover=case["input"].get("cover", False))
     extracted = [i for i in result["items"] if i["status"] == "extracted"]
 

@@ -80,7 +80,7 @@ def _promote_item_headings(blocks, tables, items):
 
 def _envelope(doc_status, text="", items=None, warnings=None, meta=None,
               trace=None, t0=None, boilerplate=None, tables=None, blocks=None,
-              cover=None):
+              cover=None, images=None):
     env = {
         "normalized_text": text,
         "doc_status": doc_status,
@@ -99,12 +99,14 @@ def _envelope(doc_status, text="", items=None, warnings=None, meta=None,
         env["tables"] = tables   # ADR-029: same rule — present only when asked
     if blocks is not None:
         env["blocks"] = blocks   # ADR-032: same rule again
+    if images is not None:
+        env["images"] = images   # ADR-033: same rule again
     if cover is not None:
-        env["cover"] = cover     # ADR-033: same rule again
+        env["cover"] = cover     # ADR-034: and again
     return env
 
 
-# ADR-033 (cold review): the cover region is capped, not just bounded by the
+# ADR-034 (cold review): the cover region is capped, not just bounded by the
 # first item span. Without a cap, a document where NO item carries a span —
 # `ambiguous`, an envelope that still ships — hands the whole filing to the
 # resolver, and EIN_RE/COVER_DATE_RE/SYMBOL_HDR_RE then match a subsidiaries
@@ -114,7 +116,7 @@ COVER_MAX = 12000
 
 
 def _cover(text, items):
-    """ADR-033's cover region: text[0:first item span], capped at COVER_MAX and
+    """ADR-034's cover region: text[0:first item span], capped at COVER_MAX and
     never sub-divided — ge-1994 opens with a section index and does not reach
     its cover until ~offset 1000, which a TOC-aware split would have to know
     about and this does not."""
@@ -123,7 +125,8 @@ def _cover(text, items):
 
 
 def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
-                  cover=False):
+                  images=False, cover=False):
+
     """Extract items from a 10-K filing.
 
     Returns {"normalized_text": str, "doc_status": str, "items": [...], ...}
@@ -142,6 +145,11 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
     paragraphs, list items, tables (pointing at the `tables` record), or one
     `pre` block for a txt-era filing. The whole-document / per-item Markdown
     view is derived by `src/sec10k/markdown.to_markdown`, never stored.
+
+    `images=True` adds ONE key, `images` — every HTML <img> as
+    `{offset, src, alt, width, height}`, the offset into `normalized_text`
+    (ADR-033). Same annotation-not-edit rule; the image BYTES are not
+    fetched, by ruling (ADR-033 §c).
     """
     t0 = time.monotonic()
     raw_bytes = Path(path).read_bytes()
@@ -155,7 +163,8 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
         raw = raw_bytes.decode("cp1252", errors="replace")
 
     trace = [{"layer": "acquisition", "path": str(path), "bytes": len(raw_bytes)}]
-    text, meta, warnings, tabs, blks = select_and_normalize(raw, tables=tables, blocks=blocks)
+    text, meta, warnings, tabs, blks, imgs = select_and_normalize(
+        raw, tables=tables, blocks=blocks, images=images)
     meta["input_sha256"] = sha
     trace.append({"layer": "select+normalize", **meta})
     # ADR-026 layer 3b, opt-in. Computed here, off the normalized text, and
@@ -175,7 +184,8 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
             "message": f"{len(raw)} raw chars normalized to {len(text)}"})
         return _envelope("failed", text, meta=meta, warnings=warnings,
                          trace=trace, t0=t0, boilerplate=chrome, tables=tabs,
-                         blocks=blks, cover=_cover(text, []) if cover else None)
+                         blocks=blks, images=imgs,
+                         cover=_cover(text, []) if cover else None)
 
     if meta["form_type"] not in ACCEPTED_FORMS:
         # refusal, not a best-effort parse (contract v2 envelope rules)
@@ -183,7 +193,8 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
         warnings.append({"code": "unsupported_form", "item": None,
                          "message": f"not an accepted 10-K form (detected: {found})"})
         return _envelope("unsupported", text, meta=meta, warnings=warnings,
-                         trace=trace, t0=t0, boilerplate=chrome, tables=tabs, blocks=blks,
+                         trace=trace, t0=t0, boilerplate=chrome, tables=tabs,
+                         blocks=blks, images=imgs,
                          cover=_cover(text, []) if cover else None)
 
     expected = expected_items(meta.get("period_end"))
@@ -252,4 +263,4 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
         doc_status = "success"
     return _envelope(doc_status, text, items=items, meta=meta,
                      warnings=warnings, trace=trace, t0=t0, boilerplate=chrome,
-                     tables=tabs, blocks=blks, cover=cov)
+                     tables=tabs, blocks=blks, images=imgs, cover=cov)

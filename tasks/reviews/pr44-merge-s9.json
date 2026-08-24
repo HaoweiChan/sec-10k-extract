@@ -1,0 +1,71 @@
+{
+  "pr": 44,
+  "task": "S10",
+  "event": "conflict resolution — merge origin/main (PR #45 / S9) into task/S10",
+  "date": "2026-08-24",
+  "branch": "task/S10",
+  "ours": "beb70fa",
+  "theirs": "f00b635",
+  "conflicted_files": 10,
+  "principle": "S9 is merged and shipped, so its behaviour is fixed: where the two genuinely disagreed about the shared pass, S9's shape was kept and S10's adapted around it. Nothing in either capability changed behaviour. No S10 acceptance criterion had to bend, so nothing was escalated.",
+  "adr_renumber": {
+    "from": "ADR-032-image-reference-annotation.md",
+    "to": "ADR-033-image-reference-annotation.md",
+    "why": "S9's ADR-032 (block structure / Markdown view) merged to main first. This is the same rule S9 itself followed one PR earlier, when D4's ADR-031 forced S9 from ADR-031 to ADR-032 — and their ADR records it the same way.",
+    "033_verified_free": "against merged main and against every remote branch including origin/task/D5 (PR #46), which carries only ADR-030 and ADR-031",
+    "references_changed": 92,
+    "breakdown": {
+      "wholly_ours_files": "54 — the ADR itself (1), the three image goldens (10), the three image adversarial cases (6), the prompt record (6), and the six pr44 review/resolution artifacts (41)",
+      "surgical_in_mixed_files": "13 — README.md 2, src/sec10k/normalize.py 1, src/sec10k/eval_adapter.py 6, src/sec10k/test_eval_adapter.py 2, evals/snapshot.py 1, .github/workflows/ci.yml 1",
+      "resolved_inside_the_conflict_hunks": "10 — specs/001-sec10k-contract.md's images section, specs/decisions/INDEX.md's bullet, specs/000-invariants.md's INV-S2 clause",
+      "tasks_TODO_md": "14 — MISSED in the first pass and caught by the orchestrator's gate hold: the S10 row's Status cell (2, line 44) and the six S10 debt rows (12, lines 160-165), including two occurrences of the full filename specs/decisions/ADR-032-image-reference-annotation.md which no longer exists. S9's 14 occurrences on lines 119 and 151-158 were left byte-identical, verified line by line before and after.",
+      "tasks_pr_loop_ledger_jsonl": "1 — also missed in the first pass, and NOT named in the gate hold either; found by the whole-repo re-sweep the hold asked for. The S10 ledger line's notes opened 'Image extraction. ADR-032 (sanctioned post-T8-freeze exception…)'. S9's line 21, which cites ADR-032 correctly, was left untouched and asserted so."
+    },
+    "deliberately_not_changed": "Every ADR-032 reference that means S9's document: specs/decisions/ADR-032-block-structure-markdown-view.md, the blocks-* cases and *-blocks goldens, src/sec10k/markdown.py, tables.py, web/*, src/repo_hygiene/eval_adapter.py, evals/run.py, tasks/DONE.md, prompts/019-s9-markdown-rendering.md, tasks/reviews/s9_markdown_walk.py, and S9's own debt row and ledger line. Each mixed file was read occurrence by occurrence with context before any edit; none was renumbered by a blanket replace.",
+    "review_artifacts": "tasks/reviews/pr44-r1..r3.json and their three resolutions WERE renumbered, and only in their ADR references. Left alone, every one of them would now resolve to S9's block-structure ADR — a signed artifact pointing at the wrong document is worse than one whose citation was corrected. No finding text, evidence, verdict or disposition was touched. The ADR's own header records the renumber and that these artifacts moved with it.",
+    "second_collision_found_and_fixed": "prompts/019 also collided — S9 shipped prompts/019-s9-markdown-rendering.md. Not named in the brief, but the same class of problem, so ours moved to prompts/020-s10-image-references.md and the ADR's reference to it was updated. Nothing enforces prompt numbering, so this is convention only. Note for the orchestrator: origin/task/D5 (PR #46) also carries a prompts/019, so it will hit this too.",
+    "count_correction": "The gate hold said 16 stale occurrences in tasks/TODO.md; the true figure is 14 (line 44: 2; lines 160-165: 4+2+2+2+1+1 = 12). Counted mechanically per line, both before and after. Total across the whole renumber is therefore 92, not the 77 first reported and not 77+16.",
+    "collateral_corrections_on_TODO_row_163": "That debt row is itself ABOUT a stale count, and the merge staled it three more ways: main now holds 33 ADRs not 32, ours makes 34 not 33, and the README line it cites moved from :85 to :92. Renumbering the reference alone would have left '34 with ADR-033' sitting next to 'counts 32 at 3e16f70' — arithmetic that is simply false, i.e. a NEW defect of exactly the class this hold was called for. Corrected together with the reference, with the original figures kept in parentheses so the row still reads as the dated finding it is. The row's headline claim is unchanged and still true: README line 92 does say '(18 ADRs)'.",
+    "self_inflicted_defect_caught_by_the_re_check": "Worth recording because it is the same failure one step later. After rewriting row 163 to explain the renumber, a blanket per-line ADR-032->ADR-033 replace over our seven rows clobbered the sentence \"S9's ADR-032 landed in between\" into \"S9's ADR-033\" — a false statement I had just created. Caught by the post-fix assertion, not by reading. Restored, and the assertion now allows exactly that one phrase and nothing else.",
+    "whole_repo_recheck": "113 ADR-032 occurrences remain across 36 files; every one confirmed from its surrounding text to mean S9's document, by a script that flags any occurrence sitting near S10 vocabulary. The orchestrator's spot list was confirmed rather than taken on trust: evals/snapshot.py:2 (cites both deliberately), blocks-br-boundary.json, xom-2021-blocks.json (whose provenance says 'images are S10's; ADR-032 §e' — S9's own exclusion list, correct), tasks/DONE.md:45 and the src/sec10k/*.py hits are all S9's. Three assertions now hold mechanically: 15 S10-owned files carry zero stale ADR-032; our 7 TODO.md rows carry 14 ADR-033 and only the one explicit S9 reference; S9's 9 rows are byte-identical. The old filename survives in exactly one place, this artifact's own 'from' field."
+  },
+  "shared_pass_resolution": {
+    "file": "src/sec10k/normalize.py (10 hunks)",
+    "signatures": "_Plain.__init__(tables=False, blocks=False, images=False); normalize(body, era, tables=False, blocks=False, images=False) -> (text, tables, blocks, images); select_and_normalize(raw, tables=False, blocks=False, images=False) -> (text, meta, warnings, tables, blocks, images). `blocks` keeps the positional slot S9 gave it so their call sites did not move; `images` is appended.",
+    "decisions": [
+      "ONE _tidy mark map for all three annotations. Both sides built their own `olds` set; merged, table marks, block marks and image marks go into a single sorted set rewritten in one pass. This is the decision that keeps 'the text is identical whatever is asked for' true by construction rather than by three separate careful implementations — and it is why the byte-identity result below is meaningful.",
+      "The <img> branch stays INSIDE handle_starttag's if/elif chain rather than becoming a standalone statement like S9's bold tracking. Load-bearing: `elif self.skip_depth: pass` is the second branch, so keeping ours in the chain is what preserves 'an <img> inside <title>/ix:header/ix:hidden is never recorded' (INV-S5), which normalize.py::_demo pins. S9's bold `if` is a separate statement after the chain and must run for every tag including img, so both forms coexist.",
+      "self.tables = [] if (tables or blocks) else None — S9's rule, kept, because blocks imply tables. self.images is independent.",
+      "The early return `if not tables` became `if not (tables or images)`, so an images-only call still takes the marks path; _place_tables is now guarded by `if tables:` because p.tables is None on an images-only call and S9's unconditional call would have crashed there.",
+      "txt era returns (text, [] if tables, pre-block if blocks, [] if images) — both sides' answers, unchanged."
+    ],
+    "other_code_files": {
+      "src/sec10k/extract.py (7 hunks)": "all additive: _envelope grew blocks= and images=, extract_items grew both flags, all three envelope returns carry both, docstring carries both paragraphs. No logic touched.",
+      "src/sec10k/eval_adapter.py (4 hunks)": "additive. The large hunk is our image vocabulary (image / images_sane / offsets_invariant_under_images) against S9's blocks vocabulary (blocks / markdown / blocks_sane / offsets_invariant_under_blocks) — disjoint elif branches on `t`, so both kept verbatim. envelope_shape's optional-key set is now {boilerplate, tables, blocks, images} and calls both _blocks_shape and _images_shape. run_case forwards both flags."
+    },
+    "call_sites_updated_beyond_the_conflicts": "The arity change broke unpack sites git had auto-merged cleanly: 9 in normalize.py::_demo (including two positional index reads that moved from [4] to [5] now that blocks occupies slot 4), 3 in tables.py::_demo, 4 in markdown.py::_demo, 1 in web/view.py::_demo, and two 3-tuple identity comparisons (tables.py, markdown.py) that had to become 4-tuples. Every one was caught by a self-check, not by inspection."
+  },
+  "doc_and_data_resolution": {
+    "README.md": "'Three opt-in annotations' -> 'Four'; both paragraphs kept, blocks then images, with a connective added so the prose still reads.",
+    "specs/000-invariants.md": "INV-S2 carries both clauses and all four enforcing cases (boilerplate, tables, blocks x2, images).",
+    "specs/001-sec10k-contract.md": "both optional-key sections kept, `blocks` then `images`; the images section renumbered to ADR-033.",
+    "specs/decisions/INDEX.md": "both bullets, numeric order — ADR-032 (S9) then ADR-033 (S10).",
+    "tasks/TODO.md": "milestone table — took main's removal of the S9 row (PR #45 moved it to DONE.md, not resurrected) and OUR S10 row, which carries the current `pr` status; main still had the stale `todo — ADR UNRUN` version. Debt table — every row from both sides kept, S9's nine then ours six; verified by count (6 rows Origin: S10 / PR #44, 9 rows Origin: S9 / PR #45) and by ledger_table_shape.",
+    "evals/report/history.jsonl": "append-only union: 43 ours + 4 theirs -> 47 unique lines in the conflict, ts-ordered; asserted afterwards that all 554 lines from HEAD and all 515 from MERGE_HEAD are present in the result. One pre-existing out-of-order pair at 2026-08-22 sits outside the conflict and was left alone — it is not this merge's business.",
+    "tasks/pr-loop-ledger.jsonl": "append-only union: both S9's and S10's lines kept, date-ordered, all 20 lines from each parent present."
+  },
+  "verification": {
+    "byte_identity": "evals/snapshot.py against the merged origin/main f00b635, default flags, over 54 dev fixture files and 5 held-out: dev 7c26bea04da89405ccf0f2a1448b5557182a3510f8e61a87241a7f70028821be, held-out 51de5a11671621a423319e9704e4e227133e90703fe8b114e71a178204957f3f, cmp equal. The dev digest differs from the pre-merge one (19168a6e...) because S9 changed what the default path produces; what matters is that it is identical between main and this branch, which is the claim.",
+    "invariant": "54/54 = 1.000 (52 ours + S9's blocks-offsets-invariant and blocks-wrapped-invariant)",
+    "fast": "117/117 = 1.000 (105 + S9's 12)",
+    "table_fidelity": "cells 427/427 = 1.0, rows 34/34 = 1.0",
+    "structure_fidelity": "blocks 61/61 = 1.0, bounds 61/61 = 1.0",
+    "baseline": "git diff against origin/main is empty — .eval-baseline.json is main's, including S9's two structure keys, unmoved",
+    "self_checks": "normalize, tables, markdown, segment, validate, boilerplate, web.view, test_eval_adapter (20/20), evals.snapshot, evals.metrics, evals.bench --self-check and --check-docs: all ok",
+    "composition_probe": "extract_items(xom-2021, exclude_boilerplate=True, tables=True, blocks=True, images=True) returns all four keys at once (126 tables, 1187 blocks, 9 images), normalized_text/items/warnings/doc_status identical to the default envelope, markdown.to_markdown derives 424,536 chars, and the nine image offsets are unchanged. Nothing in either suite exercises all four together, so this was checked by hand."
+  },
+  "unsure_or_worth_a_look": [
+    "prompts/019 collision was outside the stated scope; ours moved to 020. If the orchestrator would rather keep 019 and have S9 move, say so — but S9 is merged, so 020 is the consistent choice.",
+    "evals/snapshot.py's docstring now cites ADR-026 §d, ADR-029 §d, ADR-032 §d and ADR-033 §d. S9 does not reference the script, but their §d makes the same byte-identity claim by the same method, so citing both looked more honest than renumbering ours away."
+  ]
+}

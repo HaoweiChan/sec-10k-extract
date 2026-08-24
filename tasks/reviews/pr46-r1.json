@@ -1,0 +1,80 @@
+{
+  "pr": 46,
+  "round": 1,
+  "branch": "task/D5",
+  "head": "22c05f7",
+  "base": "c13aa5c",
+  "date": "2026-08-24",
+  "result": "REQUEST_CHANGES",
+  "counts": {
+    "HIGH": 0,
+    "MEDIUM": 2,
+    "LOW": 3
+  },
+  "routing": {
+    "repair": [
+      "R1",
+      "R2"
+    ],
+    "debt": [
+      "R3",
+      "R4",
+      "R5"
+    ]
+  },
+  "routing_rationale": {
+    "R1": "repair — MEDIUM and the note makes a dishonest claim on screen: 'the two panes will not agree while this is on' is false on aapl-2025 and on every zero-item run. D5's acceptance requires the note state the limit HONESTLY.",
+    "R2": "repair — MEDIUM and it is the acceptance criterion's only evidence. The committed d5-browser-walk.json presents 0 failures as verification of 'both panes on screen', a property the walk does not test; the reviewer's visibility:hidden mutation passes both suite and walk.",
+    "R3": "debt — LOW. Disclosed in the case's own ceiling field, and R2's repair partly covers it.",
+    "R4": "debt — LOW. Instrument-hygiene; no current drift, and check_split_breakpoint ties the CSS/JS pair.",
+    "R5": "debt — LOW. Reviewer states the acceptance parenthetical is satisfied; this is claim-precision and evidence coverage, not a layout defect."
+  },
+  "reviewer_verification_of_record": "The reviewer independently reproduced 9 failures against a pristine c13aa5c tree and confirmed the walk goes red on three mutations (breakpoint re-raised to 1100 -> 1 failure at 1024; note deleted -> 4 failures; c.disabled removed -> 2 failures at 900/768). The instrument is sound except for the R2 gap.",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The new #bp-note fires and asserts a disagreement that does not exist whenever the exclusion flag was requested but nothing was actually excluded — including the flagship aapl-2025 fixture and every `failed`/`unsupported` run with zero items.",
+      "evidence": "src/sec10k/web/view.py:80 sets `\"boilerplate_excluded\": spans is not None`, i.e. True whenever the flag was asked for even if the detector returned []; src/sec10k/web/static/index.html:740 `$(\"#bp-note\").hidden = !v.boilerplate_excluded;` keys the note off that field alone. Measured against a live server on this branch: on aapl-2025 with `exclude_boilerplate:true`, 0 of 23 items carry `display_text` and the displayed text is byte-identical to the exclusion-off run, yet the note is rendered saying \"it still shows every page break and running head the extracted pane drops — the two panes will not agree while this is on\". Same on jnj-2016, spatz-2014, sgrp-2019, reac-2015, xom-2021, wmt-2010, tgt-2002, gs-2002, intc-2002, cvx-2015, ksb-2007 (12 of 30 fixtures probed). Worse on aapl-2026-10q (doc_status `unsupported`, 0 items) and truncated-download (`failed`, 0 items, no source token): the note is on screen above an empty extracted pane — screenshot reproduced at 1280x900. The walk deliberately uses ge-1994, one of the fixtures where boilerplate IS detected, so this state is never observed anywhere in the PR's evidence.",
+      "repro": "uvicorn src.sec10k.web.app:app --port 8011; then `curl -s -X POST localhost:8011/api/extract/fixture -H 'content-type: application/json' -d '{\"fixture\":\"aapl-2025\",\"exclude_boilerplate\":true}' | python3 -c 'import sys,json;d=json.load(sys.stdin);print(d[\"boilerplate_excluded\"], sum(1 for i in d[\"items\"] if \"display_text\" in i))'` -> `True 0`; in the UI pick aapl-2025, tick \"exclude boilerplate\", extract — the note appears while the pane text is unchanged. Repeat with aapl-2026-10q for the zero-item case.",
+      "acceptance": "The note is shown only when exclusion actually removed something on screen (e.g. keyed off a response field that distinguishes \"asked for\" from \"applied\", or the wording made conditional on it), with an eval case that goes red on an aapl-2025-shaped response (`boilerplate_excluded: true`, no `display_text` on any item) and on a zero-item `unsupported` response."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The browser walk — the PR's single piece of render evidence for half 1 — only compares the two panes' rect tops and never checks that #source is actually rendered, so a tree in which the compare pane is invisible at 1024px passes both the eval suites and the walk.",
+      "evidence": "tasks/reviews/d5_browser_walk.py:136-141 — `in_row()` is `abs(pane.top - source.top) <= ROW_TOLERANCE`, nothing more; `measure()` at line 74-79 records `rendered: note.offsetParent !== null` for #bp-note but records no visibility for #pane/#source. I added `@media(max-width:1100px){#source{visibility:hidden}}` to src/sec10k/web/static/index.html (the compare pane is then invisible at 1024, which is exactly the defect D5 exists to remove) and got: `python3 -m evals.run --suite invariant` 55/55 with ui-split-breakpoint PASS, and `d5_browser_walk.py` exit 0 with `\"failures\": []`. For contrast the instrument is otherwise sound: I independently reproduced 9 failures against a pristine c13aa5c tree and red on three mutations (breakpoint re-raised to 1100 -> 1 failure at 1024; note deleted -> 4 failures; `c.disabled = STACKED.matches` removed -> 2 failures at 900/768).",
+      "repro": "Insert `@media(max-width:1100px){#source{visibility:hidden}}` after the 1180px block in src/sec10k/web/static/index.html, serve it, run `python3 tasks/reviews/d5_browser_walk.py --base http://localhost:8011 --out probe` -> exit 0, failures []; `python3 -m evals.run --suite invariant` -> 55/55.",
+      "acceptance": "The walk records and asserts `offsetParent !== null` (or non-zero width/height) for #pane and #source at every width, so the visibility:hidden / display:none mutation above makes it exit non-zero; the committed d5-browser-walk.json carries that field."
+    },
+    {
+      "id": "R3",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "ui-exclusion-note cannot distinguish \"correctly hidden until exclusion is on\" from \"never shown at all\" — a wrong program that permanently hides the note passes the suite.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:1454-1478 checks only that the element exists, carries the `hidden` attribute, has the pinned `$(\"#bp-note\").hidden = ...` assignment, and has the must_say/must_not_say wording. Adding `#bp-note{display:none}` to src/sec10k/web/static/index.html keeps `python3 -m evals.run --suite invariant` at 55/55 with ui-exclusion-note PASS; only the browser walk catches it (4 failures: \"the exclusion note stays off screen with exclusion ON\"). The case's own `ceiling` field states this hole, so it is disclosed, not hidden.",
+      "repro": "Append `#bp-note{display:none}` to the stylesheet block in index.html; `python3 -m evals.run --suite invariant` -> 55/55 PASS.",
+      "acceptance": "Either the note's rendered visibility is covered by an automated case, or the ceiling stays documented and the browser walk is promoted to a named gate in the ledger row rather than a manual artifact."
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The walk's SIDE_BY_SIDE=1024 and STACK_AT=1000 are hardcoded constants with no link to the CSS or the JS, so the three numbers can drift apart even though check_split_breakpoint ties the CSS and JS pair together.",
+      "evidence": "tasks/reviews/d5_browser_walk.py:30-31 — `SIDE_BY_SIDE = 1024` / `STACK_AT = 1000` are literals; src/repo_hygiene/eval_adapter.py:1405-1410 derives the expected `matchMedia` width from the CSS but nothing reads either into the walk. Moving both the CSS `@media(max-width:1000px)` and `matchMedia(\"(max-width:1000px)\")` to 900 keeps ui-split-breakpoint green (900 < min_side_by_side 1024) while the walk would then report false failures at 900 (\"expected the panes to stack below 1000px, but they share a row\").",
+      "repro": "Change both the CSS and JS 1000 -> 900 in index.html; `python3 -m evals.run --suite invariant` stays 55/55, `d5_browser_walk.py` reports a stacking failure at 900 that is not a defect.",
+      "acceptance": "The walk reads the stacking breakpoint out of the served CSS (or out of the case JSON) instead of hardcoding it, so it cannot disagree with the source it is measuring."
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The commit message's headline walk number is stated for the exclusion-OFF case only, and the note adds 111px of push-down so that at the acceptance-named 1024x768 viewport almost none of either pane is above the fold before scrolling.",
+      "evidence": "Commit 1008232 says \"d5-browser-walk.json 0 failures (1024: `196px 349.266px 349.281px`, both pane tops 582, note off/on correct)\"; tasks/reviews/d5-browser-walk.json records 1024 exclusion_off pane top 582 but 1024 exclusion_on pane top 693. Measured live at 1024x768 with the note on: #pane/#source top 693, height 568 (74vh), viewport 768 — 75px of a 568px pane visible without scrolling (186px with the note off). All render evidence in the PR was collected at height 860 only, where the same ratio is 167/636. The acceptance's own parenthetical (\"same row, comparable tops\") is satisfied, so this is a claim-precision and evidence-coverage note, not a layout defect.",
+      "repro": "playwright at viewport 1024x768, extract ge-1994 with \"exclude boilerplate\" ticked, read `document.querySelector('#pane').getBoundingClientRect().top + scrollY` -> 693 against innerHeight 768.",
+      "acceptance": "The walk measures at least one viewport height at 768 and the published number names which exclusion state it belongs to."
+    }
+  ]
+}
