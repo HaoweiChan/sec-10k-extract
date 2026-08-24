@@ -239,6 +239,61 @@ def test_ibr_spans_are_checked():
     assert eval_check(r4, {"type": "text_not_contains", "item": "6",
                            "value": "proxy statement"}) is not None
 
+    # ADR-031: a footnote-resolved IBR item keeps its heading line as the span
+    # and publishes the footnote's offsets under evidence.footnote; a
+    # text_contains with "evidence" anchors THAT slice. Red when the key is
+    # absent or points at the wrong text.
+    t5 = "Item 11. Executive Compensation*\n\nItem 14. Fees*\n\n* Items 11 and 14 are in the proxy statement."
+    fn = t5.index("* Items")
+    r5 = {"normalized_text": t5, "items": [
+        {"item": "11", "status": "incorporated_by_reference", "start": 0,
+         "end": 33, "confidence": 0.85, "heading_text": "Item 11. Executive Compensation*",
+         "evidence": {"footnote": {"start": fn, "end": len(t5)}}},
+        {"item": "14", "status": "incorporated_by_reference", "start": 34,
+         "end": len(t5), "confidence": 0.85, "evidence": {}}]}
+    chk = {"type": "text_contains", "item": "11", "evidence": "footnote",
+           "value": "proxy statement"}
+    assert eval_check(r5, chk) is None
+    assert eval_check(r5, {**chk, "item": "14"}) is not None          # no key
+    assert eval_check(r5, {**chk, "value": "Compensation*"}) is not None  # wrong slice
+    assert eval_check(r5, {"type": "text_contains", "item": "11",
+                           "value": "proxy statement"}) is not None  # span itself has none
+    assert eval_check(r5, {"type": "verbatim"}) is None   # heading-line span is well-formed
+    assert eval_check(r5, {"type": "no_overlap_ordered"}) is None
+
+
+def test_evidence_key():
+    """PR #42 R1: EVERY span-reading check honours an "evidence" key — the
+    footnote's EXTENT is pinnable, not only its containment — and a check type
+    that does not read spans refuses the key loudly instead of silently
+    checking the span (the "check that cannot fail" class)."""
+    t5 = "Item 11. Executive Compensation*\n\nItem 14. Fees*\n\n* Items 11 and 14 are in the proxy statement."
+    fn = t5.index("* Items")
+    r5 = {"normalized_text": t5, "items": [
+        {"item": "11", "status": "incorporated_by_reference", "start": 0,
+         "end": 33, "confidence": 0.85, "heading_text": "Item 11. Executive Compensation*",
+         "evidence": {"footnote": {"start": fn, "end": len(t5)}}}]}
+    fl = len(t5) - fn                                       # the footnote's length
+    assert eval_check(r5, {"type": "max_chars", "item": "11", "evidence": "footnote",
+                           "value": fl}) is None
+    assert eval_check(r5, {"type": "max_chars", "item": "11", "evidence": "footnote",
+                           "value": fl - 1}) is not None            # one char too long
+    assert eval_check(r5, {"type": "min_chars", "item": "11", "evidence": "footnote",
+                           "value": fl + 1}) is not None            # one char too short
+    assert eval_check(r5, {"type": "max_chars", "item": "11", "value": 33}) is None  # span itself
+    assert eval_check(r5, {"type": "text_not_contains", "item": "11", "evidence": "footnote",
+                           "value": "proxy statement"}) is not None  # reads the footnote
+    assert eval_check(r5, {"type": "text_not_contains", "item": "11",
+                           "value": "proxy statement"}) is None      # ...not the span
+    for bad in ({"type": "item_present", "item": "11", "status": "incorporated_by_reference"},
+                {"type": "item_field", "item": "11", "field": "heading_text",
+                 "value": "Item 11. Executive Compensation*"},
+                {"type": "confidence", "item": "11", "value": 0.85},
+                {"type": "verbatim"}):
+        why = eval_check(r5, {**bad, "evidence": "footnote"})
+        assert why and "refused" in why, (bad, why)
+        assert eval_check(r5, bad) is None, (bad, eval_check(r5, bad))  # same check, no key: passes
+
 
 def test_checks_that_had_never_gone_red():
     """The G1 audit (ADR-010 consequences) named four checks that were
@@ -535,6 +590,7 @@ def test_table_checks():
 TESTS = [
     test_item_field,
     test_ibr_spans_are_checked,
+    test_evidence_key,
     test_checks_that_had_never_gone_red,
     test_confidence,
     test_envelope_shape,

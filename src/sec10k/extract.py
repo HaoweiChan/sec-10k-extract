@@ -13,15 +13,15 @@ from pathlib import Path
 from src.sec10k.boilerplate import find_chrome
 from src.sec10k.normalize import ACCEPTED_FORMS, COLLAPSE_FLOOR, select_and_normalize
 from src.sec10k.segment import (
-    assign_boundaries, classify, expected_items, filter_candidates, item_label,
-    find_candidates,
+    assign_boundaries, classify, expected_items, filter_candidates, footnote_pointer,
+    item_label, find_candidates,
 )
 from src.sec10k.validate import AMBIGUOUS_CODES, STRICT_SIM, score, validate
 
-VERSION = "0.8.0-d3"  # meta.extractor_version — audits compare across runs
+VERSION = "0.8.0-d4"  # meta.extractor_version — audits compare across runs
 
 
-def _item(code, cand, status, period_end=None):
+def _item(code, cand, status, period_end=None, footnote=None):
     part, title = item_label(code, period_end)
     if cand is None:
         # no heading anywhere: the entry exists because INV-S4 says every
@@ -39,12 +39,19 @@ def _item(code, cand, status, period_end=None):
         # publish "strict" on a heading the score calls weak (SD-1)
         "method": "heading_strict" if cand["similarity"] >= STRICT_SIM else "heading_lenient",
         "evidence": {"title_similarity": cand["similarity"],
-                     "chars": cand["end"] - cand["start"]},
+                     "chars": cand["end"] - cand["start"],
+                     # ADR-031: the footnote that resolved a marked, empty
+                     # heading to IBR — offsets into normalized_text, the
+                     # pointer sentence a human reads; the item's own span stays
+                     # the heading line (INV-S1 forbids pointing it into the
+                     # item that holds the footnote). Key absent otherwise.
+                     **({"footnote": {"start": footnote[0], "end": footnote[1]}}
+                        if footnote else {})},
     }
 
 
 def _promote_item_headings(blocks, tables, items):
-    """ADR-031 §b3: the block a span-carrying item opens with IS the heading
+    """ADR-032 §b3: the block a span-carrying item opens with IS the heading
     the segmenter identified (`verbatim` asserts the span opens with
     `heading_text`), so it becomes a level-2 `heading` carrying the item
     code — a paragraph block, or a table block with exactly one visible row
@@ -89,7 +96,7 @@ def _envelope(doc_status, text="", items=None, warnings=None, meta=None,
     if tables is not None:
         env["tables"] = tables   # ADR-029: same rule — present only when asked
     if blocks is not None:
-        env["blocks"] = blocks   # ADR-031: same rule again
+        env["blocks"] = blocks   # ADR-032: same rule again
     return env
 
 
@@ -108,7 +115,7 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False):
     Markdown view is derived by `src/sec10k/tables.to_markdown`, never stored.
 
     `blocks=True` adds `blocks` (and implies `tables`) — the document's block
-    structure as offsets into `normalized_text` (ADR-031): headings,
+    structure as offsets into `normalized_text` (ADR-032): headings,
     paragraphs, list items, tables (pointing at the `tables` record), or one
     `pre` block for a txt-era filing. The whole-document / per-item Markdown
     view is derived by `src/sec10k/markdown.to_markdown`, never stored.
@@ -172,7 +179,14 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False):
         c = accepted.get(code)
         body = text[c["heading_end"]:c["end"]] if c else ""
         status = classify(code, body, c is not None)
-        items.append(_item(code, c, status, meta.get("period_end")))
+        foot = None
+        if c is not None and status == "extracted":
+            # ADR-031 (D4): a marked heading over an empty body, resolved by a
+            # footnote elsewhere that names this item and an external document
+            foot = footnote_pointer(code, c["heading_text"], body, text)
+            if foot:
+                status = "incorporated_by_reference"
+        items.append(_item(code, c, status, meta.get("period_end"), footnote=foot))
     trace.append({"layer": "status",
                   "counts": {s: sum(1 for i in items if i["status"] == s)
                              for s in {i["status"] for i in items}}})

@@ -65,6 +65,13 @@ them all); the example once showed `lenient_match`, which nothing emits.
   own pointer text — the sentence naming the other document. That text is real
   and is the evidence a human uses to confirm the claim, so it is addressable
   like any other span, and INV-S1 + boundary hygiene cover it (ADR-011).
+  One shape puts the pointer OUTSIDE the item's body (ADR-031): a heading
+  whose line ends in an asterisk run over an empty body, resolved by a
+  footnote elsewhere that names the item and an external document. There the
+  span is the item's own marked heading line and the footnote's offsets into
+  `normalized_text` are published at `evidence.footnote = {"start", "end"}`
+  (offsets only — no second copy of the text). The key is absent on every
+  other item.
 - For `status: missing` / `omitted`: `start`/`end` are null — there is no span.
 - All statuses require `confidence` (how sure are we it's actually
   absent/incorporated, not missed).
@@ -114,7 +121,7 @@ them all); the example once showed `lenient_match`, which nothing emits.
   by `src/sec10k/tables.grid()` / `to_markdown()` and are deliberately not
   fields. `rowspan`, nested tables and txt-era SGML `<TABLE>` layout are not
   interpreted (ADR-029 §e). `envelope_shape` refuses any other shape.
-- **`blocks` (optional, ADR-031)**: present *only* when the caller passes
+- **`blocks` (optional, ADR-032)**: present *only* when the caller passes
   `extract_items(path, blocks=True)`, which also implies `tables=True`
   (table blocks point into the `tables` records). A list, in document order
   and non-overlapping, of `{"kind", "start", "end", ...}` records —
@@ -134,7 +141,7 @@ them all); the example once showed `lenient_match`, which nothing emits.
   derived by `src/sec10k/markdown.to_markdown()` and are deliberately not
   fields. Headings inferred from styling, inline emphasis, italic, nested
   lists, definition lists and txt-era structure are not interpreted
-  (ADR-031 §e). `envelope_shape` refuses any other shape.
+  (ADR-032 §e). `envelope_shape` refuses any other shape.
 
 ## Envelope rules (v2, normative)
 

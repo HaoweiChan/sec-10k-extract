@@ -71,7 +71,7 @@ def run(base, out):
                 record["failures"].append(f"{fx} item {code}: {got}")
             record["fixtures"][fx] = {"item": code, "expect": want, **got}
         # PR #45 R1: both boxes on, jpm-2024 item 15 — the pane must show no running
-        # head while the header says "boilerplate hidden" (ADR-031 §b4 as repaired)
+        # head while the header says "boilerplate hidden" (ADR-032 §b4 as repaired)
         page.goto(base + "/", wait_until="networkidle")
         page.check("#render-md"); page.check("#exclude-bp")
         page.select_option("#fx", "jpm-2024")

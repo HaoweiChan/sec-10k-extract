@@ -33,5 +33,5 @@
       }
     ]
   },
-  "provenance": "ADR-031 §d / §g, the SGML-WRAPPED half of the name-collision defect: msft-2013's filing.htm carries one <DOCUMENT> block, so split_documents returns a non-empty list — and while that list shadowed the `blocks` flag, the DEFAULT call emitted `blocks` and `tables` keys on every wrapped filing (offsets_invariant_under_blocks: 'blocks OFF emitted a blocks/tables key'). Caught by the first all-fixture sweep on 2026-08-23, before any commit; renamed to `docs` and pinned here on both shapes (hard rule 2). Same checks as blocks-offsets-invariant; band around HEAD's 1,353 blocks."
+  "provenance": "ADR-032 §d / §g, the SGML-WRAPPED half of the name-collision defect: msft-2013's filing.htm carries one <DOCUMENT> block, so split_documents returns a non-empty list — and while that list shadowed the `blocks` flag, the DEFAULT call emitted `blocks` and `tables` keys on every wrapped filing (offsets_invariant_under_blocks: 'blocks OFF emitted a blocks/tables key'). Caught by the first all-fixture sweep on 2026-08-23, before any commit; renamed to `docs` and pinned here on both shapes (hard rule 2). Same checks as blocks-offsets-invariant; band around HEAD's 1,353 blocks."
 }

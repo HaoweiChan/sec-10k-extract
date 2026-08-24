@@ -22,7 +22,7 @@ _WS = re.compile(r"\s+")
 def cell_text(text, cell, omit=()):
     """One cell as a single line: the verbatim slice with its internal
     whitespace (a <div> inside the cell breaks the line) collapsed. `omit`
-    (ADR-026 chrome runs, ADR-031 §b4) is removed from the slice first,
+    (ADR-026 chrome runs, ADR-032 §b4) is removed from the slice first,
     exactly as `strip_chrome` removes it from an item."""
     raw = strip_chrome(text, omit, cell[0], cell[1]) if omit else text[cell[0]:cell[1]]
     return _WS.sub(" ", raw).strip()
@@ -112,7 +112,7 @@ def _demo():
     outer_cell = ntabs[0]["rows"][0][0]
     assert ntext[outer_cell[0]:outer_cell[1]] == "outer\n\ninner", ntext[outer_cell[0]:outer_cell[1]]
     assert grid(ntext, ntabs[1]) == [["inner"]] and grid(ntext, ntabs[0]) == [["outer inner", "after"]]
-    # ADR-031 §b4 / PR #45 R1: a chrome run inside a cell leaves the VIEW only
+    # ADR-032 §b4 / PR #45 R1: a chrome run inside a cell leaves the VIEW only
     head = ("<table><tr><td>ACME 10-K</td><td>7</td></tr><tr><td>x</td><td>y</td></tr></table>")
     ht, htabs, _ = normalize(head, "html", tables=True)
     run = [{"start": ht.index("ACME"), "end": ht.index("7") + 1, "kind": "running_head"}]

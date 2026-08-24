@@ -1,4 +1,4 @@
-"""Derived Markdown view over the ADR-031 `blocks` annotation. Ruling: ADR-031.
+"""Derived Markdown view over the ADR-032 `blocks` annotation. Ruling: ADR-032.
 
 `extract_items(path, blocks=True)` adds one envelope key, `blocks` (and the
 ADR-029 `tables` it points into): a list, in document order and

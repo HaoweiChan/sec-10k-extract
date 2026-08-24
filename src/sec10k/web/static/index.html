@@ -187,7 +187,7 @@ button:disabled{opacity:.5;cursor:default}
 pre.text{white-space:pre-wrap;word-wrap:break-word;font:13px/1.6 var(--mono);
   background:var(--bg);border:1px solid var(--line);border-radius:var(--r);
   padding:11px 11px 42px;margin:0 14px;flex:1;min-height:0;overflow:auto}
-/* S9 (ADR-031): the Markdown-rendered item body. Same box, same flush edges
+/* S9 (ADR-032): the Markdown-rendered item body. Same box, same flush edges
    and bottom padding as pre.text above — it is the same pane in a second
    mode — but proportional text, real headings, real tables. Colours are the
    page's existing tokens only (ink, dim, line, bg): no new pair to measure. */
@@ -293,7 +293,7 @@ footer a{color:var(--accent)}
     <span class="hint">— shows the extracted item as headings, paragraphs and
     tables derived from the filing's block structure instead of the flat text
     run. Display only: the offsets and character count stay those of the raw
-    slice, which the compare pane still shows (ADR-031).</span></label>
+    slice, which the compare pane still shows (ADR-032).</span></label>
 </fieldset>
 
 <div id="banner" class="s-idle">No filing extracted yet.</div>
@@ -827,7 +827,7 @@ function show(i){
       <dl class="ev">
         ${it.truncated ? `<dt>shown</dt><dd>first ${(it.display_text ?? it.text).length.toLocaleString()} of ${it.chars.toLocaleString()} characters</dd>` : ""}
         ${VIEW.boilerplate_excluded ? `<dt>boilerplate</dt><dd>detected chrome is hidden from the text above; the offsets and character count below are still those of the full span (ADR-026)</dd>` : ""}
-        ${VIEW.markdown ? `<dt>markdown</dt><dd>rendered from the filing's block structure (headings, paragraphs, tables) as Markdown; the raw slice is what the offsets and character count describe, and what the compare pane shows (ADR-031)</dd>` : ""}
+        ${VIEW.markdown ? `<dt>markdown</dt><dd>rendered from the filing's block structure (headings, paragraphs, tables) as Markdown; the raw slice is what the offsets and character count describe, and what the compare pane shows (ADR-032)</dd>` : ""}
         <dt>heading matched</dt><dd>${it.heading_text ? esc(it.heading_text) : "— (no heading found)"}</dd>
         <dt>offsets</dt><dd>${it.start != null ? `[${it.start.toLocaleString()}, ${it.end.toLocaleString()})` : "null — no span for this status"}</dd>
         <dt>evidence</dt><dd>${esc(JSON.stringify(it.evidence || {}))}</dd>

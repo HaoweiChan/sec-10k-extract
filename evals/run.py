@@ -160,7 +160,7 @@ def main():
     # ADR-029 §c: table fidelity, micro-averaged over every `table` check the
     # scored cases ran (debt excluded, like the score). None when no case in
     # this suite labels a table — reported as absent, never as a number.
-    # ADR-031 §c: structure fidelity (blocks, bounds) over every `blocks`
+    # ADR-032 §c: structure fidelity (blocks, bounds) over every `blocks`
     # check, the same way, reported on the next line.
     fid = {"cells": [0, 0], "rows": [0, 0]}
     sfid = {"blocks": [0, 0], "bounds": [0, 0]}

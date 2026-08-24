@@ -1,6 +1,6 @@
-# ADR-031 — S9: the filing's block structure is reported as offset records into an unchanged `normalized_text`; the whole-document and per-item Markdown are derived views; structure fidelity is a gated per-run metric
+# ADR-032 — S9: the filing's block structure is reported as offset records into an unchanged `normalized_text`; the whole-document and per-item Markdown are derived views; structure fidelity is a gated per-run metric
 
-Date: 2026-08-23. Status: accepted. Amended in place 2026-08-23 (§h addendum: the baseline move as made) and 2026-08-24 (PR #45 round 1: §b4 chrome-inside-a-block rule + `blocks-omit-chrome`, §g mutation table re-measured, §f2/§b2/§e corrections). Implements S9. Sanctioned exception to
+Date: 2026-08-23. Status: accepted. Amended in place 2026-08-23 (§h addendum: the baseline move as made) and 2026-08-24 (PR #45 round 1: §b4 chrome-inside-a-block rule + `blocks-omit-chrome`, §g mutation table re-measured, §f2/§b2/§e corrections). **Renumbered ADR-031 → ADR-032 at the PR #45 merge with main (2026-08-24)**: PR #42 (D4) published its own ADR-031 (footnote-marker IBR) to main first; records written before the merge — `tasks/reviews/pr45-r1..r3.json` and their resolutions — cite this document by its old number. Implements S9. Sanctioned exception to
 the T8 feature freeze (`tasks/TODO.md`, **Freeze guard**), on the pattern
 [ADR-020](ADR-020-fallback-not-justified.md) established for T12 and
 [ADR-026](ADR-026-boilerplate-chrome-exclusion.md) /

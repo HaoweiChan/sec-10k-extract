@@ -59,7 +59,7 @@ statuses; silence is never how absence is reported (INV-S4):
 | status | meaning |
 |---|---|
 | `extracted` | heading found, span assigned |
-| `incorporated_by_reference` | the item's content lives in another document; offsets point at the pointer sentence (ADR-011) |
+| `incorporated_by_reference` | the item's content lives in another document; offsets point at the pointer sentence (ADR-011) — or, when the pointer is a footnote resolving a marked empty heading, at that heading line with the footnote's offsets at `evidence.footnote` (ADR-031) |
 | `omitted` | era/filer rules permit the absence (ADR-005) |
 | `missing` | expected, and we did not find it — an admission, not a silence |
 
@@ -78,8 +78,8 @@ and the Markdown rendering is derived on demand by `src/sec10k/tables.py`; and
 headings (item headings promoted), paragraphs (bold flagged), list items,
 tables, or one `pre` block for a txt-era filing — as `{kind, start, end, …}`
 records, from which `src/sec10k/markdown.py` derives the whole document or any
-item as Markdown (ADR-031). The inspector's *render as Markdown* box shows that
-view; `normalized_text` itself is never rewritten — ADR-031 §f2 measures what
+item as Markdown (ADR-032). The inspector's *render as Markdown* box shows that
+view; `normalized_text` itself is never rewritten — ADR-032 §f2 measures what
 that would have moved.
 
 ## Key design decisions

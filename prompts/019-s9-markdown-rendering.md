@@ -5,8 +5,8 @@ lists, emphasis where the HTML carries it, and the S7 tables" so the inspector
 and any consumer can re-render it, with an explicit ruling on the alternative
 the direction literally names: making `normalized_text` itself Markdown.
 Post-freeze, ADR first. Ruling:
-[ADR-031](../specs/decisions/ADR-031-block-structure-markdown-view.md).
-(Numbered 018: 016 and 017 were taken by the D2 and D3 records.)
+[ADR-032](../specs/decisions/ADR-032-block-structure-markdown-view.md).
+(Numbered 019 since the PR #45 merge: 016/017 were taken by the D2 and D3 records, and D4's record landed on main as 018 while this PR was in review — the same collision that renumbered the ADR from 031 to 032.)
 
 ## The prompt decisions that mattered
 
@@ -26,7 +26,7 @@ Post-freeze, ADR first. Ruling:
   re-derived — and only 1 of 71 text anchors broken, which is stated too,
   because Markdown leaves most prose alone and the refusal must not lean on a
   number it does not have. The annotation route moves zero offsets; that is
-  the ruling's evidence (ADR-031 §f2).
+  the ruling's evidence (ADR-032 §f2).
 - **Headings: what the HTML says, plus what the segmenter already knows —
   and nothing inferred.** The corpus census killed the obvious plan: the only
   `<hN>` tags in 34 HTML fixtures are 615 `<h5>Table of Contents</h5>`
@@ -46,7 +46,7 @@ Post-freeze, ADR first. Ruling:
   shape the human asked for.
 - **`<br>` is a block boundary like `<p>` — one rule, no special case** — and
   the case that pins it exists because the mutation that drops the rule left
-  every other case green (ADR-031 §g M9).
+  every other case green (ADR-032 §g M9).
 - **The inspector renders the Markdown it is given, not HTML it is handed.**
   A forty-line renderer for exactly the emitted subset (ATX headings,
   paragraphs, whole-paragraph `**strong**`, `- `/`1. `, GFM tables, fences),
@@ -58,7 +58,7 @@ Post-freeze, ADR first. Ruling:
   kind error and a boundary error read differently in the time series: strong
   never recorded is 48/61 blocks at 61/61 bounds; table blocks dropped is
   48/61 on both (re-measured 2026-08-24 for PR #45 R2 — the first write-up
-  carried 58-label numerators over 61; ADR-031 §g has the runner's lines).
+  carried 58-label numerators over 61; ADR-032 §g has the runner's lines).
 
 ## Assumption → Eval contradiction → Correction
 
@@ -140,4 +140,4 @@ Post-freeze, ADR first. Ruling:
 - **Eval said:** PR #45 R2 — the reviewer re-ran the mutations: 56/61 where
   53/61 was written, 31/61 where 28/61 was, 48/61 on both for M4.
 - **Corrected:** every mutation re-run on the final tree and only the
-  runner's lines written (ADR-031 §g); the PR #35 lesson in numeric form.
+  runner's lines written (ADR-032 §g); the PR #35 lesson in numeric form.

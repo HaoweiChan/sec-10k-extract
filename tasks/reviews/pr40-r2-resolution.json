@@ -1,0 +1,42 @@
+{
+ "pr": 40,
+ "round": 2,
+ "task": "debt-sweep-closed-rows",
+ "branch": "task/debt-sweep-closed-rows",
+ "review": "tasks/reviews/pr40-r2.json",
+ "resolved_by": "implementer",
+ "date": "2026-08-23",
+ "protocol": "Every figure re-derived at every commit that names one, including the four given in the routing message, rather than relayed. One command, run at each commit: git show <commit>:tasks/TODO.md | awk '/^## Open debt/{f=1} /^## Settled/{f=0} f' | grep -c '^| ' -- minus one for the header. Readings: c0c1958 89 (88 data rows), dc3f8f0 93 (92), ffaebbf 93 (92), 87dc322 96 (95), HEAD 96 (95). These match the routing message on all four of its figures; the artifacts were wrong, not the review.",
+ "scope": "tasks/TODO.md (one sentence in one row) + tasks/reviews/. Nothing under src/, specs/ or docs/. ADR-021's lead integer untouched, the newly-struck D3 row not swept, the original sweep not reopened.",
+ "findings": [
+  {
+   "id": "R3",
+   "severity": "MEDIUM",
+   "route": "repair",
+   "disposition": "ACCEPTED -- counts dropped where nothing consumes them, corrected where one is load-bearing",
+   "verification": "Re-derived before touching anything. pr40-r0-audit.json's base_drift published two different counts for the same file at the same commit -- it quoted the audit's 88 at c0c1958 and then 'corrected' it to 87 in the same sentence. The audit's 88 is the correct figure and the parenthetical was wrong on both numbers (87 for c0c1958, 91 for dc3f8f0; the tree reads 88 and 92). Same class confirmed in pr40-r1-resolution.json: table_integrity said 'unchanged at 91' where ffaebbf has 92, and the round-2 post_merge_note -- added specifically to fix a stale integer -- said 94 where 87dc322 has 95.",
+   "root_cause": "Mechanical and uniform: the count subtracted TWO rows, one for the header and one for the |---|---|--- separator. But the separator has no space after its first pipe, so the '^| ' pattern never matched it in the first place and only the header needed subtracting. Every count published from that method was exactly one low, which is why all four were wrong by the same amount. The routing message's figures were right.",
+   "repair": "Counts dropped rather than re-corrected wherever nothing consumes them. pr40-r1-resolution.json's table_integrity now states the invariant it was actually asserting -- both repairs rewrote rows in place, adding none and removing none -- with no absolute row count, which the PR #41 merge would have staled again anyway. The post_merge_note keeps its struck-row figure of 23 (correct, and load-bearing for the ledger row) and withdraws its row-count clause. base_drift keeps ONE count: the audit's own 88 at c0c1958, now re-derived and verified, with the derivation command published inline, the withdrawn figures named as withdrawn, and the off-by-one explained so the next reader does not repeat it.",
+   "why_not_just_fix_the_numbers": "The review offered both exits. Dropping was taken for every count that had no consumer, because the ledger row this PR added argues that an unguarded integer with no consumer rots -- and these four rotted twice inside one PR, the second time in the very note added to fix the first. Keeping the numbers correct-for-now would have re-armed the same trap. The one count kept is a dated quotation of what the audit was working from, is now verified, and ships with the command to re-derive it.",
+   "acceptance_met": "Yes -- one count per commit, not two; every surviving figure re-derived at the commit it names; the evidence a reader reaches through the middle column no longer miscounts."
+  },
+  {
+   "id": "R4",
+   "severity": "LOW",
+   "route": "repair",
+   "disposition": "ACCEPTED and repaired in place",
+   "verification": "Both sub-claims checked against the file. (1) Neither refused row is struck through: the PR #11 R22 row and the evals/bench._demo row both begin '| **' at tasks/TODO.md:60 and :62, not '| ~~', so neither is inside the 23 and neither can demonstrate anything about strike-throughs -- they carried an inline bold CLOSED marker only. (2) 'Five rows proposed for deletion' overstated by one: pr40-r0-audit.json's own proposal key says four to delete outright and one (the T13-mechanisms row) to trim, and rows[3].audit_proposed says 'trim'.",
+   "repair": "The sentence now attributes the refusals to the CLOSED MARKER only, says 'four to delete outright and one to trim' to match the artifact, and states outright that the two counterexamples are not among the 23 and why -- neither is struck through, so a reader hunting for them in the struck population will not find them. It also stops overclaiming: what the two rows establish is that an inline CLOSED needs checking, and whether a struck-through title is any safer is named as the open question for the next pass rather than assumed either way.",
+   "acceptance_met": "Yes -- the row and pr40-r0-audit.json now agree on what was proposed, and the row no longer presents unstruck rows as evidence about struck ones."
+  }
+ ],
+ "kept_from_round_2": "Unchanged, as instructed: the struck-row count stays pinned to a named commit (87dc322) with its derivation command published in the row, and the D3 row stays excluded from the unverified population rather than absorbed into it.",
+ "table_integrity": "check_ledger_table_shape's own rule re-run after the rewrite: 0 failures, 0 escaped pipe sequences. Struck rows still 23 (grep -c '^| ~~' tasks/TODO.md). Debt row count unchanged -- the repair rewrote one sentence inside one existing row and added no rows.",
+ "gate": {
+  "invariant": "50/50 = 1.000",
+  "fast": "98/98 = 1.000",
+  "table_fidelity": "cells 1.0000 (400/400), rows 1.0000 (31/31)",
+  "baseline": "1.000, not moved; .eval-baseline.json untouched",
+  "hook": "pre-commit gate ran on the commit; no --no-verify"
+ }
+}

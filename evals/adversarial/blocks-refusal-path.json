@@ -27,5 +27,5 @@
       }
     ]
   },
-  "provenance": "ADR-031 §b5, as tables-refusal-path states ADR-029 §b3: an `unsupported` envelope (a 10-Q) still carries the `blocks` and `tables` lists when asked — the structure was recorded during normalization, before the refusal was decided — and no items, so no heading is promoted; nothing when not asked. Band 250-400 around the 304 blocks (272 paragraphs + 32 tables) measured at HEAD."
+  "provenance": "ADR-032 §b5, as tables-refusal-path states ADR-029 §b3: an `unsupported` envelope (a 10-Q) still carries the `blocks` and `tables` lists when asked — the structure was recorded during normalization, before the refusal was decided — and no items, so no heading is promoted; nothing when not asked. Band 250-400 around the 304 blocks (272 paragraphs + 32 tables) measured at HEAD."
 }

@@ -1,0 +1,34 @@
+{
+ "pr": 42,
+ "round": 2,
+ "date": "2026-08-23",
+ "result": "APPROVED",
+ "scope": "repair diff 3c7db31..f841f5d + standing R1-R4",
+ "gate": "invariant 51/51; fast 99/99 (+3 debt); table fidelity 400/400 · 31/31; test_eval_adapter 19/19; self-checks ok; --check-docs 68/0; repair diff = eval_adapter.py + test_eval_adapter.py only",
+ "standing": {
+  "R1": "resolved — evidence key refused on non-span checks (failing-check string), honoured on the four span checks; ±1 / dropped / PARA_END_RE / resolution-removed / empty-body-guard-removed all red as claimed",
+  "R2": "debt + in place verified (empty-body conjunct gate-pinned; marker/named-code by _demo only)",
+  "R3": "debt + in place (§i sub-item refs; regex unchanged with reason)",
+  "R4": "debt + in place (§i near-empty validator not built)"
+ },
+ "findings": [
+  {
+   "id": "R5",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "The published check count is off by one: the case has 25 checks (20 added over the original 5), but the repair writes '26 checks' / 'twenty-one added' / '21 added' in three places.",
+   "evidence": "evals/adversarial/ba-2003-asterisk-ibr.json expect.checks length = 25 (5 at 1343bf8, 19 at 3c7db31, +7 -1 in f841f5d); vs specs/decisions/ADR-031-footnote-marker-ibr.md §h 'The case now pins (26 checks; the original five kept, twenty-one added)', tasks/TODO.md D4 row '26 checks (21 added; …', tasks/reviews/pr42-r1-resolution.json R1.fix '26 checks total' and covered_by '26 checks'.",
+   "repro": "for r in 1343bf8 3c7db31 HEAD; do git show \"${r}:evals/adversarial/ba-2003-asterisk-ibr.json\" | python3 -c \"import json,sys;print(len(json.load(sys.stdin)['expect']['checks']))\"; done  # 5, 19, 25",
+   "acceptance": "ADR-031 §h, the D4 ledger row and pr42-r1-resolution.json read 25 checks / twenty added (or the case gains the 26th check they describe)."
+  },
+  {
+   "id": "R6",
+   "severity": "LOW",
+   "route": "debt",
+   "claim": "ADR-031 §d's 'every other check type REFUSES it loudly' is not true for `table` checks: run_case routes `type: table` to table_fidelity, bypassing eval_check, so an `evidence` key on a table check is silently ignored.",
+   "evidence": "src/sec10k/eval_adapter.py:537-543 — `if chk['type'] == 'table': table_fidelity(result, chk)` else eval_check; the refusal lives only inside eval_check (:67-68). No committed case carries evidence on a table check, so no gate impact today.",
+   "repro": "python3 -B -c \"import sys;sys.path.insert(0,'.');from src.sec10k.eval_adapter import table_fidelity;print('evidence' in table_fidelity.__code__.co_names)\"  # False",
+   "acceptance": "Either run_case refuses `evidence` on table checks (or eval_check is the single dispatch point) or ADR-031 §d scopes the refusal claim to eval_check-dispatched types."
+  }
+ ]
+}

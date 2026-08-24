@@ -45,7 +45,7 @@ def build_view(result, display_max=DISPLAY_MAX):
     [start:end]`, so only the render point gets one; `display_text` is
     absent whenever it would be identical to `text`.
 
-    S9 (ADR-031): the envelope carries a `blocks` key exactly when the caller
+    S9 (ADR-032): the envelope carries a `blocks` key exactly when the caller
     passed `blocks=True`, and then `display_text` is the item's derived
     Markdown — `markdown.to_markdown` over the blocks clipped to the item's
     span, rendered from the first `display_max` characters of the span so
@@ -211,7 +211,7 @@ def _demo():
     one = build_view(dict(plain, boilerplate=spans[:1]))
     assert "display_text" in one["items"][0] and "display_text" not in one["items"][1]
 
-    # S9: the same envelope plus ADR-031's `blocks` (+ `tables`) key renders
+    # S9: the same envelope plus ADR-032's `blocks` (+ `tables`) key renders
     # the item as Markdown — derived from the blocks clipped to the span,
     # `text` still the verbatim slice, offsets and chars untouched.
     from src.sec10k.normalize import normalize

@@ -73,7 +73,7 @@ class _Plain(HTMLParser):
     here; `_tidy` moves them along with the text it rewrites.
 
     With `blocks=True` (implies tables) it also records, in the same pass,
-    the BLOCK STRUCTURE (ADR-031): one record per run of text between two
+    the BLOCK STRUCTURE (ADR-032): one record per run of text between two
     block-tag boundaries outside any <table> — `{kind, start, end}` with
     kind `heading` (+`level`, from <h1>–<h6> only), `list_item` (+`ordered`,
     inside <li>), else `paragraph`; `strong: true` when every character of
@@ -101,7 +101,7 @@ class _Plain(HTMLParser):
         self.parts.append(s)
         self.pos += len(s)
 
-    # --- block recording (ADR-031 §b). A block opens on the first visible
+    # --- block recording (ADR-032 §b). A block opens on the first visible
     # data after a block-tag boundary (outside any table) and closes at the
     # next boundary; its kind is fixed when it opens.
     def _blk_close(self):
@@ -358,7 +358,7 @@ def normalize(body, era, tables=False, blocks=False):
     `text`, document order. The txt era has no HTML tables (its SGML
     <TABLE>/<S>/<C> layout is ruled out, ADR-029 §e) so it answers `[]`.
     `blocks` is None unless asked for (asking implies `tables`), else the
-    ADR-031 block records — `{kind, start, end, ...}` in document order,
+    ADR-032 block records — `{kind, start, end, ...}` in document order,
     non-overlapping; the txt era is one `pre` block over the whole text. The
     text is the same string whether or not either is asked for — by
     construction, not by care: the recorders never emit, and `_tidy` edits
@@ -468,14 +468,14 @@ def select_and_normalize(raw, tables=False, blocks=False):
 
     meta.form_type is None when nothing identified the form — the caller
     turns that into `unsupported`; this function never decides doc_status.
-    `tables` / `blocks` are None unless asked for (ADR-029 / ADR-031,
+    `tables` / `blocks` are None unless asked for (ADR-029 / ADR-032,
     opt-in): asking changes nothing else in the return value.
     """
     warnings = []
-    # `docs`, not `blocks`: the parameter of that name is ADR-031's flag, and
+    # `docs`, not `blocks`: the parameter of that name is ADR-032's flag, and
     # the <DOCUMENT> list shadowing it is the S7 `found` collision again —
     # an SGML-wrapped filing got the annotation unasked, a primary .htm never
-    # got it (ADR-031 §g, pinned by blocks-offsets-invariant on both shapes)
+    # got it (ADR-032 §g, pinned by blocks-offsets-invariant on both shapes)
     docs = split_documents(raw)
     chosen = next((b for b in docs if b["type"] in ACCEPTED_FORMS), None)
 

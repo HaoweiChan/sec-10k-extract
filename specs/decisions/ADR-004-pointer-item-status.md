@@ -1,6 +1,8 @@
 # ADR-004 — Status semantics for pointer-shaped items
 
-Date: 2026-08-15. Status: accepted. Amended by: ADR-017.
+Date: 2026-08-15. Status: accepted. Amended by: ADR-017, ADR-031 (in place
+2026-08-23: a pointer may sit in a footnote outside the item's body — see the
+note under Decision).
 
 **Ruling**: `incorporated_by_reference` is reserved for bodies that are solely a pointer to a *different* document; an internal same-document pointer, or a mixed body with substantive prose, stays `extracted`.
 **Because**: the extractor reports what the filing labels, verbatim — resolving internal pointers or judging mixed content is not v1's job.
@@ -41,6 +43,14 @@ did not disambiguate:
   Resolving internal pointers to capture the real content is a candidate
   A-level enhancement requiring its own ADR.
 - Shape 3 is `extracted` (the pointer sentence rides along inside the span).
+- *Amended 2026-08-23 (ADR-031, D4): the shape-1 pointer may also live OUTSIDE
+  the item's body — a heading whose line ends in an asterisk run over an EMPTY
+  body, resolved by a footnote anywhere in the document that begins with the
+  same run, names that item's code and names a different document (ba-2003
+  items 11/13: "* Certain information required by Items 5, 10, 11, 13 and 14
+  is incorporated herein by reference to the registrant's definitive proxy
+  statement"). Same external-document test, same two signals; a marked heading
+  over a substantive body stays shape 3 (ba-2003 items 5/10).*
 - **Pointer-only mixed bodies** (audit follow-up): an item whose body consists
   solely of pointers with no substantive standalone content takes IBR if any
   pointer names a different document (Textron Item 10: one proxy-IBR sentence

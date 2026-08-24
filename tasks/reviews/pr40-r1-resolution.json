@@ -1,0 +1,43 @@
+{
+ "pr": 40,
+ "round": 1,
+ "task": "debt-sweep-closed-rows",
+ "branch": "task/debt-sweep-closed-rows",
+ "review": "tasks/reviews/pr40-r1.json",
+ "resolved_by": "implementer",
+ "date": "2026-08-23",
+ "protocol": "Both findings re-verified against the committed files before anything was rewritten, per the review's own instruction not to trust its summary. R1's repro was re-run first and is pasted below; the reviewer's reading is correct and the original row was wrong. Scope held to tasks/TODO.md + tasks/reviews/ -- ADR-021's lead integer was NOT touched, since it belongs to whoever picks up the row.",
+ "sweep_not_reopened": "The three deletions and the two refusals are settled and were not revisited. Both repairs are confined to prose inside the two debt rows this PR adds, plus one new artifact.",
+ "findings": [
+  {
+   "id": "R1",
+   "severity": "MEDIUM",
+   "route": "repair",
+   "disposition": "ACCEPTED and repaired in place",
+   "verification": "Re-ran the review's repro rather than trusting its quotation. awk 'NR>=374 && NR<=384' specs/decisions/ADR-021-benchmark-instrument.md shows the sentence spans :377-383 and its parenthetical at :379 reads '**26 after D2**, same day: +13 dated entries each naming the value that superseded it, -7 that no longer sat beside a fixture name or whose ledger row had moved to DONE.md'. len(DOC_ALLOW) is 26. SSb12's amendment at :408-410 independently records 'gained 13 entries ... and lost 7', so 20 + 13 - 7 = 26 reconciles twice over. The reviewer is right: the count WAS moved, and the row's claim that 'the prose count was not moved with them' was a mis-reading of the file the row cites.",
+   "repair": "Row retitled 'ADR-021's DOC_ALLOW sentence contradicts itself: it opens on 20 and its own parenthetical says 26'. The body now states the actual defect -- the LEAD integer at :377 disagrees with the corrected count in its own parenthetical at :379, so the sentence reads 20 or 26 depending on where the reader stops -- and credits the ADR with having moved the count. The 'was not moved' claim is gone. The correction is dated in the row itself and names its own irony, since the row exists to document exactly this class.",
+   "not_done_deliberately": "ADR-021:377's lead integer is left as-is. The review's binding puts specs/ out of scope for this PR, and the row now names the fix for whoever takes it.",
+   "acceptance_met": "Yes -- the row states what is actually wrong (lead integer at :377 vs parenthetical at :379) and drops the claim that the count was never moved."
+  },
+  {
+   "id": "R2",
+   "severity": "LOW",
+   "route": "repair",
+   "disposition": "ACCEPTED, stronger exit taken -- the audit is now a committed artifact",
+   "verification": "Confirmed the citation did not resolve: nothing under tasks/reviews/ referenced PR #40 or this sweep at ffaebbf. Confirmed the preamble the review cites, tasks/TODO.md:47-48, does require every debt row to be visible in a committed eval case or ADR section, never only in the ledger. The row's other two claims re-checked and stand: grep -c '^| ~~' tasks/TODO.md -> 22, and the duplicate 'repo_hygiene is listed and served as a filing fixture' titles sit at :127 (struck, promoted to D1) and :130 (open).",
+   "repair": "Committed tasks/reviews/pr40-r0-audit.json and pointed the row's middle column at it. The artifact records, per row: what the audit proposed, what closure it claimed, what was checked against what, a runnable repro, and the outcome -- with the two mis-scored rows marked AUDIT MIS-SCORED explicitly (PR #11 R22 / axp-2008, and bench._demo / DOC_ALLOW). It also carries the base-drift note (the audit's line numbers were read at c0c1958; origin/main was dc3f8f0 by implementation time, so rows were located by text), the 5-proposed / 3-acted / 2-refused result, and the reusable failure mode.",
+   "reusable_failure_mode_recorded": "In both mis-scored rows the CLOSED marker covered SUB-PARTS while the row's TITLE named the part still open, and the row's own body said so a few hundred characters later ('but (3) stays open', '-- open: the durable fix'). A scan that stops at the bold CLOSED reads either row as settled. Rule recorded in the artifact: a struck-through title and the word CLOSED are not evidence; read the row to its end, then check the artifact it names against the thing it claims closed it. Secondary signal recorded: both refusals were the rows whose titles state a defect in the present tense.",
+   "acceptance_met": "Yes -- the five-row audit is committed under tasks/reviews/ and the row names the file, so a reader following the middle column finds the evidence."
+  }
+ ],
+ "table_integrity": "check_ledger_table_shape's own rule re-run over tasks/TODO.md after both rewrites: 0 failures (naive pipe count per row against the header, no pipe inside any code span), and 0 escaped pipe sequences anywhere in the file. Both repairs rewrote existing rows in place, adding none and removing none -- the invariant that matters here, stated without an absolute row count, which nothing consumes and which the PR #41 merge would have staled anyway (PR #40 R3).",
+ "gate": {
+  "invariant": "49/49 = 1.000",
+  "fast": "97/97 = 1.000",
+  "table_fidelity": "cells 1.0000 (400/400), rows 1.0000 (31/31)",
+  "baseline": "1.000, not moved; .eval-baseline.json untouched",
+  "hook": "pre-commit gate ran on the commit; no --no-verify"
+ },
+ "diff_scope": "tasks/TODO.md (2 rows rewritten in place), tasks/reviews/pr40-r0-audit.json (new), tasks/reviews/pr40-r1-resolution.json (new), evals/report/history.jsonl (runner append). Nothing under src/, evals/ (other than the runner's own log), specs/ or docs/.",
+ "post_merge_note": "The two counts recorded above were read BEFORE origin/main was merged into this branch and are left as the dated record of what round 1 actually verified, not rewritten. On the merged tree at 87dc322 they read differently: PR #41 landed D3 (the non-last-span dominance validator, item_dominates / ITEM_MAX 0.55, ADR-030), which struck one of the rows R2's population counts -- so grep -c for a struck row now answers 23, not 22. The row itself was re-derived and rewritten in the follow-up commit; it now pins the count to a named commit, publishes the command to re-derive it, and separates the D3 row (closed by a merged PR with its own review trace, ADR and shipped code) from the 22 rows closed only by an unverified marker. The falsification is itself the argument the row makes: a bare integer in a ledger row has no mechanical guard. (Revised 2026-08-23, PR #40 R3: this note originally also gave a debt-table row count, which was one low. The struck-row figure of 23 was and is correct; the row-count clause is withdrawn rather than corrected, since nothing consumes it.)"
+}

@@ -99,7 +99,7 @@ def _run(path: str, source: dict, raw: bytes = None,
     all three input modes converge, so it is the one place it is passed on.
     It changes nothing in the envelope except adding the `boilerplate` spans;
     build_view is what turns those into a stripped PANE (S8). `markdown` is
-    ADR-031's, the same way: `blocks=True` adds the `blocks` (+ `tables`)
+    ADR-032's, the same way: `blocks=True` adds the `blocks` (+ `tables`)
     annotation and build_view renders the pane from it (S9).
     """
     try:

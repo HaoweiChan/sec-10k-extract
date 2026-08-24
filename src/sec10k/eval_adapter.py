@@ -4,7 +4,7 @@ Case shape:
     "input":  {"path": "evals/fixtures/<name>/<file>",
                "exclude_boilerplate": false,   # optional, ADR-026
                "tables": false,                # optional, ADR-029
-               "blocks": false}                # optional, ADR-031 (implies tables)
+               "blocks": false}                # optional, ADR-032 (implies tables)
     "expect": {"checks": [{"type": ..., ...}, ...]}
 """
 from pathlib import Path
@@ -34,6 +34,11 @@ METHODS = {"heading_strict", "heading_lenient", "status_keyword", "llm_fallback"
 # at the pointer paragraph — real, inspectable text — so every span-level check
 # must reach it. `missing`/`omitted` have no span by definition.
 SPAN_STATUSES = {"extracted", "incorporated_by_reference"}
+# check types that read an item's offsets, and so may be pointed at an offsets
+# pair the item publishes under evidence[<key>] instead (ADR-031: `footnote`).
+# Any other check type REFUSES an "evidence" key — a silently ignored key is a
+# check that cannot fail (PR #42 R1).
+EVIDENCE_CHECKS = {"text_contains", "text_not_contains", "min_chars", "max_chars"}
 NO_EMPTY_SUCCESS_FLOOR = 1000  # provisional floor — narrows (not closes) the one-good-item hole
 # fields that determinism actually governs — timings/cost/trace/meta legitimately vary
 # run to run (wall-clock, run-local trace ids) on an honest, correct pipeline
@@ -57,6 +62,19 @@ def eval_check(result, chk, path=None):
     extracted = [i for i in result.get("items", []) if i["status"] == "extracted"]
     spanned = [i for i in result.get("items", []) if i["status"] in SPAN_STATUSES]
     has_span = entry is not None and entry["status"] in SPAN_STATUSES
+    if "evidence" in chk:
+        # ADR-031 / PR #42 R1: resolve (item, evidence key) -> offsets ONCE, and
+        # let the span-reading checks below run on that slice unchanged. The
+        # key must exist; a check type that does not read spans refuses it.
+        if t not in EVIDENCE_CHECKS:
+            return f"check type {t!r} does not read 'evidence' — key refused"
+        if entry is None:
+            return f"item {chk['item']} not in output"
+        ev = (entry.get("evidence") or {}).get(chk["evidence"])
+        if not ev:
+            return f"item {chk['item']} has no evidence span {chk['evidence']!r}"
+        entry = {**entry, "start": ev["start"], "end": ev["end"], "status": "extracted"}
+        has_span = True
 
     if t == "item_present":
         if entry is None or entry["status"] != chk.get("status", "extracted"):
@@ -167,7 +185,7 @@ def eval_check(result, chk, path=None):
         top = {"normalized_text", "doc_status", "warnings", "meta", "trace",
                "timings", "cost", "items"}
         # the three optional keys: ADR-026's `boilerplate`, ADR-029's
-        # `tables`, ADR-031's `blocks`
+        # `tables`, ADR-032's `blocks`
         extra = set(result) - top - {"boilerplate", "tables", "blocks"}
         if not top <= set(result) or extra:
             return f"envelope keys: missing {sorted(top - set(result))}, undeclared {sorted(extra)}"
@@ -180,7 +198,7 @@ def eval_check(result, chk, path=None):
             if why:
                 return f"tables not in contract shape: {why}"
         if "blocks" in result:
-            # ADR-031 contract shape, same reasoning; `blocks` implies `tables`
+            # ADR-032 contract shape, same reasoning; `blocks` implies `tables`
             why = _blocks_shape(result)
             if why:
                 return f"blocks not in contract shape: {why}"
@@ -425,7 +443,7 @@ def eval_check(result, chk, path=None):
         if not isinstance(on.get("tables"), list):
             return "tables ON emitted no tables list"
     elif t == "blocks":
-        # ADR-031 §c. A hand-labeled block sequence over the window the labels
+        # ADR-032 §c. A hand-labeled block sequence over the window the labels
         # span: `blocks` is what the envelope's annotation must hold there —
         # kind, start, end, and level/ordered/strong/item exactly as labeled
         # (a table block's record index is not labeled; its record is checked
@@ -484,7 +502,7 @@ def eval_check(result, chk, path=None):
                 return (f"{'stripped ' if omit else ''}markdown still contains {v!r} "
                         f"({got.count(v)}x)")
     elif t == "blocks_sane":
-        # ADR-031 §d: in bounds, document order, non-overlapping, every slice
+        # ADR-032 §d: in bounds, document order, non-overlapping, every slice
         # tight, every kind in the enum, a table block sitting exactly on its
         # record, a heading carrying a level, and — the view loses nothing —
         # every non-space character of normalized_text inside some block.
@@ -518,7 +536,7 @@ def eval_check(result, chk, path=None):
         if "max" in chk and len(result["blocks"]) > chk["max"]:
             return f"{len(result['blocks'])} blocks > max {chk['max']}"
     elif t == "offsets_invariant_under_blocks":
-        # ADR-031's equality, as ADR-026/029 state theirs: the same file both
+        # ADR-032's equality, as ADR-026/029 state theirs: the same file both
         # ways, DETERMINISM_FIELDS identical, the key on exactly one side —
         # and `blocks` implies `tables`, so that key rides along.
         from src.sec10k.extract import extract_items
@@ -541,7 +559,7 @@ BLOCK_LABEL_KEYS = {"kind", "start", "end", "level", "ordered", "strong", "item"
 
 
 def _blocks_shape(result):
-    """None if `result['blocks']` is in ADR-031's contract shape, else why."""
+    """None if `result['blocks']` is in ADR-032's contract shape, else why."""
     blocks = result["blocks"]
     if not isinstance(blocks, list):
         return f"blocks is {type(blocks).__name__}, not a list"
@@ -582,7 +600,7 @@ def structure_fidelity(result, chk):
     larger count — kind agreement on top of boundaries. An envelope without
     blocks scores 0 over the labeled counts. Exact match of the whole
     sequence is the pass condition; the fractions are the per-run metric
-    (ADR-031 §c), so a partial miss is measured, not only declared.
+    (ADR-032 §c), so a partial miss is measured, not only declared.
     """
     want = [{k: v for k, v in b.items() if k in BLOCK_LABEL_KEYS} for b in chk["blocks"]]
     zero = {"blocks": (0, len(want)), "bounds": (0, len(want)), "why": None}
@@ -705,7 +723,7 @@ def run_case(case):
 
     failures = []
     # ADR-029 §c: every `table` check's cell/row counts, summed for the run;
-    # ADR-031 §c: every `blocks` check's block/bounds counts, the same way
+    # ADR-032 §c: every `blocks` check's block/bounds counts, the same way
     cells, rows, blks, bnds = [0, 0], [0, 0], [0, 0], [0, 0]
     for chk in case["expect"]["checks"]:
         if chk["type"] == "table":
