@@ -102,8 +102,8 @@ def _demo():
             "<table><tr><td>a</td><td>b</td></tr></table>"
             "<p>- looks like a bullet</p><p>1. looks ordered</p><p>| pipe</p>"
             "<p>tail<br>after br</p><p> </p>text outside any tag</body></html>")
-    text, tabs, blocks = normalize(html, "html", blocks=True)
-    assert normalize(html, "html") == (text, None, None)                     # identical text
+    text, tabs, blocks, _ = normalize(html, "html", blocks=True)
+    assert normalize(html, "html") == (text, None, None, None)               # identical text
     assert normalize(html, "html", tables=True)[:2] == (text, tabs)          # blocks imply tables
     kinds = [(b["kind"], text[b["start"]:b["end"]]) for b in blocks]
     assert kinds == [("heading", "Title x"), ("paragraph", "Plain *para* with_under and #tag."),
@@ -148,18 +148,18 @@ def _demo():
     assert "Half" in part and "Half bold" not in part, part
     chrome_html = ("<p>Prose.</p><table><tr><td>ACME 10-K</td><td>7</td></tr>"
                    "<tr><td>x</td><td>y</td></tr></table><p>More.</p>")
-    ct, ctabs, cblocks = normalize(chrome_html, "html", blocks=True)
+    ct, ctabs, cblocks, _ = normalize(chrome_html, "html", blocks=True)
     run = [{"start": ct.index("ACME"), "end": ct.index("7") + 1, "kind": "running_head"}]
     assert to_markdown(ct, cblocks, ctabs, omit=run) == "Prose.\n\n| x | y |\n|---|---|\n\nMore.", \
         to_markdown(ct, cblocks, ctabs, omit=run)
     assert "ACME 10-K" in to_markdown(ct, cblocks, ctabs)          # the record itself is untouched
     # ...and a table whose only text was chrome vanishes with it
     only = ("<p>A</p><table><tr><td>ACME 10-K</td><td>7</td></tr></table><p>B</p>")
-    ot, otabs, oblocks = normalize(only, "html", blocks=True)
+    ot, otabs, oblocks, _ = normalize(only, "html", blocks=True)
     orun = [{"start": ot.index("ACME"), "end": ot.index("7") + 1, "kind": "running_head"}]
     assert to_markdown(ot, oblocks, otabs, omit=orun) == "A\n\nB"
     # txt era: one pre block, fenced longer than any backtick run inside
-    t2, _, b2 = normalize("Item 1.  Business\n   fixed ``` width\n", "txt", blocks=True)
+    t2, _, b2, _ = normalize("Item 1.  Business\n   fixed ``` width\n", "txt", blocks=True)
     assert b2 == [{"kind": "pre", "start": 0, "end": len(t2)}], b2
     assert to_markdown(t2, b2, []) == "````\n" + t2 + "\n````"
     assert to_markdown(t2, b2, [], 0, 7) == "```\nItem 1.\n```"          # an item's window

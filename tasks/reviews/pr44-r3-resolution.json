@@ -1,0 +1,72 @@
+{
+  "pr": 44,
+  "task": "S10",
+  "round": 3,
+  "date": "2026-08-24",
+  "branch": "task/S10",
+  "reviewed_head": "3b0ee45",
+  "repaired_from": "567b8eb",
+  "note": "Bounded round, human-authorized after the circuit breaker fired. Scope honoured: prose plus two _demo pins, no behaviour change. Every hunk in src/sec10k/normalize.py is inside _demo (def at :466) — verified with git diff -U0, which reports five hunks, all attributed to _demo. No other source file is touched: in_table, the annotation code, the eval cases' labels and R7/R9/R10/R11/R12 were left alone.",
+  "gate_after": {
+    "invariant": "52/52 = 1.000",
+    "fast": "105/105 = 1.000",
+    "table_fidelity": "cells 427/427 = 1.0, rows 34/34 = 1.0",
+    "baseline": "untouched",
+    "byte_identity": "evals/snapshot.py vs origin/main c13aa5c: dev 19168a6e...30e9223a, heldout 51de5a11...04957f3f, cmp equal",
+    "self_checks": "normalize / tables / test_eval_adapter (20/20) / snapshot --self-check all ok",
+    "run_by": "implementer, on the repaired tree"
+  },
+  "both_findings_reproduced_before_repair": true,
+  "resolutions": [
+    {
+      "id": "R8",
+      "disposition": "fixed",
+      "summary": "The mechanism narrative is DELETED, not rewritten to a fourth version, per the human's instruction. ADR-033 §b2a now states one thing as the rule -- `span.start <= offset < span.end`, half-open, cells and tables alike -- and says explicitly that no summary of its consequences appears there because three have been written and three have been false. Two facts follow as WHY the comparison must be applied rather than predicted (an <img> emits nothing; spans are tightened to visible characters and empty cells clamped), and then the section stops. What used to be a five-row rule table is now labelled 'Measured instances -- not a taxonomy and not exhaustive', each row a shape the rule was wrongly generalized from, with separate CELL and TABLE columns so no row can say a bare 'outside' again.",
+      "reproduction": "Confirmed exactly. `<td><font>/s/</font><img src=sig.jpg><font>Darren W. Woods</font></td>` -> image offset 12, cell (9, 27): inside its own cell, and the cell's text begins at 9, not at the mark. Both 'only when that span's own visible text begins exactly at the mark' and 'The only shape that is' are false on it.",
+      "changes": [
+        "specs/decisions/ADR-033-image-reference-annotation.md §b2a rewritten in full; the ':102 only when' sentence and ':109 The only shape that is' are gone, and every instance row now names the cell answer and the table answer separately (the ':110 bare outside' complaint)",
+        "specs/001-sec10k-contract.md: the mirrored wording replaced by the same one comparison, plus the text-empty-table case; the 'all five positions' claim dropped",
+        "specs/decisions/ADR-033 §g: 'all five positions ... only one of which lands inside its own cell' replaced with a reference to §b2a's instance table",
+        "evals/adversarial/images-in-table-cell.json: the falsified sentence 'So an image in a cell that carries text does land inside that cell' REMOVED, together with the 'entirely the second case' tally in the same paragraph; the replacement states the comparison and the 6/4 split",
+        "src/sec10k/normalize.py::_demo: the narrative comment deleted and replaced by the comparison plus measured answers; the mid-cell shape `<td><font>/s/</font><img><font>name</font></td>` added"
+      ],
+      "red_first": {
+        "command": "python3 -m src.sec10k.normalize  (with §b2a:102's committed wording asserted as `moff == mcell[0]` on the mid-cell shape, before the rewrite)",
+        "observed": "AssertionError: ([4, 22], 7) -- the image is at 7 inside cell (4, 22), so it IS inside, and the mark is NOT the cell start",
+        "after": "the pin asserts `mcell[0] < moff < mcell[1]` (strictly between) and [normalize self-check] ok"
+      },
+      "pin_is_load_bearing": "Mutation-proved rather than asserted. Rewriting the pin to round 3's wording (`moff == mcell[0]`) -> AssertionError ([4, 22], 7); to round 2's wording (`moff == mcell[1]`) -> AssertionError ([4, 22], 7). Both previously-committed characterizations are now red against this shape.",
+      "structural_change_requested_by_the_reviewer": "The round-3 artifact's structural_observation was that each _demo was built from the example that produced the wording, so it confirmed the sentence instead of testing it. What changed: _demo no longer asserts any rule. It applies the one comparison and records the measured answer per shape, and the two shapes that falsified previous wordings are among them. There is no sentence left in the ADR for a future demo to confirm."
+    },
+    {
+      "id": "R13",
+      "disposition": "fixed",
+      "summary": "'The corpus is entirely the fourth case' is deleted. §b2a now carries a two-row split table of what actually happens, and the instance table gains the wholly-text-empty-table outcome the enumeration omitted.",
+      "reproduction": "Confirmed, and independently re-derived per image rather than taken from the finding. A tag-depth scan over the four fixtures with in-table images classifies all 10: leading-row clamp (a record starts exactly +2 after the image) for ba-2003 50321, bac-2006 391006 x2 and xom-2021 232186 x3 = 6 of 10; NO table record enclosing or following the image at all for cvx-2015 133962 / 137973 / 145599 / 166482 = 4 of 10. Zero fall into any other outcome. Nearest records to 133962 are (127392, 128503) and (145616, 145697), matching the finding.",
+      "the_split_as_published": "6 of 10 leading-row clamp (ba-2003 1, bac-2006 2, xom-2021 3), a record exists starting 2 characters after the image; 4 of 10 cvx-2015, whose enclosing <table> has no visible text anywhere in it and is dropped entirely by ADR-029 §b1, so no span exists for the comparison to be applied to. '0 of 53 offsets inside any recorded span' is unchanged and still true -- what was wrong was the single reason given for it.",
+      "changes": [
+        "specs/decisions/ADR-033 §b2a: the 'entirely' sentence replaced by the two-row split table with counts and the nearest-record numbers",
+        "specs/decisions/ADR-033 §b2a instance table: a row for an <img> in a wholly text-empty <table> -- no record exists, so there is no span to compare against, while the offset is still emitted",
+        "specs/001-sec10k-contract.md: names the text-empty-table case",
+        "evals/adversarial/images-in-table-cell.json: 'The corpus is entirely the second case' removed; the same 6/4 split published; the sentence claiming cvx-2015 is merely a bigger version of the xom shape corrected to say why it is a DIFFERENT outcome",
+        "src/sec10k/normalize.py::_demo: the text-empty-table pin"
+      ],
+      "red_first": {
+        "command": "python3 -m src.sec10k.normalize  (with §b2a:115's premise asserted as `assert etabs` -- an in-table image always has a table record -- before the rewrite)",
+        "observed": "AssertionError: ([], [{'offset': 2, 'src': 'only.jpg', 'alt': None, 'width': None, 'height': None}]) -- zero table records, and the image offset still emitted",
+        "after": "the pin asserts `etabs == [] and [i['src'] for i in eimgs] == ['only.jpg']` and [normalize self-check] ok"
+      },
+      "pin_is_load_bearing": "Mutation-proved. Claiming a record is emitted (`assert etabs != []`) -> AssertionError ([], [...only.jpg...]); claiming the image is dropped with the table (`eimgs == []`) -> the same. So a future 'the corpus is entirely case N' premise about cvx-2015 goes red, which is what the acceptance asked for."
+    }
+  ],
+  "rejected": [],
+  "debt_rows_added": [],
+  "files_touched_this_round": [
+    "specs/decisions/ADR-033-image-reference-annotation.md (§b2a rewritten: rule = one comparison, narrative deleted, instance table with separate cell/table columns + the text-empty-table row, corpus split 6/4; §g's 'all five positions')",
+    "specs/001-sec10k-contract.md (mirrored wording replaced; 'all five positions' dropped)",
+    "evals/adversarial/images-in-table-cell.json (provenance: falsified sentence and 'entirely the second case' removed, 6/4 split published)",
+    "src/sec10k/normalize.py (_demo only: narrative comment deleted, mid-cell pin, text-empty-table pin)",
+    "evals/report/history.jsonl",
+    "tasks/reviews/pr44-r3-resolution.json (this file)"
+  ]
+}

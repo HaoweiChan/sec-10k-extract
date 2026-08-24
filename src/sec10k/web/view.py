@@ -218,7 +218,7 @@ def _demo():
     html = ("<html><body><p>ACME 10-K</p><p>Item 1. Business</p><p>real <b>prose</b></p>"
             "<table><tr><td>a</td><td>b</td></tr></table>"
             "<p>ACME 10-K</p><p>Item 7. MD&amp;A</p><p>more prose</p></body></html>")
-    ntext, tabs, blks = normalize(html, "html", blocks=True)
+    ntext, tabs, blks, _ = normalize(html, "html", blocks=True)
     i7 = ntext.index("Item 7.")
     env2 = {"normalized_text": ntext, "tables": tabs, "blocks": blks, "items": [
         {"item": "1", "status": "extracted", "start": ntext.index("Item 1."), "end": i7 - len("ACME 10-K\n\n")},
