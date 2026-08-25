@@ -129,7 +129,7 @@ assert hashlib.sha256(norm).hexdigest() == run["norm_sha256"]       # step 3
 
 text = norm.decode("utf-8")
 item = next(i for i in run["items"] if i["item"] == "1")
-assert text[item["start"]:item["end"]] == item["text"]              # step 4
+assert text[item["start"]:item["end"]][:len(item["text"])] == item["text"]   # step 4
 print("item 1 reproduced:", item["end"] - item["start"], "chars")
 ```
 

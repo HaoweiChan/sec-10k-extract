@@ -83,3 +83,44 @@ would obviously close it, which is the only interesting constraint in it.
   another element for the S3 layout cases to agree about, bought for a reader
   the gap did not name. Logged as debt with the trigger written down — the
   next time the compare pane changes for another reason.
+
+## Round 1 repair (PR #54) — the pin named the variable, not the value
+
+The reviewer falsified the central claim of the whole PR with a one-character
+mutation. `WIRE_NORMALIZED` pinned `return Response(content=norm, …)` and
+`hashlib.sha256(norm).hexdigest()`, both of which mention `norm` and neither of
+which says where `norm` comes from — so `norm = hit[1]` made the endpoint serve
+the **raw filing** under a matching sha header, and the case that exists to
+make exactly that impossible stayed green, 60/60. The check's own comment
+called it impossible. That is worse than an unpinned behaviour: it is a pin
+that reads as coverage.
+
+Three things are worth keeping from it:
+
+- **An allow-list pin is only as strong as the narrowest expression it names.**
+  `check_boilerplate_plumbing`'s comment already says a question can always be
+  answered by a broken hop; the same is true one level down — an expression can
+  be present while the value flowing through it is wrong. The repair pins the
+  *binding* as well as the *use*, on both hops, and adds `NORM_BINDERS`, which
+  requires each of the two functions to bind `norm` exactly once, because
+  `norm = hit[2]` followed by `norm = hit[1]` satisfies every pin and wins at
+  runtime. That is UNIQUE_UI's argument, in Python.
+
+- **The repair had the same class of defect inside it, for one run.**
+  `NORM_BINDERS` was first keyed on the route decorator; the end-of-function
+  scan stops at the next `\ndef `, which is the handler's own `def` line, so it
+  measured an empty slice and reported "0 bindings" for every possible body.
+  It was red — for the wrong reason, and it would have been green the moment
+  anyone wrote the expected count as 0. Caught only because the mutation's red
+  output was read instead of counted. The reason is now written into the
+  constant.
+
+- **The prose was right and the code under it was wrong** (R2). README's worked
+  snippet asserted `slice == item["text"]`, false for any item over
+  `DISPLAY_MAX`, with a parenthetical one line below correctly saying to
+  compare prefixes. aapl-2025 item 1 is 16,053 characters, so the printed
+  example passed; item 1A of the same fixture is 68,162 and raises. A snippet a
+  reader will paste is not documentation, it is code, and it is now pinned in
+  its correct form *and executed* against a genuinely truncated item — with the
+  case refusing to pass at all if no fixture contributes one, since on short
+  items the two forms agree and the pin would prove nothing.

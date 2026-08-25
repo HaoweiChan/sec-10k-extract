@@ -1630,6 +1630,16 @@ RECIPE = (
 
 RECIPE_DOCS = ("README.md", "src/sec10k/web/app.py")
 
+# PR #54 R2. README's worked snippet is the recipe as a consumer will actually
+# run it, and its step-4 line first shipped as a bare `==`, which is false for
+# any item over DISPLAY_MAX — aapl-2025 item 1A is 68,162 chars against a
+# 40,000-char display copy, so the published snippet raised AssertionError on
+# the fixture printed one line above it. The prose underneath said "compare
+# prefixes"; the code did not. Pinned here so the two cannot drift apart again,
+# and executed below against a genuinely truncated item so the pin is not just
+# a spelling check.
+SNIPPET_ASSERT = 'assert text[item["start"]:item["end"]][:len(item["text"])] == item["text"]'
+
 NORMALIZED_ROUTE_RE = re.compile(r'@app\.get\("(/api/normalized/[^"]+)"')
 
 # The three hops the eval harness cannot walk, because importing app.py would
@@ -1648,7 +1658,32 @@ WIRE_NORMALIZED = [
      'return Response(content=norm, media_type="text/plain; charset=utf-8", headers={'),
     ("...citing the sha step 3 verifies against",
      '"X-Normalized-SHA256": hashlib.sha256(norm).hexdigest(),'),
+    # PR #54 R1. The two pins above name `norm` and stop there, so they were
+    # satisfied by `norm = hit[1]` — the endpoint serving the RAW filing under
+    # a matching sha header, i.e. exactly the defect the comment above calls
+    # impossible, green. Measured, not imagined: the reviewer ran that mutation
+    # and so did this repair. Pinning where the value COMES FROM is the other
+    # half, and it is the half that carries the meaning.
+    ("the endpoint's bytes come from the NORMALIZED slot of the cache entry — "
+     "`hit[1]` is the raw filing and satisfies every other pin here",
+     "norm = hit[2]"),
+    ("...and what goes into that slot is the WHOLE normalized_text of this "
+     "run, not a prefix of it — a truncated cache entry fails step 3 for "
+     "every consumer on every run",
+     'norm = result.get("normalized_text") or ""'),
 ]
+
+# A pin proves its expression is present; it cannot prove nothing REBINDS the
+# name afterwards — UNIQUE_UI's argument, in Python. `norm = hit[2]` followed
+# by `norm = hit[1]` satisfies both pins and serves the raw filing, so the two
+# functions that bind `norm` must bind it exactly once each.
+# keyed on the `def` line, not the decorator: the end-of-function scan stops at
+# the next `\ndef `, and a decorated handler's own `def` is the very next line —
+# so keying on the decorator scans an empty slice and reports 0 bindings for
+# every possible body, which is red for the wrong reason and green the moment
+# the count it is compared against is 0.
+NORM_BINDERS = {"def api_normalized(": 1, "def _run(": 1}
+NORM_BIND_RE = re.compile(r"^\s*norm\s*=[^=]", re.M)
 
 
 def check_offset_reproduction_contract(case):
@@ -1672,9 +1707,18 @@ def check_offset_reproduction_contract(case):
         every fixture here. A warning nobody can falsify is decoration; if
         normalization ever became the identity, this half goes red and the
         docs get to stop shouting.
-    WIRE + DOCS — the endpoint exists exactly once, serves the cached
-        NORMALIZED bytes with the sha header, and the recipe appears verbatim
-        in both `RECIPE_DOCS`, warning included.
+    WIRE + DOCS — the endpoint exists exactly once, and every expression on
+        the path from this run's `normalized_text` to the response body is
+        pinned WHOLE: what goes into the cache, which slot comes back out, the
+        response, and the sha header — plus a guard that neither function
+        rebinds `norm` after its pinned binding (PR #54 R1: the first version
+        pinned only the two expressions that MENTION `norm`, and `norm =
+        hit[1]` served the raw filing straight through it). The recipe appears
+        verbatim in both `RECIPE_DOCS`, warning included. What none of this can
+        do is issue a request — importing app.py drags fastapi into the
+        dependency-free unit job — so FastAPI BINDING the route stays unpinned
+        and carries its own debt row. Pinned text is not a served response, and
+        the difference is written down rather than glossed.
     """
     inp = case.get("input", {})
     bad, info = [], {}
@@ -1689,6 +1733,17 @@ def check_offset_reproduction_contract(case):
         n = _squash(api).count(_squash(expr))
         if n != 1:
             bad.append(f"app.py: {why} — expected exactly one `{expr}`, found {n}")
+    for start, want in NORM_BINDERS.items():
+        j = api.find(start)
+        if j < 0:
+            bad.append(f"app.py: no `{start}` in which to check for a rebound `norm`")
+            continue
+        ends = [x for x in (api.find("\n@app.", j + 1), api.find("\ndef ", j + 1)) if x > 0]
+        n = len(NORM_BIND_RE.findall(api[j:min(ends) if ends else len(api)]))
+        if n != want:
+            bad.append(f"app.py `{start}`: binds `norm` {n} times, expected "
+                       f"{want} — a second binding after the pinned one wins at "
+                       f"runtime and leaves every pin above satisfied")
 
     for rel in RECIPE_DOCS:
         text = _squash((ROOT / rel).read_text())
@@ -1697,6 +1752,12 @@ def check_offset_reproduction_contract(case):
             if n != 1:
                 bad.append(f"{rel}: the reproduction recipe is not carried "
                            f"verbatim — `{line[:60]}…` occurs {n} times, expected 1")
+    n = _squash((ROOT / "README.md").read_text()).count(_squash(SNIPPET_ASSERT))
+    if n != 1:
+        bad.append(f"README.md: the worked snippet's step-4 line is not "
+                   f"`{SNIPPET_ASSERT}` (found {n}) — any other comparison is "
+                   f"false for an item longer than DISPLAY_MAX, i.e. the "
+                   f"published recipe raises on the reader's first long item")
 
     for rel in inp.get("fixtures", []):
         r = extract_items(str(ROOT / rel))
@@ -1709,7 +1770,7 @@ def check_offset_reproduction_contract(case):
                        f"UTF-8 normalized_text ({want_sha}) — step 3 of the "
                        f"recipe cannot be performed")
         raw = (ROOT / rel).read_bytes().decode("utf-8", "replace")
-        spanned = raw_same = 0
+        spanned = raw_same = truncated = 0
         for it in v["items"]:
             s, e = it.get("start"), it.get("end")
             if s is None or e is None:
@@ -1720,6 +1781,15 @@ def check_offset_reproduction_contract(case):
                 bad.append(f"{rel} item {it.get('item')}: the recipe's slice "
                            f"normalized_text[{s}:{e}] is not the text the API "
                            f"serves for that item (INV-S2 at the API boundary)")
+            # PR #54 R2: the comparison README's snippet actually publishes,
+            # run here rather than only spell-checked above. It is the same
+            # equality as the line above for a short item and the only true one
+            # for a long one, which is the distinction the snippet got wrong.
+            if slice_[:len(it["text"])] != it["text"]:
+                bad.append(f"{rel} item {it.get('item')}: README's step-4 line "
+                           f"is FALSE for this item — the published snippet "
+                           f"raises AssertionError on it")
+            truncated += bool(it.get("truncated"))
             if len(slice_) != it.get("chars"):
                 bad.append(f"{rel} item {it.get('item')}: chars={it.get('chars')} "
                            f"disagrees with len(normalized_text[{s}:{e}])={len(slice_)}")
@@ -1727,11 +1797,20 @@ def check_offset_reproduction_contract(case):
                 raw_same += 1
         if not spanned:
             bad.append(f"{rel}: no item carries a span — this fixture pins nothing")
+        info[f"{Path(rel).parent.name}_truncated_items"] = truncated
         if raw_same:
             bad.append(f"{rel}: {raw_same} of {spanned} spanned items slice the "
                        f"RAW bytes to the same string as the normalized text — "
                        f"the documented WARNING is not true of this fixture")
         info[f"{Path(rel).parent.name}_spanned_items"] = spanned
+    # R2 again: the line above is vacuous on a corpus where every item fits in
+    # DISPLAY_MAX, because there `[:len(text)]` and `==` agree. At least one
+    # item across the fixtures must actually be truncated, or the case has
+    # stopped covering the defect it was strengthened for.
+    if not any(k.endswith("_truncated_items") and v for k, v in info.items()):
+        bad.append("no item across these fixtures is truncated at DISPLAY_MAX, "
+                   "so nothing here distinguishes README's prefix comparison "
+                   "from the bare `==` that shipped and was wrong")
     return bad, info
 
 
