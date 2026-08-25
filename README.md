@@ -87,6 +87,62 @@ text. The image *bytes* are not fetched: every image in a 10-K is an external
 reference to a sibling document in its EDGAR accession, and resolving one is a
 network call this pipeline deliberately does not make (ADR-033 §c).
 
+### Reproducing an item's text from its offsets
+
+The offsets are **character offsets into `normalized_text`**, not into the raw
+filing. There is deliberately no raw-to-normalized offset map — ADR-026 §a
+refuses one — so reproducibility ships as a contract instead: the inspector
+serves the exact text the offsets index, and this recipe checks any published
+span end to end, from a machine with no access to this repo.
+
+1. Extract: POST the filing to /api/extract/fixture (or /upload, or /url) and
+   keep three things from the response: source.token, norm_sha256, and each
+   item's start and end.
+2. Download: GET /api/normalized/{token} — the exact normalized_text those
+   offsets index, served as UTF-8 text.
+3. Verify: sha256 of the downloaded bytes must equal norm_sha256 from step 1.
+   If it does not, the download is not that run and the offsets do not apply
+   to it.
+4. Slice: item_text = normalized_text[start:end], where normalized_text is the
+   DECODED string — start and end are character offsets into that string,
+   never byte offsets into a file.
+
+WARNING: these offsets do not index the raw filing. Slicing the raw HTML — what
+/api/source/{token} serves, or the file you uploaded — by the same start and end
+yields different bytes, because normalization rewrites the document. There is
+deliberately no raw-to-normalized offset map (ADR-026 §a).
+
+Worked, against a local inspector:
+
+```python
+import hashlib, json, urllib.request
+
+post = urllib.request.Request(
+    "http://localhost:8000/api/extract/fixture",
+    data=json.dumps({"fixture": "aapl-2025"}).encode(),
+    headers={"content-type": "application/json"})
+run = json.load(urllib.request.urlopen(post))                       # step 1
+
+norm = urllib.request.urlopen(                                      # step 2
+    "http://localhost:8000/api/normalized/" + run["source"]["token"]).read()
+assert hashlib.sha256(norm).hexdigest() == run["norm_sha256"]       # step 3
+
+text = norm.decode("utf-8")
+item = next(i for i in run["items"] if i["item"] == "1")
+assert text[item["start"]:item["end"]] == item["text"]              # step 4
+print("item 1 reproduced:", item["end"] - item["start"], "chars")
+```
+
+(`item["text"]` is the API's display copy, truncated at 40,000 characters —
+`chars` always reports the full span, so compare prefixes on a long item.)
+
+The same recipe is the OpenAPI description of `/api/normalized/{token}` itself,
+so it travels with the deployed service and not only with this file;
+`evals/adversarial/ui-offset-reproduction-contract.json` pins both copies and
+the two facts they rest on — that the slice is byte-for-byte the text the API
+serves, and that the raw-bytes slice is not.
+
+
 ## Key design decisions
 
 Full rationale in `specs/decisions/` (18 ADRs). The ones that shaped the system:

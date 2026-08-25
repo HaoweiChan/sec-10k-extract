@@ -1,0 +1,23 @@
+{
+  "id": "ui-offset-reproduction-contract",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "offset_reproduction_contract"
+    ],
+    "fixtures": [
+      "evals/fixtures/ge-1994/filing.txt",
+      "evals/fixtures/msft-2013/filing.htm"
+    ]
+  },
+  "expect": {},
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "D12 (postmortem 2026-08-25 §8, interviewer-feedback gap 3): item offsets index `normalized_text`, not the raw filing, and until this case nothing said so to a consumer and nothing let one check it. ADR-026 §a refuses a raw-to-normalized offset map, so the remedy is a CONTRACT — serve the exact text the offsets index, publish a sha that binds the download to the run, and carry the slicing recipe verbatim where a consumer will read it. The check pins all three: LIVE, that `build_view`'s `norm_sha256` is the sha256 of the run's own UTF-8 `normalized_text` and that `normalized_text[start:end]` is byte-for-byte the `text` the API serves for that item, on every spanned item of an HTML-era and a txt-era fixture; LIVE, that the same offsets against the RAW bytes produce something DIFFERENT on every one of those items, so the documented warning is falsifiable rather than decorative; and by allow-list pin, that `/api/normalized/{token}` exists exactly once and serves the cached NORMALIZED bytes with the sha header (the endpoint itself is unreachable from the harness — importing app.py drags fastapi into the dependency-free unit job, the same constraint check_boilerplate_plumbing works around). Watched red before implementation on 2026-08-26 with 17 failures: no `/api/normalized` route at all, all four wire pins at 0, all five recipe lines missing from each of README.md and app.py, and `norm_sha256=None` on both fixtures. Two halves were already GREEN in that red run and are here for the future, not for this change: the raw-differs half, which is a property of normalization (it goes red the day normalization becomes the identity, and then the docs get to stop shouting), and the slice-equals-served-text half, which is INV-S2 restated at the API boundary (it goes red the day the view serves a second copy instead of a slice — the drift the contract exists to prevent). What this change made true is the SERVED half: before it, there was no endpoint to perform step 2 against and no sha to perform step 3 with, so the recipe was unwritable, not merely unwritten."
+  },
+  "provenance": "Created 2026-08-26 for D12. Fixtures are the same HTML-era/txt-era pair `ui-boilerplate-exclusion` uses (msft-2013, ge-1994), chosen so the recipe is pinned across both normalizer paths rather than only the modern one; no fixture was added. The recipe text itself lives in `src/repo_hygiene/eval_adapter.py::RECIPE` and the check requires it to appear exactly once in each of README.md and src/sec10k/web/app.py — app.py's copy is the `/api/normalized/{token}` docstring, which FastAPI serves as that endpoint's OpenAPI description, so the reader with no access to this repo gets the recipe at /docs. Comparison is whitespace-free (`_squash`), because the two copies wrap differently and how a sentence is wrapped carries no information."
+}
