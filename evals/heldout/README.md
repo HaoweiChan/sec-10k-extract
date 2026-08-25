@@ -251,3 +251,44 @@ bytes**. That rule paid for itself immediately: `c-2025`'s cover renders as
 this instrument's six recorded failures — and the raw bytes show it is a tag
 boundary (`December&#160;31</ix:nonNumeric>, 2025`). The claim was withdrawn
 before it was made rather than corrected after a run.
+
+**H4, 2026-08-26, 5/7** — the D6 baseline, `evals/report/20260826-005839-fast.json`,
+git SHA `9b2ace08` = the labels-only commit, so run-after-labels is provable from
+history. The two new cases failed and the five incumbents passed. **No fix, no
+label correction, and no triage follows in D6** — the failures are the
+deliverable. For the seventh time the reader should ask whether the instrument
+or the pipeline is at fault; this time it is neither, because both frozen
+predictions came true almost exactly, which is the first time that has happened
+on this set.
+
+`intc-2025` — **branch (a), the predicted stub collapse, and worse than
+`intc-2002` was.** All 23 items `extracted`, all at confidence **0.95** via
+`heading_strict`, `doc_status` **`success_with_warning`**. Every span is a row
+of the trailing cross-reference index: 20 to 226 chars, **1,727 chars in
+total** across the whole 10-K, against a 571,466-char tag-strip scan of the
+document (~0.3%). ADR-015 closed by saying "the next mis-dated item repeats
+this exactly"; it did, on the same filer, 23 years later. Note what did **not**
+fire: `no_empty_success` passed, because `NO_EMPTY_SUCCESS_FLOOR` is 1,000 and
+1,727 clears it — the check named for this failure mode is 727 chars short of
+catching the maximal instance of it. The five red checks are the four
+`min_chars` floors and the one `text_contains` anchor; every structural check
+(`expected_set_complete`, `only_items`, `known_items_only`, `verbatim`,
+`no_overlap_ordered`, `deterministic`) passed. That is the pre-B audit's
+finding 4 demonstrated on a real filing: **a presence-and-status case would
+have scored this document green.**
+
+`c-2025` — **as predicted, the opposite face.** 23 items, **zero** extracted;
+22 `missing` at 0.40 and `doc_status` **`ambiguous`**. The one deviation from
+the frozen prediction, recorded rather than smoothed over: item **9C came back
+`omitted` at 0.75**, not `missing` at 0.40. The tension the case flagged is
+also resolved, and not in my favour on the surface: the demo reported
+`conf 0.95` on Citigroup and this run reports 0.40 — the structural reading was
+right about *this* document, so either the demo ran a different Citigroup
+filing or the panel number seen there came from somewhere else. Recorded as an
+open discrepancy for D7/D8, not resolved here.
+
+Together they are the postmortem §8 asymmetry on one page: same sensor, same
+absence of a usable "the fast path is stuck" signal, 0.95 on one document and
+0.40 on the other. Both cases stay **untouched** — D8/D9/D11 must not read
+their labels while iterating, and the first fix, threshold or declined fix
+taken with either outcome in hand burns that case under the rule above.
