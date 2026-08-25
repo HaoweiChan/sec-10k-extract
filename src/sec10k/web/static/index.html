@@ -110,6 +110,15 @@ button:disabled{opacity:.5;cursor:default}
 #banner{padding:11px 14px;border-radius:var(--r);margin-bottom:12px;font-weight:600;
   border:1px solid;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 #banner .src{font-weight:400;font-size:13px;font-family:var(--mono)}
+/* D7 (postmortem §8 gap 1, display half). Its own line inside the banner:
+   the coverage figure is a sentence with a caveat, not a chip, and #banner
+   is flex-wrap, so without a full-basis it would be stranded beside the
+   counts and its caveat clipped. Type comes from `.src` above, which the
+   element also carries and which OUTRANKS this rule (id+class beats id) —
+   so only the one declaration `.src` does not make is set here. It inherits
+   the banner's doc_status colour deliberately: it is a statement about the
+   same document. */
+#coverage{flex-basis:100%}
 .s-success{color:var(--ok);border-color:var(--ok);background:color-mix(in srgb,var(--ok) 10%,var(--bg))}
 .s-success_with_warning{color:var(--warn);border-color:var(--warn);background:color-mix(in srgb,var(--warn) 10%,var(--bg))}
 .s-ambiguous{color:var(--amb);border-color:var(--amb);background:color-mix(in srgb,var(--amb) 12%,var(--bg))}
@@ -799,17 +808,71 @@ async function call(url, opts){
   }finally{ busy(false); }
 }
 
+// D7 (postmortem §2, "The UI amplified both"). doc_status and the warnings
+// list live in the top banner; the side panel a viewer actually reads showed
+// `conf 0.95` with no visual link back to either, and during a demo the panel
+// is the product. These two helpers are that link, and EVERY confidence this
+// page prints is built as `conf ${…}${docQual()}${itemQual(it)}` — so a bare
+// number under a warned document is not reachable from this file rather than
+// merely discouraged (ui-confidence-honesty pins the adjacency).
+// Display only: the envelope's `confidence` is untouched, and making the
+// NUMBER itself move on a stub or a pointer span is D8's row, not this one.
+const QUALIFIED = ["success_with_warning", "ambiguous"];
+function docQual(){
+  // The RESPONSE's doc_status, never a live control — the same
+  // read-at-request-time rule S8 gave the pane header. `success` and the
+  // refusal statuses add nothing here: `success` has nothing to qualify, and
+  // `unsupported`/`failed` carry no items to print a confidence beside.
+  const st = (VIEW && VIEW.doc_status) || "";
+  return QUALIFIED.includes(st) ? ` · doc ${esc(st)}` : "";
+}
+function itemQual(it){
+  // `evidence.warnings` IS validate.py `score()`'s own `hits` list: the codes
+  // that carried THIS item's code and each cost it WARN_PENALTY. Reading it
+  // rather than re-filtering v.warnings here means the panel names exactly
+  // the warnings that moved the number, and inherits ADR-018's exclusion of
+  // `expected_item_missing` — which only restates the `missing` status the
+  // status badge already shows — instead of defining "item-targeted" a
+  // second time in the display layer, where it could drift from score().
+  const w = (it.evidence && it.evidence.warnings) || [];
+  return w.length ? ` · ⚠ ${esc(w.join(", "))}` : "";
+}
+// D7 (postmortem §8 gap 1, display half). `unattributed_content` already
+// computes the document-coverage figure and buries it in a warning row below
+// the banner; the demo read the banner. Surfaced here VERBATIM — the number
+// is validate.py's, not a second one derived in the display layer — with the
+// caveat validate.py states in its own comment attached, and deliberately NOT
+// inverted into an "attributed" share: interior gaps are not counted, so
+// 100 − outside would OVERSTATE attribution by exactly the gaps this figure
+// misses (up to 9.7 points, ibm-1997, ADR-019 §d).
+// ponytail: the percentage is read off the warning's own message with one
+// regex. Ceiling: no warning, no line — a document below UNATTRIBUTED_MAX
+// shows no coverage figure at all, because none was computed, and computing
+// one here is the envelope change D8 owns. If the message wording ever
+// drifts the regex misses and the whole message is shown verbatim instead,
+// so the figure degrades to less emphasis, never to silence.
+function coverageStrip(warns){
+  const u = warns.find(x => x.code === "unattributed_content");
+  if(!u) return "";
+  const m = /^(\d+)%/.exec(u.message || "");
+  return ` <span class="src" id="coverage">document coverage: ${
+    m ? `<b>${esc(m[1])}%</b> of the document lies outside every item`
+      : esc(u.message)
+  } — interior gaps are not counted, so true non-coverage can be up to 9.7 points higher (ADR-019 §d)</span>`;
+}
+
 function render(v){
   VIEW = v; SEL = null;
   const st = v.doc_status || "failed";
   const src = v.source ? `${v.source.mode}: ${v.source.name}` : "";
   const n = Object.entries(v.counts || {}).map(([k,c]) => `${c} ${k}`).join(" · ");
+  const w = v.warnings || [];
   $("#banner").className = "s-" + st;
   $("#banner").innerHTML = `doc_status: ${esc(st)}` +
     (n ? ` <span class="src">— ${esc(n)}</span>` : "") +
-    (src ? ` <span class="src">${esc(src)}</span>` : "");
+    (src ? ` <span class="src">${esc(src)}</span>` : "") +
+    coverageStrip(w);
 
-  const w = v.warnings || [];
   $("#warnings").innerHTML = w.length
     ? w.map(x => `<div class="warn"><code>${esc(x.code)}</code>${
         x.item ? ` <span class="hint">item ${esc(x.item)}</span>` : ""
@@ -831,13 +894,16 @@ function render(v){
     // flag from the evidence, not the number: confidence 0.8 is normal for an
     // omitted item and penalised for an extracted one, so the score alone
     // cannot say "look here". evidence.warnings names the validators that fired.
-    const lo = (it.evidence && (it.evidence.warnings || []).length) ? " lo" : "";
+    // D7: a warned DOCUMENT colours the badge too. On cvx-2015 no validator
+    // targets any item, so every badge stayed neutral at 0.95 under a
+    // `success_with_warning` banner — the demo shape exactly.
+    const lo = ((it.evidence && (it.evidence.warnings || []).length) || docQual()) ? " lo" : "";
     return `<button class="it" data-i="${i}">
       <div class="top"><span class="code">${esc(it.item)}</span>
       <span class="ttl">${esc(it.title || "")}</span></div>
       <div class="badges">
         <span class="b st-${esc(it.status)}">${esc(it.status)}</span>
-        <span class="b${lo}">conf ${it.confidence ?? "—"}</span>
+        <span class="b${lo}">conf ${it.confidence ?? "—"}${docQual()}${itemQual(it)}</span>
         <span class="b">${esc(it.method || "—")}</span>
         ${it.chars != null ? `<span class="b">${it.chars.toLocaleString()} ch</span>` : ""}
       </div></button>`;
@@ -869,8 +935,14 @@ function show(i){
   // measured live at a 1280px viewport, this band already truncates inside
   // `via heading_strict`, so a trailing marker would be invisible exactly
   // when the pane most needs to say it is hiding text.
+  // D7: the qualifier goes directly after the number, and BEFORE `via`. Both
+  // header spans are `.lbl`, which ellipsises, and the S8 note above measured
+  // this band already truncating inside `via heading_strict` at 1280px — so
+  // the qualifier has to sit on the surviving side of that cut, not appended
+  // past it. `via` is the part that may be lost; what the number is worth
+  // is not.
   const hdrRight = (VIEW.markdown ? "markdown · " : "") + (VIEW.boilerplate_excluded ? "boilerplate hidden · " : "") +
-    `Part ${esc(it.part || "—")} · ${esc(it.status)} · conf ${it.confidence ?? "—"} · via ${esc(it.method || "—")}`;
+    `Part ${esc(it.part || "—")} · ${esc(it.status)} · conf ${it.confidence ?? "—"}${docQual()}${itemQual(it)} · via ${esc(it.method || "—")}`;
   // The truncation notice used to be its own in-flow sibling after
   // pre.text, which is exactly the bug .pane-meta's own move to
   // position:absolute just fixed, reintroduced through a second element: on

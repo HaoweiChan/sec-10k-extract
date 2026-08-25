@@ -1604,6 +1604,118 @@ def check_exclusion_note_trigger(case):
                      sorted(k for k in seen if seen[k] is not old_expr[k])}
 
 
+def _js_block(live, opener):
+    """Text between the braces of the block `opener` opens, braces MATCHED.
+
+    Same argument as `_media_blocks`: a plain regex ends the block at the
+    first nested `}`, and every function here is mostly template literal, so
+    `${...}` alone would defeat one. Template `${}` pairs balance, so simple
+    depth counting is enough; a brace inside a STRING would defeat it, and
+    none of the blocks this is pointed at contains one.
+    """
+    i = live.find(opener)
+    if i < 0:
+        return None
+    i = live.index("{", i) + 1
+    depth, start = 1, i
+    while i < len(live) and depth:
+        if live[i] == "{":
+            depth += 1
+        elif live[i] == "}":
+            depth -= 1
+        i += 1
+    return live[start:i - 1]
+
+
+def check_confidence_honesty(case):
+    """D7. The 2026-08-24 demo's trust amplifier, both halves.
+
+    PANEL. `doc_status` and the warnings list live in the top banner; the
+    side panel a viewer actually reads showed a per-item `conf 0.95` with no
+    visual link back to a document the banner had already called
+    `success_with_warning` or `ambiguous` (postmortem §2, "The UI amplified
+    both"). Pinned as an ADJACENCY, not as a question: every live site that
+    prints a confidence must be the pinned `conf_marker` and must be
+    followed IMMEDIATELY by the pinned `qualifier` expression. A question
+    about the file ("does it mention doc_status somewhere?") is answerable
+    by a file that still prints a bare number two lines later — the
+    `boilerplate_plumbing` allow-list records two rounds of exactly that —
+    so a bare confidence is made unrepresentable instead. `min_conf_sites`
+    keeps it from passing vacuously by deleting the render sites.
+
+    The qualifier reads `it.evidence.warnings`, which IS `score()`'s own
+    `hits` list — the codes that carried this item's code and each cost it
+    `WARN_PENALTY`. So the panel names exactly the warnings that moved the
+    number, and inherits ADR-018's exclusion of `expected_item_missing`
+    (which only restates the `missing` status the status badge already
+    shows) rather than re-deriving a second definition here.
+
+    BANNER. `unattributed_content` already computes a document-coverage
+    figure and buries it in a warning row below the banner (postmortem §8
+    gap 1). This pins that the banner surfaces it AND states the caveat
+    `validate.py` states in its own comment — interior gaps are not counted,
+    so the figure can understate true non-coverage by up to 9.7 points
+    (ibm-1997, ADR-019 §d). `must_not_say` forbids the inversion that caveat
+    exists to prevent: `100 - outside` is NOT the attributed share, and a
+    banner that publishes it would overstate coverage by exactly the
+    uncounted interior gaps.
+
+    Text, not render — see the block comment above check_split_breakpoint.
+    CEILING: this is a STATIC READ of the markup of
+    src/sec10k/web/static/index.html. No test in this harness issues an HTTP
+    request, so nothing here observes the render: it cannot see the
+    qualifier appear beside a real 0.95, and a CSS rule could hide the
+    coverage strip with every pin below green. That is browser evidence, in
+    tasks/reviews/d7-browser-walk.json.
+    """
+    inp = case.get("input", {})
+    text = (ROOT / inp.get("file", UI_STYLESHEET)).read_text()
+    live = _live(text, "js")
+    bad = []
+
+    marker, qual = inp["conf_marker"], inp["qualifier"]
+    sites = [m.start() for m in re.finditer(re.escape("conf ${"), live)]
+    floor = inp.get("min_conf_sites", 1)
+    if len(sites) < floor:
+        bad.append(f"only {len(sites)} live confidence render site(s), expected "
+                   f"at least {floor} — the side panel's badge and the pane "
+                   f"header each print one, and deleting a site is not a way "
+                   f"to qualify it")
+    for i in sites:
+        rest = live[i:]
+        head = " ".join(rest[:90].split())
+        if not rest.startswith(marker):
+            bad.append(f"confidence rendered by an unpinned expression: {head!r}")
+        elif not _squash(rest[len(marker):]).startswith(_squash(qual)):
+            bad.append(f"bare confidence, no qualifier beside it: {head!r} — a "
+                       f"number a viewer reads with no link back to doc_status "
+                       f"or to the warnings that moved it is the demo defect")
+
+    for expr in inp.get("wire", []):
+        if _squash(expr) not in _squash(live):
+            bad.append(f"missing pinned expression (the qualifier reads the "
+                       f"response's own doc_status and the item's own "
+                       f"evidence.warnings): {expr}")
+
+    fn = inp.get("coverage_fn", "coverageStrip")
+    body = _js_block(live, f"function {fn}(")
+    if body is None:
+        bad.append(f"{fn}(): the banner has no coverage strip — the "
+                   f"document-coverage figure `unattributed_content` already "
+                   f"computes stays buried in a warning row below it")
+        return bad, {"conf_sites": len(sites), "coverage_text": None}
+    say = " ".join(re.sub(r"<[^>]+>", "", body).split())
+    for want in inp.get("must_say", []):
+        if want not in say:
+            bad.append(f"{fn}(): does not say {want!r}")
+    for nope in inp.get("must_not_say", []):
+        if nope in say:
+            bad.append(f"{fn}(): says {nope!r} — interior gaps are NOT counted, "
+                       f"so the complement of this figure is not the attributed "
+                       f"share and the banner may not present it as one")
+    return bad, {"conf_sites": len(sites), "coverage_text": say}
+
+
 CHECKS = {
     "adr_headers": lambda case: check_adr_headers(),
     "adr_index": lambda case: check_index(),
@@ -1627,6 +1739,7 @@ CHECKS = {
     "split_breakpoint": check_split_breakpoint,
     "exclusion_note": check_exclusion_note,
     "exclusion_note_trigger": check_exclusion_note_trigger,
+    "confidence_honesty": check_confidence_honesty,
 }
 
 

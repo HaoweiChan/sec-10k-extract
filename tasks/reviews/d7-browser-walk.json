@@ -1,0 +1,100 @@
+{
+ "task": "D7 — inspector confidence honesty (display-only)",
+ "date": "2026-08-26",
+ "branch": "task/D7",
+ "base": "http://127.0.0.1:8011",
+ "viewport": {"width": 1280, "height": 900},
+ "what_this_is": "The render half of D7. Both `repo_hygiene` cases (ui-confidence-honesty, ui-confidence-honesty-regression) are STATIC READS of src/sec10k/web/static/index.html — no test in that harness issues an HTTP request, so nothing there can see a badge. This is the part only a browser can answer: does the qualifier appear beside a real confidence on a real filing, is the coverage line actually on screen, and does neither fire on a document where it would be false.",
+ "method": {
+  "driver": "the in-app browser tools (preview_start / computer / form_input / javascript_tool) against a live uvicorn server, driven by hand rather than by a committed script",
+  "why_not_a_script": "D5's evidence is a re-runnable playwright script (tasks/reviews/d5_browser_walk.py). Playwright is not installed here and installing a browser toolchain is outside a display-only row; the measurements below are the same shape that script records (rect, checkVisibility, viewport intersection, text) and are reproducible by repeating the steps in `walk`.",
+  "server": "uvicorn src.sec10k.web.app:app on 127.0.0.1:8011, served from a copy of this worktree in the session scratchpad",
+  "why_a_copy": "this worktree lives under .claude/, which the preview sandbox cannot read — a server started there dies at `getcwd: Operation not permitted` before it executes anything. The harness also resolves .claude/launch.json from the MAIN repo, not from the worktree, so a launch entry added here is never seen. Recorded because it is the reason this walk was not started through preview_start's launch config; the served tree is an rsync of the branch under test, `evals/report` excluded.",
+  "visibility": "every element verdict below uses BOTH `checkVisibility({visibilityProperty, opacityProperty, contentVisibilityAuto})` and a rect-vs-viewport intersection. PR #46 R2 established that `offsetParent` and a non-zero box are both true under `visibility:hidden`; PR #46 R6 established that `checkVisibility` answers RENDERED, not ON SCREEN, and is satisfied by an element parked at left:-9999px. Both questions are asked here."
+ },
+ "walk": [
+  {
+   "fixture": "cvx-2015",
+   "why": "THE DEMO SHAPE. doc_status `success_with_warning`, carrying `unattributed_content` at 73%, and NO validator targets any item — so every item scored the unpenalised BASE_STRICT 0.95 and the side panel showed a column of bare 0.95s under a warned banner. This is postmortem §2's 'the UI amplified both' reproduced on a committed fixture.",
+   "doc_status": "success_with_warning",
+   "warning_codes": ["unattributed_content"],
+   "item_count": 20,
+   "banner_text": "doc_status: success_with_warning — 16 extracted · 4 incorporated_by_reference fixture: cvx-2015 document coverage: 73% of the document lies outside every item — interior gaps are not counted, so true non-coverage can be up to 9.7 points higher (ADR-019 §d)",
+   "coverage": {
+    "present": true,
+    "checkVisibility": true,
+    "intersects_viewport": true,
+    "rect": {"top": 529, "left": 73, "width": 1133, "height": 40},
+    "text": "document coverage: 73% of the document lies outside every item — interior gaps are not counted, so true non-coverage can be up to 9.7 points higher (ADR-019 §d)",
+    "figure_source": "validate.py's own `unattributed_content` message, parsed for its leading percentage — 73% is not recomputed here, and the complement (27%) is deliberately NOT published as an attributed share"
+   },
+   "panel": {
+    "bare_conf_badges": [],
+    "all_20_badges": "conf <n> · doc success_with_warning",
+    "badge_class": "b lo on all 20 (amber). Before D7 every one of them was class `b` (neutral): `lo` was set from evidence.warnings alone, and on this fixture no item has any.",
+    "confidences_seen": [0.95, 0.85]
+   },
+   "pane_header": {
+    "full_text": "Part I · extracted · conf 0.95 · doc success_with_warning · via heading_strict",
+    "rendered_at_1280": "ITEM 1 — PART I · EXTRACTED · CONF 0.95 · DOC…",
+    "band_clientWidth": 316,
+    "band_scrollWidth": 655,
+    "overflow_px": 339,
+    "note": "this band ALREADY ellipsised before D7 — the S8 comment above `hdrRight` records it truncating inside `via heading_strict` at 1280px, and 339px of overflow is what a 316px band does to a 655px string. D7 put the qualifier BEFORE `via` for exactly this reason, so what is lost is the method name and not the qualifier; the qualifier still degrades to `· DOC…` at this width. The side panel badge — the surface D7's Contents sentence actually names — is NOT clipped (scrollWidth == clientWidth, full text on screen). Logged as debt, Origin: D7."
+   },
+   "screenshot_observed": "amber banner with the coverage sentence on its own full-width row beneath the doc_status line; sidebar badges reading CONF 0.95 · DOC SUCCESS_WITH_WARNING in amber, wrapping to two lines inside the badge border"
+  },
+  {
+   "fixture": "jpm-2024",
+   "why": "the OTHER qualifier and the coverage line's ABSENCE, in one run. doc_status `ambiguous` (so ADR-027 §a caps every item at 0.75) with `last_item_dominates` targeting item 15 — and NO `unattributed_content`, so the banner must show no coverage figure at all.",
+   "doc_status": "ambiguous",
+   "warning_codes": ["last_item_dominates:15"],
+   "item_count": 23,
+   "banner_text": "doc_status: ambiguous — 22 extracted · 1 omitted fixture: jpm-2024",
+   "coverage": {
+    "present": false,
+    "expected_absent": true,
+    "why": "`unattributed_content` did not fire on this document, so no coverage figure was ever computed. The banner says nothing rather than deriving one — computing a figure in the display layer is the envelope change D8 owns. This is the documented ceiling of the banner half, observed rather than asserted."
+   },
+   "panel": {
+    "bare_conf_badges": [],
+    "unflagged_items": "conf 0.75 · doc ambiguous",
+    "item_15": "conf 0.75 · doc ambiguous · ⚠ last_item_dominates",
+    "badge_class": "b lo on all 23"
+   },
+   "pane_header": {
+    "selected": "item 15",
+    "full_text": "Part IV · extracted · conf 0.75 · doc ambiguous · ⚠ last_item_dominates · via heading_strict"
+   },
+   "screenshot_observed": "amber `doc_status: ambiguous` banner with NO second row; the `last_item_dominates` warning card below it; sidebar badges reading CONF 0.75 · DOC AMBIGUOUS"
+  },
+  {
+   "fixture": "aapl-2025",
+   "why": "THE CONTROL. A clean `success` with zero warnings. A qualifier that fired here would be noise, and a coverage line here would be a claim about a figure nobody computed — so this run is what proves the two halves are conditional rather than decorative. Same role PR #46 R1's no-chrome control plays for the D5 note.",
+   "doc_status": "success",
+   "warning_codes": [],
+   "item_count": 23,
+   "banner_text": "doc_status: success — 18 extracted · 5 incorporated_by_reference fixture: aapl-2025",
+   "warnings_panel": "No warnings — every validator stayed silent.",
+   "coverage": {"present": false, "expected_absent": true},
+   "panel": {
+    "qualified_badges": [],
+    "lo_badges": [],
+    "sample": "conf 0.95 (bare, class `b`, neutral grey)",
+    "note": "a bare confidence renders here, and that is correct — the document carries no doc-level qualifier and no item carries a warning, so there is nothing to say beside the number. D7 forbids a bare conf on a WARNED document, not everywhere."
+   },
+   "pane_header": {"full_text": "Part I · extracted · conf 0.95 · via heading_strict"},
+   "screenshot_observed": "green `doc_status: success` banner, single row, no coverage line; neutral grey CONF 0.95 badges"
+  }
+ ],
+ "verdict": {
+  "failures": [],
+  "panel_half": "PASS — across cvx-2015 (20 items) and jpm-2024 (23 items), both warned documents, ZERO badges rendered a bare confidence; across aapl-2025 (23 items), a clean document, ZERO badges rendered a qualifier.",
+  "banner_half": "PASS — the coverage figure is on screen (rect intersects the viewport, checkVisibility true) on the one walked fixture that carries `unattributed_content`, verbatim from validate.py's own message and with its own caveat attached; absent on both fixtures that do not."
+ },
+ "not_covered": [
+  "One viewport only (1280x900). D5's layout row is what needs a width sweep; D7 changes no geometry — it lengthens two strings and adds one full-basis row to a flex container that already wrapped. The one width-dependent consequence found is the pane-header ellipsis, measured above and logged as debt.",
+  "Markdown and exclude-boilerplate modes were not driven. Both qualifiers and the coverage strip are computed from `doc_status`, `evidence.warnings` and `v.warnings`, none of which any view mode touches — but that is an argument, not a picture, and it is the same gap the standing D5-merge debt row records for that walk.",
+  "The fallback branch of `coverageStrip` (validate.py's message stops starting with a percentage, so the whole message is shown verbatim instead of an emphasised figure) was not exercised: no committed fixture produces it. It exists so the figure degrades to less emphasis rather than to silence."
+ ]
+}

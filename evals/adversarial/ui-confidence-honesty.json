@@ -1,0 +1,45 @@
+{
+  "id": "ui-confidence-honesty",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "confidence_honesty"
+    ],
+    "conf_marker": "conf ${it.confidence ?? \"—\"}",
+    "qualifier": "${docQual()}${itemQual(it)}",
+    "min_conf_sites": 2,
+    "wire": [
+      "const QUALIFIED = [\"success_with_warning\", \"ambiguous\"];",
+      "const st = (VIEW && VIEW.doc_status) || \"\";",
+      "return QUALIFIED.includes(st) ? ` · doc ${esc(st)}` : \"\";",
+      "const w = (it.evidence && it.evidence.warnings) || [];",
+      "return w.length ? ` · ⚠ ${esc(w.join(\", \"))}` : \"\";",
+      "const u = warns.find(x => x.code === \"unattributed_content\");"
+    ],
+    "coverage_fn": "coverageStrip",
+    "must_say": [
+      "document coverage:",
+      "of the document lies outside every item",
+      "interior gaps are not counted",
+      "true non-coverage can be up to 9.7 points higher"
+    ],
+    "must_not_say": [
+      "is attributed to items",
+      "the rest of the document is covered",
+      "full coverage",
+      "100 -"
+    ]
+  },
+  "expect": {},
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "D7, both halves of the postmortem's trust amplifier. PANEL: `doc_status` and the warnings list live in the top banner and the side panel showed `conf 0.95` beside neither — postmortem §2, 'during a demo, the panel is the product'. Pinned as an ADJACENCY rather than as a question about the file: every live `conf ${` site must be the pinned marker and must be followed IMMEDIATELY by `${docQual()}${itemQual(it)}`, so a bare number is unrepresentable rather than merely discouraged. The `boilerplate_plumbing` allow-list records why (PR #27 R5/R6): a question about a hop is answerable by a broken hop, and a list of forbidden shapes only bans the ones someone already thought of. `min_conf_sites` 2 is the anti-vacuity floor — the sidebar badge and the pane header each print one, and deleting a site is not a way to qualify it. The wire pins fix WHAT the qualifier reads: the response's own `doc_status` (the same read-at-request-time rule S8 gave the pane header) and the item's own `evidence.warnings`, which IS validate.py `score()`'s `hits` list, so the panel names exactly the codes that cost this item WARN_PENALTY and inherits ADR-018's exclusion of `expected_item_missing` instead of re-deriving a second definition in the display layer. BANNER: `unattributed_content` already computes the document-coverage figure and buries it in a warning row (postmortem §8 gap 1); `coverageStrip` surfaces it in the banner with validate.py's own caveat attached. `must_not_say` forbids the inversion that caveat exists to prevent — interior gaps are NOT counted, so `100 - outside` is not the attributed share and a banner publishing it would overstate coverage by exactly the uncounted gaps. Display layer only: `extract_items` output is untouched and the envelope half (a coverage field plus an escalation threshold) is D8's row.",
+    "ceiling": "STATIC READ. This check parses the MARKUP TEXT of src/sec10k/web/static/index.html — no test in this harness issues an HTTP request, so it does NOT observe the render. It sees that the qualifier is concatenated onto every confidence template and that `coverageStrip` says what it must; it cannot see the qualifier appear beside a real 0.95 on a real filing, and a CSS rule (`#coverage{display:none}`) would keep every pin here green while the banner said nothing — the same pin-mechanism hole `ui-exclusion-note`'s ceiling states, on a new element. It also cannot see the figure itself: `coverageStrip` only fires when `unattributed_content` fired, i.e. only above UNATTRIBUTED_MAX, so a document at 20% non-coverage shows no coverage line at all. That is deliberate — the figure would have to be computed to be shown, and computing one in the display layer is the envelope change D8 owns. Render evidence is in tasks/reviews/d7-browser-walk.json.",
+    "red_first": "Watched red at 3cdfbf4 (main tip, index.html unmodified) with the check present and nothing else changed — recorded in tasks/reviews/d7-red-first.txt."
+  },
+  "provenance": "D7, created 2026-08-26 before the implementation, per hard rule 2. Fixture evidence behind the choice of what to pin: cvx-2015 is `success_with_warning` carrying `unattributed_content` at 73% with NO item-targeted warning and confidences up to 0.95 — the demo shape exactly, a bare 0.95 under a warned banner; jpm-2024 is `ambiguous` with `last_item_dominates` on item 15 and no `unattributed_content`, so it exercises the item qualifier and the coverage strip's absence together; aapl-2025 is a clean `success` with no warnings, where both qualifiers must stay off."
+}

@@ -1,0 +1,87 @@
+<!-- D7 regression fixture: ELEVEN ways the D7 qualifier and the banner
+     coverage strip regress, one failure each. Everything is still PRESENT — both
+     confidence sites render, both helpers exist, the coverage strip exists
+     and even carries the right figure. That is the point: the demo defect was
+     never a missing element, it was a present number with nothing beside it,
+     and a coverage line that reads as reassurance is worse than none.
+     Caught by evals/adversarial/ui-confidence-honesty-regression.json. -->
+
+<div id="banner" class="s-idle">No filing extracted yet.</div>
+<div id="warnings"></div>
+<div class="split"><div id="sidebar"></div><div id="pane"></div></div>
+
+<script>
+// (3) QUALIFIED no longer lists `ambiguous`, so the one status the pipeline
+//     uses to say "I could not resolve this document" qualifies nothing —
+//     jpm-2024's column of 0.75s would read as plain numbers.
+const QUALIFIED = ["success_with_warning"];
+
+function docQual(){
+  // (4) hooked to a live control's current state rather than to the
+  //     RESPONSE's doc_status, which is the S8 read-at-request-time rule
+  //     broken in the qualifier instead of in the pane header: toggling
+  //     anything after an extraction would relabel a number it did not
+  //     recompute.
+  const st = ($("#doc-status-filter") || {}).value || "";
+  return QUALIFIED.includes(st) ? ` · doc ${esc(st)}` : "";
+}
+
+function itemQual(it){
+  // (5) re-derives "item-targeted" from the NUMBER instead of reading
+  //     score()'s own `hits` list. A second definition in the display layer,
+  //     and a wrong one: 0.85 is the ordinary base for an IBR item and 0.80
+  //     for an omitted one, so this flags clean items and stays silent on a
+  //     0.95 that no validator ever touched — which is every item in the
+  //     demo's own cvx-2015 shape.
+  const w = it.confidence < 0.9 ? ["low"] : [];
+  return w.length ? ` · ⚠ ${esc(w.join(", "))}` : "";
+}
+
+function coverageStrip(warns){
+  // (6) reads a different validator's evidence. `toc_manifest_mismatch` says
+  //     which items the filing's own table of contents lists and no heading
+  //     resolved; it carries no coverage figure at all, so the strip below
+  //     would print a percentage that came from nowhere.
+  const u = warns.find(x => x.code === "toc_manifest_mismatch");
+  if(!u) return "";
+  const m = /^(\d+)%/.exec(u.message || "");
+  // (7) the 9.7-point understatement caveat is gone.
+  // (8) so is the reason for it — that interior gaps are not counted.
+  // (9) instead the line reassures: it asserts the remainder is covered,
+  //     which is the exact claim the missing caveat exists to forbid.
+  // (10) it performs the inverted arithmetic at all — `100 - outside` is
+  //      pinned as forbidden on its own, because the interior gaps between
+  //      spans were never in that subtraction, so the complement is not a
+  //      coverage figure whatever it is then called.
+  // (11) and it labels the result an attributed share, which is the claim
+  //      the missing caveat exists to forbid. (10) and (11) are separate
+  //      catches on purpose: a strip that computed the complement but
+  //      labelled it honestly would fire only the first.
+  return ` <span class="src" id="coverage">document coverage: ${
+    m ? `<b>${esc(m[1])}%</b> of the document lies outside every item`
+      : esc(u.message)
+  } — the rest of the document is covered, and ${100 - (m ? +m[1] : 0)}% is attributed to items.</span>`;
+}
+
+function render(v){
+  VIEW = v;
+  $("#banner").innerHTML = `doc_status: ${esc(v.doc_status)}` + coverageStrip(v.warnings || []);
+  // (1) the SIDE PANEL badge — the panel a viewer actually reads — prints a
+  //     bare number. This is the 2026-08-24 demo verbatim.
+  $("#sidebar").innerHTML = (v.items || []).map((it,i) => `<button class="it" data-i="${i}">
+    <div class="badges">
+      <span class="b st-${esc(it.status)}">${esc(it.status)}</span>
+      <span class="b">conf ${it.confidence ?? "—"}</span>
+    </div></button>`).join("");
+}
+
+function show(i){
+  const it = VIEW.items[i];
+  // (2) the pane header carries the DOCUMENT qualifier but drops the item's
+  //     own warnings, so an item that a validator explicitly flagged reads
+  //     the same as one it never touched — half the link, which looks like
+  //     the whole of it.
+  const hdrRight = `Part ${esc(it.part || "—")} · ${esc(it.status)} · conf ${it.confidence ?? "—"}${docQual()} · via ${esc(it.method || "—")}`;
+  $("#pane").innerHTML = `<div class="src-hdr"><span class="lbl">${hdrRight}</span></div>`;
+}
+</script>

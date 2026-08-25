@@ -1,0 +1,49 @@
+{
+  "id": "ui-confidence-honesty-regression",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "confidence_honesty"
+    ],
+    "file": "evals/fixtures/repo_hygiene/confidence-honesty-bare.html",
+    "conf_marker": "conf ${it.confidence ?? \"—\"}",
+    "qualifier": "${docQual()}${itemQual(it)}",
+    "min_conf_sites": 2,
+    "wire": [
+      "const QUALIFIED = [\"success_with_warning\", \"ambiguous\"];",
+      "const st = (VIEW && VIEW.doc_status) || \"\";",
+      "return QUALIFIED.includes(st) ? ` · doc ${esc(st)}` : \"\";",
+      "const w = (it.evidence && it.evidence.warnings) || [];",
+      "return w.length ? ` · ⚠ ${esc(w.join(\", \"))}` : \"\";",
+      "const u = warns.find(x => x.code === \"unattributed_content\");"
+    ],
+    "coverage_fn": "coverageStrip",
+    "must_say": [
+      "document coverage:",
+      "of the document lies outside every item",
+      "interior gaps are not counted",
+      "true non-coverage can be up to 9.7 points higher"
+    ],
+    "must_not_say": [
+      "is attributed to items",
+      "the rest of the document is covered",
+      "full coverage",
+      "100 -"
+    ]
+  },
+  "expect": {
+    "min_failures": 11,
+    "max_failures": 11
+  },
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "Eleven ways D7 regresses, one failure each, at an EXACT count. Nothing is DELETED in this fixture — both confidence sites render, both helpers exist, the coverage strip exists and even carries a real percentage — because the demo defect was never a missing element. It was a present number with nothing beside it, and the coverage half's worse failure mode is a line that reads as reassurance. The eleven: (1) the SIDE PANEL badge prints a bare `conf ${it.confidence ?? \"—\"}`, the 2026-08-24 demo verbatim; (2) the pane header carries `${docQual()}` but drops `${itemQual(it)}`, so a validator-flagged item reads like an untouched one — half the link, which looks like the whole of it; (3) `QUALIFIED` no longer lists `ambiguous`, so the one status meaning 'could not resolve this document' qualifies nothing and jpm-2024's column of 0.75s reads as plain numbers; (4) `docQual` reads a live control's current value instead of the RESPONSE's `doc_status` — the S8 read-at-request-time rule broken in the qualifier rather than in the header; (5) `itemQual` re-derives 'item-targeted' from the NUMBER (`it.confidence < 0.9`) instead of reading `score()`'s own `hits` list, a second definition in the display layer and a wrong one, since 0.85 is the ordinary base for an IBR item and 0.95 is what an untouched item scores — it flags clean items and stays silent on exactly the cvx-2015 shape; (6) `coverageStrip` reads `toc_manifest_mismatch`, which carries no coverage figure at all, so the strip prints a percentage from nowhere; (7) the 9.7-point understatement caveat is gone; (8) so is its reason, that interior gaps are not counted; (9) the line instead asserts the remainder is covered; (10) it performs the inverted arithmetic at all, `100 - outside` being pinned as forbidden on its own, because the interior gaps were never in that subtraction and the complement is therefore not a coverage figure whatever it is then called; (11) and it labels the result an attributed share. (10) and (11) are separate catches on purpose — a strip that computed the complement but labelled it honestly would fire only the first — and the split was found by MEASUREMENT, not by design: the fixture was written expecting ten, the run reported eleven, and the count and the fixture header were corrected to what the check actually sees rather than the check weakened to the number already written down. (9), (10) and (11) are pinned as FORBIDDEN wording rather than merely as missing wording, for the same reason `ui-exclusion-note-regression` pins 'the two panes match': a banner that overstates coverage is a failure of the task, not a shortcut. Two `must_say` halves ('document coverage:', 'of the document lies outside every item') are left INTACT so a check that blanket-failed the wording would overshoot by two, and `min_conf_sites` is met exactly — both sites are present and both are wrong, so the anti-vacuity floor is not what is being measured here.",
+    "ceiling": "Same static-read ceiling as ui-confidence-honesty: text in, text out. Nothing here renders a badge, extracts a filing, or evaluates a template literal — shape (5) is caught because the pinned expression is absent, not because anything measured that `it.confidence < 0.9` disagrees with `evidence.warnings` on a real fixture. Whether the qualifier actually appears beside a real 0.95, and whether the coverage line is on screen rather than merely in the string, is browser evidence, in tasks/reviews/d7-browser-walk.json.",
+    "red_first": "Both halves observed before the fixture existed. The real file went red first at 3cdfbf4 (main tip, index.html unmodified) with 9 failures — 2 bare-confidence, 6 wire, 1 no-coverage-strip — recorded verbatim in tasks/reviews/d7-red-first.txt; that run is what proves the check can see the demo defect. This fixture then went red at 11/11 against the implemented file, which is what proves each shape is caught SEPARATELY rather than as one blanket failure."
+  },
+  "provenance": "D7, created 2026-08-26 alongside ui-confidence-honesty.json, following the ui-exclusion-note / ui-exclusion-note-regression pair."
+}
