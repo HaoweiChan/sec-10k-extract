@@ -1,0 +1,8 @@
+{
+  "id": "heldout-provenance-claims",
+  "task": "repo_hygiene",
+  "suites": ["invariant", "fast"],
+  "input": {"checks": ["heldout_provenance_claims"]},
+  "expect": {},
+  "provenance": "PR #52 review round 1, findings R4 and R5. Both are the same defect in two shapes: a held-out case's provenance stated a byte-level fact the committed fixture does not support — c-2025 claimed a case-insensitive item-plus-digit regex 'returns exactly four hits' without naming the regex (the regex that fits the three offsets it then lists returns THREE, and the named fourth entry contains no digit at all), and intc-2025 placed the cover literal at raw offset 330847 when it starts at 330839. Neither could go red: evals/heldout/README.md counts SIX prior occasions where the verification instrument rather than the pipeline was at fault, and its remedy has always been a stricter rule for humans to follow, never an executable one. This case makes the rule executable for the three claim shapes the provenances actually use, and it covers all seven held-out cases, not only the two this PR added — 23 pre-existing occurrence-count claims across mrk-1995, spg-2019, intc-2025 and c-2025 are re-derived every run. WATCHED RED BEFORE THE FIX: at 353e8f1 the check reported exactly 2 failures, the intc-2025 offset mismatch and the c-2025 un-named regex, and 0 after. It reads fixture bytes only and imports nothing from src/sec10k, so it never invokes the extractor on a held-out filing and does not touch the isolation rule."
+}

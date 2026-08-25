@@ -109,6 +109,70 @@ def check_report_citations():
     return bad
 
 
+HELDOUT_DIR = ROOT / "evals" / "heldout"
+# The three claim shapes held-out provenances actually use for byte-level
+# facts. `evals/heldout/README.md` records SIX occasions on which the
+# verification instrument, not the pipeline, produced a wrong claim, and the
+# rule it settled on is that anything character-level must be read from the
+# raw bytes. Nothing enforced that: a provenance is free prose, so a
+# miscounted string or an offset off by eight bytes sat in the document of
+# record until a human re-derived it (PR #52 R4/R5). These re-derive it every
+# run, against the committed fixture, importing nothing from src/sec10k.
+# ponytail: pins the three phrasings in use, not prose in general — a claim
+# written some other way is simply unpinned, which is the same silence as
+# before, not a regression. Widen the patterns when a new phrasing appears.
+_PROV_COUNT_RE = re.compile(r"'([^']{1,120})' (\d+)x")
+_PROV_OFFSET_RE = re.compile(r"'([^']{1,160})'[^.]{0,40}?(?:\(|at )raw offset ([\d,]+)")
+_PROV_HITS_RE = re.compile(
+    r"[^.]*\bregex\b[^.]*?\breturns\b[^.]*?\b(\d+|one|two|three|four|five|six|"
+    r"seven|eight|nine|ten) hits[^.]*", re.I)
+_NUM_WORDS = {w: i for i, w in enumerate(
+    "zero one two three four five six seven eight nine ten".split())}
+_BACKTICKED_RE = re.compile(r"`([^`]+)`")
+
+
+def check_heldout_provenance_claims():
+    """Every byte-level claim in a held-out case's provenance must reproduce
+    against that case's committed fixture: `'<literal>' <N>x` occurrence
+    counts, `'<literal>' at raw offset <N>` positions, and any stated regex
+    hit count — which must name the regex in backticks so it can be run."""
+    bad = []
+    for f in sorted(HELDOUT_DIR.glob("*.json")):
+        case = json.loads(f.read_text())
+        prov = case.get("provenance", "")
+        where = f"evals/heldout/{f.name}"
+        raw = (ROOT / case["input"]["path"]).read_bytes()
+        for lit, n in _PROV_COUNT_RE.findall(prov):
+            got = raw.count(lit.encode())
+            if got != int(n):
+                bad.append(f"{where}: claims {lit!r} {n}x, fixture has {got}x")
+        for lit, off in _PROV_OFFSET_RE.findall(prov):
+            want = int(off.replace(",", ""))
+            b = lit.encode()
+            if raw[want:want + len(b)] != b:
+                bad.append(f"{where}: claims {lit[:40]!r} at raw offset {want}, "
+                           f"actually at {raw.find(b)}")
+        for m in _PROV_HITS_RE.finditer(prov):
+            want = _NUM_WORDS.get(m.group(1).lower())
+            if want is None:
+                want = int(m.group(1))
+            pats = _BACKTICKED_RE.findall(m.group(0))
+            if not pats:
+                bad.append(f"{where}: states a regex hit count ({m.group(1)}) "
+                           f"without naming the regex in backticks — not reproducible")
+                continue
+            for pat in pats:
+                try:
+                    got = len(re.findall(pat.encode(), raw))
+                except re.error as e:
+                    bad.append(f"{where}: regex {pat!r} does not compile ({e})")
+                    continue
+                if got != want:
+                    bad.append(f"{where}: regex {pat!r} claimed {m.group(1)} hits, "
+                               f"produces {got}")
+    return bad
+
+
 def check_ui_stylesheet(case):
     """WCAG AA over the inspector's token block + the .it selector-scoping rule.
 
@@ -1608,6 +1672,7 @@ CHECKS = {
     "adr_headers": lambda case: check_adr_headers(),
     "adr_index": lambda case: check_index(),
     "report_citations": lambda case: check_report_citations(),
+    "heldout_provenance_claims": lambda case: check_heldout_provenance_claims(),
     "ui_stylesheet": check_ui_stylesheet,
     "typography_floor": check_typography_floor,
     "layout_centering": check_layout_centering,

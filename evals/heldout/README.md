@@ -49,7 +49,7 @@ first run, so it cannot be retrofitted afterwards.
 | `cost-2022/filing.htm` | sec.gov/Archives/edgar/data/909832/000090983222000021/cost-20220828.htm | 0000909832-22-000021 | 2022-10-05 | 2022-08-28 | iXBRL, retail, **August** FY end; separates every item code from its title with an **em dash**, a heading shape no dev fixture contains | 1,861,894 |
 | `mrk-1995/filing.txt` | sec.gov/Archives/edgar/data/64978/0000950130-96-000896.txt | 0000950130-96-000896 | 1996-03-20 | 1995-12-31 | pre-2001 txt, **pharmaceutical** (the sector jnj-2016 took with it when H1 burned it); form 10-K405; earliest filing in either set that predates Item 7A, so the 14-code taxonomy is exercised by a real document; **no table of contents at all** | 322,618 |
 | ~~`axp-2008/filing.htm`~~ | sec.gov/Archives/edgar/data/4962/000119312509041008/d10k.htm | 0001193125-09-041008 | 2009-02-27 | 2008-12-31 | **BURNED AND MOVED 2026-08-19 (T12, ADR-020)** — now `evals/fixtures/axp-2008/filing.htm`, case now `evals/adversarial/axp-2008-combined-heading-burned.json`. legacy HTML, **crisis-era financial**. It DOES have a table of contents — raw bytes carry `<A NAME="toc"></A>TABLE OF CONTENTS` at offset 13689, and the contents page lists Part III's four items individually — but the pipeline's `toc_manifest` comes back **empty** on it, because those entries are bare `10.` / `11.` / `12.` / `13.` with no `Item` prefix and so generate no heading candidates. *(Corrected 2026-08-19, repair round 2: this row and the original case provenance both claimed 'no table of contents', and the stratum rationale — a filing that gives the TOC machinery nothing to work with — was built on it. The machinery does come back empty; the stated reason was wrong.)* The original row here also read "the strings 'Item 10' through 'Item 13' occur **zero** times: Part III is addressed without its item headings" — the first clause is true of the SINGULAR forms and the second does not follow from it. There is one combined heading, at raw offset 1225493: `<B>ITEMS&nbsp;10,&nbsp;11,&nbsp;12&nbsp;and&nbsp;13.</B>` plus the four-item title. See the burn note below. Replaced `wfc-2008`, moved to the dev set before its first run | 1,296,375 |
-| `spg-2019/filing.htm` | sec.gov/Archives/edgar/data/1063761/000155837020001135/spg-20191231x10k.htm | 0001558370-20-001135 | 2020-02-21 | 2019-12-31 | iXBRL, **REIT** — Item 2 Properties runs ~101K chars of mall-by-mall tables, an order of magnitude past any other Item 2; the FY2017–FY2020 window; the first filing in either set with a **present and substantive Item 16**; 9.8 MB, second-largest anywhere here | 9,812,403 |
+| `spg-2019/filing.htm` | sec.gov/Archives/edgar/data/1063761/000155837020001135/spg-20191231x10k.htm | 0001558370-20-001135 | 2020-02-21 | 2019-12-31 | iXBRL, **REIT** — Item 2 Properties runs ~101K chars of mall-by-mall tables, an order of magnitude past any other Item 2; the FY2017–FY2020 window; the first filing in either set with a **present and substantive Item 16**; 9.8 MB — third-largest committed filing anywhere in the repo since D6 added `c-2025` (16.15 MB); `jpm-2024` (12.85 MB, dev set) is second. It was second-largest when this row was written; the clause was corrected under PR #52 R3 | 9,812,403 |
 | `intc-2025/filing.htm` | sec.gov/Archives/edgar/data/50863/000005086326000011/intc-20251227.htm | 0000050863-26-000011 | 2026-01-23 | 2025-12-27 | iXBRL, **post-2019 Intel reorg layout** — narrative organized by Intel's own section names and mapped to SEC item codes ONLY by a trailing `Form 10-K Cross-Reference Index`. All 23 item codes occur **exactly once each**, all of them index rows in the last 0.63% of the document; there is no body item heading anywhere. Added by **D6** as one of the two 2026-08-24 demo-failing filings; the maximal form of the ADR-015 stub-collapse trap, a layout class no fixture covers (`intc-2002` is pre-reorg) | 3,320,720 |
 | `c-2025/filing.htm` | sec.gov/Archives/edgar/data/831001/000083100126000011/c-20251231.htm | 0000831001-26-000011 | 2026-02-20 | 2025-12-31 | iXBRL, **money-center bank** — the postmortem's #1 known-difficult class, and Citigroup appeared in no set anywhere. Contains **zero** `Item <digit>` strings naming a 10-K item: the whole form mapping is a `FORM 10-K CROSS-REFERENCE INDEX` of BARE codes (`1.`, `1A.`, …), the `axp-2008` shape applied to every item rather than four. Added by **D6** as the second demo-failing filing. 16.1 MB, the largest file in either set | 16,150,764 |
 
@@ -278,9 +278,21 @@ finding 4 demonstrated on a real filing: **a presence-and-status case would
 have scored this document green.**
 
 `c-2025` — **as predicted, the opposite face.** 23 items, **zero** extracted;
-22 `missing` at 0.40 and `doc_status` **`ambiguous`**. The one deviation from
-the frozen prediction, recorded rather than smoothed over: item **9C came back
-`omitted` at 0.75**, not `missing` at 0.40. The tension the case flagged is
+**21 `missing` at 0.40 and TWO `omitted` at 0.75 — items 9C and 16** — with
+`doc_status` **`ambiguous`**. **TWO** deviations from the frozen prediction, which
+said all 23 would be `missing` at 0.40. *(Corrected 2026-08-26 under PR #52 R2: this
+paragraph, the `353e8f1` commit message and the `tasks/TODO.md` D6 row all read "22
+`missing`" and "the one deviation", dropping item 16 — an asserted number the
+committed artifact does not support, in the file whose stated purpose is that
+predictions cannot be retrofitted. The seventh entry in this file's tally of the
+instrument rather than the pipeline being at fault. Repro:*
+`python3 -c "import json,collections; r=json.load(open('evals/report/20260826-005839-fast.json')); print(collections.Counter((i['status'],i['confidence']) for c in r['results'] if c['id']=='c-2025-heldout' for i in c['items_summary']))"`
+*→ `Counter({('missing', 0.4): 21, ('omitted', 0.75): 2})`.)* Item 16 is the more
+interesting of the two deviations: the case's own declination (a) called `omitted`
+"the natural reading" for item 16 and declined to assert it anyway, on the
+`csco-2016` precedent — and the run then produced exactly that. Declining was
+still right, because the reasoning was about what the document states rather than
+about what the pipeline would do; but the outcome is now on the record. The tension the case flagged is
 also resolved, and not in my favour on the surface: the demo reported
 `conf 0.95` on Citigroup and this run reports 0.40 — the structural reading was
 right about *this* document, so either the demo ran a different Citigroup
