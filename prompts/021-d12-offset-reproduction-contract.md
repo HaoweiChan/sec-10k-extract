@@ -121,6 +121,40 @@ Three things are worth keeping from it:
   compare prefixes. aapl-2025 item 1 is 16,053 characters, so the printed
   example passed; item 1A of the same fixture is 68,162 and raises. A snippet a
   reader will paste is not documentation, it is code, and it is now pinned in
-  its correct form *and executed* against a genuinely truncated item — with the
-  case refusing to pass at all if no fixture contributes one, since on short
-  items the two forms agree and the pin would prove nothing.
+  its correct form.
+
+## Round 2 repair (PR #54) — the same overclaim, one level down, twice
+
+Round 1 fixed R1 and then made two smaller versions of the same mistake:
+claiming in committed prose that a guard enforces more than it does. Round 2
+found both. The pattern is worth naming, because it is the failure mode of
+this whole style of checking and it recurred inside the repair for it.
+
+- **R4 — a regex guard is always one spelling behind.** `NORM_BINDERS` was
+  `^\s*norm\s*=[^=]`, which counts a rebind only when it starts a physical
+  line. `norm = hit[2]; norm = hit[1]` and `norm, _unused = hit[1], 0` are both
+  valid Python, both serve the raw filing, and both were green — the R1 defect
+  restored, under a guard four committed artifacts described as "binds `norm`
+  exactly once". Patching the pattern would have bought the next spelling.
+  Replaced by an `ast` walk counting `Name(id="norm", ctx=Store)` inside the
+  function node, which is not a better pattern but the property itself: every
+  binding form Python has is one Store node. It also deleted the text-window
+  scan and, with it, the off-by-one that shipped in round 1.
+
+- **R5 — a check implied by the line above it has no falsification power.**
+  Round 1 added `slice_[:len(it["text"])] != it["text"]` to back the claim that
+  README's snippet was "executed, not just spell-checked", plus a guard
+  requiring a truncated item so the execution could not be vacuous. But
+  `build_view` sets `it["text"] = slice_[:DISPLAY_MAX]`, so that comparison is
+  the same expression as the `slice_[:DISPLAY_MAX] != it["text"]` line directly
+  above it — it could never fail alone, and the vacuity guard therefore guarded
+  nothing. Both deleted; the four artifacts now say R2 is protected by a text
+  pin, full stop. The lazier fix was also the honest one: `eval`-ing a README
+  line to manufacture falsification power would have been machinery built to
+  make a sentence true.
+
+The rule both findings point at: **a check's claim must be measured the same
+way its subject is.** R1, R4 and R5 were all found by mutating the thing the
+claim was about and watching the gate stay green — the only test of a check
+that is worth anything, and cheap enough that it should have been run on the
+repair as readily as on the code.

@@ -11,6 +11,7 @@ ui_stylesheet). The ADR and citation checks need no case input — there is one
 specs/decisions/ tree and one evals/report/ — while `ui_stylesheet` is
 case-declared, because WHICH text sits on WHICH ground is the reviewable part.
 """
+import ast
 import hashlib
 import json
 import os
@@ -1635,9 +1636,18 @@ RECIPE_DOCS = ("README.md", "src/sec10k/web/app.py")
 # any item over DISPLAY_MAX — aapl-2025 item 1A is 68,162 chars against a
 # 40,000-char display copy, so the published snippet raised AssertionError on
 # the fixture printed one line above it. The prose underneath said "compare
-# prefixes"; the code did not. Pinned here so the two cannot drift apart again,
-# and executed below against a genuinely truncated item so the pin is not just
-# a spelling check.
+# prefixes"; the code did not.
+#
+# This is a TEXT PIN and nothing more, stated plainly because the first version
+# of this comment claimed the line was also "executed below ... so the pin is
+# not just a spelling check" (PR #54 R5). It was not: the comparison added for
+# that claim was `slice_[:len(it["text"])] != it["text"]`, which `build_view`
+# makes identical to the `slice_[:DISPLAY_MAX] != it["text"]` line already in
+# the loop, so it could never fail alone and the truncated-item guard built on
+# top of it guarded nothing. Both were deleted rather than reworded. What this
+# pin catches is an edit to README.md; what it cannot catch is someone editing
+# README.md and this constant together, which is the same ceiling every
+# allow-list pin in this file has.
 SNIPPET_ASSERT = 'assert text[item["start"]:item["end"]][:len(item["text"])] == item["text"]'
 
 NORMALIZED_ROUTE_RE = re.compile(r'@app\.get\("(/api/normalized/[^"]+)"')
@@ -1677,13 +1687,28 @@ WIRE_NORMALIZED = [
 # name afterwards — UNIQUE_UI's argument, in Python. `norm = hit[2]` followed
 # by `norm = hit[1]` satisfies both pins and serves the raw filing, so the two
 # functions that bind `norm` must bind it exactly once each.
-# keyed on the `def` line, not the decorator: the end-of-function scan stops at
-# the next `\ndef `, and a decorated handler's own `def` is the very next line —
-# so keying on the decorator scans an empty slice and reports 0 bindings for
-# every possible body, which is red for the wrong reason and green the moment
-# the count it is compared against is 0.
-NORM_BINDERS = {"def api_normalized(": 1, "def _run(": 1}
-NORM_BIND_RE = re.compile(r"^\s*norm\s*=[^=]", re.M)
+#
+# Counted with `ast`, not a regex, and PR #54 R4 is why. The first version was
+# `^\s*norm\s*=[^=]` over a text window, which counts only a rebind that starts
+# its own physical line: `norm = hit[2]; norm = hit[1]` and
+# `norm, _unused = hit[1], 0` both left the whole gate green while the endpoint
+# served the raw filing. Two more spellings would have needed two more regex
+# patches, which is the shape of a guard that is always one spelling behind.
+# `Name(id="norm", ctx=Store)` inside the function node is the property itself:
+# every binding form Python has — assignment, augmented, walrus, tuple unpack,
+# for-target — is one Store node, and the ast also makes the text-window scan
+# (and the off-by-one that shipped in it for one run) unnecessary.
+NORM_BINDERS = {"api_normalized": 1, "_run": 1}
+
+
+def _binds(src, func, name):
+    """How many times `func` in `src` binds `name`. None if there is no such
+    function — a rename must be loud, not a silent zero."""
+    for node in ast.walk(ast.parse(src)):
+        if isinstance(node, ast.FunctionDef) and node.name == func:
+            return sum(1 for n in ast.walk(node) if isinstance(n, ast.Name)
+                       and n.id == name and isinstance(n.ctx, ast.Store))
+    return None
 
 
 def check_offset_reproduction_contract(case):
@@ -1711,9 +1736,11 @@ def check_offset_reproduction_contract(case):
         the path from this run's `normalized_text` to the response body is
         pinned WHOLE: what goes into the cache, which slot comes back out, the
         response, and the sha header — plus a guard that neither function
-        rebinds `norm` after its pinned binding (PR #54 R1: the first version
-        pinned only the two expressions that MENTION `norm`, and `norm =
-        hit[1]` served the raw filing straight through it). The recipe appears
+        binds `norm` more than once, counted with `ast` (PR #54 R1: the first
+        version pinned only the two expressions that MENTION `norm`, and `norm
+        = hit[1]` served the raw filing straight through it; R4: the guard that
+        closed R1 was a line-anchored regex, and a same-line or tuple-unpack
+        rebind walked through THAT). The recipe appears
         verbatim in both `RECIPE_DOCS`, warning included. What none of this can
         do is issue a request — importing app.py drags fastapi into the
         dependency-free unit job — so FastAPI BINDING the route stays unpinned
@@ -1733,17 +1760,13 @@ def check_offset_reproduction_contract(case):
         n = _squash(api).count(_squash(expr))
         if n != 1:
             bad.append(f"app.py: {why} — expected exactly one `{expr}`, found {n}")
-    for start, want in NORM_BINDERS.items():
-        j = api.find(start)
-        if j < 0:
-            bad.append(f"app.py: no `{start}` in which to check for a rebound `norm`")
-            continue
-        ends = [x for x in (api.find("\n@app.", j + 1), api.find("\ndef ", j + 1)) if x > 0]
-        n = len(NORM_BIND_RE.findall(api[j:min(ends) if ends else len(api)]))
+    for func, want in NORM_BINDERS.items():
+        n = _binds(api, func, "norm")
         if n != want:
-            bad.append(f"app.py `{start}`: binds `norm` {n} times, expected "
+            bad.append(f"app.py `{func}()`: binds `norm` {n} times, expected "
                        f"{want} — a second binding after the pinned one wins at "
-                       f"runtime and leaves every pin above satisfied")
+                       f"runtime and leaves every pin above satisfied "
+                       f"(None means the function is gone or renamed)")
 
     for rel in RECIPE_DOCS:
         text = _squash((ROOT / rel).read_text())
@@ -1770,7 +1793,7 @@ def check_offset_reproduction_contract(case):
                        f"UTF-8 normalized_text ({want_sha}) — step 3 of the "
                        f"recipe cannot be performed")
         raw = (ROOT / rel).read_bytes().decode("utf-8", "replace")
-        spanned = raw_same = truncated = 0
+        spanned = raw_same = 0
         for it in v["items"]:
             s, e = it.get("start"), it.get("end")
             if s is None or e is None:
@@ -1781,15 +1804,6 @@ def check_offset_reproduction_contract(case):
                 bad.append(f"{rel} item {it.get('item')}: the recipe's slice "
                            f"normalized_text[{s}:{e}] is not the text the API "
                            f"serves for that item (INV-S2 at the API boundary)")
-            # PR #54 R2: the comparison README's snippet actually publishes,
-            # run here rather than only spell-checked above. It is the same
-            # equality as the line above for a short item and the only true one
-            # for a long one, which is the distinction the snippet got wrong.
-            if slice_[:len(it["text"])] != it["text"]:
-                bad.append(f"{rel} item {it.get('item')}: README's step-4 line "
-                           f"is FALSE for this item — the published snippet "
-                           f"raises AssertionError on it")
-            truncated += bool(it.get("truncated"))
             if len(slice_) != it.get("chars"):
                 bad.append(f"{rel} item {it.get('item')}: chars={it.get('chars')} "
                            f"disagrees with len(normalized_text[{s}:{e}])={len(slice_)}")
@@ -1797,20 +1811,11 @@ def check_offset_reproduction_contract(case):
                 raw_same += 1
         if not spanned:
             bad.append(f"{rel}: no item carries a span — this fixture pins nothing")
-        info[f"{Path(rel).parent.name}_truncated_items"] = truncated
         if raw_same:
             bad.append(f"{rel}: {raw_same} of {spanned} spanned items slice the "
                        f"RAW bytes to the same string as the normalized text — "
                        f"the documented WARNING is not true of this fixture")
         info[f"{Path(rel).parent.name}_spanned_items"] = spanned
-    # R2 again: the line above is vacuous on a corpus where every item fits in
-    # DISPLAY_MAX, because there `[:len(text)]` and `==` agree. At least one
-    # item across the fixtures must actually be truncated, or the case has
-    # stopped covering the defect it was strengthened for.
-    if not any(k.endswith("_truncated_items") and v for k, v in info.items()):
-        bad.append("no item across these fixtures is truncated at DISPLAY_MAX, "
-                   "so nothing here distinguishes README's prefix comparison "
-                   "from the bare `==` that shipped and was wrong")
     return bad, info
 
 

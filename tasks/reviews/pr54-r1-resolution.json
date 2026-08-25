@@ -5,28 +5,28 @@
   "date": "2026-08-26",
   "author": "implementer",
   "gate_after_repair": "invariant 60/60 = 1.000; fast 123/123 = 1.000 (baseline fast 1.0, untouched)",
-  "digests_after_repair": "evals/snapshot.py over 56 dev + 5 held-out filings, dev sha256=8c002dced6acbbcb2a1ab69a27f61fac6216f44e83d64962ffdaab612e6eaa81, heldout sha256=51de5a11671621a423319e9704e4e227133e90703fe8b114e71a178204957f3f — identical to the pre-D12 snapshot",
+  "digests_after_repair": "evals/snapshot.py over 56 dev + 5 held-out filings, dev sha256=8c002dced6acbbcb2a1ab69a27f61fac6216f44e83d64962ffdaab612e6eaa81, heldout sha256=51de5a11671621a423319e9704e4e227133e90703fe8b114e71a178204957f3f \u2014 identical to the pre-D12 snapshot",
   "resolutions": [
     {
       "id": "R1",
       "outcome": "fixed",
       "covered_by": "ui-offset-reproduction-contract (check_offset_reproduction_contract, WIRE_NORMALIZED + NORM_BINDERS)",
-      "what_changed": "The allow-list pinned only the two expressions that MENTION `norm` and never where `norm` comes from. Added two whole-expression pins — `norm = hit[2]` in the endpoint and `norm = result.get(\"normalized_text\") or \"\"` in `_run` — plus NORM_BINDERS, a scoped guard requiring each of those two functions to bind `norm` exactly once, which closes the rebind the pins alone cannot see. The check's docstring and the case's triage note now say what the pins do and do not establish: that the code says the right thing, not that FastAPI serves it.",
+      "what_changed": "The allow-list pinned only the two expressions that MENTION `norm` and never where `norm` comes from. Added two whole-expression pins \u2014 `norm = hit[2]` in the endpoint and `norm = result.get(\"normalized_text\") or \"\"` in `_run` \u2014 plus NORM_BINDERS, a guard requiring each of those two functions to bind `norm` exactly once, which closes the rebind the pins alone cannot see. [Corrected in round 2, PR #54 R4: as shipped in round 1 that guard was a line-anchored regex and enforced only 'no rebind that starts its own line' \u2014 `norm = hit[2]; norm = hit[1]` and `norm, _unused = hit[1], 0` were both green. It counts `ast` Store nodes as of round 2 and the sentence is true as written.] The check's docstring and the case's triage note now say what the pins do and do not establish: that the code says the right thing, not that FastAPI serves it.",
       "red_first": [
         "Confirmed the hole first, unmodified check + reviewer's mutation `norm = hit[1]`: PASS, 0 failures.",
-        "After strengthening, same mutation: FAIL — 'app.py: the endpoint's bytes come from the NORMALIZED slot of the cache entry — `hit[1]` is the raw filing and satisfies every other pin here — expected exactly one `norm = hit[2]`, found 0'. Reverted: PASS, 0 failures.",
-        "Second mutation `norm = (result.get(\"normalized_text\") or \"\")[:100]`: FAIL — '...what goes into that slot is the WHOLE normalized_text of this run, not a prefix of it'. Reverted: green.",
-        "Third mutation, the shadow the pins alone miss — `norm = hit[2]` followed by `norm = hit[1]`: FAIL — 'app.py `def api_normalized(`: binds `norm` 2 times, expected 1'. Reverted: green."
+        "After strengthening, same mutation: FAIL \u2014 'app.py: the endpoint's bytes come from the NORMALIZED slot of the cache entry \u2014 `hit[1]` is the raw filing and satisfies every other pin here \u2014 expected exactly one `norm = hit[2]`, found 0'. Reverted: PASS, 0 failures.",
+        "Second mutation `norm = (result.get(\"normalized_text\") or \"\")[:100]`: FAIL \u2014 '...what goes into that slot is the WHOLE normalized_text of this run, not a prefix of it'. Reverted: green.",
+        "Third mutation, the shadow the pins alone miss \u2014 `norm = hit[2]` followed by `norm = hit[1]`: FAIL \u2014 'app.py `def api_normalized(`: binds `norm` 2 times, expected 1'. Reverted: green."
       ],
-      "note": "One defect in the repair itself, found and fixed before commit: NORM_BINDERS was first keyed on the route DECORATOR, and the end-of-function scan stops at the next `\\ndef `, which is the handler's own def line — so it scanned an empty slice and reported 0 bindings for every possible body. Red for the wrong reason, and green the moment the expected count were 0. Keyed on `def api_normalized(` instead, with the reason written into the constant."
+      "note": "One defect in the repair itself, found and fixed before commit: NORM_BINDERS was first keyed on the route DECORATOR, and the end-of-function scan stops at the next `\\ndef `, which is the handler's own def line \u2014 so it scanned an empty slice and reported 0 bindings for every possible body. Red for the wrong reason, and green the moment the expected count were 0. Keyed on `def api_normalized(` instead, with the reason written into the constant."
     },
     {
       "id": "R2",
       "outcome": "fixed",
       "covered_by": "ui-offset-reproduction-contract (SNIPPET_ASSERT pin + the truncated-item requirement in the live loop)",
-      "what_changed": "README's step-4 line is now `assert text[item[\"start\"]:item[\"end\"]][:len(item[\"text\"])] == item[\"text\"]`, true for every item. The line is pinned in the check README-only, and the same comparison is executed in the live loop against every item on both fixtures; the case additionally fails if no fixture in it contributes a truncated item, because on a corpus of short items the prefix form and the bare `==` agree and the pin would be vacuous.",
+      "what_changed": "README's step-4 line is now `assert text[item[\"start\"]:item[\"end\"]][:len(item[\"text\"])] == item[\"text\"]`, true for every item. The line is pinned in the check, README-only. [Corrected in round 2, PR #54 R5: this entry also claimed the comparison was executed in the live loop and guarded by a truncated-item requirement. The executed comparison was implied by a check already in the loop, so it had no falsification power and the guard on top of it guarded nothing; both were deleted in round 2. R2 is protected by the text pin alone \u2014 reverting README.md's line is red, co-editing it with the constant is not.]",
       "red_first": [
-        "Pin added while README still carried the `==` line: FAIL — 'README.md: the worked snippet's step-4 line is not `assert text[item[\"start\"]:item[\"end\"]][:len(item[\"text\"])] == item[\"text\"]` (found 0) — any other comparison is false for an item longer than DISPLAY_MAX'.",
+        "Pin added while README still carried the `==` line: FAIL \u2014 'README.md: the worked snippet's step-4 line is not `assert text[item[\"start\"]:item[\"end\"]][:len(item[\"text\"])] == item[\"text\"]` (found 0) \u2014 any other comparison is false for an item longer than DISPLAY_MAX'.",
         "Fixed the line: PASS, 0 failures. Reported truncated-item counts, so the new requirement is not vacuous: ge-1994 1, msft-2013 2.",
         "Reproduced the reviewer's item over real HTTP (fastapi.testclient, aapl-2025): item 1 chars=16053 display=16053 old-`==`-form=True; item 1A chars=68162 display=40000 old-`==`-form=False, new prefix form True for both."
       ]
