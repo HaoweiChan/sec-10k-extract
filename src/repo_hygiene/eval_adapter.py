@@ -1791,17 +1791,31 @@ def check_deep_link(case):
     anything is assigned, so an unknown or absent `fixture` is a no-op and
     `run=1` on its own extracts nothing.
 
-    PR #55 R1 — the ORDER the first version asserted was the one that cannot
-    move. Guard-before-run is fixed by `deepLink()`'s own function text, so
-    that assertion was inert, while the order the feature actually depends on
-    went unpinned: `deepLink()` must run AFTER `boot()` fills `#fx` from
-    `/api/meta`, because the option list is the very thing its membership
-    guard tests against. Relocated to the first line of `boot()` the guard
-    finds an empty `<select>`, returns every time, and the deep link is a
-    permanent silent no-op — measured at `[PASS] ui-deep-link`, invariant
-    63/63 = 1.000. So `order` is now one list covering the whole chain
-    (options assignment -> call site -> guard -> run), and a pin that moves
-    ahead of its predecessor is red wherever it moved to.
+    WHERE `deepLink()` IS CALLED FROM is the other half, and two rounds got it
+    wrong before this shape. The call must sit on `boot()`'s straight-line
+    tail, after `#fx` has been filled from `/api/meta`: the option list is the
+    very thing the membership guard tests against, so a call that runs earlier
+    — or only on the error path — finds an empty `<select>`, returns every
+    time, and leaves the deep link a permanent silent no-op.
+
+    PR #55 R1 pinned that as guard-before-run, which is inert: that order is
+    fixed by `deepLink()`'s own function text and cannot move. PR #55 R9 then
+    measured both failure directions of the replacement, a `flat.find()`
+    ordering chain — FALSE GREEN on `deepLink()` moved into the `catch` arm
+    (runs only when /api/meta fails, i.e. never on the happy path; `[PASS]
+    ui-deep-link`, invariant 63/63 = 1.000) and FALSE RED on hoisting the
+    whole `function deepLink(){…}` declaration above `boot()` (behaviour
+    identical, declarations hoist). Both follow from the same mistake: the
+    guard and run pins live INSIDE the function body, whose textual position
+    says nothing about when it runs.
+
+    So there is no ordering machinery here at all any more. The call site is
+    pinned by CONTAINMENT — one contiguous span running from the options
+    assignment, through the `catch` arm, to `deepLink();` — and any relocation
+    out of that straight-line tail is simply a missing pin. What is asserted
+    is exactly what is checked: these expressions, and that shape around the
+    call. Nothing claims the guard's or the run trigger's position means
+    anything, because it does not.
     """
     inp = case.get("input", {})
     text = _live((ROOT / inp.get("file", UI_STYLESHEET)).read_text(), "js")
@@ -1809,18 +1823,7 @@ def check_deep_link(case):
     for expr in inp.get("wire", []):
         if _squash(expr) not in flat:
             bad.append(f"missing pinned expression (the deep link's wire): {expr}")
-    # Only meaningful once every pin is present; a missing pin is already red
-    # and would report a second, confusing failure here as -1 < everything.
-    order = inp.get("order", [])
-    if order and not bad:
-        at = [(e, flat.find(_squash(e))) for e in order]
-        for (prev, pi), (nxt, ni) in zip(at, at[1:]):
-            if ni < pi:
-                bad.append(f"out of order: {nxt!r} (@{ni}) runs before "
-                           f"{prev!r} (@{pi}) — the deep link only works if "
-                           f"each step follows the one it depends on")
-    return bad, {"deep_link_pins": len(inp.get("wire", [])),
-                 "deep_link_order": list(order)}
+    return bad, {"deep_link_pins": len(inp.get("wire", []))}
 
 
 CHECKS = {

@@ -19,12 +19,13 @@
   {
    "id": "R1",
    "severity": "MEDIUM",
-   "status": "fixed",
+   "status": "superseded",
    "reproduced": "Yes, exactly as reported. `deepLink();` moved from after the try/catch to the first line of `boot()` in src/sec10k/web/static/index.html -> `python3 -m evals.run --suite invariant` gives `[PASS] ui-deep-link`, suite 63/63 = 1.000, while `?fixture=aapl-2025&run=1` renders nothing: `$(\"#fx\").options` is empty at that point, the membership guard returns, and the feature is a permanent silent no-op.",
    "fix": "check_deep_link's `guard_expr`/`run_expr` pair (inert — guard-before-run is fixed by deepLink()'s own function text and cannot move) is replaced by a single `order` list asserting the whole dependency chain in file order: the `$(\"#fx\").innerHTML = m.fixtures...` assignment, then the `deepLink();` call site, then the guard, then the run trigger. Each consecutive pair must be non-decreasing in position, so a step that moves ahead of what it depends on is red wherever it moved to. The options assignment was added to `wire` as well, so its DELETION is reported as a missing pin rather than as a confusing -1 ordering failure.",
    "covered_by": "evals/adversarial/ui-deep-link.json (invariant + fast), check `deep_link`, input key `order`",
    "red_output_verbatim": "[FAIL] ui-deep-link (adversarial, 0.0s) / [eval] suite 'invariant': 62/63 = 0.984 -- out of order: 'deepLink();' (@14984) runs before '$(\"#fx\").innerHTML = m.fixtures.map(f => `<option>${esc(f)}</option>`).join(\"\");' (@15084) — the deep link only works if each step follows the one it depends on",
-   "note": "The case triage note claimed an assertion the code did not make; it now records what `order` covers and quotes the red output, which was the second half of the finding."
+   "note": "The case triage note claimed an assertion the code did not make; it now records what `order` covers and quotes the red output, which was the second half of the finding.",
+   "superseded_by": "PR #55 R9 (round 2). The ordering chain this entry records was itself wrong in both directions — false green on the call site moved into the catch arm, false red on hoisting the function declaration. It is replaced by a containment pin; see tasks/reviews/pr55-r2-resolution.json R9. The red_output_verbatim above WAS observed at the time and is left as the round-1 record, but the check that emitted it no longer exists, so it is not reproducible against the current tree."
   },
   {
    "id": "R2",
@@ -80,5 +81,6 @@
    "became": null,
    "note": "orchestrator-owned, absorbed at EVIDENCE. tasks/TODO.md:72 Status left exactly as found (`in-progress — UI gate UNRUN`); no Debt row created, per the round's routing instruction."
   }
- ]
+ ],
+ "audit_note_round2": "PR #55 R10 asked for an audit of every quoted output in this artifact. R2 and R3 red_output_verbatim were re-measured during the round-2 repair and match character for character; R1 is marked superseded above rather than rewritten, since this file is the record of round 1."
 }
