@@ -1,0 +1,40 @@
+{
+  "pr": 52,
+  "task": "D6",
+  "round": 3,
+  "date": "2026-08-26",
+  "scope": "repair diff only, 52843af..55275dc, plus the standing R9-R14 findings",
+  "result": "APPROVED",
+  "gate": {"invariant": "61/61 = 1.000", "fast": "124/124 = 1.000", "table_fidelity": "427/427 cells, 34/34 rows", "structure_fidelity": "61/61 blocks, 61/61 bounds", "baseline_touched": false},
+  "standing_findings_closed": ["R9", "R10", "R11", "R12", "R13 (debt)", "R14"],
+  "reviewer_independent_verification": [
+    "R14 blast radius clean: all 134 committed cases parsed (37 repo_hygiene + 97 sec10k); zero repo_hygiene cases lack input.checks, including adr-header-and-index.json; zero sec10k cases have empty/missing expect.checks. The deleted default orphans nothing.",
+    "No-burn invariant holds: id/input/expect/task/suites byte-identical to 353e8f1 for both held-out cases; only provenance moved. The committed H4 report is not stale.",
+    "R10's rewrite is TRUE, not a contradiction traded for a new wrong claim: c-2025 report gives {missing 21 @0.40, omitted 2 @0.75} on exactly 9C and 16; intc-2025 all 23 extracted @0.95, chars min 20 / max 226 / sum 1727; the seventh-instrument-fault tally (fifth at :172, sixth at :213, H4 seventh) is accurate.",
+    "Floors are honest, not fitted: min_claims equals the exact per-file yield; min_refs 9 equals the exact current count. Neither is set below what the tree sustains.",
+    "All 9 quoted refs in tasks/TODO.md resolve by hand against their targets.",
+    "No new stale facts; no prose cites the amended-away 3f5078a; scope clean."
+  ],
+  "orchestrator_verification": "R15 and R16 were reproduced independently before routing, with a control: the possessive-form ref and the short-fragment ref both pass a mutation that should fail them (GREEN, missed), while the ordinary form (:389 -> :399) goes RED. So the check bites on the shape it was built for and has exactly the two documented blind spots.",
+  "routing_note": "Both findings are LOW, both are erosion paths rather than live defects — the reviewer confirms no instance of either shape exists in the committed tree today, and the possessive ref in question resolves correctly. Per the pr-loop scope rule they go to Debt, and nothing blocks. This is the correct call and not a convenience: blocking a fourth round on two hypothetical futures, for a PR whose deliverable has been correct and unburned for four commits, would spend the circuit breaker on prose about an instrument rather than on the exam it guards.",
+  "findings": [
+    {
+      "id": "R15",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "R9's durable check has a blind spot inside the very Debt row it was built to protect: a quoted line ref written in the possessive form is not matched, so that ref can rot silently, and the case provenance's coverage number is off by one as a result.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:213-215 — LEDGER_LINE_REF_RE allows only `\\s*(?:reads|says)?\\s*\\(?\\s*` between the closing backtick and the opening quote. tasks/TODO.md:210 (the R1 Debt row) writes `ADR-021:211`'s \"no real filing joined the corpus since\" — the possessive blocks the match, so the ref is neither verified nor counted. Rewriting :211 to :911 leaves the check returning [] and invariant 61/61. Consequently the case provenance's '9 of roughly 60 refs quote their target and are therefore checkable' understates the quoting population: 10 quote their target, 9 are checkable. The ref itself resolves correctly today, so nothing is currently stale.",
+      "repro": "python3 -c \"import sys,json,pathlib; sys.path.insert(0,'.'); import src.repo_hygiene.eval_adapter as A; case=json.load(open('evals/adversarial/ledger-line-refs.json')); p=pathlib.Path('tasks/TODO.md'); o=p.read_text(); p.write_text(o.replace('\\u0060ADR-021:211\\u0060','\\u0060ADR-021:911\\u0060')); print(A.check_ledger_line_refs(case) or 'GREEN (missed)'); p.write_text(o)\"",
+      "acceptance": "The possessive form is matched (or the one ref rewritten into the matched form), min_refs rises to 10, the :211 -> :911 mutation goes RED through `python3 -m evals.run --suite invariant`, and the provenance states the quoting and checkable populations as the same number."
+    },
+    {
+      "id": "R16",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "check_ledger_line_refs can be satisfied vacuously: a ref whose quotation is 4-5 characters long counts toward the min_refs floor but verifies nothing, so a completely bogus line number passes.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:245-249 — n_refs += 1 happens before the fragment loop, and the loop continues on any normalized piece shorter than 6 chars, while LEDGER_LINE_REF_RE accepts a fragment as short as 4. Replacing `README.md:92` reads \"Full rationale in ... (18 ADRs)\" with `README.md:9999` reads \"zzzz\" — a line that does not exist — returns [] and still counts 9 refs, so both the value check and the floor are satisfied by a ref that checks nothing. No instance of this shape exists in the committed tree today; this is an erosion path, not a live defect.",
+      "repro": "python3 -c \"import sys,json,pathlib; sys.path.insert(0,'.'); import src.repo_hygiene.eval_adapter as A; case=json.load(open('evals/adversarial/ledger-line-refs.json')); p=pathlib.Path('tasks/TODO.md'); o=p.read_text(); p.write_text(o.replace('\\u0060README.md:92\\u0060 reads \\\"Full rationale in \\u0060specs/decisions/\\u0060 (18 ADRs)\\\"','\\u0060README.md:9999\\u0060 reads \\\"zzzz\\\"')); print(A.check_ledger_line_refs(case) or 'GREEN (vacuous)'); p.write_text(o)\"",
+      "acceptance": "A ref whose every quoted piece is below the 6-char verification threshold either does not count toward min_refs or is reported as unverifiable; the README.md:9999/\"zzzz\" mutation goes RED through `python3 -m evals.run --suite invariant`."
+    }
+  ]
+}
