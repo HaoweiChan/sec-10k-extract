@@ -5,10 +5,12 @@ Citigroup (C) 10-K filings were run through the inspector. Both extractions
 were visibly wrong, and the side panel showed per-item `conf 0.95` while they
 were wrong. This document is the retrospective: what failed, why the number
 said otherwise, what the repo already knew, and what work was cut from it.
-The remediation milestones are ledger rows D6–D11 in `tasks/TODO.md`; this
+The remediation milestones are ledger rows D6–D12 in `tasks/TODO.md`; this
 file is the narrative they point back to. Nothing here is normative —
 `specs/` binds. §7 records the design direction set at the interviewer
-debrief later the same day, which re-scoped D6 and added D11.
+debrief later the same day, which re-scoped D6 and added D11. §8 maps the
+two interviewers' written feedback (received 2026-08-26) onto the track,
+adds D12, and records which praised mechanisms do not actually exist.
 
 ## 1. The headline finding: 0.95 was not lying about what it measures
 
@@ -194,3 +196,55 @@ Four consequences the ledger now encodes:
   inspector already renders as "via ..." — plus a document-level routing
   record (trigger fired or not, tiers attempted, per-tier outcome and
   cost), and the inspector displays both, pinned by a red-first UI case.
+
+## 8. Addendum — interviewer feedback mapping (2026-08-26)
+
+Two interviewers returned written feedback on the assignment. Point-by-point
+against the track (their wording paraphrased; the originals are with the
+owner):
+
+**Covered by existing rows.** The headline flaw both named — the assigned
+Intel filing not completed, only short cross-reference/index fragments
+captured — is D6 (the held-out exam) plus D11 (the slow path that must pass
+it). "Status says pass while the extraction actually failed" is D8. The
+disclosure of the cross-reference-index class as unsupported is §2/§4 and
+the README's difficult/unsupported section. One apparent contradiction
+dissolves on inspection: interviewer 1 saw low confidence with an explicit
+failure marking, while the demo saw 0.95 — both are real, because the
+sensor fails asymmetrically. Unmatched headings land `missing` at 0.40 (what
+they saw); headings matched to the *wrong instances* land 0.95 (what the
+demo saw). Same D8 problem, two faces.
+
+**Three gaps the feedback exposed, now dispositioned:**
+
+1. *Coverage not disclosed at the API level* (their unseen-document test:
+   roughly 37% of content attributed to items, 63% unattributed, response
+   still reads as plain success). `unattributed_content` exists as a
+   deliberately non-escalating warning with its figure buried in evidence —
+   a figure `validate.py`'s own comment says can understate true
+   non-coverage by up to 9.7 points. Disposition: D7 (display half — the
+   banner surfaces the figure) and D8 scope (a) (envelope coverage field +
+   escalation threshold).
+2. *Validator-flagged items still serve their text under an unchanged
+   status.* Confidence alone moving (the original D8) leaves the consumer
+   holding possibly-wrong text labeled `extracted`. Disposition: D8 scope
+   (b) — the ADR must rule the consumer-facing semantics: a status change
+   or an explicit per-item review flag, never silence.
+3. *Offsets are not raw-HTML offsets, and nothing tells the consumer.*
+   True by design — offsets index `normalized_text`, and a raw-to-normalized
+   map was refused in ADR-026 §a (restated as a hard boundary at D5). The
+   remedy is contract, not mapping: D12 — a normalized-text download
+   endpoint plus a documented, pinned reproduction recipe.
+
+**Praised mechanisms that do not exist in this codebase** — recorded so no
+one banks on them: there is no `needs_review` field (the envelope has
+`doc_status`, per-item `status`, `confidence`, warnings), no
+`source_ranges`, no `/raw` or `/normalized` endpoints (the compare pane
+serves raw source via `/api/source/{token}` only), and **no Item 8 XBRL
+numeric cross-validation** — `normalize.py` strips iXBRL tags; nothing
+compares XBRL facts against extracted spans. The interviewers either tested
+a different iteration or paraphrased generously. Risk: credit resting on
+nonexistent features can be withdrawn by a deeper review. Opportunity: the
+XBRL cross-check they imagined is a genuinely good $0 deterministic
+coverage sensor — iXBRL facts are already in the document — and is now D8
+scope (c) as a candidate signal.
