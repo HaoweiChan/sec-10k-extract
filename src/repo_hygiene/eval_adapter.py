@@ -696,8 +696,14 @@ WIRE_UI = [
     ("the pane SAYS it is hiding text — R5's defect was un-stripped text "
      "under this label, and the inverse, a silent strip, is the same lie",
      '(VIEW.boilerplate_excluded ? "boilerplate hidden · " : "")'),
+    # D10 moved this pin: the same render now carries role=region + an
+    # item-naming aria-label (ui-item-text-region). Re-checked per the pin's
+    # own failure message — the STRIPPED string is still what is rendered,
+    # `display_text ?? text` unmodified, and the new attributes are display
+    # metadata that touch neither end of the wire.
     ("the extracted-item pane renders the STRIPPED string",
-     '<pre class="text">${esc(it.display_text ?? it.text)}</pre>'),
+     '<pre class="text" role="region" aria-label="Item ${esc(it.item)} extracted text">'
+     '${esc(it.display_text ?? it.text)}</pre>'),
     ("the truncation notice counts the STRIPPED string",
      '${(it.display_text ?? it.text).length.toLocaleString()}'),
 ]
@@ -720,7 +726,9 @@ WIRE_HANDLER = {
 # passed the allow-list until this was added.
 UNIQUE_UI = [
     ("nothing may shadow the excludeBp() helper", "function excludeBp"),
-    ("nothing may shadow the extracted-item render", '<pre class="text">'),
+    # D10: opening tag only, so the pin survives the ARIA attributes added to
+    # it while still counting every `pre.text` `$("#pane pre.text")` could hit
+    ("nothing may shadow the extracted-item render", '<pre class="text"'),
 ]
 
 WIRE_API = [
@@ -1604,6 +1612,141 @@ def check_exclusion_note_trigger(case):
                      sorted(k for k in seen if seen[k] is not old_expr[k])}
 
 
+# --- D10: agent-legibility (correct ARIA + a deep link) --------------------
+# All four read the file's TEXT, not a render, for the same reason
+# check_split_breakpoint documents: there is no browser in the eval harness.
+# The behavioural half — that the deep link actually lands on a rendered page
+# and that these names reach the accessibility tree — is the browser walk
+# (tasks/reviews/d10_agent_walk.py), which is evidence, not a gate.
+
+
+def _attrs(tag):
+    """{name: value} of the double-quoted attributes in one start tag."""
+    return dict(re.findall(r'([-a-zA-Z]+)\s*=\s*"([^"]*)"', tag))
+
+
+def _named(attrs):
+    """The accessible name an element carries in its own start tag, if any."""
+    return (attrs.get("aria-label") or attrs.get("aria-labelledby") or "").strip()
+
+
+def check_banner_status_role(case):
+    """D10 (2): `#banner` is the page's live status region — it is the only
+    element that reports `doc_status`, and JS rewrites it asynchronously after
+    every extraction. As a bare `<div>` its role is `generic`, which the
+    browser-agent postmortem (S2) records as dropped from the observation
+    entirely, so the one answer the page exists to give had no element to be
+    the name of. `role="status"` is the correct role for exactly this element
+    (it IS a polite live region), and an `aria-label` makes it a *named*
+    element rather than an anonymous one.
+    """
+    inp = case.get("input", {})
+    text = _live((ROOT / inp.get("file", UI_STYLESHEET)).read_text(), "js")
+    ident = inp.get("banner_id", "banner")
+    m = re.search(r'<div([^>]*\bid="' + re.escape(ident) + r'"[^>]*)>', text)
+    if not m:
+        return [f"#{ident}: no banner element in the live markup"], {"banner_attrs": None}
+    attrs = _attrs(m.group(1))
+    want_role = inp.get("role", "status")
+    bad = []
+    if attrs.get("role") != want_role:
+        bad.append(f'#{ident}: role is {attrs.get("role")!r}, want {want_role!r} '
+                   f"— a bare div is `generic` and carries no name for doc_status")
+    if not _named(attrs):
+        bad.append(f"#{ident}: no accessible name (aria-label/aria-labelledby) "
+                   f"— role=status alone leaves the region anonymous")
+    return bad, {"banner_attrs": attrs}
+
+
+def check_item_text_region(case):
+    """D10 (3): the extracted item's text container (`pre.text`, and the
+    `div.text.md` the same slot renders in Markdown mode) must be a named
+    region. Same S2 shape as the banner: a bare `<pre>` is `generic`, so the
+    pane holding the actual answer was invisible to an accessibility-first
+    reader. `role="region"` plus an `aria-label` that interpolates the item's
+    own code is what makes "Item 1A" addressable; a static label would name
+    every item identically and is therefore rejected here.
+    """
+    inp = case.get("input", {})
+    text = _live((ROOT / inp.get("file", UI_STYLESHEET)).read_text(), "js")
+    want_expr = inp.get("label_must_interpolate", "${esc(it.item)}")
+    want_role = inp.get("role", "region")
+    found, bad = {}, []
+    for tag in re.findall(r'<(?:pre|div)[^>]*\bclass="text[^"]*"[^>]*>', text):
+        attrs = _attrs(tag)
+        key = attrs.get("class")
+        found[key] = attrs
+        if attrs.get("role") != want_role:
+            bad.append(f'class="{key}": role is {attrs.get("role")!r}, '
+                       f"want {want_role!r}")
+        name = _named(attrs)
+        if not name:
+            bad.append(f'class="{key}": no accessible name naming the item')
+        elif want_expr not in name:
+            bad.append(f'class="{key}": aria-label {name!r} does not interpolate '
+                       f"{want_expr} — every item would carry the same name")
+    for key in inp.get("containers", ["text", "text md"]):
+        if key not in found:
+            bad.append(f'class="{key}": no such item-text container in the live markup')
+    return bad, {"item_text_containers": found}
+
+
+def check_mode_button_names(case):
+    """D10 (4): the three input modes each render a button whose accessible
+    name was exactly "Extract" — the postmortem's S3 ambiguity shape, where a
+    plan targeting the button resolves to 3 matches. Each needs a DISTINCT
+    accessible name; the visible label stays "Extract" because that is what
+    the button does in every mode, so the distinction rides `aria-label`.
+    """
+    inp = case.get("input", {})
+    text = _live((ROOT / inp.get("file", UI_STYLESHEET)).read_text(), "js")
+    names, bad = {}, []
+    for ident in inp.get("buttons", ["go-fx", "go-up", "go-url"]):
+        m = re.search(r'<button([^>]*\bid="' + re.escape(ident) + r'"[^>]*)>', text)
+        if not m:
+            bad.append(f"#{ident}: no such button in the live markup")
+            continue
+        names[ident] = _named(_attrs(m.group(1)))
+        if not names[ident]:
+            bad.append(f"#{ident}: no accessible name of its own — all three "
+                       f'modes read "Extract", which is the 3-match ambiguity')
+    seen = [n for n in names.values() if n]
+    dupes = sorted({n for n in seen if seen.count(n) > 1})
+    if dupes:
+        bad.append(f"mode buttons share accessible name(s) {dupes} — the names "
+                   f"must tell the three modes apart")
+    return bad, {"mode_button_names": names}
+
+
+def check_deep_link(case):
+    """D10 (1), the highest-leverage one: `?fixture=<id>&run=1` must preload
+    the fixture select and extract on load, so an agent (or a shared link)
+    lands on an already-rendered page instead of the fetch-then-render SPA the
+    postmortem's S1/S4 shapes are about.
+
+    Pinned as WHOLE expressions, for the reason WIRE_UI states: asking each
+    hop a question about itself is answerable by a broken hop. The pins carry
+    the safe-degrade contract too — the membership guard returns before
+    anything is assigned, so an unknown or absent `fixture` is a no-op and
+    `run=1` on its own extracts nothing. That ordering is asserted
+    structurally as well, since a pin set can be satisfied in the wrong order.
+    """
+    inp = case.get("input", {})
+    text = _live((ROOT / inp.get("file", UI_STYLESHEET)).read_text(), "js")
+    flat, bad = _squash(text), []
+    for expr in inp.get("wire", []):
+        if _squash(expr) not in flat:
+            bad.append(f"missing pinned expression (the deep link's wire): {expr}")
+    guard, run = inp.get("guard_expr"), inp.get("run_expr")
+    if guard and run and not bad:
+        gi, ri = flat.find(_squash(guard)), flat.find(_squash(run))
+        if gi < 0 or ri < 0 or gi > ri:
+            bad.append(f"the unknown-fixture guard does not precede the run "
+                       f"trigger (guard@{gi}, run@{ri}) — `run=1` could fire "
+                       f"without a valid fixture")
+    return bad, {"deep_link_pins": len(inp.get("wire", []))}
+
+
 CHECKS = {
     "adr_headers": lambda case: check_adr_headers(),
     "adr_index": lambda case: check_index(),
@@ -1627,6 +1770,10 @@ CHECKS = {
     "split_breakpoint": check_split_breakpoint,
     "exclusion_note": check_exclusion_note,
     "exclusion_note_trigger": check_exclusion_note_trigger,
+    "banner_status_role": check_banner_status_role,
+    "item_text_region": check_item_text_region,
+    "mode_button_names": check_mode_button_names,
+    "deep_link": check_deep_link,
 }
 
 

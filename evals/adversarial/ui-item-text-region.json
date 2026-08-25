@@ -1,0 +1,25 @@
+{
+  "id": "ui-item-text-region",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "item_text_region"
+    ],
+    "role": "region",
+    "containers": [
+      "text",
+      "text md"
+    ],
+    "label_must_interpolate": "${esc(it.item)}"
+  },
+  "expect": {},
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "D10 defect 3, postmortem shape S2 again. The extracted item's text container rendered as a bare `<pre class=\"text\">` (and, in Markdown mode, a bare `<div class=\"text md\">`) — role `generic`, no name — so the pane holding the actual filing text was invisible to an accessibility-first reader. Watched red against the unmodified file: four failures, `class=\"text md\": role is None, want 'region'` / `class=\"text md\": no accessible name naming the item` / `class=\"text\": role is None, want 'region'` / `class=\"text\": no accessible name naming the item`. Green once both carry role=region and an aria-label interpolating `${esc(it.item)}`. BOTH containers are pinned deliberately: they are the same slot in two view modes (ADR-032), so naming only the `<pre>` would let Markdown mode silently regress the fix. The label must INTERPOLATE the item code — a constant label would name all 23 items the same, which is the ambiguity shape this fix exists to remove, not a fix for it."
+  },
+  "provenance": "D10, created 2026-08-26 before the ARIA fix, per hard rule 2. Narrative: browser-agent repo docs/evals/2026-08-24-demo-sec10k-inspector-postmortem.md section 3, remediation item 3."
+}

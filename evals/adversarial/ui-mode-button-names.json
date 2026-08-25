@@ -1,0 +1,24 @@
+{
+  "id": "ui-mode-button-names",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "mode_button_names"
+    ],
+    "buttons": [
+      "go-fx",
+      "go-up",
+      "go-url"
+    ]
+  },
+  "expect": {},
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "D10 defect 4, postmortem shape S3. The three input modes each rendered `<button id=\"go-…\">Extract</button>`: role `button`, accessible name \"Extract\", three times. Any plan targeting the button resolves to 3 matches — the ambiguity failure the browser-agent repo's M38 exists for. Watched red against the unmodified file: `#go-fx: no accessible name of its own — all three modes read \"Extract\", which is the 3-match ambiguity` and the same for `#go-up` and `#go-url`. Green once each carries a distinct aria-label (fixture / uploaded file / EDGAR URL). The check also fails on DUPLICATE labels, not just missing ones, so copy-pasting one aria-label onto all three does not satisfy it. The VISIBLE label stays \"Extract\" on all three deliberately — that is what the button does in every mode; the mode is what differs, and that is what the accessible name now says."
+  },
+  "provenance": "D10, created 2026-08-26 before the ARIA fix, per hard rule 2. Narrative: browser-agent repo docs/evals/2026-08-24-demo-sec10k-inspector-postmortem.md section 1 (S3) and section 3, remediation item 4."
+}

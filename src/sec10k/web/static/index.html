@@ -295,17 +295,17 @@ footer a{color:var(--accent)}
   <div class="modes">
     <div class="mode">
       <label for="fx">select a committed fixture</label>
-      <div class="row"><select id="fx"></select><button id="go-fx">Extract</button></div>
+      <div class="row"><select id="fx"></select><button id="go-fx" aria-label="Extract the selected committed fixture">Extract</button></div>
       <span class="hint">Filings committed to the eval set, with provenance.</span>
     </div>
     <div class="mode">
       <label for="up">upload a filing (.htm / .html / .txt)</label>
-      <div class="row"><input type="file" id="up" accept=".htm,.html,.txt"><button id="go-up">Extract</button></div>
+      <div class="row"><input type="file" id="up" accept=".htm,.html,.txt"><button id="go-up" aria-label="Extract the uploaded filing">Extract</button></div>
       <span class="hint">No network, no SEC dependency. Use this for your own filings.</span>
     </div>
     <div class="mode">
       <label for="url">EDGAR document URL</label>
-      <div class="row"><input type="text" id="url" placeholder="https://www.sec.gov/Archives/edgar/data/…"><button id="go-url">Extract</button></div>
+      <div class="row"><input type="text" id="url" placeholder="https://www.sec.gov/Archives/edgar/data/…"><button id="go-url" aria-label="Extract from the EDGAR document URL">Extract</button></div>
       <span class="hint">Best-effort: EDGAR can block datacenter IPs. Upload is the reliable path.</span>
     </div>
   </div>
@@ -320,7 +320,11 @@ footer a{color:var(--accent)}
     slice, which the compare pane still shows (ADR-032).</span></label>
 </fieldset>
 
-<div id="banner" class="s-idle">No filing extracted yet.</div>
+<!-- D10: the page's ONE status region. JS rewrites it after every extraction
+     (render(), busy()), so role=status — a polite live region — is what this
+     element actually is, not an agent affordance; the aria-label names it so
+     doc_status belongs to something instead of to an anonymous `generic`. -->
+<div id="banner" class="s-idle" role="status" aria-label="doc_status">No filing extracted yet.</div>
 <div id="warnings"></div>
 <!-- D5: shown only while the response on screen actually HAD something hidden
      — render() assigns .hidden from `v.boilerplate_applied` (PR #46 R1). That
@@ -387,7 +391,26 @@ async function boot(){
     $("#sha").textContent = "build " + m.git_sha;
     $("#fx").innerHTML = m.fixtures.map(f => `<option>${esc(f)}</option>`).join("");
   }catch(e){ $("#sha").textContent = "meta unavailable"; }
+  deepLink();
   loadCapabilities();
+}
+
+// D10: `?fixture=<id>&run=1` preloads the fixture select and extracts on
+// load, so an agent — or anyone following a shared link — lands on an
+// already-rendered page instead of on the fetch-then-render SPA. Client-side
+// only: `/` still serves this same static file, unparameterised.
+// It degrades to nothing. The membership guard returns before ANYTHING is
+// assigned, so an absent or unknown `fixture` leaves the page exactly as it
+// loads and `run=1` on its own extracts nothing. Runs after the meta fetch
+// because the option list it validates against comes from that response — if
+// the fetch failed there are no options, so the guard refuses, which is the
+// right answer rather than a thrown error.
+function deepLink(){
+  const q = new URLSearchParams(location.search);
+  const want = q.get("fixture");
+  if(!want || ![...$("#fx").options].some(o => o.value === want)) return;
+  $("#fx").value = want;
+  if(q.get("run") === "1") $("#go-fx").click();
 }
 
 // The two README lists (works-well / difficult) are parsed at request time
@@ -887,9 +910,13 @@ function show(i){
       // against the original filing, which still contains the chrome.
       // S9: in Markdown mode the same string is the derived Markdown and is
       // RENDERED, by mdToHtml above; `it.text` is still the raw slice.
+      // D10: the text container is a named region in BOTH view modes — it is
+      // the same slot (ADR-032), so naming only the <pre> would let Markdown
+      // mode regress the fix. The label interpolates the item's own code; a
+      // constant one would name all 23 items identically.
       ? (VIEW.markdown
-          ? `<div class="text md">${mdToHtml(it.display_text ?? it.text)}</div>`
-          : `<pre class="text">${esc(it.display_text ?? it.text)}</pre>`)
+          ? `<div class="text md" role="region" aria-label="Item ${esc(it.item)} extracted text">${mdToHtml(it.display_text ?? it.text)}</div>`
+          : `<pre class="text" role="region" aria-label="Item ${esc(it.item)} extracted text">${esc(it.display_text ?? it.text)}</pre>`)
       : `<div class="none" style="padding:12px">Status <b>${esc(it.status)}</b> carries no span: the item is reported as absent rather than silently dropped (INV-S4).</div>`}
     <details class="pane-meta"><summary>where this text came from</summary>
       <dl class="ev">

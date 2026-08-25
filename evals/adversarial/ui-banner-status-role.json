@@ -1,0 +1,21 @@
+{
+  "id": "ui-banner-status-role",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "banner_status_role"
+    ],
+    "banner_id": "banner",
+    "role": "status"
+  },
+  "expect": {},
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "D10 defect 2, from the browser-agent repo's 2026-08-24 demo postmortem shape S2. `#banner` is the only element on the page that reports `doc_status`, and it shipped as a bare `<div id=\"banner\" class=\"s-idle\">` — accessibility role `generic`, which that repo's observer drops via SKIP_ROLES, so the one answer the inspector exists to give was not the accessible name of anything. Watched red against the unmodified file: `#banner: role is None, want 'status' — a bare div is `generic` and carries no name for doc_status` plus `#banner: no accessible name (aria-label/aria-labelledby) — role=status alone leaves the region anonymous`. Green once the div carries role=status + aria-label=\"doc_status\". role=status is CORRECT here rather than agent-special-casing: the element is a polite live region that JS rewrites after every extraction (`render()` and `busy()` both assign into it), which is exactly what role=status describes."
+  },
+  "provenance": "D10, created 2026-08-26 before the ARIA fix, per hard rule 2. Narrative: browser-agent repo docs/evals/2026-08-24-demo-sec10k-inspector-postmortem.md section 3, remediation item 2."
+}

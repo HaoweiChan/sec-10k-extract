@@ -1,0 +1,29 @@
+{
+  "id": "ui-deep-link",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "deep_link"
+    ],
+    "wire": [
+      "const q = new URLSearchParams(location.search);",
+      "const want = q.get(\"fixture\");",
+      "if(!want || ![...$(\"#fx\").options].some(o => o.value === want)) return;",
+      "$(\"#fx\").value = want;",
+      "if(q.get(\"run\") === \"1\") $(\"#go-fx\").click();",
+      "deepLink();"
+    ],
+    "guard_expr": "if(!want || ![...$(\"#fx\").options].some(o => o.value === want)) return;",
+    "run_expr": "if(q.get(\"run\") === \"1\") $(\"#go-fx\").click();"
+  },
+  "expect": {},
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "D10 defect 1 and the highest-leverage one: the postmortem calls a parameterised start URL the single change that bypasses S1 (fetch-then-render), S3 (three identical Extract buttons) and S4 (nothing waits for the async result) at once, because the agent lands on a page that is already rendered. There was no deep link at all. Watched red against the unmodified file: all six pinned expressions missing, six failures. Green once `deepLink()` exists and `boot()` calls it. Pinned as WHOLE expressions for WIRE_UI's stated reason — a question about a hop (\"does it read the query string?\") is answerable by a broken hop. The pins ALSO carry the safe-degrade contract, which is the part most likely to rot: the membership guard returns before anything is assigned, so an absent or unknown `fixture` is a no-op and `run=1` alone extracts nothing. Because a pin set can be satisfied in the wrong order, the guard's position is asserted structurally too — it must appear before the run trigger. Client-side only: no server route changed, `/` still serves the same static file (ADR-free, display layer)."
+  },
+  "provenance": "D10, created 2026-08-26 before the deep link existed, per hard rule 2. Narrative: browser-agent repo docs/evals/2026-08-24-demo-sec10k-inspector-postmortem.md section 3, remediation item 1."
+}
