@@ -1791,7 +1791,21 @@ CHECKS = {
 
 
 def run_case(case):
-    names = case.get("input", {}).get("checks") or ["adr_headers", "adr_index"]
+    # PR #52 R14: this used to DEFAULT to ["adr_headers", "adr_index"] when a
+    # case named no checks, so `ledger-line-refs.json` — which declares
+    # `files`/`min_refs` and no `checks` — ran two unrelated ADR checks against
+    # a clean tree and reported PASS while its own check was red. A case that
+    # cannot fail is worse than no case: the suite count moved 60 -> 61 on it.
+    # Every repo_hygiene case in the repo declares `checks` explicitly, so the
+    # default was dead behaviour whose only effect was to swallow a
+    # misconfiguration. Deleted rather than guarded — the failure is now loud,
+    # and a case naming check parameters but no check goes red on sight.
+    names = case.get("input", {}).get("checks")
+    if not names:
+        return {"passed": False, "failures": [
+            f"case {case.get('id', case.get('_file'))!r} names no `input.checks` — "
+            f"a repo_hygiene case that declares no check cannot fail and must not "
+            f"report green (PR #52 R14)"]}
     failures, info = [], {}
     for name in names:
         got = CHECKS[name](case)
