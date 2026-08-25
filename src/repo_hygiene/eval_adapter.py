@@ -1625,9 +1625,40 @@ def _attrs(tag):
     return dict(re.findall(r'([-a-zA-Z]+)\s*=\s*"([^"]*)"', tag))
 
 
-def _named(attrs):
-    """The accessible name an element carries in its own start tag, if any."""
-    return (attrs.get("aria-label") or attrs.get("aria-labelledby") or "").strip()
+def _named(attrs, live):
+    """The accessible name an element carries in its own start tag, or "" if
+    it has none.
+
+    PR #55 R2: an `aria-labelledby` is a name only if its IDREFs RESOLVE. The
+    first version returned the raw attribute value, so
+    `aria-labelledby="no-such-id"` — whose computed name is EMPTY, and which
+    `get_by_role(role, name=...)` matches nothing by — read as named, i.e. the
+    anonymous-`generic` defect these checks exist to catch passed them. Every
+    token must therefore name an `id="…"` present in the same live file.
+
+    Ceiling, deliberate: the name of a resolving reference is the referenced
+    element's TEXT, which is not statically reachable here (that element may
+    itself be built by JS). So what this returns for the labelledby form is
+    the token list — enough to answer "is it named", not "what does it say".
+    The page uses `aria-label` everywhere, so nothing rides on the difference
+    today; a real labelledby would want the browser walk to assert its text.
+    """
+    if attrs.get("aria-label"):
+        return attrs["aria-label"].strip()
+    ids = (attrs.get("aria-labelledby") or "").split()
+    if ids and all(re.search(r'\bid="' + re.escape(t) + r'"', live) for t in ids):
+        return " ".join(ids)
+    return ""
+
+
+def _why_unnamed(attrs):
+    """Why `_named` came back empty — a dangling IDREF and a missing attribute
+    are different defects and the diagnostic has to tell them apart."""
+    lb = attrs.get("aria-labelledby")
+    if lb:
+        return (f"aria-labelledby={lb!r} resolves to no id present in this "
+                f"file, so the computed name is empty")
+    return "it carries neither aria-label nor aria-labelledby"
 
 
 def check_banner_status_role(case):
@@ -1652,9 +1683,9 @@ def check_banner_status_role(case):
     if attrs.get("role") != want_role:
         bad.append(f'#{ident}: role is {attrs.get("role")!r}, want {want_role!r} '
                    f"— a bare div is `generic` and carries no name for doc_status")
-    if not _named(attrs):
-        bad.append(f"#{ident}: no accessible name (aria-label/aria-labelledby) "
-                   f"— role=status alone leaves the region anonymous")
+    if not _named(attrs, text):
+        bad.append(f"#{ident}: no accessible name — {_why_unnamed(attrs)}. "
+                   f"role=status alone leaves the region anonymous")
     return bad, {"banner_attrs": attrs}
 
 
@@ -1679,9 +1710,10 @@ def check_item_text_region(case):
         if attrs.get("role") != want_role:
             bad.append(f'class="{key}": role is {attrs.get("role")!r}, '
                        f"want {want_role!r}")
-        name = _named(attrs)
+        name = _named(attrs, text)
         if not name:
-            bad.append(f'class="{key}": no accessible name naming the item')
+            bad.append(f'class="{key}": no accessible name naming the item — '
+                       f"{_why_unnamed(attrs)}")
         elif want_expr not in name:
             bad.append(f'class="{key}": aria-label {name!r} does not interpolate '
                        f"{want_expr} — every item would carry the same name")
@@ -1697,25 +1729,54 @@ def check_mode_button_names(case):
     plan targeting the button resolves to 3 matches. Each needs a DISTINCT
     accessible name; the visible label stays "Extract" because that is what
     the button does in every mode, so the distinction rides `aria-label`.
+
+    PR #55 R3 — distinct is not enough, and was the whole check. Swapping
+    #go-fx to "Upload" and #go-up to "Fixture" keeps three distinct non-empty
+    names and passed: an accessibility-first reader picking by name then
+    reaches the file-upload mode when it asked for the fixture, which is worse
+    than the ambiguity this row set out to remove. So each name must ALSO
+    carry the substring naming its own mode, and must contain the button's own
+    VISIBLE text — WCAG 2.5.3 Label in Name, the rule that keeps a speech-input
+    user's "click Extract" working once an aria-label is in play. The second
+    clause is why the row's evidence can say "screen-reader correctness, not
+    agent special-casing": nothing in the eval set backed that before.
     """
     inp = case.get("input", {})
     text = _live((ROOT / inp.get("file", UI_STYLESHEET)).read_text(), "js")
-    names, bad = {}, []
-    for ident in inp.get("buttons", ["go-fx", "go-up", "go-url"]):
-        m = re.search(r'<button([^>]*\bid="' + re.escape(ident) + r'"[^>]*)>', text)
+    # {id: substring the name must carry}; a bare list means "no per-mode pin"
+    want = inp.get("buttons", ["go-fx", "go-up", "go-url"])
+    if not isinstance(want, dict):
+        want = dict.fromkeys(want, "")
+    names, labels, bad = {}, {}, []
+    for ident, mode in want.items():
+        m = re.search(r'<button([^>]*\bid="' + re.escape(ident) + r'"[^>]*)>(.*?)</button>',
+                      text, re.S)
         if not m:
             bad.append(f"#{ident}: no such button in the live markup")
             continue
-        names[ident] = _named(_attrs(m.group(1)))
+        attrs = _attrs(m.group(1))
+        names[ident] = _named(attrs, text)
+        labels[ident] = " ".join(re.sub(r"<[^>]+>", "", m.group(2)).split())
         if not names[ident]:
             bad.append(f"#{ident}: no accessible name of its own — all three "
-                       f'modes read "Extract", which is the 3-match ambiguity')
+                       f'modes read "Extract", which is the 3-match ambiguity '
+                       f"({_why_unnamed(attrs)})")
+            continue
+        if mode and mode.lower() not in names[ident].lower():
+            bad.append(f"#{ident}: accessible name {names[ident]!r} does not "
+                       f"name its own mode ({mode!r}) — distinct names that "
+                       f"point at the wrong mode are worse than no names")
+        if labels[ident] and labels[ident].lower() not in names[ident].lower():
+            bad.append(f"#{ident}: accessible name {names[ident]!r} does not "
+                       f"contain its visible label {labels[ident]!r} "
+                       f"(WCAG 2.5.3 Label in Name — speech input targets the "
+                       f"word the user can see)")
     seen = [n for n in names.values() if n]
     dupes = sorted({n for n in seen if seen.count(n) > 1})
     if dupes:
         bad.append(f"mode buttons share accessible name(s) {dupes} — the names "
                    f"must tell the three modes apart")
-    return bad, {"mode_button_names": names}
+    return bad, {"mode_button_names": names, "mode_button_labels": labels}
 
 
 def check_deep_link(case):
@@ -1728,8 +1789,19 @@ def check_deep_link(case):
     hop a question about itself is answerable by a broken hop. The pins carry
     the safe-degrade contract too — the membership guard returns before
     anything is assigned, so an unknown or absent `fixture` is a no-op and
-    `run=1` on its own extracts nothing. That ordering is asserted
-    structurally as well, since a pin set can be satisfied in the wrong order.
+    `run=1` on its own extracts nothing.
+
+    PR #55 R1 — the ORDER the first version asserted was the one that cannot
+    move. Guard-before-run is fixed by `deepLink()`'s own function text, so
+    that assertion was inert, while the order the feature actually depends on
+    went unpinned: `deepLink()` must run AFTER `boot()` fills `#fx` from
+    `/api/meta`, because the option list is the very thing its membership
+    guard tests against. Relocated to the first line of `boot()` the guard
+    finds an empty `<select>`, returns every time, and the deep link is a
+    permanent silent no-op — measured at `[PASS] ui-deep-link`, invariant
+    63/63 = 1.000. So `order` is now one list covering the whole chain
+    (options assignment -> call site -> guard -> run), and a pin that moves
+    ahead of its predecessor is red wherever it moved to.
     """
     inp = case.get("input", {})
     text = _live((ROOT / inp.get("file", UI_STYLESHEET)).read_text(), "js")
@@ -1737,14 +1809,18 @@ def check_deep_link(case):
     for expr in inp.get("wire", []):
         if _squash(expr) not in flat:
             bad.append(f"missing pinned expression (the deep link's wire): {expr}")
-    guard, run = inp.get("guard_expr"), inp.get("run_expr")
-    if guard and run and not bad:
-        gi, ri = flat.find(_squash(guard)), flat.find(_squash(run))
-        if gi < 0 or ri < 0 or gi > ri:
-            bad.append(f"the unknown-fixture guard does not precede the run "
-                       f"trigger (guard@{gi}, run@{ri}) — `run=1` could fire "
-                       f"without a valid fixture")
-    return bad, {"deep_link_pins": len(inp.get("wire", []))}
+    # Only meaningful once every pin is present; a missing pin is already red
+    # and would report a second, confusing failure here as -1 < everything.
+    order = inp.get("order", [])
+    if order and not bad:
+        at = [(e, flat.find(_squash(e))) for e in order]
+        for (prev, pi), (nxt, ni) in zip(at, at[1:]):
+            if ni < pi:
+                bad.append(f"out of order: {nxt!r} (@{ni}) runs before "
+                           f"{prev!r} (@{pi}) — the deep link only works if "
+                           f"each step follows the one it depends on")
+    return bad, {"deep_link_pins": len(inp.get("wire", [])),
+                 "deep_link_order": list(order)}
 
 
 CHECKS = {
