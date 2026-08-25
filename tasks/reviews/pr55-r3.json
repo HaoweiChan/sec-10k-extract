@@ -1,0 +1,27 @@
+{
+  "pr": 55,
+  "task": "D10",
+  "round": 3,
+  "result": "APPROVED",
+  "gate": "invariant 63/63 = 1.000; fast 126/126 = 1.000 (>= baseline 1.0). Reproduced by the reviewer on a clean `git archive` of 867f79b.",
+  "scope": "Round-2 repair diff d968ed3..867f79b plus the standing findings from rounds 1 and 2. No fresh full-diff sweep.",
+  "closed_this_round": {
+    "R9": "Closed. Mutation (a) catch-arm -> passed=False, 62/63 = 0.984; (b) hoisted declaration -> passed=True, 63/63; (c) first-line-of-boot() -> passed=False. The author's rejection of acceptance route 2 is sound and measured: reconstructing route 2 on the round-1 tree leaves mutation (a) passed=True, failures=[], so containment was the only offered mechanism that works.",
+    "R10": "Closed, and the self-reported audit is honest. Every quoted output in all four case notes reproduces character-for-character: the pre-D10 reds (checked out from 3cdfbf4) give 2/4/3/6 failures matching the notes exactly, and the dangling-IDREF, ghost-IDREF and swapped-label mutation quotes match exactly. pr55-r1-resolution.json R2 and R3 red_output_verbatim compare True under exact string equality.",
+    "R1_superseded": "Honest record-keeping, not cover. Its @14984 / @15084 quote reproduces exactly against the round-1 tree d968ed3; it is genuinely unreproducible against HEAD because the emitting code is deleted, which is what the superseded_by note says.",
+    "containment_pin": "No hole found. `_live` strips //, /* */ and <!-- --> before matching, so the span cannot be satisfied from a comment; being contiguous, nothing can be inserted between the assignment and the call. The catch-arm-body over-constraint is real but is disclosed in the check docstring and the case note. `deep_link_order` has no remaining consumer anywhere in the tree.",
+    "debt_routing": "Honored both directions. Two rows added to tasks/TODO.md, zero deletions in that file's diff; the R4 row still reads 'Evidence verbatim' (R12's own correction correctly withheld); line 72 Status still `in-progress \u2014 UI gate UNRUN`; nothing from R4-R7 quietly fixed.",
+    "collateral": "None. `git diff 5c44c4a -- src/sec10k/web/static/index.html` is 0 bytes. The two dropped standalone pins are genuinely subsumed: _squash(span) has _squash(options assignment) as a prefix and _squash('deepLink();') as a suffix, so span-present strictly implies both."
+  },
+  "findings": [
+    {
+      "id": "R13",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The ui-deep-link note's quoted mutation-(a) failure is reflowed onto one line while its provenance says every quoted output was \"pasted from a run\" \u2014 the emitted message is three lines.",
+      "evidence": "evals/adversarial/ui-deep-link.json:24 (triage.note) quotes `missing pinned expression (the deep link's wire): $(\"#fx\").innerHTML = ... .join(\"\"); }catch(e){ $(\"#sha\").textContent = \"meta unavailable\"; } deepLink();` \u2014 a single space before `}catch` and before `deepLink();`. The check emits `\\n  ` there, because the pin string itself carries newlines (input.wire[0]). Measured emitted text, with `deepLink();` moved into the catch arm: `...join(\"\");\\n  }catch(e){ $(\"#sha\").textContent = \"meta unavailable\"; }\\n  deepLink();`. The same commit's tasks/reviews/pr55-r2-resolution.json `mutation_a_now_red` quotes it correctly WITH the newlines, so the author had the exact text. Line 26 provenance nonetheless asserts \"Every output quoted above was pasted from a run observed during the round-2 repair\". Content is otherwise identical \u2014 whitespace only, no fabricated text, no offsets.",
+      "repro": "Apply mutation (a) to src/sec10k/web/static/index.html (`}catch(e){ $(\"#sha\").textContent = \"meta unavailable\"; deepLink(); }`, drop the tail call), then `python3 -c \"import json,sys;sys.path.insert(0,'.');from src.repo_hygiene.eval_adapter import run_case;print(repr(run_case(json.load(open('evals/adversarial/ui-deep-link.json')))['failures'][0]))\"` \u2014 the repr shows the two `\\n  ` the note replaces with spaces.",
+      "acceptance": "The note either carries the message's line breaks (as pr55-r2-resolution.json already does) or its provenance says multi-line outputs are reflowed to one line for readability."
+    }
+  ]
+}
