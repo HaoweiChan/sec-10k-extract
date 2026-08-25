@@ -1634,14 +1634,28 @@ def check_confidence_honesty(case):
     side panel a viewer actually reads showed a per-item `conf 0.95` with no
     visual link back to a document the banner had already called
     `success_with_warning` or `ambiguous` (postmortem §2, "The UI amplified
-    both"). Pinned as an ADJACENCY, not as a question: every live site that
-    prints a confidence must be the pinned `conf_marker` and must be
-    followed IMMEDIATELY by the pinned `qualifier` expression. A question
-    about the file ("does it mention doc_status somewhere?") is answerable
-    by a file that still prints a bare number two lines later — the
-    `boilerplate_plumbing` allow-list records two rounds of exactly that —
-    so a bare confidence is made unrepresentable instead. `min_conf_sites`
-    keeps it from passing vacuously by deleting the render sites.
+    both"). Pinned as an ADJACENCY, not as a question: every live
+    interpolation of `it.confidence` must sit where the pinned
+    `conf_marker` would start and must be followed IMMEDIATELY by the
+    pinned `qualifier`. A question about the file ("does it mention
+    doc_status somewhere?") is answerable by a file that still prints a
+    bare number two lines later — the `boilerplate_plumbing` allow-list
+    records two rounds of exactly that. `min_conf_sites` keeps it from
+    passing vacuously by deleting the render sites, and the `bodies` pins
+    below keep the qualifier's producers from being neutered in place.
+
+    WHAT THIS DOES AND DOES NOT GUARANTEE (corrected at PR #53 R2/R4; the
+    first version of this docstring said a bare confidence was made
+    "unrepresentable", and three of the round's six findings were attacks
+    that walked straight through that word). Guaranteed: no live
+    interpolation of `it.confidence` renders without the pinned qualifier
+    concatenated onto it; the qualifier's three producers are byte-equal to
+    the pinned bodies, so a pinned line cannot sit unreachable below an
+    early return; the banner's call to the coverage strip is pinned in the
+    assignment that makes it. NOT guaranteed: a render site that never
+    names `it.confidence` — one that copies the number into a local first,
+    or reads it off a re-shaped object — is outside the scan, and no static
+    read can see whether any of it reaches a screen.
 
     The qualifier reads `it.evidence.warnings`, which IS `score()`'s own
     `hits` list — the codes that carried this item's code and each cost it
@@ -1674,7 +1688,19 @@ def check_confidence_honesty(case):
     bad = []
 
     marker, qual = inp["conf_marker"], inp["qualifier"]
-    sites = [m.start() for m in re.finditer(re.escape("conf ${"), live)]
+    # PR #53 R1/R2/R4 all exploited the same weakness from different sides:
+    # this check asked about TEXT THAT IS PRESENT and never about text that
+    # is REACHED or COMPLETE. Site discovery used to be a literal search for
+    # `conf ${`, so a third render site spelled `confidence ${it.confidence
+    # ?? "—"}` printed a bare number and was invisible to the scan while
+    # `min_conf_sites` stayed satisfied by the two qualified sites. The scan
+    # now finds every interpolation OF THE FIELD and steps back to where the
+    # pinned marker would have to start, so a differently-spelled site is
+    # reported as unpinned rather than skipped.
+    lead = marker.index("${")           # `conf ` — what precedes the field
+    sites = []
+    for m in re.finditer(r"\$\{\s*it\.confidence", live):
+        sites.append(max(0, m.start() - lead))
     floor = inp.get("min_conf_sites", 1)
     if len(sites) < floor:
         bad.append(f"only {len(sites)} live confidence render site(s), expected "
@@ -1697,6 +1723,30 @@ def check_confidence_honesty(case):
                        f"response's own doc_status and the item's own "
                        f"evidence.warnings): {expr}")
 
+    # PR #53 R2. Substring existence proves a line is in the file, never that
+    # it RUNS: `if(true) return "";` as the first statement of docQual and
+    # itemQual left every pinned line intact below it as dead code, restored
+    # the bare `conf 0.95` on every cvx-2015 badge, and passed. Same attack
+    # class `_live` was added for in PR #27 R10, one level deeper — there the
+    # pinned text survived inside a comment, here it survives below a return.
+    # So the helpers whose whole job is the qualifier are pinned WHOLE:
+    # anything added, removed or reordered inside them is a difference,
+    # including a line that merely precedes the pinned one.
+    for fn_name, want_body in (inp.get("bodies") or {}).items():
+        got_body = _js_block(live, f"function {fn_name}(")
+        if got_body is None:
+            bad.append(f"{fn_name}(): no such function in the live markup — "
+                       f"the qualifier has no producer")
+        elif _squash(got_body) != _squash(want_body):
+            got_s, want_s = _squash(got_body), _squash(want_body)
+            at = next((k for k in range(min(len(got_s), len(want_s)))
+                       if got_s[k] != want_s[k]), min(len(got_s), len(want_s)))
+            bad.append(f"{fn_name}(): body differs from the pinned one at "
+                       f"char {at} — pinned {want_s[at:at + 60]!r}, found "
+                       f"{got_s[at:at + 60]!r}. The body is pinned whole "
+                       f"because a pinned LINE can sit unreachable below an "
+                       f"early return (PR #53 R2)")
+
     fn = inp.get("coverage_fn", "coverageStrip")
     body = _js_block(live, f"function {fn}(")
     if body is None:
@@ -1710,9 +1760,11 @@ def check_confidence_honesty(case):
             bad.append(f"{fn}(): does not say {want!r}")
     for nope in inp.get("must_not_say", []):
         if nope in say:
-            bad.append(f"{fn}(): says {nope!r} — interior gaps are NOT counted, "
-                       f"so the complement of this figure is not the attributed "
-                       f"share and the banner may not present it as one")
+            bad.append(f"{fn}(): says {nope!r} — the banner may neither publish "
+                       f"the complement of this figure as an attributed share "
+                       f"(interior gaps are not counted, so it is not one) nor "
+                       f"label the figure itself as coverage when what it "
+                       f"measures is NON-coverage (PR #53 R7)")
     return bad, {"conf_sites": len(sites), "coverage_text": say}
 
 

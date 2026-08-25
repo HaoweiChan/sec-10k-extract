@@ -1,0 +1,73 @@
+{
+ "pr": 53,
+ "task": "D7",
+ "round": 1,
+ "base": "3cdfbf4",
+ "reviewed_head": "68c1b47",
+ "rejected_count": 0,
+ "summary": "Six findings, one theme: `check_confidence_honesty` asked whether TEXT WAS PRESENT and never whether it was REACHED, COMPLETE or CALLED — the same mistake the check's own docstring accused a weaker check of, one level up. R1/R2/R4 are three attacks through that gap, and all three passed the round-0 check before the repair. Five repaired, one to debt, none rejected. The round's structural fix is that the three helpers producing the qualifier and the banner line are now pinned WHOLE (`bodies`, via `_js_block` equality), the call is pinned inside the banner assignment that makes it, and site discovery scans for the FIELD `it.confidence` rather than for one spelling of its label. The claim that a bare confidence is 'unrepresentable' was corrected in all four places it appeared rather than left to be re-falsified.",
+ "red_first_evidence": "tasks/reviews/pr53-r1-red.txt (the three attacks passing the round-0 check, then failing once the pins landed; R3 and R7 red against the real file before index.html was touched) and tasks/reviews/pr53_mutation_probe.py (re-runnable: seven one-defect copies of the shipped page, each asserted red, plus a green control; exit non-zero if any goes quiet).",
+ "findings": [
+  {
+   "id": "R1",
+   "severity": "MEDIUM",
+   "disposition": "fixed",
+   "covered_by": "ui-confidence-honesty + ui-confidence-honesty-regression shape (12); tasks/reviews/pr53_mutation_probe.py case R1",
+   "what_changed": "The call is pinned as a `wire` expression, and pinned IN CONTEXT — the pin is the banner assignment's tail `(src ? ` <span class=\"src\">${esc(src)}</span>` : \"\") + coverageStrip(w);`, not the bare token `coverageStrip(w)`, so the call must sit in the assignment that puts it on screen rather than merely somewhere in the file. The regression fixture gained shape (12): a `render()` carrying the real banner assignment ending at the source ternary, with `coverageStrip` defined and correct directly above it and never called.",
+   "red_observed": "Before the pin, the reviewer's repro (`coverageStrip(w);` -> `\"\";`) gave `passed=True, failures=[]`. After: `FAILS (1) — missing pinned expression …: (src ? ` <span class=\"src\">${esc(src)}</span>` : \"\") + coverageStrip(w);`. Regression fixture count moved 11 -> 15 (see R2 for why not 11 -> 17)."
+  },
+  {
+   "id": "R2",
+   "severity": "MEDIUM",
+   "disposition": "fixed",
+   "covered_by": "ui-confidence-honesty `bodies` pins on docQual / itemQual / coverageStrip; tasks/reviews/pr53_mutation_probe.py cases R2 x3",
+   "what_changed": "BOTH halves of the acceptance were taken. (a) The mechanism: a new `bodies` input pins each helper's whole body via `_js_block` + `_squash` equality, so anything added, removed or reordered inside them is a difference — including a line that merely PRECEDES the pinned one. This subsumed four per-line `wire` pins, which were removed rather than left as redundant maintenance. (b) The claim: 'unrepresentable' / 'not reachable from this file' is corrected in all four places it appeared — `check_confidence_honesty`'s docstring (which now carries an explicit WHAT THIS DOES AND DOES NOT GUARANTEE paragraph), the `index.html` comment, `prompts/021`, and the case's `note` and `ceiling`. The residual ceiling is stated instead of claimed away: a site that copies the number into a local before rendering is still out of reach.",
+   "red_observed": "Before: `if(true) return \"\";` at the head of docQual and itemQual, every pinned line intact below it, gave `passed=True`. After, one defect per copy: `docQual(): body differs from the pinned one at char 0 — pinned 'constst=(VIEW&&VIEW.doc_status)||\"\";…', found 'if(true)ret…'`, and the same for itemQual and for coverageStrip.",
+   "note": "The same attack was probed on `coverageStrip` too, which the finding did not name — it is the banner half of the identical hole, and it is now pinned and covered by the probe."
+  },
+  {
+   "id": "R3",
+   "severity": "MEDIUM",
+   "disposition": "fixed",
+   "covered_by": "ui-confidence-honesty `wire` pin on the `flag` expression + regression shape (13); tasks/reviews/pr53_mutation_probe.py case R3; measured in tasks/reviews/d7-browser-walk.json `round_1_remeasure.badge_tokens_after_R3`",
+   "what_changed": "Took the SECOND half of the acceptance, not the cheaper first. Distinct visual tokens: `lo` keeps its pre-D7 meaning (amber TEXT — this item's own validators fired) and the document-level qualifier gets a new `.b.docw` (amber BORDER over the badge's resting `--dim` text). One CSS declaration, no new palette entry, and both colours were already proven against this badge's grounds by `ui-contrast-and-specificity`. `--amb` was considered and rejected: it resolves to `var(--amber-ink)` in dark mode, the same value as `--warn`, so it would have been no distinction at all. The expression also joins the `wire` pins, so the split is a pinned decision.",
+   "red_observed": "`missing pinned expression …: const flag = (it.evidence && (it.evidence.warnings || []).length) ? \" lo\" : (docQual() ? \" docw\" : \"\");` — red against the real index.html before it was touched.",
+   "measured_after": "jpm-2024 badge class census went from round 0's `b lo` on all 23 to `{b docw: 22, b lo: 1}` — item 15, the one validator-flagged item, is now the only amber-TEXT badge among 23. cvx-2015 is `{b docw: 20}`: no validator targets any item there, so no badge earns the item token."
+  },
+  {
+   "id": "R4",
+   "severity": "MEDIUM",
+   "disposition": "fixed",
+   "covered_by": "ui-confidence-honesty widened site scan; tasks/reviews/pr53_mutation_probe.py case R4",
+   "what_changed": "Took the widening, not the docstring-only option. Site discovery is now `re.finditer(r\"\\$\\{\\s*it\\.confidence\", live)`, stepping back by `marker.index(\"${\")` to where the pinned marker would have to start, so any interpolation OF THE FIELD is either the pinned marker followed by the pinned qualifier or is reported as unpinned. The docstring and the case's `ceiling` were corrected as well, because widening the scan narrows the hole without closing it: a site that never names `it.confidence` — one that copies the number into a local first — remains out of reach, and `min_conf_sites` cannot help there, since the two legitimate sites already satisfy the floor.",
+   "red_observed": "Before, adding `<span class=\"b\">confidence ${it.confidence ?? \"—\"}</span>` to the badge row gave `passed=True, conf_sites=2`. After: `FAILS (1) — confidence rendered by an unpinned expression: 'ence ${it.confidence ?? \"—\"}</span> …'`."
+  },
+  {
+   "id": "R5",
+   "severity": "LOW (escalated to repair)",
+   "disposition": "fixed",
+   "covered_by": "tasks/reviews/d7-browser-walk.json `round_1_remeasure.pane_header_at_1280` and `.is_this_a_D7_regression`; the corrected debt row in tasks/TODO.md",
+   "what_changed": "Measured rather than disclaimed, and the finding is confirmed and WORSE than round 0 recorded. jpm-2024 item 15's header band is 251px against a 778px string and renders `Part IV · extracted · con…` — cut before the confidence number finishes, so neither `⚠ last_item_dominates` nor `doc ambiguous` nor `0.75` reaches that surface. Round 0's claim that the qualifier 'degrades to `· DOC…`' was measured on cvx-2015 only and is wrong for jpm. The walk's `verdict.panel_half` now excludes the pane header explicitly instead of covering it with an unqualified PASS, and the debt row carries both fixtures' rendered forms.",
+   "additional_finding": "Whether this is a D7 regression was settled by measurement, not argument: each fixture's PRE-D7 header string was fitted into the same band with the same font, letter-spacing, text-transform and ellipsis width. Both render byte-identically to the post-D7 page (`Part I · extracted · conf 0.95 …` and `Part IV · extracted · con…`), because what shows in that band is decided by the band's width and not the string's length — it was already saturated on main. D7 lengthened a string that was already past the cut, so it is invisible in that band. The ellipsis is a pre-existing `.src-hdr` property carried as debt, and the debt row now states this with the numbers in it."
+  },
+  {
+   "id": "R6",
+   "severity": "LOW",
+   "disposition": "debt",
+   "became": "`## Open debt, carried deliberately` row, Origin: PR #53 R6",
+   "what_changed": "No code change, per the finding's own acceptance. The row carries the evidence verbatim (extract.py:208 emits it, validate.py:301-303 strips it per ADR-018, index.html reads `evidence.warnings`) and reconciles D7's acceptance sentence against the exclusion, which the acceptance says is all that is needed. The reason it stays excluded is the one D7 chose deliberately: `evidence.warnings` IS `score()`'s `hits` list, so the panel names exactly the codes that cost the item WARN_PENALTY; re-filtering `v.warnings` to add `expected_item_missing` would adopt a second definition of 'item-targeted' in the display layer, free to drift from `score()`, in order to display a warning that restates the `missing` status badge already on screen. The finding's own mitigating note stands: any warning forces `doc_status` off `success`, so `docQual()` always fires and no bare number results."
+  },
+  {
+   "id": "R7",
+   "severity": "LOW (escalated to repair)",
+   "disposition": "fixed",
+   "covered_by": "ui-confidence-honesty `must_say` \"unattributed content:\" + `must_not_say` \"document coverage:\"; regression fixture; tasks/reviews/pr53_mutation_probe.py case R7",
+   "what_changed": "The label now names what the figure is: `unattributed content: 73% of the document lies outside every item — …`. Took the label option rather than moving the emphasis, because the bolded number is what makes the figure findable at a glance and the fix should not cost that. The old label is pinned as FORBIDDEN wording, not merely replaced in `must_say`, so the mislabel cannot return — the same treatment the inverted arithmetic and the attributed-share label already get, and for the same reason: labelling non-coverage as coverage is the inversion this task exists to prevent, in prose rather than in arithmetic.",
+   "red_observed": "Against the real index.html before it was touched: `coverageStrip(): does not say 'unattributed content:'` and `coverageStrip(): says 'document coverage:' — …`. The forbidden-wording failure message was widened at the same time, since it previously explained only the attributed-share case."
+  }
+ ],
+ "collateral": [
+  "The six mutation fixtures were deliberately NOT committed under evals/fixtures/repo_hygiene/. `evals/snapshot.py` runs `extract_items` on every file there, so each one would join the corpus digest — the standing debt row (Origin: D7) that already makes 'default-flag digests must not move' hard to read on a display-only row. They are generated into a tempdir by tasks/reviews/pr53_mutation_probe.py instead, which is re-runnable and asserts its own verdicts (the tasks/reviews/d5_browser_walk.py precedent).",
+  "The regression fixture's exact count moved 11 -> 15 for THIRTEEN authored defects, and the fixture header and case note both say so. Whole-body pinning collapses several defects inside one helper into a single failure, and the R7 mislabel trips two pins at once. A count that does not match its own list is the defect PR #46 R12 recorded, so the arithmetic is written down rather than left to be rediscovered."
+ ]
+}

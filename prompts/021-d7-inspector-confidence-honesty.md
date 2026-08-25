@@ -30,10 +30,25 @@ pointer span) is D8.
   about a hop is answerable by a broken hop; `boilerplate_plumbing`'s allow-list
   records two rounds of exactly that (PR #27 R5/R6), where `not bool(...)`,
   `!= "1"` and `return true` all answered correctly while severing the wire. So
-  `check_confidence_honesty` finds every live `conf ${` site and requires the
-  next characters to be the pinned `${docQual()}${itemQual(it)}`. A bare
-  confidence is not discouraged in this file, it is unrepresentable — and
-  `min_conf_sites` stops the check passing by deleting the sites instead.
+  `check_confidence_honesty` finds every live interpolation of `it.confidence`
+  and requires the next characters to be the pinned
+  `${docQual()}${itemQual(it)}`; `min_conf_sites` stops the check passing by
+  deleting the sites instead.
+
+  **That claim was overstated in round 0 and is corrected here.** The first
+  version of this file said a bare confidence was "unrepresentable". PR #53
+  found three attacks through that word in one review: the pinned call to the
+  banner strip was never pinned at all (R1), the pinned *lines* of `docQual`
+  and `itemQual` survived intact below an inserted `if(true) return "";` (R2),
+  and site discovery was a literal search for `conf ${`, so a site spelled
+  `confidence ${it.confidence ?? "—"}` printed a bare number the scan could
+  not see (R4). The lesson is the one the check itself was written to teach,
+  applied one level up: asking whether TEXT IS PRESENT is not asking whether
+  it RUNS. The repair pins the three helper bodies WHOLE, pins the call inside
+  the banner assignment that makes it, and scans for the FIELD rather than for
+  one spelling of its label. What remains out of reach — a site that copies the
+  number into a local first — is now written in the case's `ceiling` instead of
+  being claimed away.
 
 - **The coverage figure is surfaced, never inverted.** The interviewer-feedback
   gap (postmortem §8 gap 1) is stated as "37% attributed, 63% unattributed", and

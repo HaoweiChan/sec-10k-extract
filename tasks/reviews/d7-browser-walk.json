@@ -3,7 +3,10 @@
  "date": "2026-08-26",
  "branch": "task/D7",
  "base": "http://127.0.0.1:8011",
- "viewport": {"width": 1280, "height": 900},
+ "viewport": {
+  "width": 1280,
+  "height": 900
+ },
  "what_this_is": "The render half of D7. Both `repo_hygiene` cases (ui-confidence-honesty, ui-confidence-honesty-regression) are STATIC READS of src/sec10k/web/static/index.html — no test in that harness issues an HTTP request, so nothing there can see a badge. This is the part only a browser can answer: does the qualifier appear beside a real confidence on a real filing, is the coverage line actually on screen, and does neither fire on a document where it would be false.",
  "method": {
   "driver": "the in-app browser tools (preview_start / computer / form_input / javascript_tool) against a live uvicorn server, driven by hand rather than by a committed script",
@@ -17,14 +20,21 @@
    "fixture": "cvx-2015",
    "why": "THE DEMO SHAPE. doc_status `success_with_warning`, carrying `unattributed_content` at 73%, and NO validator targets any item — so every item scored the unpenalised BASE_STRICT 0.95 and the side panel showed a column of bare 0.95s under a warned banner. This is postmortem §2's 'the UI amplified both' reproduced on a committed fixture.",
    "doc_status": "success_with_warning",
-   "warning_codes": ["unattributed_content"],
+   "warning_codes": [
+    "unattributed_content"
+   ],
    "item_count": 20,
    "banner_text": "doc_status: success_with_warning — 16 extracted · 4 incorporated_by_reference fixture: cvx-2015 document coverage: 73% of the document lies outside every item — interior gaps are not counted, so true non-coverage can be up to 9.7 points higher (ADR-019 §d)",
    "coverage": {
     "present": true,
     "checkVisibility": true,
     "intersects_viewport": true,
-    "rect": {"top": 529, "left": 73, "width": 1133, "height": 40},
+    "rect": {
+     "top": 529,
+     "left": 73,
+     "width": 1133,
+     "height": 40
+    },
     "text": "document coverage: 73% of the document lies outside every item — interior gaps are not counted, so true non-coverage can be up to 9.7 points higher (ADR-019 §d)",
     "figure_source": "validate.py's own `unattributed_content` message, parsed for its leading percentage — 73% is not recomputed here, and the complement (27%) is deliberately NOT published as an attributed share"
    },
@@ -32,7 +42,10 @@
     "bare_conf_badges": [],
     "all_20_badges": "conf <n> · doc success_with_warning",
     "badge_class": "b lo on all 20 (amber). Before D7 every one of them was class `b` (neutral): `lo` was set from evidence.warnings alone, and on this fixture no item has any.",
-    "confidences_seen": [0.95, 0.85]
+    "confidences_seen": [
+     0.95,
+     0.85
+    ]
    },
    "pane_header": {
     "full_text": "Part I · extracted · conf 0.95 · doc success_with_warning · via heading_strict",
@@ -48,7 +61,9 @@
    "fixture": "jpm-2024",
    "why": "the OTHER qualifier and the coverage line's ABSENCE, in one run. doc_status `ambiguous` (so ADR-027 §a caps every item at 0.75) with `last_item_dominates` targeting item 15 — and NO `unattributed_content`, so the banner must show no coverage figure at all.",
    "doc_status": "ambiguous",
-   "warning_codes": ["last_item_dominates:15"],
+   "warning_codes": [
+    "last_item_dominates:15"
+   ],
    "item_count": 23,
    "banner_text": "doc_status: ambiguous — 22 extracted · 1 omitted fixture: jpm-2024",
    "coverage": {
@@ -76,25 +91,105 @@
    "item_count": 23,
    "banner_text": "doc_status: success — 18 extracted · 5 incorporated_by_reference fixture: aapl-2025",
    "warnings_panel": "No warnings — every validator stayed silent.",
-   "coverage": {"present": false, "expected_absent": true},
+   "coverage": {
+    "present": false,
+    "expected_absent": true
+   },
    "panel": {
     "qualified_badges": [],
     "lo_badges": [],
     "sample": "conf 0.95 (bare, class `b`, neutral grey)",
     "note": "a bare confidence renders here, and that is correct — the document carries no doc-level qualifier and no item carries a warning, so there is nothing to say beside the number. D7 forbids a bare conf on a WARNED document, not everywhere."
    },
-   "pane_header": {"full_text": "Part I · extracted · conf 0.95 · via heading_strict"},
+   "pane_header": {
+    "full_text": "Part I · extracted · conf 0.95 · via heading_strict"
+   },
    "screenshot_observed": "green `doc_status: success` banner, single row, no coverage line; neutral grey CONF 0.95 badges"
   }
  ],
  "verdict": {
   "failures": [],
-  "panel_half": "PASS — across cvx-2015 (20 items) and jpm-2024 (23 items), both warned documents, ZERO badges rendered a bare confidence; across aapl-2025 (23 items), a clean document, ZERO badges rendered a qualifier.",
-  "banner_half": "PASS — the coverage figure is on screen (rect intersects the viewport, checkVisibility true) on the one walked fixture that carries `unattributed_content`, verbatim from validate.py's own message and with its own caveat attached; absent on both fixtures that do not."
+  "panel_half": "PASS, with one surface excluded by measurement rather than by assumption. Across cvx-2015 (20 items) and jpm-2024 (23 items), both warned documents, ZERO badges rendered a bare confidence and ZERO were clipped; across aapl-2025 (23 items), a clean document, ZERO badges rendered a qualifier. The PANE HEADER is a different story and is NOT covered by this PASS: at 1280 it renders `Part I · extracted · conf 0.95 …` on cvx-2015 and `Part IV · extracted · con…` on jpm-2024 item 15, showing none of the qualifier — identical to what the same band rendered before D7, so a pre-existing property of `.src-hdr`, carried as debt (Origin: D7).",
+  "banner_half": "PASS — the figure is on screen (rect intersects the viewport, checkVisibility true) on the one walked fixture that carries `unattributed_content`, verbatim from validate.py's own message, with its caveat attached and, since PR #53 R7, under a label that names it as NON-coverage. Absent on both fixtures that do not carry it."
  },
  "not_covered": [
-  "One viewport only (1280x900). D5's layout row is what needs a width sweep; D7 changes no geometry — it lengthens two strings and adds one full-basis row to a flex container that already wrapped. The one width-dependent consequence found is the pane-header ellipsis, measured above and logged as debt.",
+  "One viewport only (1280x900). D5's layout row is what needs a width sweep; D7 changes no geometry — it lengthens two strings and adds one full-basis row to a flex container that already wrapped. The width-dependent consequence is the pane-header ellipsis, now measured on BOTH walked fixtures (PR #53 R5) and shown to be unchanged by D7.",
   "Markdown and exclude-boilerplate modes were not driven. Both qualifiers and the coverage strip are computed from `doc_status`, `evidence.warnings` and `v.warnings`, none of which any view mode touches — but that is an argument, not a picture, and it is the same gap the standing D5-merge debt row records for that walk.",
   "The fallback branch of `coverageStrip` (validate.py's message stops starting with a percentage, so the whole message is shown verbatim instead of an emphasised figure) was not exercised: no committed fixture produces it. It exists so the figure degrades to less emphasis rather than to silence."
- ]
+ ],
+ "round_1_remeasure": {
+  "why": "PR #53 R5 — round 0 measured the clipped pane header on cvx-2015 only, the DOC-qualifier case, and published an unqualified PASS over jpm-2024, the one walked fixture whose header carries an ITEM-targeted warning and whose string is 14 chars longer. R3 and R7 also changed what renders, so both fixtures were re-driven at 1280x900 on the repaired page.",
+  "pane_header_at_1280": {
+   "cvx-2015 item 1": {
+    "full_text": "Part I · extracted · conf 0.95 · doc success_with_warning · via heading_strict",
+    "rendered_at_1280": "Part I · extracted · conf 0.95 …",
+    "band_clientWidth": 316,
+    "band_scrollWidth": 655,
+    "overflow_px": 339,
+    "chars_shown": 31,
+    "chars_total": 78
+   },
+   "jpm-2024 item 15": {
+    "full_text": "Part IV · extracted · conf 0.75 · doc ambiguous · ⚠ last_item_dominates · via heading_strict",
+    "rendered_at_1280": "Part IV · extracted · con…",
+    "band_clientWidth": 251,
+    "band_scrollWidth": 778,
+    "overflow_px": 527,
+    "chars_shown": 25,
+    "chars_total": 92,
+    "note": "R5 is right and it is WORSE than round 0 recorded: this band is 251px (the longer item title takes more of the row), so the header is cut before the confidence NUMBER finishes — `con…`. Neither `⚠ last_item_dominates` nor `doc ambiguous` nor `0.75` reaches the screen here."
+   }
+  },
+  "is_this_a_D7_regression": {
+   "answer": "No — measured, not argued.",
+   "method": "Both fixtures' PRE-D7 header strings were fitted into the same bands with the same font, letter-spacing and text-transform, ellipsis width included.",
+   "cvx-2015 item 1": {
+    "pre_D7_rendered": "Part I · extracted · conf 0.95 …",
+    "with_D7_rendered": "Part I · extracted · conf 0.95 …",
+    "identical": true
+   },
+   "jpm-2024 item 15": {
+    "pre_D7_rendered": "Part IV · extracted · con…",
+    "with_D7_rendered": "Part IV · extracted · con…",
+    "identical": true
+   },
+   "reading": "The rendered pane header is BYTE-IDENTICAL before and after D7 at both fixtures, because what a viewer sees in that band is decided by the band's width and not by the string's length — the band was already saturated by `Part … · extracted · conf …` on main. D7 lengthened a string that was already past the cut. So the item qualifier's absence from this surface is a pre-existing property of the `.src-hdr` band, not something this PR introduced, and the debt row says so."
+  },
+  "badge_tokens_after_R3": {
+   "why": "PR #53 R3 — D7 first folded the document-level flag into `lo`, which repainted every badge on a warned document identically and erased the only item-level colour in the sidebar. The split is `lo` (amber TEXT, this item's own validators fired) vs `docw` (amber BORDER, resting dim text, this DOCUMENT is warned).",
+   "jpm-2024": {
+    "class_census": {
+     "b docw": 22,
+     "b lo": 1
+    },
+    "item_15": {
+     "text": "conf 0.75 · doc ambiguous · ⚠ last_item_dominates",
+     "class": "b lo",
+     "color": "rgb(251, 172, 35)",
+     "border": "rgb(251, 172, 35)",
+     "clipped": false
+    },
+    "a_plain_item": {
+     "text": "conf 0.75 · doc ambiguous",
+     "class": "b docw",
+     "color": "rgb(138, 151, 168)",
+     "border": "rgb(251, 172, 35)",
+     "clipped": false
+    },
+    "reading": "item 15 is now the ONLY amber-text badge among 23 — the signal R3 says was erased, restored and measured. Round 0 recorded `b lo on all 23` here."
+   },
+   "cvx-2015": {
+    "class_census": {
+     "b docw": 20
+    },
+    "reading": "no validator targets any item on this filing, so no badge earns the item token and all 20 carry the document one. The demo's bare-0.95 column is still marked, just not marked as if a validator had fired."
+   },
+   "clipping": "Neither fixture clips a single badge: `scrollWidth == clientWidth` on every conf badge measured, including item 15's three-part string. The side panel — the surface D7's acceptance names — shows the whole qualifier at 1280 while the pane header shows none of it."
+  },
+  "banner_after_R7": {
+   "cvx-2015": "doc_status: success_with_warning — 16 extracted · 4 incorporated_by_reference fixture: cvx-2015 unattributed content: 73% of the document lies outside every item — interior gaps are not counted, so true non-coverage can be up to 9.7 points higher (ADR-019 §d)",
+   "reading": "R7 — the label now names what the figure IS. Round 0 read `document coverage: 73%`, where 73% is NON-coverage, so a viewer taking the label and the bolded number without the clause between them read the figure exactly backwards. `document coverage:` is now pinned as forbidden wording in both cases.",
+   "jpm-2024": "no coverage line at all — `unattributed_content` did not fire, so no figure was computed. Unchanged from round 0 and still the documented ceiling."
+  }
+ }
 }
