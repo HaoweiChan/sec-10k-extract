@@ -1,0 +1,46 @@
+{
+  "pr": 54,
+  "task": "D12",
+  "round": 3,
+  "date": "2026-08-26",
+  "author": "implementer",
+  "pass_type": "bounded correction pass on an APPROVED PR — four dictated corrections, no eval case added, no logic change beyond R7's isinstance",
+  "gate_after_pass": "invariant 60/60 = 1.000; fast 123/123 = 1.000 (baseline fast 1.0, untouched)",
+  "digests_after_pass": "evals/snapshot.py over 56 dev + 5 held-out filings, dev sha256=8c002dced6acbbcb2a1ab69a27f61fac6216f44e83d64962ffdaab612e6eaa81, heldout sha256=51de5a11671621a423319e9704e4e227133e90703fe8b114e71a178204957f3f — identical to the pre-D12 snapshot",
+  "app_py_readme_todo_unchanged_this_pass": true,
+  "resolutions": [
+    {
+      "id": "R6",
+      "outcome": "fixed",
+      "branch_taken": "first branch, as directed — the note drops the unqualified claim and carries the enumerated list",
+      "covered_by": "no code change; claim correction in evals/adversarial/ui-offset-reproduction-contract.json",
+      "what_changed": "The triage note said Store-node counting means every binding form Python has is covered. It now says what is covered — assignment, augmented assignment, walrus, tuple unpack, for-target — and names the forms that emit no Store node and are therefore NOT covered: `except X as norm`, `import x as norm`, `def norm`, `global`/`nonlocal norm`, and match-statement capture patterns, crediting R6's demonstrated match case. It also states the ceiling the reviewer asked be stated rather than chased: `hit = (hit[0], hit[1], hit[1])` written before the pinned binding serves the raw filing with every `norm` guard satisfied, so no guard on this name can be complete, and that is the inherent ceiling of allow-list pinning over file text.",
+      "red_first": "None — text correction, as directed. No behaviour changed and no mutation was invented to dress one up."
+    },
+    {
+      "id": "R7",
+      "outcome": "fixed",
+      "covered_by": "ui-offset-reproduction-contract (check_offset_reproduction_contract::_binds)",
+      "what_changed": "`isinstance(node, ast.FunctionDef)` -> `isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))`. Two tokens, as directed.",
+      "verification": "Converted the handler to `async def api_normalized(...)` and re-ran the case: GREEN, 0 failures — before this fix that refactor reported `binds norm None times` and blamed a rename it could not distinguish. Restored, then re-confirmed the rebind mutant `norm = hit[2]; norm = hit[1]` is still RED under the widened isinstance, so the fix widened what the walk sees without loosening what it enforces.",
+      "red_first": "Not applicable as a case-level red — this is a fail-loud-for-the-wrong-reason fix inside an already-red path, and the directive said to take the isinstance fix rather than author a case for it."
+    },
+    {
+      "id": "R8",
+      "outcome": "fixed",
+      "covered_by": "no code change; correction to tasks/reviews/pr54-r1-resolution.json",
+      "what_changed": "R2's `covered_by` now reads `ui-offset-reproduction-contract (SNIPPET_ASSERT text pin)`, labelled as a round-3 correction in the same style as the round-2 ones. Added to `claims_corrected` in tasks/reviews/pr54-r2-resolution.json, explicitly as a MISS by that round rather than as a routine entry — that list claimed to enumerate the correction and did not.",
+      "red_first": "None — text correction, as directed."
+    },
+    {
+      "id": "R9",
+      "outcome": "fixed",
+      "covered_by": "no code change; corrections to prompts/021-d12-offset-reproduction-contract.md and src/repo_hygiene/eval_adapter.py",
+      "what_changed": "Both sentences now say the decorator-keying defect was caught and fixed inside round 1 and never committed, matching resolutions[0].note of the round-1 artifact. Independently confirmed before editing: `git show e633b99:src/repo_hygiene/eval_adapter.py` keys NORM_BINDERS on the `def` line, so the shipped window was correct and the reviewer's reading is right.",
+      "beyond_the_two_named_locations": "R9 named prompts/021:142 and eval_adapter.py:1700. A THIRD copy of the same false claim was in tasks/reviews/pr54-r2-resolution.json R4 `what_changed` ('the decorator off-by-one that shipped in round 1'). Corrected too, labelled, and reported here rather than left standing — leaving a known-false sibling uncorrected is precisely the R8 pattern, one round later. Flagged in case the orchestrator judges it scope growth; no other file was touched.",
+      "red_first": "None — text correction, as directed."
+    }
+  ],
+  "rejections": "None. All four findings were checked against the code or the artifact before being applied, and all four are correct as reported.",
+  "no_new_debt": "No debt rows added or edited; tasks/TODO.md is untouched this pass, so ledger_table_shape has nothing new to gate."
+}

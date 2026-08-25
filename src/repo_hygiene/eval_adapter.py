@@ -1697,7 +1697,8 @@ WIRE_NORMALIZED = [
 # `Name(id="norm", ctx=Store)` inside the function node is the property itself:
 # every binding form Python has — assignment, augmented, walrus, tuple unpack,
 # for-target — is one Store node, and the ast also makes the text-window scan
-# (and the off-by-one that shipped in it for one run) unnecessary.
+# (and the decorator-keying defect that version carried in-session, caught
+# and fixed inside round 1 and never committed) unnecessary.
 NORM_BINDERS = {"api_normalized": 1, "_run": 1}
 
 
@@ -1705,7 +1706,8 @@ def _binds(src, func, name):
     """How many times `func` in `src` binds `name`. None if there is no such
     function — a rename must be loud, not a silent zero."""
     for node in ast.walk(ast.parse(src)):
-        if isinstance(node, ast.FunctionDef) and node.name == func:
+        if (isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and node.name == func):
             return sum(1 for n in ast.walk(node) if isinstance(n, ast.Name)
                        and n.id == name and isinstance(n.ctx, ast.Store))
     return None

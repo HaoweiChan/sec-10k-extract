@@ -13,7 +13,7 @@
       "outcome": "fixed",
       "branch_taken": "strengthen the guard (the orchestrator's steer, and the smaller diff)",
       "covered_by": "ui-offset-reproduction-contract (check_offset_reproduction_contract, NORM_BINDERS + _binds)",
-      "what_changed": "The line-anchored regex `^\\s*norm\\s*=[^=]` over a text window is replaced by `_binds()`, an `ast` walk counting `Name(id='norm', ctx=Store)` nodes inside the named function. Every binding form Python has — plain, chained, same-line-after-semicolon, augmented, walrus, tuple unpack, for-target — is one Store node, so the guard now enforces the property four artifacts already claimed for it instead of a line shape. Keys are function names rather than `def` lines, which also deletes the end-of-function text scan and with it the decorator off-by-one that shipped in round 1. Innocent formatting was checked and is unaffected: the real app.py binds `norm` exactly once in each function and is green unmodified.",
+      "what_changed": "The line-anchored regex `^\\s*norm\\s*=[^=]` over a text window is replaced by `_binds()`, an `ast` walk counting `Name(id='norm', ctx=Store)` nodes inside the named function. Every binding form Python has — plain, chained, same-line-after-semicolon, augmented, walrus, tuple unpack, for-target — is one Store node, so the guard now enforces the property four artifacts already claimed for it instead of a line shape. Keys are function names rather than `def` lines, which also deletes the end-of-function text scan and with it the decorator-keying defect that scan carried in-session. [Corrected in round 3, PR #54 R9: that defect was caught and fixed inside round 1 and never committed — the round-1 shipped code at e633b99 keys on the `def` line and its window is correct. R9 named two locations for this false 'shipped' claim; this artifact was a third.] Innocent formatting was checked and is unaffected: the real app.py binds `norm` exactly once in each function and is green unmodified.",
       "red_first": [
         "Both reviewer mutations confirmed GREEN under the shipped regex guard first: `norm = hit[2]; norm = hit[1]` -> passed True, 0 failures; `norm = hit[2]` then `norm, _unused = hit[1], 0` -> passed True, 0 failures.",
         "Under the ast guard, same-line mutant: FAIL — 'app.py `api_normalized()`: binds `norm` 2 times, expected 1 — a second binding after the pinned one wins at runtime and leaves every pin above satisfied (None means the function is gone or renamed)'.",
@@ -38,7 +38,8 @@
         "src/repo_hygiene/eval_adapter.py SNIPPET_ASSERT comment",
         "evals/adversarial/ui-offset-reproduction-contract.json provenance",
         "tasks/reviews/pr54-r1-resolution.json R2 what_changed — corrected in place with the correction named",
-        "prompts/021-d12-offset-reproduction-contract.md, last bullet of the round-1 section"
+        "prompts/021-d12-offset-reproduction-contract.md, last bullet of the round-1 section",
+        "tasks/reviews/pr54-r1-resolution.json R2 covered_by — MISSED in round 2 and corrected in round 3 (PR #54 R8); listing it here because this list claimed to enumerate the correction and did not"
       ]
     }
   ],

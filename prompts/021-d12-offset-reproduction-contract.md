@@ -139,7 +139,9 @@ this whole style of checking and it recurred inside the repair for it.
   Replaced by an `ast` walk counting `Name(id="norm", ctx=Store)` inside the
   function node, which is not a better pattern but the property itself: every
   binding form Python has is one Store node. It also deleted the text-window
-  scan and, with it, the off-by-one that shipped in round 1.
+  scan and, with it, the decorator-keying defect that version carried
+  in-session — which was caught and fixed inside round 1 and never
+  committed, as the round-1 resolution artifact records.
 
 - **R5 — a check implied by the line above it has no falsification power.**
   Round 1 added `slice_[:len(it["text"])] != it["text"]` to back the claim that

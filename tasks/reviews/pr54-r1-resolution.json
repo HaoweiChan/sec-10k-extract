@@ -23,7 +23,7 @@
     {
       "id": "R2",
       "outcome": "fixed",
-      "covered_by": "ui-offset-reproduction-contract (SNIPPET_ASSERT pin + the truncated-item requirement in the live loop)",
+      "covered_by": "ui-offset-reproduction-contract (SNIPPET_ASSERT text pin) [Corrected in round 3, PR #54 R8: this field still named the truncated-item requirement that round 2 deleted, two lines above a what_changed that said it was deleted \u2014 the round-2 correction fixed the sibling field and missed this one.]",
       "what_changed": "README's step-4 line is now `assert text[item[\"start\"]:item[\"end\"]][:len(item[\"text\"])] == item[\"text\"]`, true for every item. The line is pinned in the check, README-only. [Corrected in round 2, PR #54 R5: this entry also claimed the comparison was executed in the live loop and guarded by a truncated-item requirement. The executed comparison was implied by a check already in the loop, so it had no falsification power and the guard on top of it guarded nothing; both were deleted in round 2. R2 is protected by the text pin alone \u2014 reverting README.md's line is red, co-editing it with the constant is not.]",
       "red_first": [
         "Pin added while README still carried the `==` line: FAIL \u2014 'README.md: the worked snippet's step-4 line is not `assert text[item[\"start\"]:item[\"end\"]][:len(item[\"text\"])] == item[\"text\"]` (found 0) \u2014 any other comparison is false for an item longer than DISPLAY_MAX'.",
