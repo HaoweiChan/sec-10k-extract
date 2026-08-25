@@ -248,7 +248,9 @@ Both cases were authored from an independent tag-strip regex scan importing
 nothing from `src/`, with **every character-level claim re-read from the raw
 bytes**. That rule paid for itself immediately: `c-2025`'s cover renders as
 `December 31 , 2025` in the scan — the `pgr-2023` floating comma, the second of
-this instrument's six recorded failures — and the raw bytes show it is a tag
+the six failures recorded above this section (the H4 write-up below became the
+seventh; the running count is stated once, at the H4 entry, and not repeated
+here) — and the raw bytes show it is a tag
 boundary (`December&#160;31</ix:nonNumeric>, 2025`). The claim was withdrawn
 before it was made rather than corrected after a run.
 
@@ -257,9 +259,21 @@ git SHA `9b2ace08` = the labels-only commit, so run-after-labels is provable fro
 history. The two new cases failed and the five incumbents passed. **No fix, no
 label correction, and no triage follows in D6** — the failures are the
 deliverable. For the seventh time the reader should ask whether the instrument
-or the pipeline is at fault; this time it is neither, because both frozen
-predictions came true almost exactly, which is the first time that has happened
-on this set.
+or the pipeline is at fault, and **the seventh time the answer is the
+instrument** — not in the labels, which held, but in this very write-up, which
+first reported `c-2025` as 22 items `missing` and named one deviation from its
+frozen prediction when the committed report shows 21 `missing`, two `omitted`,
+and TWO deviations. See the correction at the `c-2025` paragraph below; it is
+the entry that takes the seventh slot in this file's tally.
+
+What IS true, and is the reason the run is still worth what it cost, is
+narrower than the sentence that used to stand here: **the extractor behaved as
+both cases predicted it would** — the stub collapse at 0.95 on `intc-2025` and
+the total non-resolution at 0.40 on `c-2025`, each frozen into its provenance
+before the run. That is the first time a prediction about the pipeline has held
+on this set. It is not the same claim as "both frozen predictions came true":
+`c-2025`'s prediction also said all 23 items would be `missing` at 0.40, and two
+of them were not.
 
 `intc-2025` — **branch (a), the predicted stub collapse, and worse than
 `intc-2002` was.** All 23 items `extracted`, all at confidence **0.95** via

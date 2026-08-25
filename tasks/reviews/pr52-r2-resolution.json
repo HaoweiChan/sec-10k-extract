@@ -1,0 +1,99 @@
+{
+  "pr": 52,
+  "task": "D6",
+  "round": 2,
+  "date": "2026-08-26",
+  "implementer": "task/D6 round-2 repair",
+  "base": "52843af",
+  "scope": "R9, R10, R11, R12 repaired; R13 logged as debt. R7's floor-half rejection stands unchanged — round 2 raised nothing against it. No check in either held-out case was added, removed or altered in this round either: `id`, `task`, `suites`, `input` and `expect` remain identical to 353e8f1 for both, so the committed H4 report still describes exactly what it ran and was not re-run. Rides a new commit, not an amend: 52843af is pushed (CLAUDE.md rule 7).",
+  "recurring_defect_response": {
+    "the_charge": "Every round so far closed a finding at the instances it names rather than at its class. R2 needed two passes; R9 is R1's own enumeration going stale because of R1's own edit; R12 is the R4/R5 class recurring inside the repair that closed R4/R5.",
+    "what_changed_this_round": "Each finding got a repo-wide sweep for its CLASS before any edit, and the sweeps are reported below. Two of the four found defects the finding did not name: the R9 sweep found a pre-existing stale ref at tasks/TODO.md:195 that no review round had flagged, and mutation-testing the new R9 check found a correctness hole in the check itself (a bare `:893` continuation ref could inherit the wrong path across rows) which was fixed before commit. Both new instruments fail closed on a committed count, so the coverage they advertise cannot silently shrink — R11's lesson applied to R9's instrument pre-emptively rather than waiting for a round-3 finding about it."
+  },
+  "sweeps": [
+    {
+      "finding": "R9",
+      "class": "every `<file>:<line>` citation in the ledger files",
+      "sweep": "Parsed all 66 file:line citations in tasks/TODO.md and tasks/DONE.md and resolved each. Verifiable subset (a quotation adjacent to the ref): 9, of which 3 were broken — the two the finding named (ADR-021:214, :752, both mine) plus the ADR-021:377/:379/:379-381/:408-410 group in the untouched row 178, plus ONE the finding did not name: tasks/TODO.md:195 cites specs/001-sec10k-contract.md:133 for a sentence that lives at :157 (the images bullet; it also occurs at :119 and :139, and the surrounding clause about `images=imgs` and `images-refusal-path` fixes which one is meant). Un-verifiable subset: ~57 bare refs with nothing quoted beside them. An existence-only rule over those was written and rejected — six are deliberate shorthand (app.py:127, segment.py:508, normalize.py:271, prompts/008, prompts/009, boilerplate._demo) that no path resolution should reconcile."
+    },
+    {
+      "finding": "R10",
+      "class": "every running tally and every verdict about who was at fault, in the honesty ledger",
+      "sweep": "grep for seventh/sixth/'at fault'/'recorded failures' across evals/heldout/README.md returned 5 sites: :173 (H3, 'Fifth time') and :213 (axp burn, 'Sixth time') are dated historical entries and correct; :251, :259-260 and :287 are the D6 section and were mutually inconsistent. All three reconciled."
+    },
+    {
+      "finding": "R11",
+      "class": "instruments that can return green having checked nothing",
+      "sweep": "Both new checks audited against the `evals/bench.check_docs` precedent. `heldout_provenance_claims` failed open and now fails closed on a per-file `min_claims` floor. The R9 check was given the same `min_refs` floor at authoring rather than after a finding."
+    },
+    {
+      "finding": "R12",
+      "class": "numeric claims about intc-2025's spans anywhere in the repo",
+      "sweep": "grep for 23-char / 20-to-226 / 1,727 / 43-char across evals/, tasks/, docs/, specs/. One defect, the one named: intc-2025 declination (e). Every other site (README H4 at :267 and :272, tasks/TODO.md:211, declination (f)) already carried figures the committed report supports."
+    }
+  ],
+  "gate_after_repair": {
+    "invariant": "61/61 = 1.000 (was 60/60; +1 for ledger-line-refs)",
+    "fast": "124/124 = 1.000 (was 123/123; +1 for ledger-line-refs)",
+    "baseline": "1.000, not moved, .eval-baseline.json not edited",
+    "heldout_h4": "NOT re-run — 5/7 at evals/report/20260826-005839-fast.json still stands and still describes the current case files"
+  },
+  "resolutions": [
+    {
+      "id": "R9",
+      "severity": "MEDIUM",
+      "status": "fixed + durable check",
+      "reproduced": "Yes. `sed -n '214p;752p'` on ADR-021 at 52843af returns text this commit wrote and an unrelated fragment; the intended sentences are at :224 and :762. Row 178's :377/:379/:379-381/:408-410 are all +10.",
+      "action": "All seven stale refs corrected (:214→:224, :752→:762, :377→:387, :379→:389, :379-381→:389-391, :408-410→:418-420 twice, :133→:157). More importantly the six refs in the R1 Debt row were CONVERTED TO THE QUOTING FORM, which is immune to the whole class and is what the new check reads.",
+      "covered_by": "evals/adversarial/ledger-line-refs.json :: check_ledger_line_refs",
+      "red_first": "On the tree at 52843af the check reported two failures and nothing else: tasks/TODO.md:178 → ADR-021:379, and tasks/TODO.md:195 → 001-sec10k-contract.md:133. It could not report the other four at that commit, and this is stated rather than glossed: those refs carried no quotation, so nothing existed to verify them against. Converting them to the quoting form is what brings them under the check permanently — which is the finding's own remedy ('quoting is immune to this whole class').",
+      "mutations_proved": [
+        "wrong line number (:389→:399) → RED, names the quoted fragment",
+        "quotation deleted from a ref → RED via the min_refs floor (9→5)",
+        "quotation altered ('five held-out'→'nine held-out') → RED",
+        "found and fixed during mutation testing: a bare `:893` continuation ref inherited `last` across ROWS, so deleting one ref silently re-pointed its neighbours at another file. `last` now resets per row."
+      ],
+      "limits_stated": "9 of ~60 refs in tasks/TODO.md are verifiable. The rest are bare and unpinnable by any means short of re-reading the author's intent; min_refs stops the quoted population from shrinking, and the remedy for a bare ref is to quote it when its row is next touched."
+    },
+    {
+      "id": "R10",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "reproduced": "Yes. `grep -n seventh` returned two sentences with opposite verdicts about H4 — :259-260 'this time it is neither' and :287 'The seventh entry in this file's tally of the instrument ... being at fault'.",
+      "action": "The H4 paragraph now says the instrument WAS at fault for the seventh time, and that the fault is this write-up's own miscount of c-2025 rather than the labels. The claim it replaces — 'both frozen predictions came true' — was false in the way the correction says: c-2025's prediction also said all 23 items would be `missing` at 0.40 and two were not. What survives is the narrower and still-significant claim: the extractor behaved as both cases predicted, which is the first time a prediction about the pipeline has held on this set. :251's present-tense 'six recorded failures' is re-anchored to the six entries above that section, with the running count stated once, at the H4 entry.",
+      "gate_case": "NONE — stated rather than skipped. Pinning 'this file does not contradict itself about a verdict' requires reading two English sentences for agreement. The numeric half of R10 (the 21/2 counts) is the R2 class, already argued un-pinnable in the round-1 artifact for the same reason: it needs a paragraph → cited report → case id → status counts parse of free prose."
+    },
+    {
+      "id": "R11",
+      "severity": "MEDIUM",
+      "status": "fixed",
+      "reproduced": "Yes, both mutations. Against the round-1 check, curly-quoting mrk-1995's literals returned [] and rewording `'Vasotec' 8x` to `'Vasotec' appears eight times` returned [] — gate still 123/123 with four pins silently gone.",
+      "action": "Two layers, following `evals/bench.check_docs`. (1) The patterns now accept typographic quotes, so the curly-quote route no longer drops anything. (2) `min_claims` in the case commits how many claims each held-out file must yield — c-2025 13, intc-2025 8, spg-2019 5, mrk-1995 4 — and a file yielding fewer, or gone entirely, is a failure. cost-2022, csco-2016 and pgr-2023 state no byte-level claims in these shapes and are deliberately floorless rather than forced into the idiom.",
+      "mutations_proved": [
+        "reword `'Vasotec' 8x` → `'Vasotec' appears eight times`: RED (yields 3, floor 4)",
+        "strip every count shape from mrk-1995: RED (yields 0, floor 4)",
+        "wrong value `'Vasotec' 9x`: RED (fixture has 8x) — proves the value check still bites",
+        "curly quotes: GREEN, and this is the CORRECT answer now — the claim count stays 4, i.e. the pins still engage and still verify. It is reported as green-with-coverage-intact rather than claimed as a red, because turning a non-defect red would be a false alarm. The unrecognised-shape route it stood for is covered by the reword and strip mutations above."
+      ],
+      "additional_coverage": "c-2025's two Regulation S-K offsets ('Item 402(v)' at 1,859,455 and 'Item 408' at 15,875,549) were reworded into the pinned `at raw offset N` shape and now verify; c-2025 goes from 11 pinned claims to 13.",
+      "limits_stated": "intc-2025's SCAN offsets (571,466 / 567,879 / 232,331 / 328,627) are positions in a tag-strip rendering, not in the committed bytes. Verifying them would mean reimplementing the authoring scan inside the gate — pinning the instrument to itself — so they are declared unpinnable in the case provenance rather than left to look like coverage."
+    },
+    {
+      "id": "R12",
+      "severity": "LOW",
+      "status": "fixed",
+      "reproduced": "Yes. The committed report gives min 20 / max 226 / n 23 / sum 1,727. No item is 23 chars; 23 is the item count.",
+      "action": "Declination (e) now reads 'a document whose 23 items are all index rows of 20 to 226 chars, 1,727 chars in total' — consistent with tasks/TODO.md:211 ('20-to-226-char stubs') and with declination (f) ('43-char stub' for 9A). Repo-wide sweep found no other instance.",
+      "gate_case": "NONE — stated rather than skipped. This is a figure inside free prose describing a run; the same parse problem as R2. The general instrument that WOULD catch it is a provenance-claims check extended to per-item span figures, which needs the report as a second input and a stable phrasing convention that does not exist yet."
+    },
+    {
+      "id": "R13",
+      "severity": "LOW",
+      "status": "debt",
+      "action": "Debt row 'evals/report/history.jsonl records runs at SHAs that are on no branch' (Origin: D6 / PR #52 R13). Five rows carry sha 3f5078a, amended away during the round-1 repair; seven earlier unreachable SHAs are already committed in that file, so the question predates D6. No prose cites 3f5078a, so nothing is broken today; how to treat amended-away run records is a repo-wide policy choice that trades off differently for --dir reports than for hook runs, and is not decided inside a PR about a held-out set."
+    }
+  ],
+  "carried_unchanged": {
+    "R7_floor_half": "REJECTED, unchanged. Round 2 raised nothing against the written reason, so round 1's contrary position does not survive. The hole remains stated inside intc-2025 as declination (f) and logged as debt for the next held-out expansion."
+  }
+}

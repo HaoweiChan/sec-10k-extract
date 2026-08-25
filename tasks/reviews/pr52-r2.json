@@ -1,0 +1,61 @@
+{
+  "pr": 52,
+  "task": "D6",
+  "round": 2,
+  "date": "2026-08-26",
+  "scope": "repair diff only, 353e8f1..52843af, plus the eight standing round-1 findings",
+  "result": "REQUEST_CHANGES",
+  "gate": {"invariant": "60/60 = 1.000", "fast": "123/123 = 1.000", "table_fidelity": "427/427 cells, 34/34 rows", "structure_fidelity": "61/61 blocks, 61/61 bounds", "baseline_touched": false},
+  "standing_findings_closed": ["R1 (partially — see R9)", "R2", "R3", "R4", "R5", "R6 (partially — see R12)", "R7 prose half", "R8"],
+  "standing_findings_rejected_and_accepted_by_reviewer": ["R7 floor half — the reviewer raised no finding against the written rejection, so the round-1 reviewer's contrary position does not stand"],
+  "orchestrator_verification": "R9, R10, R11 and R12 were each re-derived independently by the orchestrator before routing, not taken on the reviewer's word. R11 reproduced: the curly-quote mutation on mrk-1995 returns [] (green). R9 reproduced: ADR-021:214/:752 at HEAD carry unrelated text, intended targets at :224/:762. R10 reproduced: README:259-260 and :287 assert opposite verdicts about the same H4 entry. R12 reproduced: intc-2025 per-item chars are min 20 / max 226 / n 23 / sum 1727, and no item is 23 chars.",
+  "routing_note": "R9, R10, R11 are MEDIUM and in scope on the published-number/dishonest-claim test. R12 is LOW and routed to repair as a RECORDED EXCEPTION on the same D5 self-contradiction test used in round 1 — a stated number the committed report contradicts, inside a held-out provenance, which is the exact R4/R5 class this repair was closing. R13 is LOW and routed to DEBT: unreachable SHAs in history.jsonl have ample committed precedent (seven prior instances), no prose cites 3f5078a, and how to treat amended-away run records is a choice rather than a stale fact with one right answer.",
+  "recurring_defect": "Across both rounds the same failure repeats: a finding is closed at the instances it names rather than at its class. R2 needed two passes; R9 is R1's own enumeration going stale from R1's own edit; R12 is R4/R5 recurring inside the very repair that closed R4/R5. The implementer recorded the lesson in the round-1 resolution artifact ('a finding that names N instances is a lower bound, not an inventory') and then did not apply it.",
+  "findings": [
+    {
+      "id": "R9",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The repair's own 10-line insertion into ADR-021 shifted every line below 211 by +10, which falsifies both file:line citations in the new Debt row written to enumerate R1's staleness AND three previously-correct citations in an untouched live Debt row — the repair reintroduces the exact defect class R1 was raised about.",
+      "evidence": "`tasks/TODO.md:210` (new, this diff) cites \"ADR-021:214, :752\" as two of the six stale locations. At HEAD 52843af, ADR-021:214 reads \"`c-2025` (15.403 MiB) — so the population `evals/bench.py:232\" — text this same commit wrote, not a stale statement — and :752 reads \"arithmetic; aggregates to two significant figures):\". The intended targets moved to :224 (\"read for all 33 real filings, the 5 held-out among them by `stat`\") and :762 (\"Projection of record (`real_edgar_committed`, n=33, 2.104 MiB — unchanged membership)\"), which is where they sit at 353e8f1 as :214/:752. The same insertion also broke `tasks/TODO.md:178` (untouched by this diff), which cites ADR-021:377, :379-381 and :408-410; at 52843af those sentences are at :387, :389 and :418. R1's acceptance was literally \"a Debt row in tasks/TODO.md names each stale location by file:line\"; 2 of 6 do not resolve.",
+      "repro": "sed -n '214p;752p' specs/decisions/ADR-021-benchmark-instrument.md; sed -n '224p;762p' specs/decisions/ADR-021-benchmark-instrument.md; sed -n '377p;387p;389p;418p' specs/decisions/ADR-021-benchmark-instrument.md",
+      "acceptance": "The new Debt row cites ADR-021:224 and :762 (or quotes the target sentences instead of numbering them), and tasks/TODO.md:178's ADR-021 refs move to :387 / :389-391 / :418-420 — each verified by `sed -n '<n>p'` at HEAD. This is the second time in this repo an ADR insertion silently invalidated ledger line refs (the pending ADR-019 line-ref item is the first), so the durable close is a repo_hygiene check that every `<file>:<line>` citation in tasks/TODO.md resolves to a line containing the fragment quoted beside it, watched red at 52843af where it must report at least the five refs above."
+    },
+    {
+      "id": "R10",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "R2 is not genuinely closed: the H4 entry's own verdict sentence, 28 lines above the correction the repair added, still says the instrument was NOT at fault at H4 and that both frozen predictions came true — both of which the repair's own correction falsifies.",
+      "evidence": "`evals/heldout/README.md:259-260` (unchanged by this diff): \"For the seventh time the reader should ask whether the instrument or the pipeline is at fault; this time it is neither, because both frozen predictions came true almost exactly, which is the first time that has happened on this set.\" `evals/heldout/README.md:287` (added by this diff): \"The seventh entry in this file's tally of the instrument rather than the pipeline being at fault.\" The same H4 entry is simultaneously the seventh occasion the instrument was NOT at fault and the seventh entry in the tally of it BEING at fault, and \"both frozen predictions came true almost exactly\" sits against the repair's own \"TWO deviations from the frozen prediction\" for c-2025. `:251` (\"the second of this instrument's six recorded failures\") is a present-tense running count that is now 7.",
+      "repro": "sed -n '251p;255,262p;284,292p' evals/heldout/README.md",
+      "acceptance": "The H4 paragraph reads consistently: either :259 is amended to record that the instrument WAS at fault at H4 (the write-up's own miscount, the seventh entry) and that c-2025's prediction deviated twice, or the added :287 note stops calling itself the seventh tally entry. Either way `grep -n 'seventh' evals/heldout/README.md` must not return two sentences asserting opposite verdicts about H4, and :251's running count is reconciled with it."
+    },
+    {
+      "id": "R11",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "`check_heldout_provenance_claims` fails OPEN — it returns green when it extracts zero claims, so the coverage the resolution artifact and the case provenance both assert (\"23 pre-existing occurrence-count claims re-derived from the committed fixtures every run\") can silently drop to zero on a prose reword or a quote-style change with the gate still 123/123.",
+      "evidence": "`src/repo_hygiene/eval_adapter.py:122-172` — `check_heldout_provenance_claims` accumulates `bad` from three findall-based patterns and has no guard that any claim was found. Demonstrated: replacing `'Vasotec' 8x` with `'Vasotec' appears eight times` in mrk-1995 returns [] (green, claim unpinned); replacing that provenance's ASCII apostrophes with typographic ones returns [] (green, all four mrk-1995 pins gone at once). Only the literal `'X' Nx`, `'X' ... raw offset N` and `regex ... returns N hits` shapes engage: 3 of the 7 held-out cases (cost-2022, csco-2016, pgr-2023) already contribute zero claims, and inside the two D6 cases the c-2025 offsets ('Item 402(v)' at 1,859,455; 'Item 408' at 15,875,549) and every intc-2025 scan offset (571,466 / 567,879 / 232,331 / 328,627) are unpinned. The repo already has the opposite precedent for this instrument class: `evals/bench.py:615 check_docs` FAILS CLOSED on a vacuous run, asserted at `evals/bench.py:988-991`.",
+      "repro": "python3 -c \"import json,sys; sys.path.insert(0,'.'); import src.repo_hygiene.eval_adapter as A; p='evals/heldout/mrk-1995-heldout.json'; o=open(p).read(); c=json.loads(o); c['provenance']=c['provenance'].replace(chr(39),chr(8217)); open(p,'w').write(json.dumps(c,indent=2,ensure_ascii=False)); print(A.check_heldout_provenance_claims()); open(p,'w').write(o)\"  # prints []",
+      "acceptance": "The check counts the claims it extracted and fails closed below a committed floor, so both the curly-quote and the reword mutation go RED. Watched red first via those two mutations, then `python3 -m evals.run --suite invariant` back to 60/60."
+    },
+    {
+      "id": "R12",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The R6 repair introduces a new false number into a held-out document of record: intc-2025's declination (e) describes the filing as \"a document whose every item is a 23-char index row\", which the committed H4 report contradicts and which the same commit's own Debt row states differently.",
+      "evidence": "`evals/heldout/intc-2025-heldout.json` declination (e), added by this diff: \"the honest verdict for a document whose every item is a 23-char index row\". The committed report gives per-item chars min 20 / max 226 / n 23 / sum 1,727 — no item is 23 chars; 23 is the ITEM COUNT. `tasks/TODO.md:211`, written in the same commit, says \"20-to-226-char cross-reference-index stubs\", and the same case's declination (f) cites 9A as \"a 43-char stub\". This is the R4/R5 defect class recurring inside the repair that closed R4/R5, and the new gate check does not reach it.",
+      "repro": "python3 -c \"import json; r=json.load(open('evals/report/20260826-005839-fast.json')); print(sorted(i['chars'] for c in r['results'] if c['id']=='intc-2025-heldout' for i in c['items_summary']))\"",
+      "acceptance": "The clause reads a figure the committed report supports (e.g. \"whose 23 items are all 20-to-226-char index rows, 1,727 chars in total\"), consistent with tasks/TODO.md:211 and declination (f)'s 43-char figure."
+    },
+    {
+      "id": "R13",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "Five rows appended to evals/report/history.jsonl by this diff record their sha as 3f5078a, a commit amended away that exists on no branch, so on a fresh clone those five gate records — two asserting dirty:false — cite a commit no reader can resolve.",
+      "evidence": "`evals/report/history.jsonl:687-691` carry \"sha\": \"3f5078a\"; `git branch -a --contains 3f5078a` returns nothing and `git name-rev 3f5078a` returns undefined. Ample committed precedent already exists in the same file: da748ba, 124132e, 097ce39, f383a71, 28a95cf, 940ecb7, 32e3a8b are likewise unreachable from any ref. Confirmed no prose anywhere in the repo cites 3f5078a; the resolution artifact deliberately avoided quoting it.",
+      "repro": "git branch -a --contains 3f5078a; git name-rev 3f5078a; grep -c '3f5078a' evals/report/history.jsonl",
+      "acceptance": "Debt row: decide repo-wide how amended-away run records are treated in history.jsonl — drop them, or accept them on the seven-instance precedent and say so once. Not this PR's to settle."
+    }
+  ]
+}
