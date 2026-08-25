@@ -35,20 +35,31 @@ pointer span) is D8.
   `${docQual()}${itemQual(it)}`; `min_conf_sites` stops the check passing by
   deleting the sites instead.
 
-  **That claim was overstated in round 0 and is corrected here.** The first
-  version of this file said a bare confidence was "unrepresentable". PR #53
-  found three attacks through that word in one review: the pinned call to the
-  banner strip was never pinned at all (R1), the pinned *lines* of `docQual`
-  and `itemQual` survived intact below an inserted `if(true) return "";` (R2),
-  and site discovery was a literal search for `conf ${`, so a site spelled
-  `confidence ${it.confidence ?? "—"}` printed a bare number the scan could
-  not see (R4). The lesson is the one the check itself was written to teach,
-  applied one level up: asking whether TEXT IS PRESENT is not asking whether
-  it RUNS. The repair pins the three helper bodies WHOLE, pins the call inside
-  the banner assignment that makes it, and scans for the FIELD rather than for
-  one spelling of its label. What remains out of reach — a site that copies the
-  number into a local first — is now written in the case's `ceiling` instead of
-  being claimed away.
+  **That claim was overstated in round 0, and the correction was overstated
+  again in round 1.** Worth recording as a pattern, because it took two
+  reviews to see it. Round 0 said a bare confidence was "unrepresentable";
+  PR #53 found three attacks through that word (the call to the banner strip
+  was never pinned; the pinned *lines* of `docQual`/`itemQual` survived below
+  an inserted `if(true) return "";`; the scan was a literal `conf ${` search a
+  differently-spelled site walked past). I strengthened the mechanism and
+  rewrote the claim as "no live interpolation of `it.confidence` renders
+  without the pinned qualifier" — and round 2 falsified *that* in two more
+  ways: `_js_block` reads the FIRST declaration while JS runs the LAST, so a
+  hoisted `function docQual(){ return ""; }` stub neutered the qualifier with
+  the body pin still byte-equal and the whole gate green; and
+  `conf ${esc(it.confidence)}` names the field, prints a bare number, and
+  starts no interpolation — the plausible next edit, since every sibling badge
+  in that same template literal is already `${esc(...)}`.
+
+  Both mechanisms are now closed (declaration-count check, enclosing-
+  interpolation scan, banner pin carrying its assignment target), but the
+  mechanism was never the real lesson. **A static text pin cannot make a
+  claim about a program, and every version of this paragraph that tried was
+  falsified by the next reviewer who looked.** So the published claim is now
+  a description of what the check reads, followed by an explicit statement
+  that the list of things it misses is illustrative and not exhaustive. That
+  is the sentence that ends the loop: not a stronger pin, but a claim that
+  does not outrun what a text pin can know.
 
 - **The coverage figure is surfaced, never inverted.** The interviewer-feedback
   gap (postmortem §8 gap 1) is stated as "37% attributed, 63% unattributed", and

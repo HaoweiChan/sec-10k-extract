@@ -1641,21 +1641,45 @@ def check_confidence_honesty(case):
     doc_status somewhere?") is answerable by a file that still prints a
     bare number two lines later — the `boilerplate_plumbing` allow-list
     records two rounds of exactly that. `min_conf_sites` keeps it from
-    passing vacuously by deleting the render sites, and the `bodies` pins
-    below keep the qualifier's producers from being neutered in place.
+    passing vacuously by deleting the render sites; the `bodies` pins keep
+    a producer from being neutered in place or shadowed by a second
+    declaration; the banner pin carries its assignment target. What that
+    adds up to, and what it does not, is the next paragraph.
 
-    WHAT THIS DOES AND DOES NOT GUARANTEE (corrected at PR #53 R2/R4; the
-    first version of this docstring said a bare confidence was made
-    "unrepresentable", and three of the round's six findings were attacks
-    that walked straight through that word). Guaranteed: no live
-    interpolation of `it.confidence` renders without the pinned qualifier
-    concatenated onto it; the qualifier's three producers are byte-equal to
-    the pinned bodies, so a pinned line cannot sit unreachable below an
-    early return; the banner's call to the coverage strip is pinned in the
-    assignment that makes it. NOT guaranteed: a render site that never
-    names `it.confidence` — one that copies the number into a local first,
-    or reads it off a re-shaped object — is outside the scan, and no static
-    read can see whether any of it reaches a screen.
+    WHAT THIS CHECK IS, WRITTEN SO IT CANNOT BE READ AS MORE. Rewritten
+    twice — PR #53 round 1 and again at round 2. Each earlier version
+    asserted a property of the PROGRAM ("a bare confidence is
+    unrepresentable", then "no live interpolation of `it.confidence`
+    renders without the pinned qualifier"), and each was falsified inside
+    one review by an edit a working developer might plausibly make. So the
+    claim is now stated as what the code actually does.
+
+    This is a TEXT PIN over one file. A green run asserts that
+    src/sec10k/web/static/index.html contains, verbatim modulo whitespace:
+
+      * every mention of `it.confidence` sitting inside an interpolation
+        whose whole `${...}` is the pinned `conf_marker`, immediately
+        followed by the pinned `qualifier`;
+      * exactly one declaration of each pinned helper, each with a body
+        byte-equal to its pin;
+      * the pinned banner assignment, assignment target included;
+      * the pinned wording in the coverage strip and none of the forbidden
+        wording.
+
+    It does NOT assert that the page renders a qualified confidence, and no
+    static read of one file could: these pins constrain the text a program
+    is written in, not the program. Out of reach today, concretely — a
+    number rendered without mentioning `it.confidence` (copied into a local
+    first, or read off a re-shaped object); markup injected by another
+    script or served from another file; anything hidden by CSS or simply
+    never reached at runtime for a reason the text does not show. THAT LIST
+    IS ILLUSTRATIVE, NOT EXHAUSTIVE, and this is the sentence that matters:
+    a text pin cannot enumerate the programs it fails to constrain. Read a
+    green run as "the pinned text is present and unique", never as "the
+    defect is impossible". What the screen actually showed is the browser
+    walk, tasks/reviews/d7-browser-walk.json; the falsification attempts
+    that have been run against these pins are
+    tasks/reviews/pr53_mutation_probe.py.
 
     The qualifier reads `it.evidence.warnings`, which IS `score()`'s own
     `hits` list — the codes that carried this item's code and each cost it
@@ -1698,9 +1722,37 @@ def check_confidence_honesty(case):
     # pinned marker would have to start, so a differently-spelled site is
     # reported as unpinned rather than skipped.
     lead = marker.index("${")           # `conf ` — what precedes the field
-    sites = []
-    for m in re.finditer(r"\$\{\s*it\.confidence", live):
-        sites.append(max(0, m.start() - lead))
+    # PR #53 R4, second pass. Round 1 matched `${\s*it.confidence`, i.e. only
+    # interpolations the field STARTS. `conf ${esc(it.confidence)}` names the
+    # field, renders a bare number, and started nothing — and it is the
+    # PLAUSIBLE next edit, not an exotic one, because every sibling badge in
+    # that same template literal is already `${esc(...)}`. So every mention of
+    # the field is now traced back to the `${` that encloses it and the whole
+    # enclosing interpolation must be the pinned marker: wrapped, parenthesised
+    # or reordered spellings are reported as unpinned rather than skipped.
+    # `rfind` alone is not enough: the nearest preceding `${` may belong to an
+    # interpolation that already CLOSED, in which case the mention is not being
+    # rendered at all and attaching it to that interpolation reports the wrong
+    # offset — and fires on correct code (`if (it.confidence == null)` would be
+    # flagged). So the candidate must actually enclose the mention. A mention
+    # outside every interpolation is not a render site and is skipped, which is
+    # the "copied into a local first" hole the ceiling names out loud.
+    sites = set()
+    for m in re.finditer(r"it\.confidence", live):
+        opened = live.rfind("${", 0, m.start())
+        if opened < 0:
+            continue
+        i, depth = opened + 2, 1
+        while i < len(live) and depth:
+            if live[i] == "{":
+                depth += 1
+            elif live[i] == "}":
+                depth -= 1
+            i += 1
+        if i <= m.start():          # that interpolation closed before the mention
+            continue
+        sites.add(max(0, opened - lead))
+    sites = sorted(sites)
     floor = inp.get("min_conf_sites", 1)
     if len(sites) < floor:
         bad.append(f"only {len(sites)} live confidence render site(s), expected "
@@ -1733,6 +1785,19 @@ def check_confidence_honesty(case):
     # anything added, removed or reordered inside them is a difference,
     # including a line that merely precedes the pinned one.
     for fn_name, want_body in (inp.get("bodies") or {}).items():
+        # PR #53 R2, second pass. `_js_block` reads the FIRST declaration; JS
+        # runs the LAST. `function docQual(){ return ""; }` inserted above
+        # `render()` therefore left the pinned body byte-equal, won at runtime,
+        # and restored the bare `conf 0.95` on all 20 cvx-2015 badges with the
+        # whole gate green. Pinning a body says nothing about which body runs
+        # unless the name is declared exactly once, so that is checked first.
+        seen = live.count(f"function {fn_name}(")
+        if seen != 1:
+            bad.append(f"{fn_name}(): declared {seen} times in the live markup, "
+                       f"expected exactly 1 — a second declaration shadows the "
+                       f"pinned one at runtime (JS runs the LAST), so the body "
+                       f"pin below would be checking a function nothing calls")
+            continue
         got_body = _js_block(live, f"function {fn_name}(")
         if got_body is None:
             bad.append(f"{fn_name}(): no such function in the live markup — "

@@ -822,13 +822,18 @@ async function call(url, opts){
 // `conf 0.95` with no visual link back to either, and during a demo the panel
 // is the product. These two helpers are that link, and EVERY confidence this
 // page prints is built as `conf ${…}${docQual()}${itemQual(it)}`.
-// PR #53 R2 corrected what that buys, because the first version of this
-// comment overclaimed it: `ui-confidence-honesty` pins the adjacency at every
-// interpolation of `it.confidence` AND pins these two bodies whole, so a
-// pinned line cannot sit unreachable below an early return. What it still
-// cannot reach is a render site that never names `it.confidence` — one that
-// copies the number into a local first. That is a ceiling, not a guarantee,
-// and it is written down in the case's own `ceiling` field.
+// What the eval buys, stated as what it checks rather than as what it
+// prevents — this comment has now been corrected twice (PR #53 rounds 1 and
+// 2), because both earlier versions claimed a property of the PROGRAM ("a
+// bare number is not reachable from this file", then "no interpolation of
+// `it.confidence` renders unqualified") and a reviewer falsified each inside
+// one round. `ui-confidence-honesty` is a TEXT PIN: it asserts that this file
+// contains the pinned marker + qualifier around every mention of
+// `it.confidence`, exactly one declaration of each helper with a body equal
+// to its pin, and the pinned banner assignment. It does not and cannot
+// assert what the page renders — that is the browser walk's job, and the
+// residual holes are listed in the case's own `ceiling` field, which says
+// plainly that the list is illustrative rather than exhaustive.
 // Display only: the envelope's `confidence` is untouched, and making the
 // NUMBER itself move on a stub or a pointer span is D8's row, not this one.
 const QUALIFIED = ["success_with_warning", "ambiguous"];

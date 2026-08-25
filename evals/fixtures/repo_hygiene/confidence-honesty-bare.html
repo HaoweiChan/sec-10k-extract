@@ -1,10 +1,12 @@
-<!-- D7 regression fixture: THIRTEEN authored defects in the D7 qualifier and
-     the banner strip, reported as FIFTEEN failures. The count is not the
-     defect count and has not been since the PR #53 round-1 repair: the
-     helper bodies are now pinned WHOLE, so several defects inside ONE helper
-     collapse into a single "body differs" failure, while one defect can trip
-     two pins (the mislabel is both a missing must_say and a forbidden
-     must_not_say). Shapes (12) and (13) were added in that round.
+<!-- D7 regression fixture: THIRTEEN NUMBERED defects plus the R7 mislabel,
+     numbered (14) below, reported as FIFTEEN failures. The arithmetic, spelled
+     out because PR #53 R9 caught the earlier version of this header getting it
+     wrong: each of (1)-(13) produces exactly one failure, and (14) produces
+     TWO — a missing `must_say` ("unattributed content:") and a forbidden
+     `must_not_say` ("document coverage:") — so 13 + 2 = 15. Whole-body pinning
+     does NOT change the count: (4), (5) and (6) each produced one failure
+     before that mechanism landed and one after. Shapes (12) and (13) were
+     added at PR #53 round 1.
 
      Everything is still PRESENT: both confidence sites render, all three
      helpers exist, and the coverage strip is defined and even computes a real
@@ -53,6 +55,11 @@ function coverageStrip(warns){
   const u = warns.find(x => x.code === "toc_manifest_mismatch");
   if(!u) return "";
   const m = /^(\d+)%/.exec(u.message || "");
+  // (14) PR #53 R7/R9. The label calls a NON-coverage figure "document
+  //      coverage:", so a reader who takes the label and the bolded number
+  //      without the clause between them reads 73% exactly backwards. This is
+  //      the one defect here that trips TWO pins, and it is why 13 numbered
+  //      defects report 15 failures.
   // (7) the 9.7-point understatement caveat is gone.
   // (8) so is the reason for it — that interior gaps are not counted.
   // (9) instead the line reassures: it asserts the remainder is covered,

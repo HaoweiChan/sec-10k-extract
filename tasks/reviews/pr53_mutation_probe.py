@@ -16,7 +16,7 @@ WHY ONE DEFECT PER COPY. `evals/adversarial/ui-confidence-honesty-regression`
 carries every shape at once at an exact count, which is this repo's pattern
 and is where the GATE coverage lives. It is a poor instrument for asking
 "would this single change have been caught", because every shape's failure
-list is mixed with sixteen others — and that is precisely how R1/R2/R4
+list is mixed with the fourteen others — and that is precisely how R1/R2/R4
 survived round 0. Both exist on purpose: the fixture guards the gate, this
 guards the claim.
 
@@ -64,6 +64,20 @@ MUTATIONS = [
      '               : (docQual() ? " docw" : "");',
      'const flag = ((it.evidence && (it.evidence.warnings || []).length)'
      ' || docQual()) ? " lo" : "";'),
+    ("R2", "a duplicate `docQual` hoisted above render(): the pinned body is "
+     "still byte-equal, and JS runs the LAST declaration",
+     "function render(v){\n",
+     'function docQual(){ return ""; }\nfunction render(v){\n'),
+    ("R2", "the pinned banner tail moved onto a dead local, with the real "
+     "innerHTML set to something else",
+     "  $(\"#banner\").innerHTML = `doc_status: ${esc(st)}` +\n",
+     "  $(\"#banner\").innerHTML = `doc_status: ${esc(st)}`;\n"
+     "  const _unused = `doc_status: ${esc(st)}` +\n"),
+    ("R4", "a site spelled `conf ${esc(it.confidence)}` \u2014 names the field, "
+     "renders a bare number, does not START the interpolation",
+     '        <span class="b">${esc(it.method || "\u2014")}</span>',
+     '        <span class="b">conf ${esc(it.confidence)}</span>\n'
+     '        <span class="b">${esc(it.method || "\u2014")}</span>'),
     ("R7", "a NON-coverage figure labelled as coverage",
      'id="coverage">unattributed content: ${',
      'id="coverage">document coverage: ${'),
