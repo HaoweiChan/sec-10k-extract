@@ -39,14 +39,19 @@ ALLOWED_SUFFIX = (".htm", ".html", ".txt")
 
 app = FastAPI(title="sec10k-extract inspector")
 
-# Original-filing bytes for the S4 compare pane, keyed by an opaque token
-# handed to the browser. Bounded at 3 documents: this is a browse aid for
-# the run just performed, not a document store, so an LRU cap is enough and
-# needs no eviction policy fancier than OrderedDict gives for free.
+# Original-filing bytes for the S4 compare pane and (D12) the run's own
+# normalized text, keyed by one opaque token handed to the browser:
+# {token: (content_type, raw_bytes, normalized_utf8_bytes)}. Bounded at 3
+# documents: this is a browse aid for the run just performed, not a document
+# store, so an LRU cap is enough and needs no eviction policy fancier than
+# OrderedDict gives for free.
 # ponytail: process-local and in-memory, so a restart or a second worker
 # process empties it — fine for a single-instance inspector, revisit if this
-# ever runs behind more than one uvicorn worker.
-SOURCE_CACHE: "OrderedDict[str, tuple[str, bytes]]" = OrderedDict()
+# ever runs behind more than one uvicorn worker. D12 roughly doubles what an
+# entry costs (normalized text is the same order as the filing); the ceiling
+# is 3 x 2 x MAX_BYTES, and the upgrade path if that ever bites is a disk
+# spill, not a smaller cap.
+SOURCE_CACHE: "OrderedDict[str, tuple[str, bytes, bytes]]" = OrderedDict()
 SOURCE_CACHE_MAX = 3
 
 
@@ -87,13 +92,21 @@ def _err(status: int, code: str, message: str, doc_status: str = "failed", **ext
         "warnings": [{"code": code, "item": None, "message": message}], **extra})
 
 
-def _cache_source(raw: bytes, suffix: str) -> str:
-    """Store the original filing bytes under a fresh opaque token, evicting
-    the oldest entry once the LRU is over its 3-document cap."""
+def _cache_source(raw: bytes, suffix: str, normalized: str) -> str:
+    """Store the original filing bytes AND the run's normalized text under a
+    fresh opaque token, evicting the oldest entry once the LRU is over its
+    3-document cap.
+
+    D12: one token, two representations, deliberately. The compare pane wants
+    the raw filing; a consumer reproducing an item's offsets wants the exact
+    `normalized_text` those offsets index. Keying both off the same token is
+    what makes them provably the same run — a second cache could hand out a
+    normalized text from a different extraction and nothing would notice.
+    """
     content_type = ("text/plain; charset=utf-8" if suffix == ".txt"
                      else "text/html; charset=utf-8")
     token = secrets.token_urlsafe(16)
-    SOURCE_CACHE[token] = (content_type, raw)
+    SOURCE_CACHE[token] = (content_type, raw, normalized.encode("utf-8"))
     SOURCE_CACHE.move_to_end(token)
     while len(SOURCE_CACHE) > SOURCE_CACHE_MAX:
         SOURCE_CACHE.popitem(last=False)
@@ -129,7 +142,8 @@ def _run(path: str, source: dict, raw: bytes = None,
         except OSError:
             body = None
     if body is not None:
-        source = dict(source, token=_cache_source(body, Path(path).suffix.lower()))
+        norm = result.get("normalized_text") or ""
+        source = dict(source, token=_cache_source(body, Path(path).suffix.lower(), norm))
     view["source"] = source
     return JSONResponse(view)
 
@@ -232,9 +246,54 @@ def api_source(token: str):
         return JSONResponse(status_code=404, content={
             "error": "source_not_cached",
             "message": "original source is no longer cached — re-run the extraction"})
-    content_type, raw = hit
+    content_type, raw, _ = hit
     return Response(content=raw, media_type=content_type, headers={
         "Content-Security-Policy": "sandbox allow-same-origin",
+        "X-Content-Type-Options": "nosniff",
+    })
+
+
+@app.get("/api/normalized/{token}")
+def api_normalized(token: str):
+    """Download the exact `normalized_text` this run's item offsets index.
+
+    Item offsets are character offsets into `normalized_text`, never into the
+    raw filing, and ADR-026 §a refuses a raw-to-normalized offset map. So
+    reproducibility ships as a contract instead: this endpoint serves the one
+    string the offsets are true of, and the recipe below is how a consumer
+    with no access to this repo checks any published span for itself.
+
+    1. Extract: POST the filing to /api/extract/fixture (or /upload, or /url)
+       and keep three things from the response: source.token, norm_sha256, and
+       each item's start and end.
+    2. Download: GET /api/normalized/{token} — the exact normalized_text those
+       offsets index, served as UTF-8 text.
+    3. Verify: sha256 of the downloaded bytes must equal norm_sha256 from step
+       1. If it does not, the download is not that run and the offsets do not
+       apply to it.
+    4. Slice: item_text = normalized_text[start:end], where normalized_text is
+       the DECODED string — start and end are character offsets into that
+       string, never byte offsets into a file.
+
+    WARNING: these offsets do not index the raw filing. Slicing the raw HTML —
+    what /api/source/{token} serves, or the file you uploaded — by the same
+    start and end yields different bytes, because normalization rewrites the
+    document. There is deliberately no raw-to-normalized offset map
+    (ADR-026 §a).
+
+    A miss is the same plain refusal /api/source gives — the 3-document LRU
+    dropped it, and re-running the extraction is the only honest answer
+    (hard rule 4: never guess a replacement document).
+    """
+    hit = SOURCE_CACHE.get(token)
+    if hit is None:
+        return JSONResponse(status_code=404, content={
+            "error": "source_not_cached",
+            "message": "normalized text is no longer cached — re-run the extraction"})
+    norm = hit[2]
+    return Response(content=norm, media_type="text/plain; charset=utf-8", headers={
+        "X-Normalized-SHA256": hashlib.sha256(norm).hexdigest(),
+        "Content-Disposition": 'attachment; filename="normalized_text.txt"',
         "X-Content-Type-Options": "nosniff",
     })
 

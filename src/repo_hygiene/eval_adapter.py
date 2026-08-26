@@ -11,6 +11,8 @@ ui_stylesheet). The ADR and citation checks need no case input — there is one
 specs/decisions/ tree and one evals/report/ — while `ui_stylesheet` is
 case-declared, because WHICH text sits on WHICH ground is the reviewable part.
 """
+import ast
+import hashlib
 import json
 import os
 import re
@@ -1770,6 +1772,219 @@ def check_exclusion_note_trigger(case):
                      sorted(k for k in seen if seen[k] is not old_expr[k])}
 
 
+# D12 — the offset REPRODUCTION contract. Verbatim in exactly two places, and
+# this tuple is the third: README.md (the human's copy) and app.py's
+# `/api/normalized/{token}` docstring, which FastAPI serves as the endpoint's
+# own OpenAPI description, so a consumer with no access to this repo reads it
+# at /docs. Pinned line by line rather than as one blob because the two copies
+# wrap differently (markdown list vs. Python docstring) and how a sentence is
+# wrapped carries no information — `_squash`, same argument as everywhere else
+# in this file.
+RECIPE = (
+    "1. Extract: POST the filing to /api/extract/fixture (or /upload, or /url) and keep "
+    "three things from the response: source.token, norm_sha256, and each item's start and end.",
+    "2. Download: GET /api/normalized/{token} — the exact normalized_text those offsets "
+    "index, served as UTF-8 text.",
+    "3. Verify: sha256 of the downloaded bytes must equal norm_sha256 from step 1. If it "
+    "does not, the download is not that run and the offsets do not apply to it.",
+    "4. Slice: item_text = normalized_text[start:end], where normalized_text is the DECODED "
+    "string — start and end are character offsets into that string, never byte offsets into a file.",
+    "WARNING: these offsets do not index the raw filing. Slicing the raw HTML — what "
+    "/api/source/{token} serves, or the file you uploaded — by the same start and end yields "
+    "different bytes, because normalization rewrites the document. There is deliberately no "
+    "raw-to-normalized offset map (ADR-026 §a).",
+)
+
+RECIPE_DOCS = ("README.md", "src/sec10k/web/app.py")
+
+# PR #54 R2. README's worked snippet is the recipe as a consumer will actually
+# run it, and its step-4 line first shipped as a bare `==`, which is false for
+# any item over DISPLAY_MAX — aapl-2025 item 1A is 68,162 chars against a
+# 40,000-char display copy, so the published snippet raised AssertionError on
+# the fixture printed one line above it. The prose underneath said "compare
+# prefixes"; the code did not.
+#
+# This is a TEXT PIN and nothing more, stated plainly because the first version
+# of this comment claimed the line was also "executed below ... so the pin is
+# not just a spelling check" (PR #54 R5). It was not: the comparison added for
+# that claim was `slice_[:len(it["text"])] != it["text"]`, which `build_view`
+# makes identical to the `slice_[:DISPLAY_MAX] != it["text"]` line already in
+# the loop, so it could never fail alone and the truncated-item guard built on
+# top of it guarded nothing. Both were deleted rather than reworded. What this
+# pin catches is an edit to README.md; what it cannot catch is someone editing
+# README.md and this constant together, which is the same ceiling every
+# allow-list pin in this file has.
+SNIPPET_ASSERT = 'assert text[item["start"]:item["end"]][:len(item["text"])] == item["text"]'
+
+NORMALIZED_ROUTE_RE = re.compile(r'@app\.get\("(/api/normalized/[^"]+)"')
+
+# The three hops the eval harness cannot walk, because importing app.py would
+# drag fastapi into the dependency-free unit job (see check_boilerplate_plumbing
+# for the full argument). Allow-list, whole expressions, same reasons as WIRE_API.
+WIRE_NORMALIZED = [
+    ("_run puts THIS RUN's normalized_text in the cache, under the same token "
+     "that serves the raw source — a token that served some other run's text "
+     "would fail the sha in step 3 rather than lie, but it would fail it for "
+     "the wrong reason",
+     'source = dict(source, token=_cache_source(body, Path(path).suffix.lower(), norm))'),
+    ("the cache stores the normalized bytes beside the raw bytes",
+     'SOURCE_CACHE[token] = (content_type, raw, normalized.encode("utf-8"))'),
+    ("the endpoint serves the NORMALIZED bytes, not the raw ones — serving "
+     "`raw` here is the whole defect this contract exists to make impossible",
+     'return Response(content=norm, media_type="text/plain; charset=utf-8", headers={'),
+    ("...citing the sha step 3 verifies against",
+     '"X-Normalized-SHA256": hashlib.sha256(norm).hexdigest(),'),
+    # PR #54 R1. The two pins above name `norm` and stop there, so they were
+    # satisfied by `norm = hit[1]` — the endpoint serving the RAW filing under
+    # a matching sha header, i.e. exactly the defect the comment above calls
+    # impossible, green. Measured, not imagined: the reviewer ran that mutation
+    # and so did this repair. Pinning where the value COMES FROM is the other
+    # half, and it is the half that carries the meaning.
+    ("the endpoint's bytes come from the NORMALIZED slot of the cache entry — "
+     "`hit[1]` is the raw filing and satisfies every other pin here",
+     "norm = hit[2]"),
+    ("...and what goes into that slot is the WHOLE normalized_text of this "
+     "run, not a prefix of it — a truncated cache entry fails step 3 for "
+     "every consumer on every run",
+     'norm = result.get("normalized_text") or ""'),
+]
+
+# A pin proves its expression is present; it cannot prove nothing REBINDS the
+# name afterwards — UNIQUE_UI's argument, in Python. `norm = hit[2]` followed
+# by `norm = hit[1]` satisfies both pins and serves the raw filing, so the two
+# functions that bind `norm` must bind it exactly once each.
+#
+# Counted with `ast`, not a regex, and PR #54 R4 is why. The first version was
+# `^\s*norm\s*=[^=]` over a text window, which counts only a rebind that starts
+# its own physical line: `norm = hit[2]; norm = hit[1]` and
+# `norm, _unused = hit[1], 0` both left the whole gate green while the endpoint
+# served the raw filing. Two more spellings would have needed two more regex
+# patches, which is the shape of a guard that is always one spelling behind.
+# `Name(id="norm", ctx=Store)` inside the function node is the property itself:
+# every binding form Python has — assignment, augmented, walrus, tuple unpack,
+# for-target — is one Store node, and the ast also makes the text-window scan
+# (and the decorator-keying defect that version carried in-session, caught
+# and fixed inside round 1 and never committed) unnecessary.
+NORM_BINDERS = {"api_normalized": 1, "_run": 1}
+
+
+def _binds(src, func, name):
+    """How many times `func` in `src` binds `name`. None if there is no such
+    function — a rename must be loud, not a silent zero."""
+    for node in ast.walk(ast.parse(src)):
+        if (isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and node.name == func):
+            return sum(1 for n in ast.walk(node) if isinstance(n, ast.Name)
+                       and n.id == name and isinstance(n.ctx, ast.Store))
+    return None
+
+
+def check_offset_reproduction_contract(case):
+    """D12. A consumer with no access to this repo must be able to reproduce
+    any item's text from the published offsets, and must be told, in the same
+    breath, that those offsets do NOT index the raw filing.
+
+    ADR-026 §a refuses a raw-to-normalized offset map, so reproducibility
+    ships as a CONTRACT: serve the exact `normalized_text` the offsets index,
+    pin the recipe that slices it, and pin the sha that binds the download to
+    the run. Three halves, because each can rot on its own:
+
+    LIVE (the recipe is TRUE) — per fixture, `extract_items` + `build_view`,
+        no HTTP: the view's `norm_sha256` is the sha256 of the UTF-8
+        `normalized_text` (so step 3 can be performed at all), and for every
+        item with a span `normalized_text[start:end]` is byte-for-byte the
+        `text` the API serves (step 4). This is INV-S2 restated at the API
+        boundary, and it is what makes the recipe a fact rather than a claim.
+    LIVE (the WARNING is true) — the same offsets applied to the RAW filing
+        bytes must produce something DIFFERENT, on every span-carrying item of
+        every fixture here. A warning nobody can falsify is decoration; if
+        normalization ever became the identity, this half goes red and the
+        docs get to stop shouting.
+    WIRE + DOCS — the endpoint exists exactly once, and every expression on
+        the path from this run's `normalized_text` to the response body is
+        pinned WHOLE: what goes into the cache, which slot comes back out, the
+        response, and the sha header — plus a guard that neither function
+        binds `norm` more than once, counted with `ast` (PR #54 R1: the first
+        version pinned only the two expressions that MENTION `norm`, and `norm
+        = hit[1]` served the raw filing straight through it; R4: the guard that
+        closed R1 was a line-anchored regex, and a same-line or tuple-unpack
+        rebind walked through THAT). The recipe appears
+        verbatim in both `RECIPE_DOCS`, warning included. What none of this can
+        do is issue a request — importing app.py drags fastapi into the
+        dependency-free unit job — so FastAPI BINDING the route stays unpinned
+        and carries its own debt row. Pinned text is not a served response, and
+        the difference is written down rather than glossed.
+    """
+    inp = case.get("input", {})
+    bad, info = [], {}
+    api = _live((ROOT / inp.get("api_file", API_FILE)).read_text(), "py")
+
+    routes = NORMALIZED_ROUTE_RE.findall(api)
+    if routes != ["/api/normalized/{token}"]:
+        bad.append(f"app.py declares {routes!r} for the normalized-text download, "
+                   f"not exactly one `/api/normalized/{{token}}` GET route — the "
+                   f"recipe's step 2 names that path and nothing else serves it")
+    for why, expr in WIRE_NORMALIZED:
+        n = _squash(api).count(_squash(expr))
+        if n != 1:
+            bad.append(f"app.py: {why} — expected exactly one `{expr}`, found {n}")
+    for func, want in NORM_BINDERS.items():
+        n = _binds(api, func, "norm")
+        if n != want:
+            bad.append(f"app.py `{func}()`: binds `norm` {n} times, expected "
+                       f"{want} — a second binding after the pinned one wins at "
+                       f"runtime and leaves every pin above satisfied "
+                       f"(None means the function is gone or renamed)")
+
+    for rel in RECIPE_DOCS:
+        text = _squash((ROOT / rel).read_text())
+        for line in RECIPE:
+            n = text.count(_squash(line))
+            if n != 1:
+                bad.append(f"{rel}: the reproduction recipe is not carried "
+                           f"verbatim — `{line[:60]}…` occurs {n} times, expected 1")
+    n = _squash((ROOT / "README.md").read_text()).count(_squash(SNIPPET_ASSERT))
+    if n != 1:
+        bad.append(f"README.md: the worked snippet's step-4 line is not "
+                   f"`{SNIPPET_ASSERT}` (found {n}) — any other comparison is "
+                   f"false for an item longer than DISPLAY_MAX, i.e. the "
+                   f"published recipe raises on the reader's first long item")
+
+    for rel in inp.get("fixtures", []):
+        r = extract_items(str(ROOT / rel))
+        text = r.get("normalized_text") or ""
+        v = build_view(r)
+        want_sha = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        if v.get("norm_sha256") != want_sha:
+            bad.append(f"{rel}: the run publishes norm_sha256="
+                       f"{v.get('norm_sha256')!r}, not the sha256 of its own "
+                       f"UTF-8 normalized_text ({want_sha}) — step 3 of the "
+                       f"recipe cannot be performed")
+        raw = (ROOT / rel).read_bytes().decode("utf-8", "replace")
+        spanned = raw_same = 0
+        for it in v["items"]:
+            s, e = it.get("start"), it.get("end")
+            if s is None or e is None:
+                continue
+            spanned += 1
+            slice_ = text[s:e]
+            if slice_[:DISPLAY_MAX] != it["text"]:
+                bad.append(f"{rel} item {it.get('item')}: the recipe's slice "
+                           f"normalized_text[{s}:{e}] is not the text the API "
+                           f"serves for that item (INV-S2 at the API boundary)")
+            if len(slice_) != it.get("chars"):
+                bad.append(f"{rel} item {it.get('item')}: chars={it.get('chars')} "
+                           f"disagrees with len(normalized_text[{s}:{e}])={len(slice_)}")
+            if raw[s:e] == slice_:
+                raw_same += 1
+        if not spanned:
+            bad.append(f"{rel}: no item carries a span — this fixture pins nothing")
+        if raw_same:
+            bad.append(f"{rel}: {raw_same} of {spanned} spanned items slice the "
+                       f"RAW bytes to the same string as the normalized text — "
+                       f"the documented WARNING is not true of this fixture")
+        info[f"{Path(rel).parent.name}_spanned_items"] = spanned
+    return bad, info
 def _js_block(live, opener):
     """Text between the braces of the block `opener` opens, braces MATCHED.
 
@@ -2236,6 +2451,7 @@ CHECKS = {
     "split_breakpoint": check_split_breakpoint,
     "exclusion_note": check_exclusion_note,
     "exclusion_note_trigger": check_exclusion_note_trigger,
+    "offset_reproduction_contract": check_offset_reproduction_contract,
     "confidence_honesty": check_confidence_honesty,
     "banner_status_role": check_banner_status_role,
     "item_text_region": check_item_text_region,

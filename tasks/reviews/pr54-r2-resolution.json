@@ -1,0 +1,47 @@
+{
+  "pr": 54,
+  "task": "D12",
+  "round": 2,
+  "date": "2026-08-26",
+  "author": "implementer",
+  "gate_after_repair": "invariant 60/60 = 1.000; fast 123/123 = 1.000 (baseline fast 1.0, untouched)",
+  "digests_after_repair": "evals/snapshot.py over 56 dev + 5 held-out filings, dev sha256=8c002dced6acbbcb2a1ab69a27f61fac6216f44e83d64962ffdaab612e6eaa81, heldout sha256=51de5a11671621a423319e9704e4e227133e90703fe8b114e71a178204957f3f — identical to the pre-D12 snapshot",
+  "app_py_unchanged_this_round": true,
+  "resolutions": [
+    {
+      "id": "R4",
+      "outcome": "fixed",
+      "branch_taken": "strengthen the guard (the orchestrator's steer, and the smaller diff)",
+      "covered_by": "ui-offset-reproduction-contract (check_offset_reproduction_contract, NORM_BINDERS + _binds)",
+      "what_changed": "The line-anchored regex `^\\s*norm\\s*=[^=]` over a text window is replaced by `_binds()`, an `ast` walk counting `Name(id='norm', ctx=Store)` nodes inside the named function. Every binding form Python has — plain, chained, same-line-after-semicolon, augmented, walrus, tuple unpack, for-target — is one Store node, so the guard now enforces the property four artifacts already claimed for it instead of a line shape. Keys are function names rather than `def` lines, which also deletes the end-of-function text scan and with it the decorator-keying defect that scan carried in-session. [Corrected in round 3, PR #54 R9: that defect was caught and fixed inside round 1 and never committed — the round-1 shipped code at e633b99 keys on the `def` line and its window is correct. R9 named two locations for this false 'shipped' claim; this artifact was a third.] Innocent formatting was checked and is unaffected: the real app.py binds `norm` exactly once in each function and is green unmodified.",
+      "red_first": [
+        "Both reviewer mutations confirmed GREEN under the shipped regex guard first: `norm = hit[2]; norm = hit[1]` -> passed True, 0 failures; `norm = hit[2]` then `norm, _unused = hit[1], 0` -> passed True, 0 failures.",
+        "Under the ast guard, same-line mutant: FAIL — 'app.py `api_normalized()`: binds `norm` 2 times, expected 1 — a second binding after the pinned one wins at runtime and leaves every pin above satisfied (None means the function is gone or renamed)'.",
+        "Under the ast guard, tuple-unpack mutant: FAIL with the identical message.",
+        "Reverted: passed True, 0 failures. Round-1 regression re-checked at the same time — `norm = hit[1]` still FAILs on the `norm = hit[2]` text pin."
+      ],
+      "claims_corrected": [
+        "src/repo_hygiene/eval_adapter.py NORM_BINDERS comment — now states the ast mechanism and why the regex was abandoned rather than patched",
+        "src/repo_hygiene/eval_adapter.py check docstring",
+        "evals/adversarial/ui-offset-reproduction-contract.json triage note — mechanism, and the mutation list grown from three to five",
+        "tasks/reviews/pr54-r1-resolution.json R1 what_changed — corrected in place with the correction named as such, not silently"
+      ]
+    },
+    {
+      "id": "R5",
+      "outcome": "fixed",
+      "branch_taken": "reword (the orchestrator's steer), plus deletion of the dead check",
+      "covered_by": "ui-offset-reproduction-contract (SNIPPET_ASSERT text pin — which is now all that is claimed)",
+      "red_first": "REWORD BRANCH — there is no red to watch, and none was invented. The finding is that a committed claim overstated a check, not that a behaviour is wrong; the fix is deleting the check that could not fail and correcting the four sentences that cited it. What was verified instead, positively: reverting README.md's step-4 line alone is still RED on the text pin (confirmed this round, then restored), so R2's substantive protection is intact and is exactly what the artifacts now describe.",
+      "what_changed": "Deleted `slice_[:len(it[\"text\"])] != it[\"text\"]` from the live loop — `build_view` sets `it[\"text\"] = slice_[:DISPLAY_MAX]`, so it is the same expression as the `slice_[:DISPLAY_MAX] != it[\"text\"]` line immediately above and could never fail alone — and deleted the truncated-item vacuity guard and its counter, which existed only to protect that dead comparison. Four artifacts now state that R2 is protected by a text pin and name its ceiling (co-editing README.md and SNIPPET_ASSERT together is green, as it is for every allow-list pin in this file). Deletion over reword where both were possible: the misleading sentence had a dead check under it, and leaving the check while fixing the sentence would have kept the thing that made the sentence tempting.",
+      "claims_corrected": [
+        "src/repo_hygiene/eval_adapter.py SNIPPET_ASSERT comment",
+        "evals/adversarial/ui-offset-reproduction-contract.json provenance",
+        "tasks/reviews/pr54-r1-resolution.json R2 what_changed — corrected in place with the correction named",
+        "prompts/021-d12-offset-reproduction-contract.md, last bullet of the round-1 section",
+        "tasks/reviews/pr54-r1-resolution.json R2 covered_by — MISSED in round 2 and corrected in round 3 (PR #54 R8); listing it here because this list claimed to enumerate the correction and did not"
+      ]
+    }
+  ],
+  "no_new_debt": "Nothing outside these two findings was touched, and nothing new was found that needed a debt row. The existing PR #54 R3 row and the two D12 rows are unchanged."
+}
