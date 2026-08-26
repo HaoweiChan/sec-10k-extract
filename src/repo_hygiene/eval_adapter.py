@@ -111,6 +111,164 @@ def check_report_citations():
     return bad
 
 
+HELDOUT_DIR = ROOT / "evals" / "heldout"
+# The three claim shapes held-out provenances actually use for byte-level
+# facts. `evals/heldout/README.md` records SIX occasions on which the
+# verification instrument, not the pipeline, produced a wrong claim, and the
+# rule it settled on is that anything character-level must be read from the
+# raw bytes. Nothing enforced that: a provenance is free prose, so a
+# miscounted string or an offset off by eight bytes sat in the document of
+# record until a human re-derived it (PR #52 R4/R5). These re-derive it every
+# run, against the committed fixture, importing nothing from src/sec10k.
+# ponytail: pins the three phrasings in use, not prose in general — a claim
+# written some other way is simply unpinned, which is the same silence as
+# before, not a regression. Widen the patterns when a new phrasing appears.
+_Q = "['‘’]"  # ASCII or typographic single quote — PR #52 R11: swapping one
+                       # for the other silently disarmed every pin in a file
+_PROV_COUNT_RE = re.compile(_Q + r"([^'‘’]{1,120})" + _Q + r" (\d+)x")
+_PROV_OFFSET_RE = re.compile(
+    _Q + r"([^'‘’]{1,160})" + _Q + r"[^.]{0,40}?(?:\(|at )raw offset ([\d,]+)")
+_PROV_HITS_RE = re.compile(
+    r"[^.]*\bregex\b[^.]*?\breturns\b[^.]*?\b(\d+|one|two|three|four|five|six|"
+    r"seven|eight|nine|ten) hits[^.]*", re.I)
+_NUM_WORDS = {w: i for i, w in enumerate(
+    "zero one two three four five six seven eight nine ten".split())}
+_BACKTICKED_RE = re.compile(r"`([^`]+)`")
+
+
+def check_heldout_provenance_claims(case=None):
+    """Every byte-level claim in a held-out case's provenance must reproduce
+    against that case's committed fixture: `'<literal>' <N>x` occurrence
+    counts, `'<literal>' at raw offset <N>` positions, and any stated regex
+    hit count — which must name the regex in backticks so it can be run.
+
+    FAILS CLOSED (PR #52 R11, on the `evals/bench.check_docs` precedent): the
+    first version returned green when it extracted NOTHING, so the coverage it
+    advertises could be silently reduced to zero — swapping ASCII apostrophes
+    for typographic ones, or rewording `'X' 8x` to `'X' appears eight times`,
+    disarmed every pin in a file and left the gate at 123/123. `min_claims`
+    in the case commits how many claims each file must yield; a file that
+    yields fewer, or that has disappeared, is a failure. A check that can be
+    disarmed by a curly apostrophe is worse than none — it launders the
+    coverage claim."""
+    bad = []
+    floors = dict((case or {}).get("input", {}).get("min_claims") or {})
+    seen = {}
+    for f in sorted(HELDOUT_DIR.glob("*.json")):
+        hc = json.loads(f.read_text())
+        prov = hc.get("provenance", "")
+        where = f"evals/heldout/{f.name}"
+        raw = (ROOT / hc["input"]["path"]).read_bytes()
+        n_claims = 0
+        for lit, n in _PROV_COUNT_RE.findall(prov):
+            n_claims += 1
+            got = raw.count(lit.encode())
+            if got != int(n):
+                bad.append(f"{where}: claims {lit!r} {n}x, fixture has {got}x")
+        for lit, off in _PROV_OFFSET_RE.findall(prov):
+            n_claims += 1
+            want = int(off.replace(",", ""))
+            b = lit.encode()
+            if raw[want:want + len(b)] != b:
+                bad.append(f"{where}: claims {lit[:40]!r} at raw offset {want}, "
+                           f"actually at {raw.find(b)}")
+        for m in _PROV_HITS_RE.finditer(prov):
+            n_claims += 1
+            want = _NUM_WORDS.get(m.group(1).lower())
+            if want is None:
+                want = int(m.group(1))
+            pats = _BACKTICKED_RE.findall(m.group(0))
+            if not pats:
+                bad.append(f"{where}: states a regex hit count ({m.group(1)}) "
+                           f"without naming the regex in backticks — not reproducible")
+                continue
+            for pat in pats:
+                try:
+                    got = len(re.findall(pat.encode(), raw))
+                except re.error as e:
+                    bad.append(f"{where}: regex {pat!r} does not compile ({e})")
+                    continue
+                if got != want:
+                    bad.append(f"{where}: regex {pat!r} claimed {m.group(1)} hits, "
+                               f"produces {got}")
+        seen[f.name] = n_claims
+    for name, floor in sorted(floors.items()):
+        got = seen.get(name)
+        if got is None:
+            bad.append(f"evals/heldout/{name}: committed for {floor} pinned claims "
+                       f"but the case file is gone — coverage cannot silently vanish")
+        elif got < floor:
+            bad.append(f"evals/heldout/{name}: yields {got} pinned claims, "
+                       f"committed floor is {floor} — the check is failing closed "
+                       f"rather than laundering the coverage claim")
+    return bad
+
+
+LEDGER_LINE_REF_SHORT = {"ADR-021": "specs/decisions/ADR-021-benchmark-instrument.md"}
+# PR #52 R9. A ledger row that cites `<file>:<line>` and QUOTES the sentence it
+# means is self-verifying; the line number rots the moment anything is inserted
+# above it, and this repo has now done that twice (the pending ADR-019 line-ref
+# item is the first). Adjacency is the whole discriminator: a quotation that
+# immediately follows the ref is a quotation OF it, while one further along the
+# sentence belongs to a different clause — matching loosely produced four false
+# positives on the committed tree, matching adjacently produces none.
+# ponytail: pins refs that quote, which is the shape that CAN be checked. A
+# bare `file.py:126` with nothing quoted beside it is unpinnable by any means
+# short of re-reading the author's mind, and `min_refs` below is what stops
+# that silence from growing — the fix for a bare ref is to quote it.
+LEDGER_LINE_REF_RE = re.compile(
+    r"`(?P<path>[A-Za-z0-9_./-]*):(?P<line>\d+)(?:-\d+)?`"
+    r"\s*(?:reads|says)?\s*\(?\s*[\"“](?P<frag>[^\"”]{4,200})[\"”]")
+
+
+def _ledger_norm(s):
+    return re.sub(r"\s+", " ", re.sub(r"[`*_]", "", s)).strip()
+
+
+def check_ledger_line_refs(case):
+    """Every `<file>:<line>` citation in the ledger that quotes its target must
+    quote something actually on (or beside) that line. Fails closed on
+    `min_refs`: a rewrite that drops the quotations drops the coverage."""
+    bad, seen = [], {}
+    for rel in case.get("input", {}).get("files", LEDGER_FILES):
+        n_refs = 0
+        for n, line in enumerate((ROOT / rel).read_text().split("\n"), 1):
+            # `last` resets per row: a bare `:893` continuation always follows
+            # its full path inside the same row, and carrying it across rows let
+            # a deleted ref silently re-point its neighbours at another file
+            # (found by mutation-testing this check, PR #52 R9)
+            last = None
+            for m in LEDGER_LINE_REF_RE.finditer(line):
+                path = m.group("path") or last
+                path = LEDGER_LINE_REF_SHORT.get(path, path)
+                if m.group("path"):
+                    last = path
+                if not path:
+                    continue
+                target = ROOT / path
+                n_refs += 1
+                if not target.is_file():
+                    bad.append(f"{rel}:{n}: cites {path} — no such file")
+                    continue
+                src = target.read_text().split("\n")
+                lo = int(m.group("line"))
+                # ±2 lines: a quoted sentence legitimately wraps in the source
+                window = _ledger_norm(" ".join(src[max(0, lo - 2):lo + 2]))
+                for piece in re.split(r"…|\.\.\.", m.group("frag")):
+                    piece = _ledger_norm(piece)
+                    if len(piece) < 6:
+                        continue
+                    if piece not in window:
+                        bad.append(f"{rel}:{n}: {path}:{lo} does not contain the "
+                                   f"quoted {piece[:70]!r}")
+        seen[rel] = n_refs
+    for rel, floor in sorted((case.get("input", {}).get("min_refs") or {}).items()):
+        if seen.get(rel, 0) < floor:
+            bad.append(f"{rel}: {seen.get(rel, 0)} verifiable line refs, committed "
+                       f"floor is {floor} — failing closed")
+    return bad
+
+
 def check_ui_stylesheet(case):
     """WCAG AA over the inspector's token block + the .it selector-scoping rule.
 
@@ -698,8 +856,14 @@ WIRE_UI = [
     ("the pane SAYS it is hiding text — R5's defect was un-stripped text "
      "under this label, and the inverse, a silent strip, is the same lie",
      '(VIEW.boilerplate_excluded ? "boilerplate hidden · " : "")'),
+    # D10 moved this pin: the same render now carries role=region + an
+    # item-naming aria-label (ui-item-text-region). Re-checked per the pin's
+    # own failure message — the STRIPPED string is still what is rendered,
+    # `display_text ?? text` unmodified, and the new attributes are display
+    # metadata that touch neither end of the wire.
     ("the extracted-item pane renders the STRIPPED string",
-     '<pre class="text">${esc(it.display_text ?? it.text)}</pre>'),
+     '<pre class="text" role="region" aria-label="Item ${esc(it.item)} extracted text">'
+     '${esc(it.display_text ?? it.text)}</pre>'),
     ("the truncation notice counts the STRIPPED string",
      '${(it.display_text ?? it.text).length.toLocaleString()}'),
 ]
@@ -722,7 +886,9 @@ WIRE_HANDLER = {
 # passed the allow-list until this was added.
 UNIQUE_UI = [
     ("nothing may shadow the excludeBp() helper", "function excludeBp"),
-    ("nothing may shadow the extracted-item render", '<pre class="text">'),
+    # D10: opening tag only, so the pin survives the ARIA attributes added to
+    # it while still counting every `pre.text` `$("#pane pre.text")` could hit
+    ("nothing may shadow the extracted-item render", '<pre class="text"'),
 ]
 
 WIRE_API = [
@@ -1819,12 +1985,453 @@ def check_offset_reproduction_contract(case):
                        f"the documented WARNING is not true of this fixture")
         info[f"{Path(rel).parent.name}_spanned_items"] = spanned
     return bad, info
+def _js_block(live, opener):
+    """Text between the braces of the block `opener` opens, braces MATCHED.
+
+    Same argument as `_media_blocks`: a plain regex ends the block at the
+    first nested `}`, and every function here is mostly template literal, so
+    `${...}` alone would defeat one. Template `${}` pairs balance, so simple
+    depth counting is enough; a brace inside a STRING would defeat it, and
+    none of the blocks this is pointed at contains one.
+    """
+    i = live.find(opener)
+    if i < 0:
+        return None
+    i = live.index("{", i) + 1
+    depth, start = 1, i
+    while i < len(live) and depth:
+        if live[i] == "{":
+            depth += 1
+        elif live[i] == "}":
+            depth -= 1
+        i += 1
+    return live[start:i - 1]
+
+
+def check_confidence_honesty(case):
+    """D7. The 2026-08-24 demo's trust amplifier, both halves.
+
+    PANEL. `doc_status` and the warnings list live in the top banner; the
+    side panel a viewer actually reads showed a per-item `conf 0.95` with no
+    visual link back to a document the banner had already called
+    `success_with_warning` or `ambiguous` (postmortem §2, "The UI amplified
+    both"). Pinned as an ADJACENCY, not as a question: every live
+    interpolation of `it.confidence` must sit where the pinned
+    `conf_marker` would start and must be followed IMMEDIATELY by the
+    pinned `qualifier`. A question about the file ("does it mention
+    doc_status somewhere?") is answerable by a file that still prints a
+    bare number two lines later — the `boilerplate_plumbing` allow-list
+    records two rounds of exactly that. `min_conf_sites` keeps it from
+    passing vacuously by deleting the render sites; the `bodies` pins keep
+    a producer from being neutered in place or shadowed by a second
+    declaration; the banner pin carries its assignment target. What that
+    adds up to, and what it does not, is the next paragraph.
+
+    WHAT THIS CHECK IS, WRITTEN SO IT CANNOT BE READ AS MORE. Rewritten
+    twice — PR #53 round 1 and again at round 2. Each earlier version
+    asserted a property of the PROGRAM ("a bare confidence is
+    unrepresentable", then "no live interpolation of `it.confidence`
+    renders without the pinned qualifier"), and each was falsified inside
+    one review by an edit a working developer might plausibly make. So the
+    claim is now stated as what the code actually does.
+
+    This is a TEXT PIN over one file. A green run asserts that
+    src/sec10k/web/static/index.html contains, verbatim modulo whitespace:
+
+      * every mention of `it.confidence` sitting inside an interpolation
+        whose whole `${...}` is the pinned `conf_marker`, immediately
+        followed by the pinned `qualifier`;
+      * exactly one declaration of each pinned helper, each with a body
+        byte-equal to its pin;
+      * the pinned banner assignment, assignment target included;
+      * the pinned wording in the coverage strip and none of the forbidden
+        wording.
+
+    It does NOT assert that the page renders a qualified confidence, and no
+    static read of one file could: these pins constrain the text a program
+    is written in, not the program. Out of reach today, concretely — a
+    number rendered without mentioning `it.confidence` (copied into a local
+    first, or read off a re-shaped object); markup injected by another
+    script or served from another file; anything hidden by CSS or simply
+    never reached at runtime for a reason the text does not show. THAT LIST
+    IS ILLUSTRATIVE, NOT EXHAUSTIVE, and this is the sentence that matters:
+    a text pin cannot enumerate the programs it fails to constrain. Read a
+    green run as "the pinned text is present and unique", never as "the
+    defect is impossible". What the screen actually showed is the browser
+    walk, tasks/reviews/d7-browser-walk.json; the falsification attempts
+    that have been run against these pins are
+    tasks/reviews/pr53_mutation_probe.py.
+
+    The qualifier reads `it.evidence.warnings`, which IS `score()`'s own
+    `hits` list — the codes that carried this item's code and each cost it
+    `WARN_PENALTY`. So the panel names exactly the warnings that moved the
+    number, and inherits ADR-018's exclusion of `expected_item_missing`
+    (which only restates the `missing` status the status badge already
+    shows) rather than re-deriving a second definition here.
+
+    BANNER. `unattributed_content` already computes a document-coverage
+    figure and buries it in a warning row below the banner (postmortem §8
+    gap 1). This pins that the banner surfaces it AND states the caveat
+    `validate.py` states in its own comment — interior gaps are not counted,
+    so the figure can understate true non-coverage by up to 9.7 points
+    (ibm-1997, ADR-019 §d). `must_not_say` forbids the inversion that caveat
+    exists to prevent: `100 - outside` is NOT the attributed share, and a
+    banner that publishes it would overstate coverage by exactly the
+    uncounted interior gaps.
+
+    Text, not render — see the block comment above check_split_breakpoint.
+    CEILING: this is a STATIC READ of the markup of
+    src/sec10k/web/static/index.html. No test in this harness issues an HTTP
+    request, so nothing here observes the render: it cannot see the
+    qualifier appear beside a real 0.95, and a CSS rule could hide the
+    coverage strip with every pin below green. That is browser evidence, in
+    tasks/reviews/d7-browser-walk.json.
+    """
+    inp = case.get("input", {})
+    text = (ROOT / inp.get("file", UI_STYLESHEET)).read_text()
+    live = _live(text, "js")
+    bad = []
+
+    marker, qual = inp["conf_marker"], inp["qualifier"]
+    # PR #53 R1/R2/R4 all exploited the same weakness from different sides:
+    # this check asked about TEXT THAT IS PRESENT and never about text that
+    # is REACHED or COMPLETE. Site discovery used to be a literal search for
+    # `conf ${`, so a third render site spelled `confidence ${it.confidence
+    # ?? "—"}` printed a bare number and was invisible to the scan while
+    # `min_conf_sites` stayed satisfied by the two qualified sites. The scan
+    # now finds every interpolation OF THE FIELD and steps back to where the
+    # pinned marker would have to start, so a differently-spelled site is
+    # reported as unpinned rather than skipped.
+    lead = marker.index("${")           # `conf ` — what precedes the field
+    # PR #53 R4, second pass. Round 1 matched `${\s*it.confidence`, i.e. only
+    # interpolations the field STARTS. `conf ${esc(it.confidence)}` names the
+    # field, renders a bare number, and started nothing — and it is the
+    # PLAUSIBLE next edit, not an exotic one, because every sibling badge in
+    # that same template literal is already `${esc(...)}`. So every mention of
+    # the field is now traced back to the `${` that encloses it and the whole
+    # enclosing interpolation must be the pinned marker: wrapped, parenthesised
+    # or reordered spellings are reported as unpinned rather than skipped.
+    # `rfind` alone is not enough: the nearest preceding `${` may belong to an
+    # interpolation that already CLOSED, in which case the mention is not being
+    # rendered at all and attaching it to that interpolation reports the wrong
+    # offset — and fires on correct code (`if (it.confidence == null)` would be
+    # flagged). So the candidate must actually enclose the mention. A mention
+    # outside every interpolation is not a render site and is skipped, which is
+    # the "copied into a local first" hole the ceiling names out loud.
+    sites = set()
+    for m in re.finditer(r"it\.confidence", live):
+        opened = live.rfind("${", 0, m.start())
+        if opened < 0:
+            continue
+        i, depth = opened + 2, 1
+        while i < len(live) and depth:
+            if live[i] == "{":
+                depth += 1
+            elif live[i] == "}":
+                depth -= 1
+            i += 1
+        if i <= m.start():          # that interpolation closed before the mention
+            continue
+        sites.add(max(0, opened - lead))
+    sites = sorted(sites)
+    floor = inp.get("min_conf_sites", 1)
+    if len(sites) < floor:
+        bad.append(f"only {len(sites)} live confidence render site(s), expected "
+                   f"at least {floor} — the side panel's badge and the pane "
+                   f"header each print one, and deleting a site is not a way "
+                   f"to qualify it")
+    for i in sites:
+        rest = live[i:]
+        head = " ".join(rest[:90].split())
+        if not rest.startswith(marker):
+            bad.append(f"confidence rendered by an unpinned expression: {head!r}")
+        elif not _squash(rest[len(marker):]).startswith(_squash(qual)):
+            bad.append(f"bare confidence, no qualifier beside it: {head!r} — a "
+                       f"number a viewer reads with no link back to doc_status "
+                       f"or to the warnings that moved it is the demo defect")
+
+    for expr in inp.get("wire", []):
+        if _squash(expr) not in _squash(live):
+            bad.append(f"missing pinned expression (the qualifier reads the "
+                       f"response's own doc_status and the item's own "
+                       f"evidence.warnings): {expr}")
+
+    # PR #53 R2. Substring existence proves a line is in the file, never that
+    # it RUNS: `if(true) return "";` as the first statement of docQual and
+    # itemQual left every pinned line intact below it as dead code, restored
+    # the bare `conf 0.95` on every cvx-2015 badge, and passed. Same attack
+    # class `_live` was added for in PR #27 R10, one level deeper — there the
+    # pinned text survived inside a comment, here it survives below a return.
+    # So the helpers whose whole job is the qualifier are pinned WHOLE:
+    # anything added, removed or reordered inside them is a difference,
+    # including a line that merely precedes the pinned one.
+    for fn_name, want_body in (inp.get("bodies") or {}).items():
+        # PR #53 R2, second pass. `_js_block` reads the FIRST declaration; JS
+        # runs the LAST. `function docQual(){ return ""; }` inserted above
+        # `render()` therefore left the pinned body byte-equal, won at runtime,
+        # and restored the bare `conf 0.95` on all 20 cvx-2015 badges with the
+        # whole gate green. Pinning a body says nothing about which body runs
+        # unless the name is declared exactly once, so that is checked first.
+        seen = live.count(f"function {fn_name}(")
+        if seen != 1:
+            bad.append(f"{fn_name}(): declared {seen} times in the live markup, "
+                       f"expected exactly 1 — a second declaration shadows the "
+                       f"pinned one at runtime (JS runs the LAST), so the body "
+                       f"pin below would be checking a function nothing calls")
+            continue
+        got_body = _js_block(live, f"function {fn_name}(")
+        if got_body is None:
+            bad.append(f"{fn_name}(): no such function in the live markup — "
+                       f"the qualifier has no producer")
+        elif _squash(got_body) != _squash(want_body):
+            got_s, want_s = _squash(got_body), _squash(want_body)
+            at = next((k for k in range(min(len(got_s), len(want_s)))
+                       if got_s[k] != want_s[k]), min(len(got_s), len(want_s)))
+            bad.append(f"{fn_name}(): body differs from the pinned one at "
+                       f"char {at} — pinned {want_s[at:at + 60]!r}, found "
+                       f"{got_s[at:at + 60]!r}. The body is pinned whole "
+                       f"because a pinned LINE can sit unreachable below an "
+                       f"early return (PR #53 R2)")
+
+    fn = inp.get("coverage_fn", "coverageStrip")
+    body = _js_block(live, f"function {fn}(")
+    if body is None:
+        bad.append(f"{fn}(): the banner has no coverage strip — the "
+                   f"document-coverage figure `unattributed_content` already "
+                   f"computes stays buried in a warning row below it")
+        return bad, {"conf_sites": len(sites), "coverage_text": None}
+    say = " ".join(re.sub(r"<[^>]+>", "", body).split())
+    for want in inp.get("must_say", []):
+        if want not in say:
+            bad.append(f"{fn}(): does not say {want!r}")
+    for nope in inp.get("must_not_say", []):
+        if nope in say:
+            bad.append(f"{fn}(): says {nope!r} — the banner may neither publish "
+                       f"the complement of this figure as an attributed share "
+                       f"(interior gaps are not counted, so it is not one) nor "
+                       f"label the figure itself as coverage when what it "
+                       f"measures is NON-coverage (PR #53 R7)")
+    return bad, {"conf_sites": len(sites), "coverage_text": say}
+# --- D10: agent-legibility (correct ARIA + a deep link) --------------------
+# All four read the file's TEXT, not a render, for the same reason
+# check_split_breakpoint documents: there is no browser in the eval harness.
+# The behavioural half — that the deep link actually lands on a rendered page
+# and that these names reach the accessibility tree — is the browser walk
+# (tasks/reviews/d10_agent_walk.py), which is evidence, not a gate.
+
+
+def _attrs(tag):
+    """{name: value} of the double-quoted attributes in one start tag."""
+    return dict(re.findall(r'([-a-zA-Z]+)\s*=\s*"([^"]*)"', tag))
+
+
+def _named(attrs, live):
+    """The accessible name an element carries in its own start tag, or "" if
+    it has none.
+
+    PR #55 R2: an `aria-labelledby` is a name only if its IDREFs RESOLVE. The
+    first version returned the raw attribute value, so
+    `aria-labelledby="no-such-id"` — whose computed name is EMPTY, and which
+    `get_by_role(role, name=...)` matches nothing by — read as named, i.e. the
+    anonymous-`generic` defect these checks exist to catch passed them. Every
+    token must therefore name an `id="…"` present in the same live file.
+
+    Ceiling, deliberate: the name of a resolving reference is the referenced
+    element's TEXT, which is not statically reachable here (that element may
+    itself be built by JS). So what this returns for the labelledby form is
+    the token list — enough to answer "is it named", not "what does it say".
+    The page uses `aria-label` everywhere, so nothing rides on the difference
+    today; a real labelledby would want the browser walk to assert its text.
+    """
+    if attrs.get("aria-label"):
+        return attrs["aria-label"].strip()
+    ids = (attrs.get("aria-labelledby") or "").split()
+    if ids and all(re.search(r'\bid="' + re.escape(t) + r'"', live) for t in ids):
+        return " ".join(ids)
+    return ""
+
+
+def _why_unnamed(attrs):
+    """Why `_named` came back empty — a dangling IDREF and a missing attribute
+    are different defects and the diagnostic has to tell them apart."""
+    lb = attrs.get("aria-labelledby")
+    if lb:
+        return (f"aria-labelledby={lb!r} resolves to no id present in this "
+                f"file, so the computed name is empty")
+    return "it carries neither aria-label nor aria-labelledby"
+
+
+def check_banner_status_role(case):
+    """D10 (2): `#banner` is the page's live status region — it is the only
+    element that reports `doc_status`, and JS rewrites it asynchronously after
+    every extraction. As a bare `<div>` its role is `generic`, which the
+    browser-agent postmortem (S2) records as dropped from the observation
+    entirely, so the one answer the page exists to give had no element to be
+    the name of. `role="status"` is the correct role for exactly this element
+    (it IS a polite live region), and an `aria-label` makes it a *named*
+    element rather than an anonymous one.
+    """
+    inp = case.get("input", {})
+    text = _live((ROOT / inp.get("file", UI_STYLESHEET)).read_text(), "js")
+    ident = inp.get("banner_id", "banner")
+    m = re.search(r'<div([^>]*\bid="' + re.escape(ident) + r'"[^>]*)>', text)
+    if not m:
+        return [f"#{ident}: no banner element in the live markup"], {"banner_attrs": None}
+    attrs = _attrs(m.group(1))
+    want_role = inp.get("role", "status")
+    bad = []
+    if attrs.get("role") != want_role:
+        bad.append(f'#{ident}: role is {attrs.get("role")!r}, want {want_role!r} '
+                   f"— a bare div is `generic` and carries no name for doc_status")
+    if not _named(attrs, text):
+        bad.append(f"#{ident}: no accessible name — {_why_unnamed(attrs)}. "
+                   f"role=status alone leaves the region anonymous")
+    return bad, {"banner_attrs": attrs}
+
+
+def check_item_text_region(case):
+    """D10 (3): the extracted item's text container (`pre.text`, and the
+    `div.text.md` the same slot renders in Markdown mode) must be a named
+    region. Same S2 shape as the banner: a bare `<pre>` is `generic`, so the
+    pane holding the actual answer was invisible to an accessibility-first
+    reader. `role="region"` plus an `aria-label` that interpolates the item's
+    own code is what makes "Item 1A" addressable; a static label would name
+    every item identically and is therefore rejected here.
+    """
+    inp = case.get("input", {})
+    text = _live((ROOT / inp.get("file", UI_STYLESHEET)).read_text(), "js")
+    want_expr = inp.get("label_must_interpolate", "${esc(it.item)}")
+    want_role = inp.get("role", "region")
+    found, bad = {}, []
+    for tag in re.findall(r'<(?:pre|div)[^>]*\bclass="text[^"]*"[^>]*>', text):
+        attrs = _attrs(tag)
+        key = attrs.get("class")
+        found[key] = attrs
+        if attrs.get("role") != want_role:
+            bad.append(f'class="{key}": role is {attrs.get("role")!r}, '
+                       f"want {want_role!r}")
+        name = _named(attrs, text)
+        if not name:
+            bad.append(f'class="{key}": no accessible name naming the item — '
+                       f"{_why_unnamed(attrs)}")
+        elif want_expr not in name:
+            bad.append(f'class="{key}": aria-label {name!r} does not interpolate '
+                       f"{want_expr} — every item would carry the same name")
+    for key in inp.get("containers", ["text", "text md"]):
+        if key not in found:
+            bad.append(f'class="{key}": no such item-text container in the live markup')
+    return bad, {"item_text_containers": found}
+
+
+def check_mode_button_names(case):
+    """D10 (4): the three input modes each render a button whose accessible
+    name was exactly "Extract" — the postmortem's S3 ambiguity shape, where a
+    plan targeting the button resolves to 3 matches. Each needs a DISTINCT
+    accessible name; the visible label stays "Extract" because that is what
+    the button does in every mode, so the distinction rides `aria-label`.
+
+    PR #55 R3 — distinct is not enough, and was the whole check. Swapping
+    #go-fx to "Upload" and #go-up to "Fixture" keeps three distinct non-empty
+    names and passed: an accessibility-first reader picking by name then
+    reaches the file-upload mode when it asked for the fixture, which is worse
+    than the ambiguity this row set out to remove. So each name must ALSO
+    carry the substring naming its own mode, and must contain the button's own
+    VISIBLE text — WCAG 2.5.3 Label in Name, the rule that keeps a speech-input
+    user's "click Extract" working once an aria-label is in play. The second
+    clause is why the row's evidence can say "screen-reader correctness, not
+    agent special-casing": nothing in the eval set backed that before.
+    """
+    inp = case.get("input", {})
+    text = _live((ROOT / inp.get("file", UI_STYLESHEET)).read_text(), "js")
+    # {id: substring the name must carry}; a bare list means "no per-mode pin"
+    want = inp.get("buttons", ["go-fx", "go-up", "go-url"])
+    if not isinstance(want, dict):
+        want = dict.fromkeys(want, "")
+    names, labels, bad = {}, {}, []
+    for ident, mode in want.items():
+        m = re.search(r'<button([^>]*\bid="' + re.escape(ident) + r'"[^>]*)>(.*?)</button>',
+                      text, re.S)
+        if not m:
+            bad.append(f"#{ident}: no such button in the live markup")
+            continue
+        attrs = _attrs(m.group(1))
+        names[ident] = _named(attrs, text)
+        labels[ident] = " ".join(re.sub(r"<[^>]+>", "", m.group(2)).split())
+        if not names[ident]:
+            bad.append(f"#{ident}: no accessible name of its own — all three "
+                       f'modes read "Extract", which is the 3-match ambiguity '
+                       f"({_why_unnamed(attrs)})")
+            continue
+        if mode and mode.lower() not in names[ident].lower():
+            bad.append(f"#{ident}: accessible name {names[ident]!r} does not "
+                       f"name its own mode ({mode!r}) — distinct names that "
+                       f"point at the wrong mode are worse than no names")
+        if labels[ident] and labels[ident].lower() not in names[ident].lower():
+            bad.append(f"#{ident}: accessible name {names[ident]!r} does not "
+                       f"contain its visible label {labels[ident]!r} "
+                       f"(WCAG 2.5.3 Label in Name — speech input targets the "
+                       f"word the user can see)")
+    seen = [n for n in names.values() if n]
+    dupes = sorted({n for n in seen if seen.count(n) > 1})
+    if dupes:
+        bad.append(f"mode buttons share accessible name(s) {dupes} — the names "
+                   f"must tell the three modes apart")
+    return bad, {"mode_button_names": names, "mode_button_labels": labels}
+
+
+def check_deep_link(case):
+    """D10 (1), the highest-leverage one: `?fixture=<id>&run=1` must preload
+    the fixture select and extract on load, so an agent (or a shared link)
+    lands on an already-rendered page instead of the fetch-then-render SPA the
+    postmortem's S1/S4 shapes are about.
+
+    Pinned as WHOLE expressions, for the reason WIRE_UI states: asking each
+    hop a question about itself is answerable by a broken hop. The pins carry
+    the safe-degrade contract too — the membership guard returns before
+    anything is assigned, so an unknown or absent `fixture` is a no-op and
+    `run=1` on its own extracts nothing.
+
+    WHERE `deepLink()` IS CALLED FROM is the other half, and two rounds got it
+    wrong before this shape. The call must sit on `boot()`'s straight-line
+    tail, after `#fx` has been filled from `/api/meta`: the option list is the
+    very thing the membership guard tests against, so a call that runs earlier
+    — or only on the error path — finds an empty `<select>`, returns every
+    time, and leaves the deep link a permanent silent no-op.
+
+    PR #55 R1 pinned that as guard-before-run, which is inert: that order is
+    fixed by `deepLink()`'s own function text and cannot move. PR #55 R9 then
+    measured both failure directions of the replacement, a `flat.find()`
+    ordering chain — FALSE GREEN on `deepLink()` moved into the `catch` arm
+    (runs only when /api/meta fails, i.e. never on the happy path; `[PASS]
+    ui-deep-link`, invariant 63/63 = 1.000) and FALSE RED on hoisting the
+    whole `function deepLink(){…}` declaration above `boot()` (behaviour
+    identical, declarations hoist). Both follow from the same mistake: the
+    guard and run pins live INSIDE the function body, whose textual position
+    says nothing about when it runs.
+
+    So there is no ordering machinery here at all any more. The call site is
+    pinned by CONTAINMENT — one contiguous span running from the options
+    assignment, through the `catch` arm, to `deepLink();` — and any relocation
+    out of that straight-line tail is simply a missing pin. What is asserted
+    is exactly what is checked: these expressions, and that shape around the
+    call. Nothing claims the guard's or the run trigger's position means
+    anything, because it does not.
+    """
+    inp = case.get("input", {})
+    text = _live((ROOT / inp.get("file", UI_STYLESHEET)).read_text(), "js")
+    flat, bad = _squash(text), []
+    for expr in inp.get("wire", []):
+        if _squash(expr) not in flat:
+            bad.append(f"missing pinned expression (the deep link's wire): {expr}")
+    return bad, {"deep_link_pins": len(inp.get("wire", []))}
 
 
 CHECKS = {
     "adr_headers": lambda case: check_adr_headers(),
     "adr_index": lambda case: check_index(),
     "report_citations": lambda case: check_report_citations(),
+    "heldout_provenance_claims": check_heldout_provenance_claims,
+    "ledger_line_refs": check_ledger_line_refs,
     "ui_stylesheet": check_ui_stylesheet,
     "typography_floor": check_typography_floor,
     "layout_centering": check_layout_centering,
@@ -1845,11 +2452,30 @@ CHECKS = {
     "exclusion_note": check_exclusion_note,
     "exclusion_note_trigger": check_exclusion_note_trigger,
     "offset_reproduction_contract": check_offset_reproduction_contract,
+    "confidence_honesty": check_confidence_honesty,
+    "banner_status_role": check_banner_status_role,
+    "item_text_region": check_item_text_region,
+    "mode_button_names": check_mode_button_names,
+    "deep_link": check_deep_link,
 }
 
 
 def run_case(case):
-    names = case.get("input", {}).get("checks") or ["adr_headers", "adr_index"]
+    # PR #52 R14: this used to DEFAULT to ["adr_headers", "adr_index"] when a
+    # case named no checks, so `ledger-line-refs.json` — which declares
+    # `files`/`min_refs` and no `checks` — ran two unrelated ADR checks against
+    # a clean tree and reported PASS while its own check was red. A case that
+    # cannot fail is worse than no case: the suite count moved 60 -> 61 on it.
+    # Every repo_hygiene case in the repo declares `checks` explicitly, so the
+    # default was dead behaviour whose only effect was to swallow a
+    # misconfiguration. Deleted rather than guarded — the failure is now loud,
+    # and a case naming check parameters but no check goes red on sight.
+    names = case.get("input", {}).get("checks")
+    if not names:
+        return {"passed": False, "failures": [
+            f"case {case.get('id', case.get('_file'))!r} names no `input.checks` — "
+            f"a repo_hygiene case that declares no check cannot fail and must not "
+            f"report green (PR #52 R14)"]}
     failures, info = [], {}
     for name in names:
         got = CHECKS[name](case)

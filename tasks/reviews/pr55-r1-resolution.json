@@ -1,0 +1,86 @@
+{
+ "pr": 55,
+ "task": "D10",
+ "round": 1,
+ "date": "2026-08-26",
+ "implementer": "task/D10 round-1 repair",
+ "base": "5c44c4a",
+ "gate_after_repair": {
+  "invariant": "63/63 = 1.000",
+  "fast": "126/126 = 1.000",
+  "baseline": ".eval-baseline.json untouched, fast 1.0",
+  "table_fidelity": "cells 427/427, rows 34/34",
+  "structure_fidelity": "blocks 61/61, bounds 61/61",
+  "browser_walk": "tasks/reviews/d10-agent-walk.json unchanged this round — no index.html behaviour changed, only the checks that read it; R4/R5 both name the walk artifact and are routed to debt, so regenerating it is deferred with them"
+ },
+ "routing_note": "All three MEDIUM findings were the same class and are fixed here. R4-R7 were routed to debt by the orchestrator and are untouched in code; each carries `Origin: PR #55 R<n>` in tasks/TODO.md's Open-debt table. R8 is orchestrator-owned (the D10 Status column) and gets no Debt row; tasks/TODO.md:72 Status is left exactly as the reviewer found it.",
+ "method_note": "Every fix here was watched red on the reviewer's own mutation before it landed, per hard rule 2. Mutations were applied in place to src/sec10k/web/static/index.html and reverted with `git checkout --` (the tree was clean at 5c44c4a), which is equivalent to the reviewer's scratch copy. All three were first confirmed GREEN-on-mutation, together, in one run: `[PASS] ui-banner-status-role`, `[PASS] ui-deep-link`, `[PASS] ui-item-text-region`, `[PASS] ui-mode-button-names`, invariant 63/63 = 1.000, with the deep link permanently dead, the banner anonymous and two buttons labelled for the wrong mode.",
+ "resolutions": [
+  {
+   "id": "R1",
+   "severity": "MEDIUM",
+   "status": "superseded",
+   "reproduced": "Yes, exactly as reported. `deepLink();` moved from after the try/catch to the first line of `boot()` in src/sec10k/web/static/index.html -> `python3 -m evals.run --suite invariant` gives `[PASS] ui-deep-link`, suite 63/63 = 1.000, while `?fixture=aapl-2025&run=1` renders nothing: `$(\"#fx\").options` is empty at that point, the membership guard returns, and the feature is a permanent silent no-op.",
+   "fix": "check_deep_link's `guard_expr`/`run_expr` pair (inert — guard-before-run is fixed by deepLink()'s own function text and cannot move) is replaced by a single `order` list asserting the whole dependency chain in file order: the `$(\"#fx\").innerHTML = m.fixtures...` assignment, then the `deepLink();` call site, then the guard, then the run trigger. Each consecutive pair must be non-decreasing in position, so a step that moves ahead of what it depends on is red wherever it moved to. The options assignment was added to `wire` as well, so its DELETION is reported as a missing pin rather than as a confusing -1 ordering failure.",
+   "covered_by": "evals/adversarial/ui-deep-link.json (invariant + fast), check `deep_link`, input key `order`",
+   "red_output_verbatim": "[FAIL] ui-deep-link (adversarial, 0.0s) / [eval] suite 'invariant': 62/63 = 0.984 -- out of order: 'deepLink();' (@14984) runs before '$(\"#fx\").innerHTML = m.fixtures.map(f => `<option>${esc(f)}</option>`).join(\"\");' (@15084) — the deep link only works if each step follows the one it depends on",
+   "note": "The case triage note claimed an assertion the code did not make; it now records what `order` covers and quotes the red output, which was the second half of the finding.",
+   "superseded_by": "PR #55 R9 (round 2). The ordering chain this entry records was itself wrong in both directions — false green on the call site moved into the catch arm, false red on hoisting the function declaration. It is replaced by a containment pin; see tasks/reviews/pr55-r2-resolution.json R9. The red_output_verbatim above WAS observed at the time and is left as the round-1 record, but the check that emitted it no longer exists, so it is not reproducible against the current tree."
+  },
+  {
+   "id": "R2",
+   "severity": "MEDIUM",
+   "status": "fixed",
+   "reproduced": "Yes, both halves. (a) banner: `role=\"status\" aria-label=\"doc_status\"` -> `role=\"status\" aria-labelledby=\"no-such-id\"` gives `[PASS] ui-banner-status-role`, invariant 63/63 = 1.000. (b) item region: `aria-label=\"Item ${esc(it.item)} extracted text\"` -> `aria-labelledby=\"ghost-${esc(it.item)}\"` gives `[PASS] ui-item-text-region` — the ghost form even satisfies `label_must_interpolate`.",
+   "fix": "`_named(attrs, live)` now takes the live file text and resolves IDREFs: an `aria-labelledby` is a name only if EVERY whitespace-separated token names an `id=\"…\"` present in the same live file; a dangling reference returns \"\", i.e. no name. New `_why_unnamed(attrs)` keeps the two defects apart in the diagnostic (dangling reference vs no naming attribute at all). Both consumers, check_banner_status_role and check_item_text_region, pass their `text` through. Documented ceiling, deliberate: the NAME of a resolving reference is the referenced element's text, which is not statically reachable here, so the labelledby form answers \"is it named\" and not \"what does it say\" — the page uses aria-label everywhere, so nothing rides on it today.",
+   "covered_by": "evals/adversarial/ui-banner-status-role.json and evals/adversarial/ui-item-text-region.json (both invariant + fast), shared helper `_named`",
+   "red_output_verbatim": "banner: [FAIL] ui-banner-status-role, invariant 62/63 = 0.984 -- #banner: no accessible name — aria-labelledby='no-such-id' resolves to no id present in this file, so the computed name is empty. role=status alone leaves the region anonymous || item region: class=\"text md\": no accessible name naming the item — aria-labelledby='ghost-${esc(it.item)}' resolves to no id present in this file, so the computed name is empty; and the same for class=\"text\""
+  },
+  {
+   "id": "R3",
+   "severity": "MEDIUM",
+   "status": "fixed",
+   "reproduced": "Yes, exactly as reported. `#go-fx` relabelled \"Upload\" and `#go-up` relabelled \"Fixture\" -> `[PASS] ui-mode-button-names`, invariant 63/63 = 1.000, with all three visible labels still reading `Extract`.",
+   "fix": "check_mode_button_names' `buttons` input becomes {id: substring the name must carry} — go-fx/fixture, go-up/upload, go-url/URL — and the button regex now captures the element's VISIBLE text as well as its attributes. Two clauses added on top of non-empty + distinct: each accessible name must contain (case-insensitively) the substring naming its own mode, and each must contain its own visible label, which is WCAG 2.5.3 Label in Name — the rule that keeps a speech-input user's \"click Extract\" working once an aria-label is in play. A bare list is still accepted for `buttons` and means \"no per-mode pin\", so the check stays usable by a case that does not want the second clause.",
+   "covered_by": "evals/adversarial/ui-mode-button-names.json (invariant + fast), check `mode_button_names`, input key `buttons` as a map",
+   "red_output_verbatim": "[FAIL] ui-mode-button-names (adversarial, 0.0s) / [eval] suite 'invariant': 62/63 = 0.984 -- #go-fx: accessible name 'Upload' does not name its own mode ('fixture') — distinct names that point at the wrong mode are worse than no names; #go-fx: accessible name 'Upload' does not contain its visible label 'Extract' (WCAG 2.5.3 Label in Name — speech input targets the word the user can see); #go-up: accessible name 'Fixture' does not name its own mode ('upload') — distinct names that point at the wrong mode are worse than no names; #go-up: accessible name 'Fixture' does not contain its visible label 'Extract' (WCAG 2.5.3 Label in Name — speech input targets the word the user can see)",
+   "note": "The Label-in-Name clause is what lets the D10 row's reviewer-evidence claim (\"correct ARIA is screen-reader correctness, not agent special-casing\") be backed by the eval set rather than merely asserted, which the reviewer named as the gap."
+  },
+  {
+   "id": "R4",
+   "severity": "LOW",
+   "status": "debt",
+   "became": "tasks/TODO.md Open-debt row **The D10 walk misdescribes its own method, and records a phantom unnamed button** (`Origin: PR #55 R4`)",
+   "note": "Routed to debt by the orchestrator; claim, evidence and acceptance carried verbatim in the row. Not fixed here: it concerns the walk's prose and its two informational name lists, not any clause the walk fails on — every graded clause goes through get_by_role(role, name=...), and each was independently re-proved red this round by mutation. Closing it means regenerating the committed artifact, which pairs with R5."
+  },
+  {
+   "id": "R5",
+   "severity": "LOW",
+   "status": "debt",
+   "became": "tasks/TODO.md Open-debt row **The 404 Debt row cites an artifact field that cannot carry the two URLs it names** (`Origin: PR #55 R5`)",
+   "note": "Routed to debt by the orchestrator; claim, evidence and acceptance carried verbatim in the row. The reviewer confirms the underlying fact is true and independently checkable from evals/fixtures/aapl-2025/; what is wrong is one citation. Both halves of the acceptance touch the walk artifact, so it closes with R4."
+  },
+  {
+   "id": "R6",
+   "severity": "LOW",
+   "status": "debt",
+   "became": "tasks/TODO.md Open-debt row **The banner's accessible name is an envelope field name that repeats its own leading text** (`Origin: PR #55 R6`)",
+   "note": "Routed to debt by the orchestrator; claim, evidence and acceptance carried verbatim in the row. Explicitly NOT fixed here per the round's instruction, even though it touches markup written in this PR: `doc_status` is quoted by the walk artifact, the case triage notes and the browser-agent repo's M41 probe plan, so renaming it is a coordinated change rather than a repair edit."
+  },
+  {
+   "id": "R7",
+   "severity": "LOW",
+   "status": "debt",
+   "became": "tasks/TODO.md Open-debt row **Two named scrollable regions have no `tabindex=\"0\"`** (`Origin: PR #55 R7`)",
+   "note": "Routed to debt by the orchestrator; claim, evidence and acceptance carried verbatim in the row. Explicitly NOT fixed here per the round's instruction, even though it touches markup written in this PR. It is the only one of the four that changes what ships to a user and is a real gap on engines without auto-focusable scrollers — but adding a focus stop to the tab order is a capability addition wanting its own red-first case and a keyboard pass in the walk."
+  },
+  {
+   "id": "R8",
+   "severity": "LOW",
+   "status": "debt",
+   "became": null,
+   "note": "orchestrator-owned, absorbed at EVIDENCE. tasks/TODO.md:72 Status left exactly as found (`in-progress — UI gate UNRUN`); no Debt row created, per the round's routing instruction."
+  }
+ ],
+ "audit_note_round2": "PR #55 R10 asked for an audit of every quoted output in this artifact. R2 and R3 red_output_verbatim were re-measured during the round-2 repair and match character for character; R1 is marked superseded above rather than rewritten, since this file is the record of round 1."
+}

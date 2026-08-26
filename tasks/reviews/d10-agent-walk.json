@@ -1,0 +1,111 @@
+{
+ "base": "http://localhost:8011",
+ "fixture": "aapl-2025",
+ "steps": {
+  "deep_link": {
+   "url": "http://localhost:8011/?fixture=aapl-2025&run=1",
+   "clicks_issued": 0,
+   "items_rendered": 23,
+   "selected_fixture": "aapl-2025",
+   "banner_role_status_count": 1,
+   "banner_name": "doc_status",
+   "banner_text": "doc_status: success",
+   "uncaught_js_errors": [],
+   "console_errors_ungraded": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+   ],
+   "shot": "d10-agent-walk/1-deep-link-rendered.png",
+   "reachable_by_name": 1
+  },
+  "mode_buttons": {
+   "names": {
+    "go-fx": "Extract the selected committed fixture",
+    "go-up": "Extract the uploaded filing",
+    "go-url": "Extract from the EDGAR document URL"
+   },
+   "matches_per_name": {
+    "go-fx": 1,
+    "go-up": 1,
+    "go-url": 1
+   },
+   "all_button_names": [
+    "Extract the selected committed fixture",
+    "",
+    "Extract the uploaded filing",
+    "Extract from the EDGAR document URL",
+    "1 Business extracted conf 0.95 heading_strict 16,053 ch",
+    "1A Risk Factors extracted conf 0.95 heading_strict 68,162 ch",
+    "1B Unresolved Staff Comments extracted conf 0.95 heading_strict 43 ch",
+    "1C Cybersecurity extracted conf 0.95 heading_strict 2,704 ch",
+    "2 Properties extracted conf 0.95 heading_strict 520 ch",
+    "3 Legal Proceedings extracted conf 0.95 heading_strict 5,408 ch",
+    "4 Mine Safety Disclosures extracted conf 0.95 heading_strict 93 ch",
+    "5 Market for Registrant's Common Equity, Related Stockholder Matters a",
+    "6 [Reserved] extracted conf 0.95 heading_strict 54 ch",
+    "7 Management's Discussion and Analysis of Financial Condition and Resu",
+    "7A Quantitative and Qualitative Disclosures About Market Risk extracte",
+    "8 Financial Statements and Supplementary Data extracted conf 0.95 head",
+    "9 Changes in and Disagreements with Accountants on Accounting and Fina",
+    "9A Controls and Procedures extracted conf 0.95 heading_strict 4,511 ch",
+    "9B Other Information extracted conf 0.95 heading_strict 574 ch",
+    "9C Disclosure Regarding Foreign Jurisdictions that Prevent Inspections",
+    "10 Directors, Executive Officers and Corporate Governance incorporated",
+    "11 Executive Compensation incorporated_by_reference conf 0.85 heading_",
+    "12 Security Ownership of Certain Beneficial Owners and Management and ",
+    "13 Certain Relationships and Related Transactions, and Director Indepe",
+    "14 Principal Accountant Fees and Services incorporated_by_reference co",
+    "15 Exhibits, Financial Statement Schedules extracted conf 0.95 heading",
+    "16 Form 10-K Summary extracted conf 0.95 heading_strict 69 ch"
+   ]
+  },
+  "item_region": {
+   "item_code": "1",
+   "region_matches_by_name": 1,
+   "tag": "pre",
+   "role_attr": "region",
+   "aria_label": "Item 1 extracted text",
+   "first_chars": "Item 1. Business\n\nCompany Background\n\nThe Company designs, manufactures and mark",
+   "shot": "d10-agent-walk/2-item-region.png"
+  },
+  "item_region_markdown": {
+   "item_code": "1",
+   "region_matches_by_name": 1
+  },
+  "degrade": {
+   "unknown-fixture": {
+    "url": "http://localhost:8011/?fixture=no-such-fixture-xyz&run=1",
+    "items_rendered": 0,
+    "banner_text": "No filing extracted yet.",
+    "selected_fixture": "aapl-2025",
+    "uncaught_js_errors": [],
+    "console_errors_ungraded": []
+   },
+   "run-without-fixture": {
+    "url": "http://localhost:8011/?run=1",
+    "items_rendered": 0,
+    "banner_text": "No filing extracted yet.",
+    "selected_fixture": "aapl-2025",
+    "uncaught_js_errors": [],
+    "console_errors_ungraded": []
+   },
+   "no-params": {
+    "url": "http://localhost:8011/",
+    "items_rendered": 0,
+    "banner_text": "No filing extracted yet.",
+    "selected_fixture": "aapl-2025",
+    "uncaught_js_errors": [],
+    "console_errors_ungraded": []
+   },
+   "shot": "d10-agent-walk/3-degrade-no-params.png"
+  }
+ },
+ "failures": [],
+ "aria_snapshot_excerpt": [
+  "    - button \"Extract the selected committed fixture\": Extract",
+  "    - button \"Extract the uploaded filing\": Extract",
+  "    - button \"Extract from the EDGAR document URL\": Extract",
+  "  - status \"doc_status\": \"doc_status: success \u2014 18 extracted \u00b7 5 incorporated_by_reference fixture: aapl-2025\"",
+  "  - region \"Item 1 extracted text\": Item 1. Business Company Background The Company designs, manufactures and markets smartphones, personal computers, tablets, wearables and accessories, and sells a v"
+ ],
+ "verdict": "DRIVABLE: deep link renders on load, banner is a named status, item text is a named region, the three mode buttons are distinguishable"
+}

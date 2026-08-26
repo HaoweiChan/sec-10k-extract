@@ -1,0 +1,117 @@
+{
+  "pr": 52,
+  "task": "D6",
+  "round": 1,
+  "date": "2026-08-26",
+  "implementer": "task/D6 round-1 repair",
+  "base": "353e8f1",
+  "scope": "All seven findings addressed: five fixed, one fixed-in-part with the other half rejected in writing, one taken as debt plus a mandatory retraction. NO CHECK IN EITHER HELD-OUT CASE WAS ADDED, REMOVED OR ALTERED — verified mechanically against 353e8f1: `expect`, `input` and `id` are identical for both cases and only `provenance` prose changed. The committed H4 report therefore still describes exactly the cases it ran, and H4 was NOT re-run. No fix was made to the extractor, no label was corrected, no held-out outcome influenced implementation, so neither case is burned. Amended into the PR #52 round-1 repair commit (this branch's HEAD), which was unpushed, rather than chased by a fix-commit (the SHA is deliberately not quoted here: an amend changes it, and a resolution artifact citing the SHA of the commit it rides in is stale the moment it is written), per CLAUDE.md rule 7.",
+  "gate_after_repair": {
+    "invariant": "60/60 = 1.000 (was 59/59; +1 for the new case)",
+    "fast": "123/123 = 1.000 (was 122/122; +1 for the new case)",
+    "baseline": "1.000, not moved, .eval-baseline.json not edited",
+    "table_fidelity": "cells 427/427, rows 34/34",
+    "structure_fidelity": "blocks 61/61, bounds 61/61",
+    "heldout_h4": "NOT re-run — 5/7 at evals/report/20260826-005839-fast.json still stands, and still describes the current case files",
+    "note": "Re-run after the R2 second pass and R8; unchanged."
+  },
+  "red_first": {
+    "case": "evals/adversarial/heldout-provenance-claims.json",
+    "check": "src/repo_hygiene/eval_adapter.py :: check_heldout_provenance_claims",
+    "watched_red": "At 353e8f1, before either fix, the check reported exactly 2 failures: \"evals/heldout/intc-2025-heldout.json: claims 'For the fiscal year ended December 27, 2' at raw offset 330847, actually at 330839\" (R5) and \"evals/heldout/c-2025-heldout.json: states a regex hit count (four) without naming the regex in backticks — not reproducible\" (R4). 0 failures after the fixes.",
+    "negative_test": "The hit-count rule actually executes the named regex, not just its presence: mutating `returns 3 hits` to `returns 4 hits` in the committed provenance yields \"regex '(?i)items?\\\\s*[0-9]' claimed 4 hits, produces 3\", and restoring it returns to green.",
+    "coverage_beyond_this_pr": "The check covers all seven held-out cases, not only the two D6 added: 23 pre-existing `'<literal>' <N>x` occurrence-count claims across mrk-1995, spg-2019, intc-2025 and c-2025 are re-derived from the committed fixtures every run. All 23 were already true.",
+    "isolation": "The check reads fixture bytes only and imports nothing from src/sec10k. It does not invoke the extractor on a held-out filing, so it does not touch the isolation rule."
+  },
+  "resolutions": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "status": "debt + mandatory retraction",
+      "reproduced": "Yes. `python3 -c \"print((33*2.104 + 3320720/1048576 + 16150764/1048576)/35)\"` → 2.5143 against the 2.104 MiB of record; `evals/heldout/fixtures` holds 7 directories, not 5.",
+      "action": "Took the narrowest honest option the orchestrator named. (a) MANDATORY HALF, done: `specs/decisions/ADR-021-benchmark-instrument.md:211`'s \"no real filing joined the corpus since\" is struck through and retracted in place, with the two filings, their sizes, the new n=35 and the recomputed ~2.514 MiB named. The 33 / 2.104 MiB figures themselves are NOT edited — they are the record of a run that happened, and replacing a measured number with a computed guess would be the worse lie. (b) Debt row **\"Bench population of record is stale after D6\"** (Origin: D6 / PR #52 R1) in `tasks/TODO.md` names all six stale locations by file:line: docs/analysis-report.md:553, :893, :902, :922 and ADR-021:214, :752, with the repro and the recomputed sweep (153 s → ~183 s, 1,072 s → ~1,281 s ≈ 21 min).",
+      "why_not_a_fresh_sweep": "A measured projection can only be honestly restated by measuring. That is real wall-clock cost belonging to whoever next moves the bench, not to D6, whose scope is authoring two cases and recording one held-out run.",
+      "gate_case": "NONE — and this is stated rather than skipped. A check asserting \"every 'N held-out' reads 7\" would go red on roughly ten legitimately historical measurement records (ADR-020:146/:275, ADR-026:167/:172, ADR-029:175, ADR-030:46, ADR-031:16, ADR-032:35/:299/:360, ADR-033:42 all correctly say 5 for the date they measured). Separating a present-tense claim about the current corpus from a dated record of a past one is not mechanizable from free prose, and a check that fires on ten true sentences to catch four false ones is worse than the staleness. The finding's own evidence says the same: \"No eval case could have gone red on this.\""
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "status": "fixed (took two passes)",
+      "reproduced": "Yes. `Counter({('missing', 0.4): 21, ('omitted', 0.75): 2})`; the two `omitted` items are 9C and 16.",
+      "action": "Corrected in both live locations: the `evals/heldout/README.md` H4 entry and the `tasks/TODO.md` D6 row now read 21 `missing` at 0.40 and TWO `omitted` at 0.75 (items 9C and 16), and name TWO deviations from the frozen prediction. The README also records that the error existed, where, and that it is the seventh entry in that file's tally of the instrument being at fault, with the repro command inline. Per CLAUDE.md rule 7 the pushed `353e8f1` message is not rewritten; this correction rides the consolidated repair commit with its own honest message. The README adds the point the acceptance asked for: the case's own declination (a) called `omitted` \"the natural reading\" for item 16 and declined to assert it on the `csco-2016` precedent, and the run then produced exactly that — declining was still right, because the reasoning was about what the document states rather than about what the pipeline would do. SECOND PASS, 2026-08-26, after the coordinator re-ran the gate on the round-1 repair: the first pass corrected only the two places the finding's own evidence named and MISSED a third live instance — tasks/TODO.md:212, the ## Debt row \"What the 2026-08-24 demo actually ran on Citigroup is unestablished\", which still asserted \"zero extracted items, 22 `missing` at 0.40\" in the present tense as a live claim rather than as a quotation of the error. It is the row D7 and D8 are pointed at, in the same file whose D6 row the first pass corrected — so the first pass fixed the instance it was shown and did not sweep the file. It now reads 21 `missing` at 0.40 plus two `omitted` at 0.75 (9C and 16), with a note that the row's argument is strengthened rather than weakened: zero extracted is still zero extracted, and the 0.95 the demo showed is 0.40 on 21 items and 0.75 on two. The two remaining `22 missing` strings in the repo — evals/heldout/README.md's H4 correction note and the D6 row's own correction note — are quotations of the original error and are deliberately left standing.",
+      "gate_case": "NONE — stated rather than skipped. Pinning this would mean parsing free prose into (paragraph → cited report → case id → per-status counts). The H4 paragraph names its report and its case in different sentences and states counts in mixed digit/word form; a regex that resolved that mapping would be bespoke to one paragraph, and the honest alternative — restructuring the README's run history into a data file — is a change to the honesty record's form that is out of D6's scope and would need its own decision.",
+      "lesson": "A finding that names N instances is a lower bound, not an inventory. The right first move was a repo-wide grep for the stale string, which would have found all three in one pass."
+    },
+    {
+      "id": "R3",
+      "severity": "LOW",
+      "status": "fixed",
+      "reproduced": "Yes. c-2025 16,150,764 > jpm-2024 12,849,180 > spg-2019 9,812,403.",
+      "action": "`evals/heldout/README.md:52`'s spg-2019 row now reads third-largest, names c-2025 and jpm-2024 as first and second, and records that the clause was true when written. Accepted as repair rather than debt on the routing note's terms: the row contradicted a row added in the same table by the same diff, which is a stale fact with one right answer.",
+      "gate_case": "NONE — same reason as R1's ranking half: an ordinal-rank claim in prose has no stable machine-readable form here, and the repo's existing decimal cross-check (`evals/bench.py --check-docs`, run by the pre-commit hook) already pins the fixture-attributed MiB figures, which is the checkable part."
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "status": "fixed",
+      "reproduced": "Yes. `(?i)items?\\\\s*[0-9]` returns 3 hits at 1828047, 1859455, 15875549; the loosest reading `(?i)item[^<]{0,4}[0-9]` returns 8; 'Reconciling Items' contains no digit and cannot match either.",
+      "action": "The c-2025 provenance now names the exact regex in backticks and the count it actually produces (3), drops the phantom fourth entry, records the loosest reading and its 8 hits with the entity explanation, and states that the load-bearing claim was re-derived and is unaffected. Both stated counts are now executed by the new gate check every run.",
+      "gate_case": "evals/adversarial/heldout-provenance-claims.json — watched red first (see red_first above)."
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "status": "fixed",
+      "reproduced": "Yes. The cover literal starts at 330839, not 330847.",
+      "action": "Offset corrected to 330839. The Item 1 and Item 7 index rows are now quoted in full ('General development of business Pages 3 - 5 , 18' / 'Description of business Pages 3 - 24 , 33 , 52 , 72 - 75' / 'Available information Page 2'; 'Liquidity and capital resources Pages 29 - 32' / 'Results of operations Pages 18 - 29' / 'Critical accounting estimates Pages 34 - 36 , 65 - 72'), and the surrounding map is now explicitly marked as abridged to row title and page range except where marked quoted-in-full — so the abridgement is declared rather than passing as a full transcription. No asserted label changed.",
+      "gate_case": "evals/adversarial/heldout-provenance-claims.json — watched red first (see red_first above)."
+    },
+    {
+      "id": "R6",
+      "severity": "LOW",
+      "status": "fixed (prose option)",
+      "reproduced": "Yes. Neither new case has a `doc_status` check; cost-2022, csco-2016 and pgr-2023 do; neither declination list named the omission.",
+      "action": "Took the declination option, not the check option, and the rule-2 contamination question is why. Both cases gain declination (e)/(f) naming `doc_status` explicitly: it is dropped because `doc_status` on these two filings is the very signal postmortem §2 says lied at the demo, so the honest verdict for a document whose every item is an index-row stub — or in which nothing resolves at all — is a question D8/D9/D11 must ANSWER, not one this exam may presuppose. Pinning `ambiguous` or `success_with_warning` now would freeze my guess about a policy explicitly under revision. Each case's frozen prediction already records what I expect the value to be, which is the right register for a guess. Adding an actual check was refused for the same reason as R7's floor half: it would alter what the committed H4 run measured.",
+      "gate_case": "NONE — stated rather than skipped. The candidate pin (\"every held-out case mentions `doc_status` in its checks or its provenance\") fails both tests: it would have been GREEN on this PR at 353e8f1, because both new cases already mentioned `doc_status` in their frozen predictions — so it could not have been watched red for R6 — and it would go RED on the incumbent `spg-2019`, which mentions it nowhere. A check that misses the finding it was written for and breaks an out-of-scope case instead is not a pin."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "status": "prose half fixed; floor half REJECTED, logged as debt",
+      "reproduced": "Yes, both halves. Only 5 checks went red on a fully collapsed baseline; declination (c)'s stated reason is contradicted for 9A, whose index row is a lone contiguous 'Page 109' outside every other item's range.",
+      "prose_half": "FIXED. Declination (c) no longer names 9A. It now lists only items 2, 3, 5, 7A, 9B and 15, with the reason restated accurately (3 is Pages 102-105 nested inside item 8's 56-108; 15 is 56-108 plus 110-115), and says outright that 9A is NOT in that list, that its exclusion has no evidentiary reason, and that it is as floorable from the index alone as 1A's 37-51 is.",
+      "floor_half": "REJECTED as a repair, and the substance is conceded — the hole is real and is now stated inside the case itself as declination (f) and logged as a Debt row (Origin: D6 / PR #52 R7). The reason is process, not evidence. The H4 baseline is already committed against this case's check list; adding a check now either falsifies that committed report — the README H4 entry states that the five red checks are the four floors and the one anchor — or forces a re-run. And a re-run chosen after I had read the outcome, adding an assertion I picked knowing 9A came back a 43-char stub at 0.95, is precisely the retrofit the freeze exists to prevent. The burn rule names 'a threshold choice' as influence; the `gs-2002` and `axp-2008` precedents both burned on weaker influence than deriving a new threshold with the outcome in hand. Closing this hole that way would cost the exam itself, which is the whole deliverable of D6. It is carried at authoring by the next held-out expansion, where it costs nothing.",
+      "gate_case": "NONE for either half. The prose half is a factual claim about a filing's index inside free prose; the floor half is deliberately not implemented."
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "status": "fixed",
+      "raised_by": "coordinator, after re-running the gate on the first version of the PR #52 round-1 repair commit (this branch's HEAD)",
+      "reproduced": "Yes. The D6 row's Status ended \"Gate unchanged: invariant 59/59, fast 122/122 = 1.000\" — a figure this PR's own repair falsified, since heldout-provenance-claims joined both suites.",
+      "action": "The D6 row now states BOTH figures rather than overwriting one with the other: invariant 59/59 / fast 122/122 = 1.000 at 353e8f1, which is what the H4 baseline run was gated at, and invariant 60/60 / fast 123/123 = 1.000 at the PR #52 round-1 repair commit (this branch's HEAD), with the reason both are kept. The row's status word is also corrected from `done` to `pr`: it is not done until a human merges, and pr-loop housekeeping is what moves it to tasks/DONE.md.",
+      "gate_case": "NONE — stated rather than skipped, and for the same structural reason as R1. A check asserting \"every `invariant N/N` figure in tasks/TODO.md matches the current suite size\" would now go red on the very sentence this finding asked for: the 59/59 / 122/122 figure is a deliberate, correct record of what the baseline commit was gated at. Distinguishing a dated historical gate figure from a stale present-tense one is the same un-mechanizable prose problem as R1's held-out counts. ledger_table_shape, the one existing check that reads this file, pins cell counts and pipes only, and is green."
+    }
+  ],
+  "rejections": [
+    {
+      "id": "R7 (floor half only)",
+      "reason": "Adding a 9A floor after the committed H4 run either falsifies that report or requires a re-run chosen with the outcome already read — the definition of retrofitting under the burn rule. Conceded as real, stated inside the case as declination (f), and logged as debt for the next expansion."
+    }
+  ],
+  "debt_logged": [
+    "Bench population of record is stale after D6 (Origin: D6 / PR #52 R1) — six locations named by file:line; ADR-021:211 retracted in place regardless.",
+    "intc-2025 is satisfiable by repairing 4 of its 23 items (Origin: D6 / PR #52 R7) — the 9A floor, carried at the next held-out expansion.",
+    "What the 2026-08-24 demo actually ran on Citigroup is unestablished (Origin: D6) — logged in the original D6 commit, unchanged this round."
+  ],
+  "files_changed": [
+    "src/repo_hygiene/eval_adapter.py — new check_heldout_provenance_claims + CHECKS entry",
+    "evals/adversarial/heldout-provenance-claims.json — new case, invariant + fast",
+    "evals/heldout/intc-2025-heldout.json — provenance only (R5, R6, R7 prose)",
+    "evals/heldout/c-2025-heldout.json — provenance only (R4, R6)",
+    "evals/heldout/README.md — R2 (H4 entry), R3 (spg-2019 row)",
+    "specs/decisions/ADR-021-benchmark-instrument.md — R1 retraction",
+    "tasks/reviews/pr52-r1.json, tasks/reviews/pr52-r1-resolution.json",
+    "tasks/TODO.md — R2 (D6 row + the Citigroup demo-provenance Debt row), R8 (both gate figures, status done -> pr), two new Debt rows"
+  ]
+}

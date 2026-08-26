@@ -1,0 +1,21 @@
+{
+  "id": "ui-banner-status-role",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "banner_status_role"
+    ],
+    "banner_id": "banner",
+    "role": "status"
+  },
+  "expect": {},
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "D10 defect 2, from the browser-agent repo's 2026-08-24 demo postmortem shape S2. `#banner` is the only element on the page that reports `doc_status`, and it shipped as a bare `<div id=\"banner\" class=\"s-idle\">` — accessibility role `generic`, which that repo's observer drops via SKIP_ROLES, so the one answer the inspector exists to give was not the accessible name of anything. Red against the pre-D10 file (3cdfbf4), re-measured with the current check: `#banner: role is None, want 'status' — a bare div is `generic` and carries no name for doc_status` and `#banner: no accessible name — it carries neither aria-label nor aria-labelledby. role=status alone leaves the region anonymous`. Green once the div carries role=status + aria-label=\"doc_status\". role=status is CORRECT here rather than agent-special-casing: the element is a polite live region that JS rewrites after every extraction (`render()` and `busy()` both assign into it), which is exactly what role=status describes. PR #55 R2 closed the hole in what \"named\" meant. `_named` returned the raw `aria-labelledby` value without resolving the IDREF, so `<div id=\"banner\" role=\"status\" aria-labelledby=\"no-such-id\">` — a dangling reference whose COMPUTED name is empty, and which `get_by_role('status', name=...)` matches nothing by — read as named and passed at invariant 63/63 = 1.000: the anonymous-`generic` defect this case exists to catch, walking straight through it. `_named` now requires every token of an `aria-labelledby` to name an `id=\"…\"` present in the same live file. Red on exactly that mutation, re-measured: `#banner: no accessible name — aria-labelledby='no-such-id' resolves to no id present in this file, so the computed name is empty. role=status alone leaves the region anonymous`. Known ceiling, carried as debt (PR #55 R11): resolution asks whether an element with that id EXISTS, not whether its text computes to a non-empty name, so `aria-labelledby=\"up\"` — pointing at the file input, whose accname is empty — is still accepted here."
+  },
+  "provenance": "D10, created 2026-08-26 before the ARIA fix, per hard rule 2; IDREF resolution added in the PR #55 round-1 repair, red-first on the reviewer's own dangling-reference mutation. Every output quoted above was pasted from a run observed during the round-2 repair (PR #55 R10 asked for exactly this audit): the pre-D10 red was re-measured with the current check rather than carried over from the original run, since the message text moved when `_why_unnamed` was added. Narrative: browser-agent repo docs/evals/2026-08-24-demo-sec10k-inspector-postmortem.md section 3, remediation item 2."
+}

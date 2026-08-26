@@ -1,0 +1,26 @@
+FAILS (1)                    <- R1  severed `coverageStrip(w)` call in render()
+       - missing pinned expression (the qualifier reads the response's own doc_status and the item's own evidence.warnings): (src ? ` <span class="src">${
+FAILS (2)                    <- R2  dead-code `if(true) return "";` in docQual + itemQual
+       - docQual(): body differs from the pinned one at char 0 — pinned 'constst=(VIEW&&VIEW.doc_status)||"";returnQUALIFIED.includes', found 'if(true)ret
+       - itemQual(): body differs from the pinned one at char 0 — pinned 'constw=(it.evidence&&it.evidence.warnings)||[];returnw.lengt', found 'if(true)re
+FAILS (1)                    <- R4  third site spelled `confidence ${it.confidence ?? "—"}`
+       - confidence rendered by an unpinned expression: 'ence ${it.confidence ?? "—"}</span> <span class="b">${esc(it.method || "—")}</span'
+PASSES (attack undetected)   <- ---  control: the real, unmutated index.html
+
+--- context ---
+R1/R2/R4: the three mutations are the reviewer's own repros, byte-copies of
+src/sec10k/web/static/index.html with one defect each. Against the committed
+check at 68c1b47 ALL THREE reported 'PASSES (attack undetected)'; the run above
+is the same three against the repaired check. Mutation fixtures live at
+evals/fixtures/repo_hygiene/mut-r{1,2,4}-*.html and are committed so the
+reviewer can re-run them.
+sha at time of run: 718893a + working tree
+
+=== R3 + R7 red, against the real src/sec10k/web/static/index.html ===
+(the case pins were added first; index.html still carried the round-0 code)
+
+ui-confidence-honesty passed=False failures=3
+  - missing pinned expression …: const flag = (it.evidence && (it.evidence.warnings || []).length) ? " lo"
+                 : (docQual() ? " docw" : "");          <- R3, badge class not yet split
+  - coverageStrip(): does not say 'unattributed content:'                        <- R7, label
+  - coverageStrip(): says 'document coverage:' — …                               <- R7, old label forbidden

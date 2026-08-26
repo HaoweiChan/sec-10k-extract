@@ -1,0 +1,68 @@
+{
+  "pr": 53,
+  "task": "D7",
+  "round": 3,
+  "result": "APPROVED",
+  "base": "526cb4f",
+  "head": "75c2d73",
+  "scope": "round-2 repair diff plus the three standing findings only",
+  "gate": {"invariant": "61/61 = 1.000", "fast": "124/124 = 1.000", "baseline": "fast 1.0, .eval-baseline.json untouched", "digests": "56 pre-existing dev fixtures byte-identical to main (8c002dced6acbbcb…), heldout 51de5a1167162142…, MOVED: []", "mutation_probe": "10 attacks + control, all red, exit 0"},
+  "closed_this_round": {
+    "R2": "Declaration-count guard present at eval_adapter.py:1794; the plain hoisted duplicate goes red with the named message, and the banner dead-local attack goes red on the pin now carrying `$(\"#banner\").innerHTML =`. Both halves of the round-2 acceptance — mechanism plus narrowed prose in all four places — landed.",
+    "R4": "`conf ${esc(it.confidence)}` and `conf ${(it.confidence)}` both red. The claimed inverse fix is real and complete for the cases that matter: `const low = it.confidence < 0.9;` and `if (it.confidence == null) { }` inside render() are both green, so the check does not punish valid non-rendering edits.",
+    "R9": "Counted by running, not reading. Regression case yields exactly 15 failures; three of four must_say are missing, so exactly ONE is intact as the note now says. Fixture numbers (1)-(14) all present, (14) at confidence-honesty-bare.html:58, and 13 + 2 = 15 maps one-to-one onto the failure list. Probe docstring line 19 says fourteen."
+  },
+  "orchestrator_note": "All five findings are LOW and non-blocking by the reviewer's own `blocking` flag, and all five route to debt under the scope rule. No escalation this round — unlike rounds 1 and 2, nothing here concerns a claim the PR publishes as true. R10, R12 and R13 were reproduced independently by the orchestrator before being logged (spaced duplicate declaration and post-declaration rebind both pass; the non-rendering mention is correctly green; probe docstring lines 1 and 27 still say six).",
+  "findings": [
+    {
+      "id": "R10",
+      "severity": "LOW",
+      "blocking": false,
+      "route": "debt",
+      "claim": "The R2 declaration-count guard is a whitespace-exact literal count, so the published bullet \"exactly one declaration of each pinned helper\" is not what a green run asserts: a second declaration spelled `function docQual () {` (space before the paren) leaves the count at 1 and the run green with two declarations in the file.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:1794 `seen = live.count(f\"function {fn_name}(\")` — a raw substring, while every other comparison in this function goes through `_squash`. Inserting `function docQual () { return \"\"; }` above `function render(v){` (index.html:883) gives seen==1, body pin byte-equal, passed=True, failures=[]. The same holds for a post-declaration rebind — `docQual = () => \"\";` or `var docQual = function(){ return \"\"; };` above render(), and `coverageStrip = () => \"\";` — all green, all neuter the qualifier at runtime. Falsifies bullet 2 of eval_adapter.py:1662 and of the case `ceiling`.",
+      "repro": "Copy index.html, insert `function docQual () { return \"\"; }` immediately above `function render(v){`, run ui-confidence-honesty with input.file pointed at the copy -> passed=True. Orchestrator-confirmed, as was the `docQual = () => \"\";` rebind.",
+      "acceptance": "Either the count is whitespace-tolerant (`len(re.findall(rf\"function\\s+{fn_name}\\s*\\(\", live))`) with a spaced-duplicate mutation added to pr53_mutation_probe.py and watched green-then-red, or the bullet reads \"exactly one declaration spelled `function <name>(`\" rather than \"exactly one declaration\"."
+    },
+    {
+      "id": "R11",
+      "severity": "LOW",
+      "blocking": false,
+      "route": "debt",
+      "claim": "The widened scan considers only the NEAREST preceding `${`, so a mention inside an enclosing interpolation that contains an earlier nested `${...}` is skipped entirely — a rendering spelling that prints a bare number and stays green, falsifying the rewritten first bullet.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:1742 `opened = live.rfind(\"${\", 0, m.start())` followed by `if i <= m.start(): continue` at :1751 — when the nearest `${` closed early the mention is dropped rather than searched further back. A sidebar badge spelled ``conf ${(it.evidence?.warnings||[]).length ? `⚠ ${esc(it.evidence.warnings[0])}` : it.confidence}`` renders a bare confidence on the else branch and gives passed=True. The mention IS inside an interpolation whose whole `${...}` is not the pinned marker, so eval_adapter.py:1660-1662 and the identical sentence in the case `ceiling` are literally false. The brace walk is also not string/regex aware and that ceiling is unstated (`_js_block`'s docstring states its equivalent).",
+      "repro": "Copy index.html, insert the nested-template span above; run_case on ui-confidence-honesty with input.file set to the copy -> passed True. Variants ``conf ${`${\"\"}` + it.confidence}`` and ``conf ${[`${\"\"}`, it.confidence].join(\"\")}`` are also green.",
+      "acceptance": "Either the walk retries successively earlier `${` until one encloses the mention (with a nested-template mutation added to the probe, watched green-then-red), or the code comment and the bullet name the ceiling out loud: only the nearest preceding `${` is considered."
+    },
+    {
+      "id": "R12",
+      "severity": "LOW",
+      "blocking": false,
+      "route": "debt",
+      "claim": "One of the four copies of the rewritten claim is out of sync and stronger than the other three: the index.html comment drops the \"inside an interpolation\" qualifier and asserts the pin covers *every* mention of `it.confidence`.",
+      "evidence": "src/sec10k/web/static/index.html:830-833 — \"it asserts that this file contains the pinned marker + qualifier around every mention of `it.confidence`\". eval_adapter.py:1660 and the case `ceiling` both say \"every mention of `it.confidence` sitting inside an interpolation\"; prompts/021 does not restate the bullets and is in sync. The unqualified version is false by design: adding the correct, non-rendering line `const low = it.confidence < 0.9;` above index.html:924 gives passed=True — a mention with no marker and no qualifier around it, deliberately skipped.",
+      "repro": "Copy index.html, insert `const low = it.confidence < 0.9;` above `const flag = (it.evidence`, run ui-confidence-honesty against the copy -> passed True. Orchestrator-confirmed. (This also confirms R4's inverse fix is real: the widened scan does NOT fire on correct non-render code.)",
+      "acceptance": "The index.html comment carries the same qualifier as the other three copies (\"every mention … inside an interpolation\")."
+    },
+    {
+      "id": "R13",
+      "severity": "LOW",
+      "blocking": false,
+      "route": "debt",
+      "claim": "Two counts in the mutation probe's own docstring are stale in the same round R9 was raised to fix counts in that exact file — the header still describes it as round 1's six mutations while it now carries ten across two rounds.",
+      "evidence": "tasks/reviews/pr53_mutation_probe.py:1 (\"PR #53 round-1: the six findings as one-defect mutations\") and :27 (\"Six more would make it worse to prove a point about a different file\"). MUTATIONS now has 10 entries (:50-85) spanning rounds 1 and 2; line 19 in the same docstring WAS corrected this round (sixteen -> fourteen), so the file was open and two neighbouring counts were left wrong. Orchestrator-confirmed by reading lines 1, 19 and 27.",
+      "repro": "python3 tasks/reviews/pr53_mutation_probe.py — prints ten attack lines plus the control; the docstring says six.",
+      "acceptance": "The header and the tempdir paragraph say ten mutations across PR #53 rounds 1 and 2."
+    },
+    {
+      "id": "R14",
+      "severity": "LOW",
+      "blocking": false,
+      "route": "debt",
+      "claim": "The new declaration-count guard makes the `got_body is None` branch dead, and its own message is wrong for the seen==0 case it now absorbs.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:1794-1801 continues whenever `seen != 1`; `_js_block` (line 1614 `i = live.find(opener)`) returns None exactly when that same literal occurs zero times, so the `if got_body is None:` branch at :1802 (\"no such function in the live markup — the qualifier has no producer\") is unreachable. A renamed or differently-spaced helper now reports \"declared 0 times … a second declaration shadows the pinned one at runtime\", which describes the opposite of what happened.",
+      "repro": "Rename `function docQual(` to `function docQualifier(` in a copy and run the case: the failure text talks about a second declaration shadowing, with seen=0.",
+      "acceptance": "Either the seen==0 case keeps the \"no such function\" wording, or the dead branch goes. Diagnostic text only."
+    }
+  ]
+}

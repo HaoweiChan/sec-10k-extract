@@ -1,0 +1,83 @@
+{
+  "pr": 53,
+  "task": "D7",
+  "round": 1,
+  "result": "REQUEST_CHANGES",
+  "base": "3cdfbf4",
+  "head": "68c1b47",
+  "gate": {"invariant": "61/61 = 1.000", "fast": "124/124 = 1.000", "baseline": "fast 1.0, .eval-baseline.json untouched"},
+  "routing_note": "R5 and R7 are LOW and would normally route to debt. The orchestrator escalated both to repair: R7 mislabels a displayed number on the surface D7 itself added (a banner reading 'document coverage: 73%' where 73% is NON-coverage is the inversion this task exists to prevent), and R5 concerns this PR's own acceptance evidence — an artifact that publishes an unqualified PASS over an unmeasured surface cannot be deferred to a later row, because it is what this PR ships as gate proof. Both fixes are one line. Recorded here because escalating past the reviewer's severity is a routing decision, not a silent one.",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "Neither new eval case pins that `coverageStrip` is ever CALLED, so deleting the call from `render()` leaves the banner with no coverage figure and the whole gate green — the exact 'a question about a hop is answerable by a broken hop' hole the check's own docstring claims to have closed.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:1691-1704 (`check_confidence_honesty` only does `_js_block(live, f\"function {fn}(\")` and inspects the body text; nothing pins the call site) vs src/sec10k/web/static/index.html:867 (`coverageStrip(w);` inside `render()`'s banner innerHTML). Replacing that single call with `\"\";` produced `{'passed': True, 'failures': [], 'conf_sites': 2}` for `ui-confidence-honesty`. The 11-shape regression fixture evals/fixtures/repo_hygiene/confidence-honesty-bare.html keeps the call (line ~70) and contains no 'defined but never called' shape, so it cannot catch this either.",
+      "repro": "cp src/sec10k/web/static/index.html /tmp/m.html; sed -i '' 's/^    coverageStrip(w);/    \"\";/' /tmp/m.html; run ui-confidence-honesty against /tmp/m.html -> passed True, 0 failures",
+      "acceptance": "`wire` (or an equivalent pin) contains the call expression from `render()` (e.g. `coverageStrip(w)`), and the regression fixture gains a shape whose only defect is the severed call, with min_failures/max_failures moved to the measured new count. Watch the new shape red before it goes green."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The PR's central claim — 'a bare confidence is not discouraged in this file, it is unrepresentable' / 'not reachable from this file' — is false: the check pins the call-site adjacency and the mere existence of the helper bodies, never that those bodies are reached, so an early `return \"\";` in `docQual`/`itemQual` restores the 2026-08-24 demo defect (bare `conf 0.95` on every cvx-2015 badge) with all pins green.",
+      "evidence": "prompts/021-d7-inspector-confidence-honesty.md:36-40; src/sec10k/web/static/index.html:813-817 comment ('so a bare number under a warned document is not reachable from this file rather than merely discouraged'); src/repo_hygiene/eval_adapter.py:1685-1689 (the `wire` loop is `if _squash(expr) not in _squash(live)` — substring existence only). Inserting `if(true) return \"\";` as the first line of BOTH `docQual` (index.html:822) and `itemQual` (index.html:830), leaving every pinned line intact below it as dead code, gives `passed True, failures []`. Same attack class `_live()` was added for in PR #27 R10 (eval_adapter.py:636-657), one level deeper.",
+      "repro": "Insert `if(true) return \"\";` as the first statement of docQual and itemQual, leaving the pinned lines intact below; run ui-confidence-honesty -> passed True",
+      "acceptance": "Either (a) the regression fixture gains a dead-code shape (a helper whose pinned line is unreachable) and the check catches it — e.g. pin the WHOLE helper body via `_js_block` equality rather than substring existence — or (b) the 'unrepresentable / not reachable from this file' language in prompts/021, index.html:813-817, the adapter docstring and the case's `note` is corrected to what the check actually guarantees: the call-site adjacency plus the presence of the pinned lines. A claim this load-bearing must match the mechanism."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The `lo` badge-class semantics changed from 'this item has warnings' to 'this item OR its document has warnings', which erases the only item-level colour signal in the sidebar, and no eval case pins the expression — mutating `|| docQual()` back out keeps both new cases green.",
+      "evidence": "src/sec10k/web/static/index.html:897 — `const lo = ((it.evidence && (it.evidence.warnings || []).length) || docQual()) ? \" lo\" : \"\";`, replacing main's `const lo = (it.evidence && (it.evidence.warnings || []).length) ? \" lo\" : \"\";` whose own comment (index.html:892-895) states 'flag from the evidence, not the number … evidence.warnings names the validators that fired'. The author's own walk records the consequence: tasks/reviews/d7-browser-walk.json jpm-2024 `panel.badge_class: \"b lo on all 23\"` — item 15 is the only validator-flagged item on that filing and is now the same amber as the 22 that are not. `check_confidence_honesty` never reads the `lo` expression; ui-contrast-and-specificity.json pins CSS contrast ratios, not the JS assignment.",
+      "repro": "Revert index.html:897 to main's expression; ui-confidence-honesty still passes and `python3 -m evals.run --suite invariant` stays green.",
+      "acceptance": "Either the `lo` expression joins the `wire` pins (so the change is a pinned decision, and a regression shape exists for it), or the doc-level and item-level flags get distinct visual tokens so an item-targeted warning stays findable by colour on a warned document. Whichever is chosen, one case that could have gone red."
+    },
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The check's docstring overclaims its ceiling: it says 'every live site that prints a confidence must be the pinned conf_marker', but site discovery is a literal search for the string `conf ${`, so a third render site spelled `confidence ${it.confidence ?? \"—\"}` prints a bare number and is invisible to the scan.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:1673 — `sites = [m.start() for m in re.finditer(re.escape(\"conf ${\"), live)]`; docstring at eval_adapter.py:1633-1640 claims coverage of 'every live site that prints a confidence'. Adding `<span class=\"b\">confidence ${it.confidence ?? \"—\"}</span>` to the sidebar badge row (index.html:906) yields `passed True, failures [], conf_sites 2` — `min_conf_sites: 2` is satisfied by the two pre-existing qualified sites, so the anti-vacuity floor does not help. The case's `ceiling` field names the render/CSS ceiling but not this one.",
+      "repro": "Add a second, differently-spelled confidence interpolation to the sidebar badge row; run ui-confidence-honesty against the mutated file -> passed True",
+      "acceptance": "Either widen the site scan to a pattern matching any `it.confidence` interpolation (e.g. `re.finditer(r\"\\$\\{\\s*it\\.confidence\", live)`) and require the pinned marker/qualifier around each hit, or correct the docstring and the case's `ceiling` to say the scan is a literal `conf ${` search and a differently-spelled site is out of reach. Backed by a regression-fixture shape either way."
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The browser walk records the clipped pane-header rendering only for cvx-2015 (doc qualifier), never for jpm-2024 — the one walked fixture whose header carries an item-targeted warning — so the surface where the itemQual half is most likely to be lost to the ellipsis is unmeasured while the artifact publishes an unqualified PASS verdict.",
+      "evidence": "tasks/reviews/d7-browser-walk.json: cvx-2015 `pane_header` has `rendered_at_1280`, `band_clientWidth: 316`, `band_scrollWidth: 655`; jpm-2024 `pane_header` records only `full_text: \"Part IV · extracted · conf 0.75 · doc ambiguous · ⚠ last_item_dominates · via heading_strict\"` (14 chars LONGER than the cvx string that already overflowed by 339px) with no rendered form and no widths. Truncation cuts from the end, so `⚠ last_item_dominates` is the first thing lost after `via`. tasks/TODO.md:209 debt row and the `verdict` block are candid about the cvx case but neither states the jpm case was not measured.",
+      "repro": "Re-run the walk on jpm-2024 at 1280x900, select item 15, read `$('#pane .src-hdr .lbl:last-child')` textContent vs its clientWidth/scrollWidth.",
+      "acceptance": "The walk artifact carries `rendered_at_1280` + band widths for jpm-2024's item 15 header, or the debt row states plainly that the item-qualifier's visibility in the pane header was measured on the doc-qualifier case only. The disposition of the ellipsis itself is honest as written — the side panel is the surface D7's Contents sentence names and it is not clipped — this is about the evidence pack, not the fix."
+    },
+    {
+      "id": "R6",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "`expected_item_missing` is an item-targeted warning and is silently omitted from the panel qualifier, which the spec's 'any item-targeted warnings beside the per-item number' reads literally against — though no bare number results.",
+      "evidence": "src/sec10k/extract.py:208 emits `{\"code\": \"expected_item_missing\", \"item\": i[\"item\"], …}`; src/sec10k/validate.py:301-303 strips it from `ev[\"warnings\"]` per ADR-018; src/sec10k/web/static/index.html:830 reads `it.evidence.warnings`, so a `missing` item's own warning never appears beside its `conf 0.40`. Mitigating: any warning at all forces doc_status off `success` (extract.py:229-237), so `docQual()` always fires and the number is never bare; the `missing` status badge already states the same fact.",
+      "repro": "Extract any fixture with an unresolved expected item; the item's badge shows `conf 0.4 · doc success_with_warning` with no `⚠ expected_item_missing`, while the warnings card below the banner does list it with an `item` hint.",
+      "acceptance": "No code change needed if the exclusion is stated in the case's `note` as a deliberate reading of the spec sentence (ADR-018's exclusion inherited on purpose) — it currently is stated in the adapter docstring but the D7 acceptance sentence is not reconciled against it in tasks/TODO.md."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The banner line labels a NON-coverage number 'document coverage:', so a viewer who reads the label and the figure but not the clause between them reads 73% as coverage rather than as its complement.",
+      "evidence": "src/sec10k/web/static/index.html:860-864 renders `document coverage: <b>73%</b> of the document lies outside every item — interior gaps are not counted, …`. The `<b>` emphasis is on the number, adjacent to the word 'coverage', with the disambiguating clause unbolded after it. tasks/reviews/d7-browser-walk.json cvx-2015 confirms the rendered string. The `must_not_say` pins forbid the inverted arithmetic and the attributed-share label, which is the important half and is done correctly; this is a label/emphasis issue only.",
+      "repro": "Load cvx-2015 in the inspector at 1280x900 and read the banner's second row.",
+      "acceptance": "Label reads as what the figure is (e.g. `unattributed content:` or `document coverage — unattributed:`), or the emphasis moves onto 'lies outside every item'. Add the new label to `must_say` so the wording stays pinned."
+    }
+  ],
+  "verified_not_findings": [
+    "Red-first is real and reproduces exactly — 9 failures against 3cdfbf4's unmodified index.html, matching tasks/reviews/d7-red-first.txt line for line.",
+    "The regression fixture's 11 shapes map one-to-one onto 11 real failures; the exact-count pin is correct.",
+    "itemQual reads the right set — validate.py:303 `ev[\"warnings\"] = hits`, and every item-targeted validator at validate.py:181/186/201/210/235 passes item=code.",
+    "extract.py / validate.py / view.py are untouched, so per-fixture digests cannot move; the corpus-headline move is fully explained by the new UI fixture and no committed document cites the old digest.",
+    "The walk artifact discloses the non-preview_start path in its own method.why_a_copy block and again in prompts/021.",
+    "Committing one report JSON matches the 46 already on main."
+  ]
+}

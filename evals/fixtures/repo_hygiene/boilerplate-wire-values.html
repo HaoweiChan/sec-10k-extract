@@ -39,7 +39,7 @@ $("#go-up").onclick = () => {
 };
 const hdrRight = (VIEW.boilerplate_excluded ? "boilerplate hidden · " : "") + rest;
 $("#pane").innerHTML = `
-    <pre class="text">${esc(it.display_text ?? it.text)}</pre>
+    <pre class="text" role="region" aria-label="Item ${esc(it.item)} extracted text">${esc(it.display_text ?? it.text)}</pre>
     <details class="pane-meta"><dl class="ev">
       ${it.truncated ? `<dt>shown</dt><dd>first ${(it.display_text ?? it.text).length.toLocaleString()} of ${it.chars.toLocaleString()} characters</dd>` : ""}
     </dl></details>`;

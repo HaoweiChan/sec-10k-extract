@@ -110,6 +110,15 @@ button:disabled{opacity:.5;cursor:default}
 #banner{padding:11px 14px;border-radius:var(--r);margin-bottom:12px;font-weight:600;
   border:1px solid;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 #banner .src{font-weight:400;font-size:13px;font-family:var(--mono)}
+/* D7 (postmortem §8 gap 1, display half). Its own line inside the banner:
+   the coverage figure is a sentence with a caveat, not a chip, and #banner
+   is flex-wrap, so without a full-basis it would be stranded beside the
+   counts and its caveat clipped. Type comes from `.src` above, which the
+   element also carries and which OUTRANKS this rule (id+class beats id) —
+   so only the one declaration `.src` does not make is set here. It inherits
+   the banner's doc_status colour deliberately: it is a statement about the
+   same document. */
+#coverage{flex-basis:100%}
 .s-success{color:var(--ok);border-color:var(--ok);background:color-mix(in srgb,var(--ok) 10%,var(--bg))}
 .s-success_with_warning{color:var(--warn);border-color:var(--warn);background:color-mix(in srgb,var(--warn) 10%,var(--bg))}
 .s-ambiguous{color:var(--amb);border-color:var(--amb);background:color-mix(in srgb,var(--amb) 12%,var(--bg))}
@@ -179,6 +188,15 @@ button:disabled{opacity:.5;cursor:default}
 .b.st-incorporated_by_reference{color:var(--accent);border-color:var(--accent)}
 .b.st-omitted{color:var(--dim)}
 .b.lo{color:var(--warn);border-color:var(--warn)}
+/* PR #53 R3. `lo` keeps the meaning it had before D7 — amber TEXT means THIS
+   item's own validators fired. D7 first made it fire for a warned DOCUMENT
+   too, which repainted all 23 jpm-2024 badges identically and erased the one
+   signal that found item 15. The document-level qualifier gets its own token
+   instead: amber BORDER over the badge's resting `--dim` text. The border
+   says "this document is warned"; amber text stays reserved for an item a
+   validator actually hit. One declaration, and both tokens are already
+   proven against this badge's grounds by ui-contrast-and-specificity. */
+.b.docw{border-color:var(--warn)}
 
 /* S5 round 3 (debt row V4): #pane used to stack an <h2>, a hint line and the
    evidence <dl> ABOVE pre.text, so the extracted text started ~136px below
@@ -295,17 +313,17 @@ footer a{color:var(--accent)}
   <div class="modes">
     <div class="mode">
       <label for="fx">select a committed fixture</label>
-      <div class="row"><select id="fx"></select><button id="go-fx">Extract</button></div>
+      <div class="row"><select id="fx"></select><button id="go-fx" aria-label="Extract the selected committed fixture">Extract</button></div>
       <span class="hint">Filings committed to the eval set, with provenance.</span>
     </div>
     <div class="mode">
       <label for="up">upload a filing (.htm / .html / .txt)</label>
-      <div class="row"><input type="file" id="up" accept=".htm,.html,.txt"><button id="go-up">Extract</button></div>
+      <div class="row"><input type="file" id="up" accept=".htm,.html,.txt"><button id="go-up" aria-label="Extract the uploaded filing">Extract</button></div>
       <span class="hint">No network, no SEC dependency. Use this for your own filings.</span>
     </div>
     <div class="mode">
       <label for="url">EDGAR document URL</label>
-      <div class="row"><input type="text" id="url" placeholder="https://www.sec.gov/Archives/edgar/data/…"><button id="go-url">Extract</button></div>
+      <div class="row"><input type="text" id="url" placeholder="https://www.sec.gov/Archives/edgar/data/…"><button id="go-url" aria-label="Extract from the EDGAR document URL">Extract</button></div>
       <span class="hint">Best-effort: EDGAR can block datacenter IPs. Upload is the reliable path.</span>
     </div>
   </div>
@@ -320,7 +338,11 @@ footer a{color:var(--accent)}
     slice, which the compare pane still shows (ADR-032).</span></label>
 </fieldset>
 
-<div id="banner" class="s-idle">No filing extracted yet.</div>
+<!-- D10: the page's ONE status region. JS rewrites it after every extraction
+     (render(), busy()), so role=status — a polite live region — is what this
+     element actually is, not an agent affordance; the aria-label names it so
+     doc_status belongs to something instead of to an anonymous `generic`. -->
+<div id="banner" class="s-idle" role="status" aria-label="doc_status">No filing extracted yet.</div>
 <div id="warnings"></div>
 <!-- D5: shown only while the response on screen actually HAD something hidden
      — render() assigns .hidden from `v.boilerplate_applied` (PR #46 R1). That
@@ -387,7 +409,26 @@ async function boot(){
     $("#sha").textContent = "build " + m.git_sha;
     $("#fx").innerHTML = m.fixtures.map(f => `<option>${esc(f)}</option>`).join("");
   }catch(e){ $("#sha").textContent = "meta unavailable"; }
+  deepLink();
   loadCapabilities();
+}
+
+// D10: `?fixture=<id>&run=1` preloads the fixture select and extracts on
+// load, so an agent — or anyone following a shared link — lands on an
+// already-rendered page instead of on the fetch-then-render SPA. Client-side
+// only: `/` still serves this same static file, unparameterised.
+// It degrades to nothing. The membership guard returns before ANYTHING is
+// assigned, so an absent or unknown `fixture` leaves the page exactly as it
+// loads and `run=1` on its own extracts nothing. Runs after the meta fetch
+// because the option list it validates against comes from that response — if
+// the fetch failed there are no options, so the guard refuses, which is the
+// right answer rather than a thrown error.
+function deepLink(){
+  const q = new URLSearchParams(location.search);
+  const want = q.get("fixture");
+  if(!want || ![...$("#fx").options].some(o => o.value === want)) return;
+  $("#fx").value = want;
+  if(q.get("run") === "1") $("#go-fx").click();
 }
 
 // The two README lists (works-well / difficult) are parsed at request time
@@ -799,17 +840,81 @@ async function call(url, opts){
   }finally{ busy(false); }
 }
 
+// D7 (postmortem §2, "The UI amplified both"). doc_status and the warnings
+// list live in the top banner; the side panel a viewer actually reads showed
+// `conf 0.95` with no visual link back to either, and during a demo the panel
+// is the product. These two helpers are that link, and EVERY confidence this
+// page prints is built as `conf ${…}${docQual()}${itemQual(it)}`.
+// What the eval buys, stated as what it checks rather than as what it
+// prevents — this comment has now been corrected twice (PR #53 rounds 1 and
+// 2), because both earlier versions claimed a property of the PROGRAM ("a
+// bare number is not reachable from this file", then "no interpolation of
+// `it.confidence` renders unqualified") and a reviewer falsified each inside
+// one round. `ui-confidence-honesty` is a TEXT PIN: it asserts that this file
+// contains the pinned marker + qualifier around every mention of
+// `it.confidence`, exactly one declaration of each helper with a body equal
+// to its pin, and the pinned banner assignment. It does not and cannot
+// assert what the page renders — that is the browser walk's job, and the
+// residual holes are listed in the case's own `ceiling` field, which says
+// plainly that the list is illustrative rather than exhaustive.
+// Display only: the envelope's `confidence` is untouched, and making the
+// NUMBER itself move on a stub or a pointer span is D8's row, not this one.
+const QUALIFIED = ["success_with_warning", "ambiguous"];
+function docQual(){
+  // The RESPONSE's doc_status, never a live control — the same
+  // read-at-request-time rule S8 gave the pane header. `success` and the
+  // refusal statuses add nothing here: `success` has nothing to qualify, and
+  // `unsupported`/`failed` carry no items to print a confidence beside.
+  const st = (VIEW && VIEW.doc_status) || "";
+  return QUALIFIED.includes(st) ? ` · doc ${esc(st)}` : "";
+}
+function itemQual(it){
+  // `evidence.warnings` IS validate.py `score()`'s own `hits` list: the codes
+  // that carried THIS item's code and each cost it WARN_PENALTY. Reading it
+  // rather than re-filtering v.warnings here means the panel names exactly
+  // the warnings that moved the number, and inherits ADR-018's exclusion of
+  // `expected_item_missing` — which only restates the `missing` status the
+  // status badge already shows — instead of defining "item-targeted" a
+  // second time in the display layer, where it could drift from score().
+  const w = (it.evidence && it.evidence.warnings) || [];
+  return w.length ? ` · ⚠ ${esc(w.join(", "))}` : "";
+}
+// D7 (postmortem §8 gap 1, display half). `unattributed_content` already
+// computes the document-coverage figure and buries it in a warning row below
+// the banner; the demo read the banner. Surfaced here VERBATIM — the number
+// is validate.py's, not a second one derived in the display layer — with the
+// caveat validate.py states in its own comment attached, and deliberately NOT
+// inverted into an "attributed" share: interior gaps are not counted, so
+// 100 − outside would OVERSTATE attribution by exactly the gaps this figure
+// misses (up to 9.7 points, ibm-1997, ADR-019 §d).
+// ponytail: the percentage is read off the warning's own message with one
+// regex. Ceiling: no warning, no line — a document below UNATTRIBUTED_MAX
+// shows no coverage figure at all, because none was computed, and computing
+// one here is the envelope change D8 owns. If the message wording ever
+// drifts the regex misses and the whole message is shown verbatim instead,
+// so the figure degrades to less emphasis, never to silence.
+function coverageStrip(warns){
+  const u = warns.find(x => x.code === "unattributed_content");
+  if(!u) return "";
+  const m = /^(\d+)%/.exec(u.message || "");
+  return ` <span class="src" id="coverage">unattributed content: ${
+    m ? `<b>${esc(m[1])}%</b> of the document lies outside every item`
+      : esc(u.message)
+  } — interior gaps are not counted, so true non-coverage can be up to 9.7 points higher (ADR-019 §d)</span>`;
+}
+
 function render(v){
   VIEW = v; SEL = null;
   const st = v.doc_status || "failed";
   const src = v.source ? `${v.source.mode}: ${v.source.name}` : "";
   const n = Object.entries(v.counts || {}).map(([k,c]) => `${c} ${k}`).join(" · ");
+  const w = v.warnings || [];
   $("#banner").className = "s-" + st;
   $("#banner").innerHTML = `doc_status: ${esc(st)}` +
     (n ? ` <span class="src">— ${esc(n)}</span>` : "") +
-    (src ? ` <span class="src">${esc(src)}</span>` : "");
+    (src ? ` <span class="src">${esc(src)}</span>` : "") +
+    coverageStrip(w);
 
-  const w = v.warnings || [];
   $("#warnings").innerHTML = w.length
     ? w.map(x => `<div class="warn"><code>${esc(x.code)}</code>${
         x.item ? ` <span class="hint">item ${esc(x.item)}</span>` : ""
@@ -831,13 +936,22 @@ function render(v){
     // flag from the evidence, not the number: confidence 0.8 is normal for an
     // omitted item and penalised for an extracted one, so the score alone
     // cannot say "look here". evidence.warnings names the validators that fired.
-    const lo = (it.evidence && (it.evidence.warnings || []).length) ? " lo" : "";
+    // D7: a warned DOCUMENT marks the badge too. On cvx-2015 no validator
+    // targets any item, so every badge stayed neutral at 0.95 under a
+    // `success_with_warning` banner — the demo shape exactly.
+    // PR #53 R3: with a SEPARATE token. Folding both into `lo` cost the
+    // sidebar its only item-level colour — measured on jpm-2024, where item
+    // 15 is the one validator-flagged item and went the same amber as the 22
+    // that are not. Item-targeted wins when both are true: it is the stronger
+    // statement about this item's own number.
+    const flag = (it.evidence && (it.evidence.warnings || []).length) ? " lo"
+               : (docQual() ? " docw" : "");
     return `<button class="it" data-i="${i}">
       <div class="top"><span class="code">${esc(it.item)}</span>
       <span class="ttl">${esc(it.title || "")}</span></div>
       <div class="badges">
         <span class="b st-${esc(it.status)}">${esc(it.status)}</span>
-        <span class="b${lo}">conf ${it.confidence ?? "—"}</span>
+        <span class="b${flag}">conf ${it.confidence ?? "—"}${docQual()}${itemQual(it)}</span>
         <span class="b">${esc(it.method || "—")}</span>
         ${it.chars != null ? `<span class="b">${it.chars.toLocaleString()} ch</span>` : ""}
       </div></button>`;
@@ -869,8 +983,14 @@ function show(i){
   // measured live at a 1280px viewport, this band already truncates inside
   // `via heading_strict`, so a trailing marker would be invisible exactly
   // when the pane most needs to say it is hiding text.
+  // D7: the qualifier goes directly after the number, and BEFORE `via`. Both
+  // header spans are `.lbl`, which ellipsises, and the S8 note above measured
+  // this band already truncating inside `via heading_strict` at 1280px — so
+  // the qualifier has to sit on the surviving side of that cut, not appended
+  // past it. `via` is the part that may be lost; what the number is worth
+  // is not.
   const hdrRight = (VIEW.markdown ? "markdown · " : "") + (VIEW.boilerplate_excluded ? "boilerplate hidden · " : "") +
-    `Part ${esc(it.part || "—")} · ${esc(it.status)} · conf ${it.confidence ?? "—"} · via ${esc(it.method || "—")}`;
+    `Part ${esc(it.part || "—")} · ${esc(it.status)} · conf ${it.confidence ?? "—"}${docQual()}${itemQual(it)} · via ${esc(it.method || "—")}`;
   // The truncation notice used to be its own in-flow sibling after
   // pre.text, which is exactly the bug .pane-meta's own move to
   // position:absolute just fixed, reintroduced through a second element: on
@@ -887,9 +1007,13 @@ function show(i){
       // against the original filing, which still contains the chrome.
       // S9: in Markdown mode the same string is the derived Markdown and is
       // RENDERED, by mdToHtml above; `it.text` is still the raw slice.
+      // D10: the text container is a named region in BOTH view modes — it is
+      // the same slot (ADR-032), so naming only the <pre> would let Markdown
+      // mode regress the fix. The label interpolates the item's own code; a
+      // constant one would name all 23 items identically.
       ? (VIEW.markdown
-          ? `<div class="text md">${mdToHtml(it.display_text ?? it.text)}</div>`
-          : `<pre class="text">${esc(it.display_text ?? it.text)}</pre>`)
+          ? `<div class="text md" role="region" aria-label="Item ${esc(it.item)} extracted text">${mdToHtml(it.display_text ?? it.text)}</div>`
+          : `<pre class="text" role="region" aria-label="Item ${esc(it.item)} extracted text">${esc(it.display_text ?? it.text)}</pre>`)
       : `<div class="none" style="padding:12px">Status <b>${esc(it.status)}</b> carries no span: the item is reported as absent rather than silently dropped (INV-S4).</div>`}
     <details class="pane-meta"><summary>where this text came from</summary>
       <dl class="ev">
