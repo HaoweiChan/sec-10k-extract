@@ -1,0 +1,50 @@
+{
+  "pr": 53,
+  "task": "D7",
+  "round": 2,
+  "result": "REQUEST_CHANGES",
+  "base": "68c1b47",
+  "head": "526cb4f",
+  "scope": "repair diff plus standing findings only — not a fresh full-diff sweep",
+  "gate": {"invariant": "61/61 = 1.000", "fast": "124/124 = 1.000", "baseline": "fast 1.0, .eval-baseline.json untouched", "digests": "dev 8c002dced6acbbcb… identical to main, MOVED: []", "mutation_probe": "six attacks red, control green, exit 0 (run independently by the orchestrator)"},
+  "closed_this_round": {
+    "R1": "call pinned; regression shape 12 watched red-first",
+    "R3": ".b.docw = amber border over --dim text vs .b.lo = amber text — distinct in both palettes; --amb/--warn confirmed identical in dark mode; census re-derived from the fixtures independently: jpm-2024 {b docw: 22, b lo: 1}, cvx-2015 {b docw: 20}, aapl-2025 all plain — exact match",
+    "R5": "verdict.panel_half explicitly excludes the pane header; the pre-D7 fitting claim is arithmetically consistent — 8.4-8.5 px/char at both bands means the pre-D7 strings (~50 and ~51 chars) overflow 316px and 251px too, so the truncation is genuinely pre-existing and D7 introduced no regression",
+    "R6": "debt row carries the evidence verbatim and reconciles the acceptance sentence",
+    "R7": "label is `unattributed content:`, `document coverage:` pinned as forbidden, figure not inverted"
+  },
+  "routing_note": "R9 is LOW and would normally route to debt. Escalated to repair: all three miscounts sit in files R2 and R4 already require editing this round, and leaving known-wrong counts in committed artifacts while the implementer has those exact files open is worse than the scope rule protects against. This is the second documented escalation in this PR (round 1 escalated R5 and R7); both were cheap and both concerned the honesty of committed artifacts.",
+  "orchestrator_guidance": "R2 and R4 are each the SECOND falsification of the same paragraph: round 1 found the guarantee stronger than the mechanism, the implementer strengthened the mechanism, and the reviewer found a further gap the still-unchanged guarantee also fails to cover. Strengthening alone has now twice invited a new falsification. The convergent move is BOTH halves at once — take the cheap pins (the reviewer calls each a one-liner) AND narrow the published prose to exactly what the mechanism delivers, naming the residual holes. Round 3 is the last before the circuit breaker.",
+  "findings": [
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "status": "standing — mechanism half closed, claim half still open",
+      "claim": "The mechanism half is closed (early returns are now caught), but the replacement guarantee published in all four places is still stronger than the pin: `_js_block` reads the FIRST `function <fn>(` while JS runs the LAST, so a duplicate declaration neuters any of the three helpers with the entire gate green.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:1614 (`i = live.find(opener)`) under the claim at eval_adapter.py:1652-1656 ('the qualifier's three producers are byte-equal to the pinned bodies'), duplicated in index.html:824-831, prompts/021-d7-inspector-confidence-honesty.md:38-52 and the case `note`/`ceiling`. Inserting `function docQual(){ return \"\"; }` immediately above `function render(v){` leaves the pinned body byte-equal, hoists the stub to win, and restores the 2026-08-24 demo defect verbatim (bare `conf 0.95` on all 20 cvx-2015 badges) — the reviewer ran the full gate with that one line applied: invariant 61/61 = 1.000, fast 124/124 = 1.000. Same with `function coverageStrip(warns){ return \"\"; }`. Second falsification of the same paragraph: the R1 pin is only the RHS tail `(src ? ... : \"\") + coverageStrip(w);`, not the assignment target, so moving that tail into `const _unused = ...` and setting `$(\"#banner\").innerHTML = ...` also passes — the docstring's 'pinned in the assignment that makes it' and the resolution's 'the assignment that puts it on screen' are not what is pinned.",
+      "repro": "cp src/sec10k/web/static/index.html /tmp/m.html; insert `function docQual(){ return \"\"; }` above `function render(v){`; run ui-confidence-honesty with input.file=/tmp/m.html -> passed=True, failures=[]. Also `python3 -m evals.run --suite invariant && --suite fast` with the line applied in place -> 61/61, 124/124.",
+      "acceptance": "Either the check fails when `live.count(f\"function {fn}(\") != 1` for each pinned body and the banner pin includes `$(\"#banner\").innerHTML =` (both one-liners), with `pr53_mutation_probe.py` gaining the shadowing and dead-assignment mutations asserted red; or the 'WHAT THIS DOES AND DOES NOT GUARANTEE' paragraph names duplicate-declaration shadowing and a dead banner assignment as out of reach in all four places it appears. The round-1 acceptance is 'a claim this load-bearing must match the mechanism' — it still does not."
+    },
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "status": "standing — scan widened as specified, corrected ceiling still misdescribes the residual hole",
+      "claim": "The widened scan landed as specified, but the corrected ceiling misdescribes the residual hole: it says only a site that 'never names it.confidence' is invisible, while `conf ${esc(it.confidence)}` names the field, renders a bare number, and is invisible — falsifying the docstring's first Guaranteed sentence.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:1701 (`re.finditer(r\"\\$\\{\\s*it\\.confidence\", live)`) vs the guarantee at eval_adapter.py:1650-1652 ('no live interpolation of `it.confidence` renders without the pinned qualifier') and the NOT-guaranteed clause at 1657-1660 / the case `ceiling`. Adding `<span class=\"b\">conf ${esc(it.confidence)}</span>` to the sidebar badge row (index.html:918) gives passed=True, failures=[], conf_sites=2; so does `conf ${(it.confidence)}`. This is the plausible edit, not an exotic one: every sibling badge in that same template literal is already `${esc(it.item)}`, `${esc(it.status)}`, `${esc(it.method || \"—\")}`, so 'escape the confidence too' is the natural next change and it goes green while printing a bare number.",
+      "repro": "Copy index.html, replace the method badge with `<span class=\"b\">conf ${esc(it.confidence)}</span>` plus the original, run_case on ui-confidence-honesty with input.file set to the copy -> passed True, conf_sites 2.",
+      "acceptance": "Either the scan finds every occurrence of `it.confidence` inside a `${...}` (not only those starting it) and requires the enclosing interpolation to be the pinned marker — with an `esc(...)`-wrapped site added to pr53_mutation_probe.py and watched red — or the docstring's Guaranteed sentence and the case `ceiling` are narrowed to the truth: only an interpolation that STARTS with `it.confidence` is checked, and any other spelling, wrapped or parenthesised, is out of reach."
+    },
+    {
+      "id": "R9",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "Three counts in the round's own artifacts do not match their lists — the exact PR #46 R12 class the resolution's collateral note claims to have guarded against.",
+      "evidence": "(a) evals/adversarial/ui-confidence-honesty-regression.json `note`: 'Two `must_say` halves are left INTACT'. Round 0 that was true ('document coverage:' + 'of the document lies outside every item'); the R7 rename replaced 'document coverage:' with 'unattributed content:' in must_say, and the fixture still says the old label, so exactly ONE must_say is intact — running the case gives three missing-must_say failures (#9 'unattributed content:', #10 'interior gaps are not counted', #11 '9.7 points') out of four. (b) The same note and evals/fixtures/repo_hygiene/confidence-honesty-bare.html:1-9 say 'THIRTEEN authored defects', but the fixture's numbered comments run (1)-(13) and the R7 mislabel is a 14th, unnumbered defect that the prose counts inside the thirteen while attributing 2 of the 15 failures to it; the 13->15 delta comes entirely from that unlisted defect, not from the 'whole-body pinning collapses several defects' mechanism the note leads with, which changes the count by zero (each of (4),(5),(6) produced one failure in round 0 too). (c) tasks/reviews/pr53_mutation_probe.py:19 — 'every shape's failure list is mixed with sixteen others'; there are 15 failures, so 14 others.",
+      "repro": "python3 -c \"import json,sys; sys.path.insert(0,'.'); from src.repo_hygiene.eval_adapter import run_case; r=run_case(json.load(open('evals/adversarial/ui-confidence-honesty-regression.json'))); print(len(r['failures'])); [print(f) for f in r['failures']]\"",
+      "acceptance": "The case note says ONE must_say half is intact, the fixture header and note either number the mislabel as (14) or say 'thirteen numbered defects plus the R7 mislabel', the 13->15 explanation attributes the +2 to the mislabel alone, and the probe docstring says fourteen."
+    }
+  ]
+}

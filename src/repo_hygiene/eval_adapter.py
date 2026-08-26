@@ -1612,6 +1612,233 @@ def check_exclusion_note_trigger(case):
                      sorted(k for k in seen if seen[k] is not old_expr[k])}
 
 
+def _js_block(live, opener):
+    """Text between the braces of the block `opener` opens, braces MATCHED.
+
+    Same argument as `_media_blocks`: a plain regex ends the block at the
+    first nested `}`, and every function here is mostly template literal, so
+    `${...}` alone would defeat one. Template `${}` pairs balance, so simple
+    depth counting is enough; a brace inside a STRING would defeat it, and
+    none of the blocks this is pointed at contains one.
+    """
+    i = live.find(opener)
+    if i < 0:
+        return None
+    i = live.index("{", i) + 1
+    depth, start = 1, i
+    while i < len(live) and depth:
+        if live[i] == "{":
+            depth += 1
+        elif live[i] == "}":
+            depth -= 1
+        i += 1
+    return live[start:i - 1]
+
+
+def check_confidence_honesty(case):
+    """D7. The 2026-08-24 demo's trust amplifier, both halves.
+
+    PANEL. `doc_status` and the warnings list live in the top banner; the
+    side panel a viewer actually reads showed a per-item `conf 0.95` with no
+    visual link back to a document the banner had already called
+    `success_with_warning` or `ambiguous` (postmortem §2, "The UI amplified
+    both"). Pinned as an ADJACENCY, not as a question: every live
+    interpolation of `it.confidence` must sit where the pinned
+    `conf_marker` would start and must be followed IMMEDIATELY by the
+    pinned `qualifier`. A question about the file ("does it mention
+    doc_status somewhere?") is answerable by a file that still prints a
+    bare number two lines later — the `boilerplate_plumbing` allow-list
+    records two rounds of exactly that. `min_conf_sites` keeps it from
+    passing vacuously by deleting the render sites; the `bodies` pins keep
+    a producer from being neutered in place or shadowed by a second
+    declaration; the banner pin carries its assignment target. What that
+    adds up to, and what it does not, is the next paragraph.
+
+    WHAT THIS CHECK IS, WRITTEN SO IT CANNOT BE READ AS MORE. Rewritten
+    twice — PR #53 round 1 and again at round 2. Each earlier version
+    asserted a property of the PROGRAM ("a bare confidence is
+    unrepresentable", then "no live interpolation of `it.confidence`
+    renders without the pinned qualifier"), and each was falsified inside
+    one review by an edit a working developer might plausibly make. So the
+    claim is now stated as what the code actually does.
+
+    This is a TEXT PIN over one file. A green run asserts that
+    src/sec10k/web/static/index.html contains, verbatim modulo whitespace:
+
+      * every mention of `it.confidence` sitting inside an interpolation
+        whose whole `${...}` is the pinned `conf_marker`, immediately
+        followed by the pinned `qualifier`;
+      * exactly one declaration of each pinned helper, each with a body
+        byte-equal to its pin;
+      * the pinned banner assignment, assignment target included;
+      * the pinned wording in the coverage strip and none of the forbidden
+        wording.
+
+    It does NOT assert that the page renders a qualified confidence, and no
+    static read of one file could: these pins constrain the text a program
+    is written in, not the program. Out of reach today, concretely — a
+    number rendered without mentioning `it.confidence` (copied into a local
+    first, or read off a re-shaped object); markup injected by another
+    script or served from another file; anything hidden by CSS or simply
+    never reached at runtime for a reason the text does not show. THAT LIST
+    IS ILLUSTRATIVE, NOT EXHAUSTIVE, and this is the sentence that matters:
+    a text pin cannot enumerate the programs it fails to constrain. Read a
+    green run as "the pinned text is present and unique", never as "the
+    defect is impossible". What the screen actually showed is the browser
+    walk, tasks/reviews/d7-browser-walk.json; the falsification attempts
+    that have been run against these pins are
+    tasks/reviews/pr53_mutation_probe.py.
+
+    The qualifier reads `it.evidence.warnings`, which IS `score()`'s own
+    `hits` list — the codes that carried this item's code and each cost it
+    `WARN_PENALTY`. So the panel names exactly the warnings that moved the
+    number, and inherits ADR-018's exclusion of `expected_item_missing`
+    (which only restates the `missing` status the status badge already
+    shows) rather than re-deriving a second definition here.
+
+    BANNER. `unattributed_content` already computes a document-coverage
+    figure and buries it in a warning row below the banner (postmortem §8
+    gap 1). This pins that the banner surfaces it AND states the caveat
+    `validate.py` states in its own comment — interior gaps are not counted,
+    so the figure can understate true non-coverage by up to 9.7 points
+    (ibm-1997, ADR-019 §d). `must_not_say` forbids the inversion that caveat
+    exists to prevent: `100 - outside` is NOT the attributed share, and a
+    banner that publishes it would overstate coverage by exactly the
+    uncounted interior gaps.
+
+    Text, not render — see the block comment above check_split_breakpoint.
+    CEILING: this is a STATIC READ of the markup of
+    src/sec10k/web/static/index.html. No test in this harness issues an HTTP
+    request, so nothing here observes the render: it cannot see the
+    qualifier appear beside a real 0.95, and a CSS rule could hide the
+    coverage strip with every pin below green. That is browser evidence, in
+    tasks/reviews/d7-browser-walk.json.
+    """
+    inp = case.get("input", {})
+    text = (ROOT / inp.get("file", UI_STYLESHEET)).read_text()
+    live = _live(text, "js")
+    bad = []
+
+    marker, qual = inp["conf_marker"], inp["qualifier"]
+    # PR #53 R1/R2/R4 all exploited the same weakness from different sides:
+    # this check asked about TEXT THAT IS PRESENT and never about text that
+    # is REACHED or COMPLETE. Site discovery used to be a literal search for
+    # `conf ${`, so a third render site spelled `confidence ${it.confidence
+    # ?? "—"}` printed a bare number and was invisible to the scan while
+    # `min_conf_sites` stayed satisfied by the two qualified sites. The scan
+    # now finds every interpolation OF THE FIELD and steps back to where the
+    # pinned marker would have to start, so a differently-spelled site is
+    # reported as unpinned rather than skipped.
+    lead = marker.index("${")           # `conf ` — what precedes the field
+    # PR #53 R4, second pass. Round 1 matched `${\s*it.confidence`, i.e. only
+    # interpolations the field STARTS. `conf ${esc(it.confidence)}` names the
+    # field, renders a bare number, and started nothing — and it is the
+    # PLAUSIBLE next edit, not an exotic one, because every sibling badge in
+    # that same template literal is already `${esc(...)}`. So every mention of
+    # the field is now traced back to the `${` that encloses it and the whole
+    # enclosing interpolation must be the pinned marker: wrapped, parenthesised
+    # or reordered spellings are reported as unpinned rather than skipped.
+    # `rfind` alone is not enough: the nearest preceding `${` may belong to an
+    # interpolation that already CLOSED, in which case the mention is not being
+    # rendered at all and attaching it to that interpolation reports the wrong
+    # offset — and fires on correct code (`if (it.confidence == null)` would be
+    # flagged). So the candidate must actually enclose the mention. A mention
+    # outside every interpolation is not a render site and is skipped, which is
+    # the "copied into a local first" hole the ceiling names out loud.
+    sites = set()
+    for m in re.finditer(r"it\.confidence", live):
+        opened = live.rfind("${", 0, m.start())
+        if opened < 0:
+            continue
+        i, depth = opened + 2, 1
+        while i < len(live) and depth:
+            if live[i] == "{":
+                depth += 1
+            elif live[i] == "}":
+                depth -= 1
+            i += 1
+        if i <= m.start():          # that interpolation closed before the mention
+            continue
+        sites.add(max(0, opened - lead))
+    sites = sorted(sites)
+    floor = inp.get("min_conf_sites", 1)
+    if len(sites) < floor:
+        bad.append(f"only {len(sites)} live confidence render site(s), expected "
+                   f"at least {floor} — the side panel's badge and the pane "
+                   f"header each print one, and deleting a site is not a way "
+                   f"to qualify it")
+    for i in sites:
+        rest = live[i:]
+        head = " ".join(rest[:90].split())
+        if not rest.startswith(marker):
+            bad.append(f"confidence rendered by an unpinned expression: {head!r}")
+        elif not _squash(rest[len(marker):]).startswith(_squash(qual)):
+            bad.append(f"bare confidence, no qualifier beside it: {head!r} — a "
+                       f"number a viewer reads with no link back to doc_status "
+                       f"or to the warnings that moved it is the demo defect")
+
+    for expr in inp.get("wire", []):
+        if _squash(expr) not in _squash(live):
+            bad.append(f"missing pinned expression (the qualifier reads the "
+                       f"response's own doc_status and the item's own "
+                       f"evidence.warnings): {expr}")
+
+    # PR #53 R2. Substring existence proves a line is in the file, never that
+    # it RUNS: `if(true) return "";` as the first statement of docQual and
+    # itemQual left every pinned line intact below it as dead code, restored
+    # the bare `conf 0.95` on every cvx-2015 badge, and passed. Same attack
+    # class `_live` was added for in PR #27 R10, one level deeper — there the
+    # pinned text survived inside a comment, here it survives below a return.
+    # So the helpers whose whole job is the qualifier are pinned WHOLE:
+    # anything added, removed or reordered inside them is a difference,
+    # including a line that merely precedes the pinned one.
+    for fn_name, want_body in (inp.get("bodies") or {}).items():
+        # PR #53 R2, second pass. `_js_block` reads the FIRST declaration; JS
+        # runs the LAST. `function docQual(){ return ""; }` inserted above
+        # `render()` therefore left the pinned body byte-equal, won at runtime,
+        # and restored the bare `conf 0.95` on all 20 cvx-2015 badges with the
+        # whole gate green. Pinning a body says nothing about which body runs
+        # unless the name is declared exactly once, so that is checked first.
+        seen = live.count(f"function {fn_name}(")
+        if seen != 1:
+            bad.append(f"{fn_name}(): declared {seen} times in the live markup, "
+                       f"expected exactly 1 — a second declaration shadows the "
+                       f"pinned one at runtime (JS runs the LAST), so the body "
+                       f"pin below would be checking a function nothing calls")
+            continue
+        got_body = _js_block(live, f"function {fn_name}(")
+        if got_body is None:
+            bad.append(f"{fn_name}(): no such function in the live markup — "
+                       f"the qualifier has no producer")
+        elif _squash(got_body) != _squash(want_body):
+            got_s, want_s = _squash(got_body), _squash(want_body)
+            at = next((k for k in range(min(len(got_s), len(want_s)))
+                       if got_s[k] != want_s[k]), min(len(got_s), len(want_s)))
+            bad.append(f"{fn_name}(): body differs from the pinned one at "
+                       f"char {at} — pinned {want_s[at:at + 60]!r}, found "
+                       f"{got_s[at:at + 60]!r}. The body is pinned whole "
+                       f"because a pinned LINE can sit unreachable below an "
+                       f"early return (PR #53 R2)")
+
+    fn = inp.get("coverage_fn", "coverageStrip")
+    body = _js_block(live, f"function {fn}(")
+    if body is None:
+        bad.append(f"{fn}(): the banner has no coverage strip — the "
+                   f"document-coverage figure `unattributed_content` already "
+                   f"computes stays buried in a warning row below it")
+        return bad, {"conf_sites": len(sites), "coverage_text": None}
+    say = " ".join(re.sub(r"<[^>]+>", "", body).split())
+    for want in inp.get("must_say", []):
+        if want not in say:
+            bad.append(f"{fn}(): does not say {want!r}")
+    for nope in inp.get("must_not_say", []):
+        if nope in say:
+            bad.append(f"{fn}(): says {nope!r} — the banner may neither publish "
+                       f"the complement of this figure as an attributed share "
+                       f"(interior gaps are not counted, so it is not one) nor "
+                       f"label the figure itself as coverage when what it "
+                       f"measures is NON-coverage (PR #53 R7)")
+    return bad, {"conf_sites": len(sites), "coverage_text": say}
 # --- D10: agent-legibility (correct ARIA + a deep link) --------------------
 # All four read the file's TEXT, not a render, for the same reason
 # check_split_breakpoint documents: there is no browser in the eval harness.
@@ -1849,6 +2076,7 @@ CHECKS = {
     "split_breakpoint": check_split_breakpoint,
     "exclusion_note": check_exclusion_note,
     "exclusion_note_trigger": check_exclusion_note_trigger,
+    "confidence_honesty": check_confidence_honesty,
     "banner_status_role": check_banner_status_role,
     "item_text_region": check_item_text_region,
     "mode_button_names": check_mode_button_names,
