@@ -1,0 +1,17 @@
+=== ui-confidence-honesty: passed=False  failures=9
+  - bare confidence, no qualifier beside it: 'conf ${it.confidence ?? "—"}</span> <span class="b">${esc(it.method || "—")}</span' — a number a viewer reads with no link back to doc_status or to the warnings that moved it is the demo defect
+  - bare confidence, no qualifier beside it: 'conf ${it.confidence ?? "—"} · via ${esc(it.method || "—")}`; $("#pane").innerHTM' — a number a viewer reads with no link back to doc_status or to the warnings that moved it is the demo defect
+  - missing pinned expression (the qualifier reads the response's own doc_status and the item's own evidence.warnings): const QUALIFIED = ["success_with_warning", "ambiguous"];
+  - missing pinned expression (the qualifier reads the response's own doc_status and the item's own evidence.warnings): const st = (VIEW && VIEW.doc_status) || "";
+  - missing pinned expression (the qualifier reads the response's own doc_status and the item's own evidence.warnings): return QUALIFIED.includes(st) ? ` · doc ${esc(st)}` : "";
+  - missing pinned expression (the qualifier reads the response's own doc_status and the item's own evidence.warnings): const w = (it.evidence && it.evidence.warnings) || [];
+  - missing pinned expression (the qualifier reads the response's own doc_status and the item's own evidence.warnings): return w.length ? ` · ⚠ ${esc(w.join(", "))}` : "";
+  - missing pinned expression (the qualifier reads the response's own doc_status and the item's own evidence.warnings): const u = warns.find(x => x.code === "unattributed_content");
+  - coverageStrip(): the banner has no coverage strip — the document-coverage figure `unattributed_content` already computes stays buried in a warning row below it
+  info: conf_sites= 2
+  coverage_text= None
+
+--- run context ---
+git sha: 3cdfbf4 (main tip, src/sec10k/web/static/index.html UNMODIFIED)
+date: 2026-08-25T16:52:46Z
+suite line: [eval] suite 'invariant': 59/60 = 0.983  (+3 enumerated debt, unscored)

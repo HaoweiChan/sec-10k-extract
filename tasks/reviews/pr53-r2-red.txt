@@ -1,0 +1,31 @@
+[R1] red   — coverageStrip is defined, correct, and never called from render()
+          missing pinned expression (the qualifier reads the response's own doc_status and the item's own evidence.warnings): (src
+[R2] red   — every pinned line of docQual intact, sitting below an early return
+          docQual(): body differs from the pinned one at char 0 — pinned 'constst=(VIEW&&VIEW.doc_status)||"";returnQUALIFIED.incl
+[R2] red   — the same dead-code attack on itemQual
+          itemQual(): body differs from the pinned one at char 0 — pinned 'constw=(it.evidence&&it.evidence.warnings)||[];returnw.
+[R2] red   — the same dead-code attack on the banner half
+          coverageStrip(): body differs from the pinned one at char 0 — pinned 'constu=warns.find(x=>x.code==="unattributed_conten
+[R4] red   — a third render site the literal `conf ${` scan could not see
+          confidence rendered by an unpinned expression: 'ence ${it.confidence ?? "—"}</span> <span class="b">${esc(it.method || "
+[R3] red   — the document flag folded back into the item flag's token
+          missing pinned expression (the qualifier reads the response's own doc_status and the item's own evidence.warnings): cons
+[R2] GREEN — a duplicate `docQual` hoisted above render(): the pinned body is still byte-equal, and JS runs the LAST declaration
+[R2] GREEN — the pinned banner tail moved onto a dead local, with the real innerHTML set to something else
+[R4] GREEN — a site spelled `conf ${esc(it.confidence)}` — names the field, renders a bare number, does not START the interpolation
+[R7] red   — a NON-coverage figure labelled as coverage
+          coverageStrip(): body differs from the pinned one at char 143 — pinned 'unattributedcontent:${m?`<b>${esc(m[1])}%</b>oft
+          coverageStrip(): does not say 'unattributed content:'
+          coverageStrip(): says 'document coverage:' — the banner may neither publish the complement of this figure as an attribut
+[ctl] green — the shipped index.html, unmodified
+FAIL: R2: `a duplicate `docQual` hoisted above render(): the pinned body is still byte-equal, and JS runs the LAST declaration` passes the case — the defect this finding names is invisible again
+FAIL: R2: `the pinned banner tail moved onto a dead local, with the real innerHTML set to something else` passes the case — the defect this finding names is invisible again
+FAIL: R4: `a site spelled `conf ${esc(it.confidence)}` — names the field, renders a bare number, does not START the interpolation` passes the case — the defect this finding names is invisible again
+
+--- context ---
+Run against the round-1 head 526cb4f with the three round-2 attacks newly added
+to the probe and NO other change. The three GREEN lines are the findings:
+  R2  duplicate-declaration shadowing of a pinned helper
+  R2  the pinned banner tail moved onto a dead local
+  R4  a site spelled conf ${esc(it.confidence)}
+Every other line was already red from the round-1 repair.
