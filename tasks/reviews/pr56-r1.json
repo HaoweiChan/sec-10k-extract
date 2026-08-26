@@ -1,0 +1,95 @@
+{
+  "pr": 56,
+  "round": 1,
+  "result": "REQUEST_CHANGES",
+  "counts": {
+    "HIGH": 0,
+    "MEDIUM": 3,
+    "LOW": 4
+  },
+  "reviewer": "groundwork:pr-reviewer, fresh context, falsification-only",
+  "verified_and_held": [
+    "corpus table 42/744/8,860,388 + 7/147/3,229,509 = 49/891/12,089,897 (exact, re-derived independently)",
+    "\u00a7b4 coverage table 0.3/0.0/23.1/27.2/66.3/80.8/92.8/99.3% exact",
+    "D8 item-1 floor 0/42 dev and 1/7 held-out; broadened floor 38/42 and 6/7 \u2014 exact",
+    "classify('10', body, True) -> incorporated_by_reference vs ('10', span, True) -> extracted",
+    "item 9B span [326876, 331942)",
+    "intc-2025 1,727 chars; 23 dotted hits all above raw offset 3,251,505; one literal 'Item 1.' in 3,320,720 bytes",
+    "A2 span-char table (534/119/280/453/189, 172/398/274/372, 229/202/175, 86, 241)",
+    "every cost cell in \u00a7d reproduces at chars/4 and the stated prices",
+    "snapshot digests d6f7b81e... (57) and dd67647b... (7) reproduce",
+    "nothing under src/ or evals/*.py changed",
+    "held-out re-run 5/7 = 0.714 (report evals/report/20260826-145255-fast.json, reviewer's own run)",
+    "bench --check-docs 68 checked / 0 unmatched",
+    "ledger-line-refs raised min_refs floor genuinely fails on all three claimed mutations plus a fourth the reviewer added"
+  ],
+  "escalated_to_human": [
+    "R3 burn-or-amend choice \u2014 costs D11 its held-out exam either way; the loop repairs \u00a7g's ground but does not decide the burn"
+  ],
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-034 \u00a7c1's bolded evidentiary claim that all five cover-sentence filings report zero `missing` Part III items is false for `c-2025`, which reports items 10, 11, 12, 13 and 14 all `missing` \u2014 and the same false claim was copied into the axp-2008 case triage note.",
+      "evidence": "specs/decisions/ADR-034-pointer-and-fanout-rulings.md:193-196 lists `jpm-2024`, `wfc-2008`, `gs-2002`, `ba-2003` and `c-2025` then asserts **Every one of those filings reports zero `missing` Part III items.** Measured on `evals/heldout/fixtures/c-2025/filing.htm`: items 10/11/12/13/14 are all `status=missing, confidence=0.4, start=None`. The ADR contradicts itself \u2014 its own \u00a7a table at :64 says `c-2025` produces 21 `missing`. Replicated in evals/adversarial/axp-2008-combined-part-iii.json triage ('on filings that lose no Part III items') and weakened-but-carried in tasks/TODO.md:90 ('losing no items').",
+      "repro": "python3 -c \"import sys;sys.path.insert(0,'.');from src.sec10k.extract import extract_items;r=extract_items('evals/heldout/fixtures/c-2025/filing.htm');print([(i['item'],i['status']) for i in r['items'] if i['item'] in ('10','11','12','13','14')])\" -> all ('missing')",
+      "acceptance": "The sentence names the causal claim it actually means (no filing loses Part III items *to the multi-code string*) and states `c-2025`'s five missing Part III items explicitly, in the ADR, the axp-2008 triage note and the TODO Debt row."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The '23 of 23' figure that defines sub-class A1 is wrong: only 13 of `intc-2025`'s 23 item bodies are internal page pointers \u2014 5 are 'None'/'[Reserved]' and 4 are `(a)`, an EXTERNAL proxy-statement pointer the ADR's own \u00a7b3 rule rejects out of Class A \u2014 and the author's own instrument flags 13, not 23.",
+      "evidence": "ADR-034:98 'Every one of its 23 item bodies is a page reference into this same document'; :141 table row 'all 23'; :16 ruling '23 of 23 items'; specs/decisions/INDEX.md ADR-034 entry '23 of 23 items'; tasks/TODO.md:69 and :88. Measured spans: 1B/4/6/9/9C are 'None'/'[Reserved]'; 11/12/13/14 bodies are '(a)', resolved at normalized offset 516118+ by '(a) Incorporated by reference to the applicable section of the 2026 Proxy Statement.' \u2014 the external-pointer class \u00a7b3:148-152 rejects this shape for mrk-1995, gs-2002 item 10, ibm-1997 item 12, ge-1994 item 6 and xom-2021 item 15. d9_class_scan.py itself prints 13. The derived '15.6% of 147 held-out items' is therefore also wrong (13/147 = 8.8%).",
+      "repro": "python3 tasks/reviews/d9_class_scan.py 2>&1 | grep 'intc-2025 (held-out' -> \"13 items\"",
+      "acceptance": "A1's item count is adjudicated hit by hit the way \u00a7b3 adjudicates the dev filings, the 'None'/'[Reserved]'/proxy-`(a)` bodies are named as rejected or as a distinct sub-shape, and the corrected count propagates to \u00a7b2, the \u00a7b3 table, the ruling line, INDEX.md and both TODO.md rows. The 0.3%-coverage argument that actually carries the A1 ruling is unaffected and should be stated as the load-bearing figure."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair+escalate",
+      "claim": "The burn ruling is wrong on the rule as written: evals/heldout/README.md names D9 by name and says a declined fix taken with either outcome in hand burns the case, and ADR-034 \u00a7g's distinguishing ground (that the two precedent burns also authored a case AND moved the fixture) inverts trigger and remedy and is contradicted by both precedents it cites.",
+      "evidence": "evals/heldout/README.md:318-321 (D6 H4 entry): 'Both cases stay **untouched** \u2014 D8/D9/D11 must not read their labels while iterating, and the first fix, threshold or declined fix taken with either outcome in hand burns that case under the rule above.' ADR-034:401-415 (\u00a7g) and tasks/TODO.md:233 never quote or address that sentence. README:149-152 (gs-2002 burn) states the trigger as the decision not to fix taken with its outcome in hand, the move as the consequence; README:193-195 (axp-2008 burn) states the rule names BOTH as influence \u2014 each independently, not a required conjunction. ADR-034 read both outcomes (\u00a7a:53-67) and made them load-bearing (\u00a7e1 rests A1's subsumption on intc-2025's outcome; \u00a7c3 rests ADR-020's narrowing on c-2025's 21 missing).",
+      "repro": "sed -n '318,321p;149,152p;193,195p' evals/heldout/README.md vs ADR-034:401-415",
+      "acceptance": "Either the burn is applied per the README (both cases to evals/adversarial/, both fixtures to evals/fixtures/, replacements budgeted) \u2014 a HUMAN call, since it costs D11 its exam \u2014 or the README's rule and its D6 H4 sentence are amended in the same commit. What must not stand either way is \u00a7g's current ground, which attributes to the two precedents a conjunctive test they explicitly disclaim.",
+      "orchestrator_note": "Split: the \u00a7g ground is repaired now because it is wrong under BOTH outcomes. The burn-or-amend choice is escalated to the human and is NOT decided by the loop."
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The multi-code prevalence denominator is off by one: the scan hits 18 fixtures, not 17, so it is seventeen other fixtures, not sixteen.",
+      "evidence": "ADR-034:188 'returns hits on 17 fixtures' and :204 'sixteen other fixtures carry the string'; d9_class_scan.py prints 18 Class-B hit blocks. Copied into tasks/TODO.md:90 and the axp-2008 triage note.",
+      "repro": "python3 tasks/reviews/d9_class_scan.py 2>&1 | awk '/CLASS B regex/,0' | grep -c '^  [a-z]' -> 18",
+      "acceptance": "17/16 corrected to 18/17 in ADR-034 \u00a7c1, tasks/TODO.md:90 and the axp-2008 triage note; the 1-in-49 ruling is unaffected."
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "'Each is adjudicated below' and 'Every other hit is:' are overstated \u2014 2 of 15 Class-A hit fixtures and 7 of 18 Class-B hit fixtures are not mentioned anywhere in ADR-034, including one synthetic fixture carrying the exact co-occurrence \u00a7c1 says only axp-2008 has.",
+      "evidence": "ADR-034:129-130 and :188-200. grep -c for ibr-pointer-first/ibr-security-holders/cat-2023/wmt-2010/interior-span-dominates -> 0. interior-span-dominates carries 'Items 1, 2, 3, 5, 6, 7, 7A' at normalized offset 105383 with items 1A/1B/2/3 missing \u2014 the shape \u00a7c1 concludes exists only on axp-2008 (synthetic, so the real-filing ruling stands).",
+      "repro": "grep -c 'interior-span-dominates' specs/decisions/ADR-034-pointer-and-fanout-rulings.md -> 0",
+      "acceptance": "\u00a7b3 and \u00a7c1 either enumerate every hit the scan returns (synthetics included, one-line reason) or say plainly that they adjudicate the real-EDGAR hits and list the synthetic hits as out of scope."
+    },
+    {
+      "id": "R6",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The published gate figures are already stale at HEAD \u2014 the same defect the D6 row in this very file names and deliberately avoids.",
+      "evidence": "ADR-034:493-494 and tasks/TODO.md:69 both publish 'invariant 67/67, fast 130/130'. At HEAD (66743b1, after this PR's own merge of origin/main) the suites are 68/68 and 131/131, both 1.000. DONE.md's D6 entry says suite sizes are 'deliberately NOT quoted ... that is exactly the R8 defect'.",
+      "repro": "python3 -m evals.run --suite invariant | tail -1 -> 68/68; --suite fast -> 131/131",
+      "acceptance": "Either the figures are re-measured at the merge SHA, or dropped in favour of 'score 1.000, baseline untouched' as the D6 row does."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The sonnet-5 price row is presented under a date that cannot support the claim made about it: \u00a7d says the basis is the same date ADR-020 \u00a7d cited (2026-06-24) while also saying a 1M-context $2.00/MTok tier 'now exists' \u2014 but ADR-020 \u00a7d's table at that date lists only opus-5 and haiku-4-5.",
+      "evidence": "ADR-034:264-267 and :288-290; ADR-020:331-333 and :344. Every arithmetic cell in \u00a7d reproduces at chars/4 and the stated prices, so the numbers are fine; the dating of the sonnet-5 row is what is unsupported.",
+      "repro": "grep -n '2026-06-24' -A3 specs/decisions/ADR-020-fallback-not-justified.md | grep -i sonnet -> no match",
+      "acceptance": "\u00a7d either dates the sonnet-5 row to when it entered the cached table, or drops 'now exists' and says ADR-020 \u00a7d simply did not enumerate the mid tier already on the same table."
+    }
+  ]
+}

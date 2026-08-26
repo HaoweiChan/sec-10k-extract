@@ -1,0 +1,102 @@
+{
+  "pr": 56,
+  "round": 2,
+  "responder": "implementer, same worktree, branch task/D9",
+  "red_evidence": "tasks/reviews/pr56-r2-red.txt \u2014 pre-fix evidence for all six findings, each with a CLAIM-WIDE grep rather than only the cited line, plus a post-fix sweep at the bottom in which every residual hit is listed and adjudicated.",
+  "root_cause_addressed": {
+    "defect": "In rounds 1 and 2 I corrected the claim at the line the finding cited and left a restatement of the same claim alive elsewhere \u2014 R4's third stale copy, R8's settled burn answer 50 lines below the text withdrawing its ground, R10's arithmetic left unchanged when the enumeration it summed was rewritten.",
+    "method_this_round": "For each claim touched, grepped the claim across ADR-034, INDEX.md, ADR-020, tasks/TODO.md and both eval-case triage notes, and fixed every occurrence together. Then a post-fix sweep per finding.",
+    "what_the_sweep_caught_that_the_findings_did_not_name": [
+      "tasks/TODO.md:233 \u2014 my own 'ESCALATED, UNDECIDED' Debt row still contained the sentence 'The first draft ruled NOT burned on the ground that...', carrying the withdrawn negative answer verbatim inside the row that escalates it. R8 cites only ADR-034:563-564. Fixed.",
+      "evals/adversarial/axp-2008-combined-part-iii.json \u2014 the triage note restated the whole bucket list (5/5/3/1/3) and the ONE-member claim without the body-heading qualifier. R9 and R10 cite only ADR-034. Fixed.",
+      "tasks/TODO.md:237 \u2014 the round-1 LOW debt row restated both the '1+5+5+3+1+3 = 18' arithmetic (R10) and the 'co-occurrence exists only on axp-2008' claim (R9). Neither finding names this row. Fixed.",
+      "The first sweep pass returned 7 hits. I examined all 7 rather than tuning the pattern to read zero: 1 was the real TODO.md:233 restatement above, 2 are pre-existing unrelated text ('ruled NOT JUSTIFIED', the ADR-020 fallback ruling), 4 are corrections quoting the figure they correct. All are printed and adjudicated in the sweep."
+    ]
+  },
+  "summary": {
+    "fixed": 6,
+    "rejected": 0,
+    "debt_rows": 1,
+    "rulings_moved": 0
+  },
+  "findings": [
+    {
+      "id": "R8",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "accepted": "In full. This is the clearest instance of the root cause: \u00a7g's prose was rewritten in round 1 and \u00a7g's own New-Debt list, fifty lines below, was not.",
+      "fix": "\u00a7g New-Debt item 2 now states that the burn rule FIRES and the response is OPEN and escalated, points at the two options above it and at tasks/TODO.md's escalation Debt row, and says in terms that nothing in the document rules the burn does not fire. The superseded phrasing is DESCRIBED, not quoted, so a reader grepping the file for a settled answer finds none. Also removed from \u00a7g's opening sentence and from tasks/TODO.md:233 (not named by the finding).",
+      "verified": "grep -c 'ruled NO' / 'no-case-authored' / 'not burned' / 'NOT burned' over ADR-034 -> 0,0,0,0; over tasks/TODO.md -> only the pre-existing unrelated 'ruled NOT JUSTIFIED' at :32."
+    },
+    {
+      "id": "R9",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "accepted": "In full, and it is the substantive one: the round-1 R1 repair and the round-1 R5 repair contradicted each other inside one section, and I shipped both.",
+      "fix": "\u00a7c1 now states only the claim that carries the ruling \u2014 axp-2008 is the one filing in 49 whose multi-code string is a BODY HEADING OVER ITEM CONTENT \u2014 and adds a two-row table naming c-2025 and xom-2021 as real filings where the string and missing items co-occur WITHOUT a causal link, with the reason in each case (c-2025: no body headings anywhere, \u00a7b1's bare-code index; xom-2021: item 6 is absent from the document entirely and the string does not name it). Propagated to the axp-2008 triage note and tasks/TODO.md:237.",
+      "verified_before_publishing": "xom-2021: 'Selected Financial Data' occurs 0 times, item 6 is missing, and the string at 39731 does not name item 6 \u2014 run against the fixture AND cross-checked against ADR-020:142. Recorded in the red file."
+    },
+    {
+      "id": "R10",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "accepted": "In full.",
+      "fix": "\u00a7c1 says up front that the buckets are over the 18 hit FIXTURES, not the 39 individual hits, and that two filings hit in more than one bucket and are listed under each. gs-2002 gains a sixth bucket, 'a financial-statements index heading' (ITEMS 14(a)(1) AND 14(a)(2) at 135012); xom-2021 is added to the prose-cross-reference bucket for its 39731 hit alongside its numeric-artifact hits. Closing arithmetic now reads 20 bucket entries over 18 distinct fixtures, states the 39 explicitly, and no longer claims to account for every hit. Propagated to the triage note and tasks/TODO.md:237."
+    },
+    {
+      "id": "R11",
+      "severity": "LOW",
+      "disposition": "fixed in place + debt logged",
+      "accepted": "In full \u2014 an editing accident of my own \u00a7b3a insertion.",
+      "fix": "The bac-2006/spatz-2014 paragraph is moved back above the ### b3a heading, so 'those five filings' again follows \u00a7b3's Class-A table and the ledger's 'ADR-034 \u00a7b3' citations resolve. Verified structurally in the sweep: \u00a7b3 153 < paragraph 189 < \u00a7b3a 195."
+    },
+    {
+      "id": "R12",
+      "severity": "LOW",
+      "disposition": "fixed in place + debt logged",
+      "accepted": "In full, and it is the root cause again in miniature: R6 removed these figures from two places and left a third in the file it was editing.",
+      "fix": "The hooksPath Debt row now reads 'fast score 1.000 with the baseline untouched ... suite size deliberately not pinned here, the same R6/R12 defect this row would otherwise repeat'."
+    },
+    {
+      "id": "R13",
+      "severity": "LOW",
+      "disposition": "fixed in place + debt logged",
+      "accepted": "In full.",
+      "fix": "\u00a7g now cites PR #56 R3."
+    }
+  ],
+  "debt_row": "tasks/TODO.md \u2014 'Three LOW findings from PR #56 round 2, corrected in place; and the ROOT CAUSE both rounds share', which records R11/R12/R13 and states the recurring process defect and the claim-wide-sweep method adopted to close it.",
+  "gate": "invariant and fast both score 1.000, baseline untouched. hooksPath still broken repo-wide, so run by hand: bench --self-check ok, bench --check-docs 68 checked / 0 unmatched.",
+  "scope": "Presentation and internal consistency only. Sections e) and f) untouched; no ruling moved; nothing under src/ or evals/*.py.",
+  "rulings_i_still_believe_are_right": "All three, and they are untouched \u2014 ADR-034 \u00a7e and \u00a7f are byte-identical across both repair rounds. Nothing in either review bore on the rulings; every finding was a figure, a sweep sentence, a stale restatement or a citation. With the owner's decision folded in, D9 now has no open items.",
+  "owner_decision_folded_in": {
+    "date": "2026-08-26",
+    "decided_by": "owner, on the R3/R8 escalation",
+    "ruling": "AMEND THE RULE. Neither held-out case is burned.",
+    "amendment": "evals/heldout/README.md's Burn-rule section and the D6 H4 entry at :318-321 both amended and dated: a decision that cites a held-out outcome but authors no case, moves no fixture, changes no threshold and ships no code does NOT burn the case. Influence still burns; a ruling is not influence.",
+    "why_it_is_the_right_line": "The rule exists to stop labels being tuned against. A document shipping no code and no threshold tunes nothing \u2014 no artifact in the tree could have absorbed the labels.",
+    "cost_recorded": "The amendment weakens a rule this repo wrote deliberately: a future decision row may cite intc-2025's and c-2025's outcomes repeatedly without either ever being burned, which is a slow leak \u2014 the labels become common knowledge to whoever writes the milestones and the exam decays without any single ruling being wrong. Stated in both the README and \u00a7g.",
+    "falsifiers": [
+      "a decision that cited a held-out outcome turns out to have carried a threshold or code change after all",
+      "D11 passes intc-2025 or c-2025 by a route tracing to a decision document rather than the dev proxies cvx-2015/jpm-2024",
+      "the count of rulings leaning on an unburned held-out outcome grows past a handful \u2014 instrument: grep -rl 'intc-2025\\|c-2025' specs/decisions/"
+    ],
+    "consequence_for_D11": "Both cases stay in evals/heldout/, unseen by every code path. D11's exam survives intact \u2014 the point of the call.",
+    "R8_test_now_stricter": "The burn does not fire BECAUSE THE RULE WAS AMENDED, not because the withdrawn no-case-authored ground was sound. \u00a7g makes only the second claim; the first is nowhere in the file. grep -c 'ruled NO' / 'no-case-authored' / 'not burned' over ADR-034 all return 0.",
+    "ledger": "The 'ESCALATED TO THE OWNER, UNDECIDED' Debt row is REMOVED \u2014 a settled decision is not debt. \u00a7g carries it, and the D9 status cell and INDEX.md both record the ruling. \u00a7g's New-Debt item 2 is struck and points at the decision.",
+    "propagated_to": [
+      "evals/heldout/README.md (burn rule + D6 H4 entry)",
+      "ADR-034 \u00a7g",
+      "ADR-034 status header",
+      "specs/decisions/INDEX.md",
+      "tasks/TODO.md D9 status cell",
+      "tasks/TODO.md escalation Debt row (removed)"
+    ]
+  },
+  "hooksPath_correction": {
+    "what_D9_claimed": "core.hooksPath points at a deleted worktree so the pre-commit eval gate is silently disarmed REPO-WIDE.",
+    "what_was_actually_true": "The scope claim was wrong. .git/config's local value has always been the correct .githooks; three worktrees each carried a config.worktree override pointing at a deleted agent worktree, and `git config <key>` prints the effective value with no hint of which scope supplied it. Only those three worktrees were disarmed; every other checkout gated normally throughout. The orchestrator unset all three overrides and the hook now fires.",
+    "fix": "The Debt row is struck and closed, rewritten to state the real cause and scope, and the --no-verify explanation is dropped with the condition that forced it. The lesson kept in the row: `git config --show-origin --get-all core.hooksPath` would have shown this in one line and D9 did not run it before writing 'repo-wide' into the ledger.",
+    "this_commit": "goes through the pre-commit hook for real \u2014 no --no-verify."
+  }
+}

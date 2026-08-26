@@ -1,6 +1,9 @@
 # ADR-020 — T12: the LLM fallback stage is not justified, and what would change that
 
-Date: 2026-08-19. Status: accepted. Implements T12/A4. Rules on the candidate
+Date: 2026-08-19. Status: accepted, **§b and §c row 7 NARROWED 2026-08-26 by
+[ADR-034](ADR-034-pointer-and-fanout-rulings.md) (D9)** — see the dated notes
+in each. The ruling below (no unconditional LLM fallback ships; the escalation
+ladder governs) is unchanged. Implements T12/A4. Rules on the candidate
 design recorded in `docs/architecture/overview.md` §10. Closes the open
 question that `README.md`, `docs/evals/evaluation-strategy.md` metric 11 and
 `docs/analysis-report.md` §4 currently point at. Enumerates one new debt class
@@ -177,6 +180,16 @@ or not complete — the maximal hallucination surface in the corpus, bought by
 deleting the refusal guarantee that is the product's headline honesty property.
 **Not addressable.**
 
+**Narrowed 2026-08-26 (ADR-034 §c3, D9).** The count below is correct for the
+corpus at this ADR's SHA and is not rewritten. What no longer holds is the
+word *only*: the held-out `c-2025`, authored under D6 after this ADR, is a real
+EDGAR filing reporting **21 `missing` items** whose content a reader can point
+to, and no heading-shape change reaches it — it has no headings to reshape. The
+addressable surface is therefore larger than one filing, and `axp-2008`'s
+uniqueness is no longer available as an argument. The T12 ruling is unaffected:
+ADR-034 routes both to D11's triggered tier, not to the unconditional fallback
+this ADR rejected.
+
 **Net addressable surface: 4 of 768 items = 0.52%** — `axp-2008` items 10–13,
 one filing, one root cause. Every other `missing` item in either set is either
 absent from its document or asserted `missing` on purpose.
@@ -257,6 +270,19 @@ capability ADR-019 §e already enumerates as debt (`cvx-2015`). So the TOC route
 confirms which items are expected — which the era table already does, which is
 why `expected_item_missing` fires — and locates nothing. It changes neither the
 count nor the ruling.
+
+**Row 7's cost premise is NARROWED 2026-08-26 (ADR-034 §c2, D9), and the row is
+left standing rather than rewritten.** Row 7 rules the fan-out cheaper because
+"a regex produces the identical output" at $0. That rests on `classify`
+returning `extracted` on the four partition bodies — the claim the R19
+correction at the top of this file already falsified for item 10, and which
+ADR-034 re-ran rather than cited: heading-stripped, item 10 classifies
+`incorporated_by_reference`. ADR-034 adds a second obstacle measured the same
+way — `axp-2008` item 9B's span is `[326876, 331942)`, containing the whole
+Part III block, so a fan-out must also truncate a neighbouring `extracted` item
+or `no_overlap_ordered` fails. The deterministic fix is a four-part capability,
+not a regex, and D9 rules it **subsumed by D11** rather than promoted. The
+escalation ladder and this ADR's ruling stand.
 
 **Score: 1 of 7 fixed, and by the more expensive of two instruments that produce
 identical output. 5 of 7 never trigger. 1 of 7 is structurally impossible for

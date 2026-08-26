@@ -1,0 +1,86 @@
+{
+  "pr": 56,
+  "round": 2,
+  "result": "REQUEST_CHANGES",
+  "scope": "repair diff 2cd8141..f0b656f plus standing round-1 findings; no fresh full sweep",
+  "counts": {
+    "HIGH": 0,
+    "MEDIUM": 3,
+    "LOW": 3
+  },
+  "round1_findings_verified_closed": [
+    "R1",
+    "R2",
+    "R4",
+    "R6",
+    "R7"
+  ],
+  "round1_findings_still_open": [
+    "R3 (via R8) \u2014 the withdrawn ground survives verbatim elsewhere in \u00a7g",
+    "R5 (via R9, R10) \u2014 enumeration partly met, arithmetic and buckets wrong"
+  ],
+  "pressed_and_cleared": [
+    "Red evidence is genuine, not reconstructed: every ADR line number quoted in pr56-r1-red.txt resolves against 2cd8141 and no longer resolves against f0b656f; R1's repro re-run gives the identical tuple list",
+    "The asymmetric-rule concern the implementer self-flagged is CURED: \u00a7b3a applies \u00a7b3's external-document rejection to intc-2025's four proxy-(a) bodies, matching the verdict mrk-1995 5/7, gs-2002 10, ibm-1997 12, ge-1994 6, xom-2021 15 already get; 13/6/4 = 23; 13/147 = 8.8% checks; no remaining filing where the rule is applied one way only",
+    "\u00a7g's withdrawal rests on a CORRECT reading: heldout/README.md:147-153 names no new case for gs-2002 (it moved the existing case), README:191-194 names a new case for axp-2008 \u2014 so 'authored no case' is right for gs-2002 and no third pass is needed; the three README block quotes in \u00a7g match their sources verbatim",
+    "'1 in 49' is honest for the body-heading class: every non-axp real-filing hit was read in context and none is a body heading over item content (ba-2003 @402319 a footnote, gs-2002 @2868 a cover sentence, xom-2021 @39731 forward-looking prose, wmt-2010 @105417 the same prose the synthetic mutates)",
+    "Scope held and NO RULING MOVED: sections e) and f) byte-identical across the repair; the top ruling block changed only '23 of 23 items' -> '0.3% ...; 13 of 23 item bodies are internal page pointers'"
+  ],
+  "orchestrator_note": "Round 2 of 3 before the circuit breaker. The recurring defect across both rounds is the same: a correction is applied at the cited line while a restatement of the same claim survives elsewhere in the file (R4's third stale copy, now R8's surviving 'ruled NO' and R10's stale arithmetic). Round 3 is dispatched as a file-wide sweep per claim, not a line-by-line patch.",
+  "findings": [
+    {
+      "id": "R8",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "R3 is NOT closed: the ground \u00a7g explicitly withdraws is still asserted verbatim as a settled ruling 50 lines later in the same section, so ADR-034 simultaneously says the burn question is open-and-escalated and that it 'is ruled NO'.",
+      "evidence": "ADR-034:563-564 New-Debt item 2, byte-identical to pre-repair 2cd8141:436-437: '2. Whether this ADR trips the held-out burn rule (\u00a7g above) is ruled NO on the / no-case-authored, no-code ground. Recorded for challenge.' That ground is exactly what :500-514 withdraws as falsified, and it contradicts :540-546 ('the question is recorded, open, and owned by the human'), tasks/TODO.md:233 ('ESCALATED TO THE OWNER, UNDECIDED') and the header note at :9-10. R3's acceptance says 'What must not stand either way is \u00a7g's current ground'; it stands, unedited, inside \u00a7g.",
+      "repro": "grep -n 'no-case-authored' specs/decisions/ADR-034-pointer-and-fanout-rulings.md -> 564; git show 2cd8141:specs/decisions/ADR-034-pointer-and-fanout-rulings.md | grep -n 'no-case-authored' -> 436 (same sentence, unchanged by the repair)",
+      "acceptance": "\u00a7g's New-Debt item 2 states the escalated, undecided question with its two options (or points at tasks/TODO.md:233) and contains no 'ruled NO'; grep -c 'ruled NO' returns 0 and no sentence in the file asserts the burn rule does not fire."
+    },
+    {
+      "id": "R9",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The R5 repair and the R1 repair contradict each other inside \u00a7c1: the new text claims the string-plus-missing co-occurrence is found 'only on axp-2008' in the real corpus, ~20 lines after the same section states real-EDGAR c-2025 carries the multi-code string with items 10-14 all missing.",
+      "evidence": "ADR-034:274-279 'the string-plus-missing co-occurrence this section otherwise finds only on `axp-2008` ... but \"only `axp-2008`\" is true of the real corpus, not of the scan output'. Falsified twice by real filings: (a) ADR-034:253-258 (added by the R1 repair) says c-2025 items 10-14 are all missing at 0.40 while :247-250 puts c-2025's 'Items 10, 11, 12, 13 and 14' hit at offset 4054; (b) xom-2021 (dev, real EDGAR) has missing=['6'] and carries 'Items 1, 1A, 2, 7 and 7A' at normalized offset 39731.",
+      "repro": "python3 tasks/reviews/d9_class_scan.py 2>&1 | awk '/CLASS B regex/,0' | grep -A1 '^  xom-2021\\|^  c-2025'; sed -n '253,258p;272,279p' specs/decisions/ADR-034-pointer-and-fanout-rulings.md",
+      "acceptance": "\u00a7c1 states the co-occurrence claim in the form it can defend \u2014 axp-2008 is the only filing in 49 whose multi-code string is a BODY HEADING over item content \u2014 and names c-2025 and xom-2021 as real filings where string and missing items co-occur without a causal link, so no sentence in \u00a7c1 contradicts :253-258."
+    },
+    {
+      "id": "R10",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "R5's acceptance is only partly met: the new enumeration is per-fixture, its closing arithmetic claims to 'account for every hit' at 18 when the scan returns 39 hits, and it mis-buckets two real filings' hits.",
+      "evidence": "ADR-034:244-245 'The other seventeen, enumerated in full rather than swept (PR #56 R5)' and :281-282 'The five buckets account for every hit: 1 body heading + 5 cover sentences + 5 numeric artifacts + 3 prose cross-references + 1 TOC line + 3 synthetic = 18' \u2014 18 is the FIXTURE count; the scan emits 39 @offset hit lines. Mis-buckets: (a) :260-263 files xom-2021 solely under 'a numeric table artifact' citing 'Items 3,926 12,392 16', but its first hit @39731 is 'Items 1, 1A, 2, 7 and 7A' in forward-looking prose \u2014 bucket 3, not a numeric artifact; (b) :247-250 files gs-2002 solely under 'cover-page sentence', but its @135012 hit is 'ITEMS 14(a)(1) AND 14(a)(2)', a financial-statements index heading.",
+      "repro": "python3 tasks/reviews/d9_class_scan.py 2>&1 | awk '/CLASS B regex/,0' | grep -c '^      @' -> 39 (vs the published 18)",
+      "acceptance": "\u00a7c1 either says plainly it buckets the 18 hit FIXTURES (arithmetic reading '= 18 fixtures') with xom-2021 and gs-2002 listed under every bucket their hits fall in, or it enumerates all 39 hits. No sentence claims to account for 'every hit' with a sum of 18."
+    },
+    {
+      "id": "R11",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The R2 repair inserted \u00a7b3a between \u00a7b3's conclusion and \u00a7b3's trailing paragraph, orphaning that paragraph into a section it does not belong to and breaking the cross-reference the Debt row uses.",
+      "evidence": "ADR-034:209-213 ('Two of those five filings were never enumerated anywhere: bac-2006 items 3, 6 and 7A, and spatz-2014 item 8') is now inside \u00a7b3a (:178-213), whose subject is intc-2025's 23 bodies; 'those five filings' has no antecedent there \u2014 the antecedent is \u00a7b3:175-176. tasks/TODO.md:234 cites 'ADR-034 \u00a7b3' for exactly this content. At 2cd8141 the paragraph sat at :154-159 inside \u00a7b3.",
+      "repro": "awk 'NR>=178 && NR<=215' specs/decisions/ADR-034-pointer-and-fanout-rulings.md",
+      "acceptance": "The bac-2006/spatz-2014 paragraph sits in \u00a7b3 (before the ### b3a heading), or \u00a7b3a's copy names its own antecedent; tasks/TODO.md:234's \u00a7b3 citation resolves to the paragraph it means."
+    },
+    {
+      "id": "R12",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "A stale suite size of the exact kind R6 removed is still published in the same ledger the R6 repair edited.",
+      "evidence": "tasks/TODO.md:236 (hooksPath Debt row) \u2014 \"D9's own commit ran `sh .githooks/pre-commit` explicitly instead: fast 130/130 = 1.000, bench self-check ok\". The fast suite is 131 at f0b656f (orchestrator-verified). Out of R6's literal scope, but the same defect in the same file, presented as this milestone's gate evidence rather than a dated historical record.",
+      "repro": "grep -n 'fast 130/130' tasks/TODO.md -> 236; python3 -m evals.run --suite fast | tail -1 -> 131/131",
+      "acceptance": "The row reads 'fast score 1.000, baseline untouched, exit 0', or the figure is explicitly dated to the commit it was measured at."
+    },
+    {
+      "id": "R13",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "\u00a7g misattributes the falsification of its withdrawn ground to finding R1, which is the c-2025 finding, not R3.",
+      "evidence": "ADR-034:496 \u2014 'The first draft ruled \"not burned\" and gave a ground that PR #56 R1's reviewer falsified.' The ground was falsified by R3 (pr56-r1.json findings[2]); R1 is the c-2025 finding. Every other repair citation in the file uses the id in this exact form ('PR #56 R2', 'R4', 'R5', 'R7'), so 'R1' reads as a finding id.",
+      "repro": "sed -n '496p' specs/decisions/ADR-034-pointer-and-fanout-rulings.md",
+      "acceptance": "\u00a7g cites PR #56 R3 (or 'round 1's reviewer' unambiguously) for the withdrawn burn-rule ground."
+    }
+  ]
+}

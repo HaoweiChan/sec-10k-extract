@@ -1,0 +1,75 @@
+{
+  "pr": 56,
+  "round": 3,
+  "result": "REQUEST_CHANGES",
+  "circuit_breaker": "FIRED \u2014 three review rounds without approval",
+  "scope": "repair diff 4b88ad0..HEAD plus standing round-2 findings",
+  "counts": {
+    "HIGH": 1,
+    "MEDIUM": 3,
+    "LOW": 1
+  },
+  "round2_findings_verified_closed": [
+    "R8",
+    "R9",
+    "R11",
+    "R12",
+    "R13"
+  ],
+  "round2_findings_still_open": [
+    "R10 (via R15) \u2014 replacement arithmetic falsified by its own instrument"
+  ],
+  "verified": [
+    "Orchestrator correction b265f4a is right: ADR-034:583-585 names both claims and no ordinal-position reference survives in \u00a7g",
+    "NO RULING MOVED: \u00a7e and \u00a7f hash identically at 2cd8141, f0b656f, 4b88ad0 and HEAD (07934f2d8649 / f49138d78c57, 48 and 17 lines)",
+    "R8 sweep independently reproduced: no restatement survives outside the sentence that rejects it"
+  ],
+  "blocker": "R14 \u2014 the amended burn rule, as drafted, does not exempt the work it was written to exempt. D9 raised ledger-line-refs min_refs 9->11 and shipped tasks/reviews/d9_class_scan.py, whose BODY_MAX=700 was set against held-out intc-2025 body lengths. The owner's DECISION (amend, neither case burned) is not in question; its DRAFTING is.",
+  "findings": [
+    {
+      "id": "R14",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "D9 fails the exemption its own amended burn rule states, so \u00a7g's conclusion 'neither case is burned' does not follow from the amendment as recorded: D9 changed a threshold and shipped a committed code artifact whose knob was set with a held-out filing's measurements in hand.",
+      "evidence": "The amendment is a conjunction of four conditions \u2014 evals/heldout/README.md:28-29 and ADR-034:588-591: 'authors no case, moves no fixture, changes no threshold and ships no code'. D9 trips two. (a) THRESHOLD: evals/adversarial/ledger-line-refs.json min_refs 9 -> 11 in this PR; the case's own provenance says 'FLOOR RAISED 9 -> 11 on 2026-08-26 (D9, ADR-034)'. (b) CODE + THRESHOLD: tasks/reviews/d9_class_scan.py is a committed 133-line .py added by this PR; :41 reads BODY_MAX = 700 with the comment recording it was set against HELD-OUT intc-2025 body lengths, and :39 reads the heldout fixtures directly. That also falsifies \u00a7g:592-594's ground ('there is no artifact in the tree that could have absorbed the labels'). It equally trips the NARROWED D6 H4 sentence at README:351-353. ADR-034:609-611 lists as a falsifier 'a decision that cited a held-out outcome turning out to have carried a threshold or code change after all' \u2014 that falsifier fires on this ADR at the moment of writing.",
+      "repro": "git diff 6b37ffa..HEAD -- evals/adversarial/ledger-line-refs.json | grep -E '^[-+] *\"tasks'; sed -n '39,41p' tasks/reviews/d9_class_scan.py; sed -n '28,29p' evals/heldout/README.md",
+      "acceptance": "Either the amendment's clause distinguishes the thresholds/code it means (e.g. 'no extractor threshold and no src/ change') so D9 plainly falls inside it, or \u00a7g and the README adjudicate D9's own min_refs raise and d9_class_scan.py::BODY_MAX explicitly and say why they are not the influence the rule targets. Test: reading only README:26-57, a reader decides whether D9 is exempt and gets the same answer \u00a7g publishes."
+    },
+    {
+      "id": "R15",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "R10 is not closed \u2014 the replacement arithmetic asserts a new falsifiable claim its own instrument contradicts: at least four fixtures, not two, have hits in more than one bucket, so '20 bucket entries' is wrong.",
+      "evidence": "ADR-034:261-262 'Two filings hit in more than one bucket' and :316-319 '= 20 bucket entries over 18 distinct fixtures, because gs-2002 and xom-2021 each appear in two buckets'. Scan plus context: ba-2003 @56848 'items 3,135 4,355 1' is a numeric table artifact but ba-2003 is listed only in the cover/footnote bucket; gs-2002 @21527 is a prose cross-reference inside an item body, a THIRD bucket it is not listed in; jpm-2024 @197103 is in the executive-officers body, not a cover sentence; axp-2008 @334794 is the same financial-statements-index shape gs-2002 gets its own bucket for.",
+      "repro": "python3 tasks/reviews/d9_class_scan.py 2>&1 | awk '/CLASS B regex/,0' | grep -A3 '^  ba-2003\\|^  gs-2002\\|^  jpm-2024\\|^  axp-2008'",
+      "acceptance": "Either the bucket entries are recounted so the sum matches the fixtures listed under each bucket and the 'two filings' sentence names every multi-bucket fixture; or \u00a7c1 drops the entry-count arithmetic and states only the 18-fixture / 39-hit facts plus the one body-heading adjudication."
+    },
+    {
+      "id": "R16",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The repair broke every line citation \u00a7g makes into evals/heldout/README.md: the amendment inserted 33 lines above them, so all three refs point at unrelated paragraphs, and the one labelled 'verbatim' quotes a sentence that no longer exists anywhere in the file.",
+      "evidence": "ADR-034:546 cites README:193-195 (now the pgr-2023 prediction paragraph; text is at :226-228). ADR-034:550 cites README:149-152 (now 'Coverage that has MOVED to the dev side'; text at :182-185). ADR-034:557 says 'README:318-321, the D6 H4 entry, verbatim:' and block-quotes 'the first fix, threshold or declined fix' \u2014 README:318-321 is now a no_empty_success paragraph, and after the amendment the source at :351-353 reads 'the first fix or threshold', so the quoted string exists nowhere in the file and is not marked as pre-amendment text. ledger-line-refs only checks tasks/TODO.md, and \u00a7h already records that bench --check-docs does not read this ADR, so nothing on the gate catches it.",
+      "repro": "sed -n '149,152p;193,195p;318,321p' evals/heldout/README.md",
+      "acceptance": "The three \u00a7g refs resolve to the sentences they quote (:182-185, :226-228, :351-354), and the D6 H4 block quote is labelled as the entry AS IT READ BEFORE the 2026-08-26 amendment."
+    },
+    {
+      "id": "R17",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The amended README contradicts itself: the gs-2002 burn entry still states, present tense and undated, that a documented decision to decline a fix counts as influence and burns \u2014 the exact proposition the amendment retracts.",
+      "evidence": "README:183-184 'the burn rule names \"a threshold choice\" as burning, and a documented decision to decline a fix is at least as much influence.' Against README:28-30 ('a ruling is not influence') and README:355-359. ADR-034:550-554 leans on this same entry as the precedent that a decline burns 'alone', also unannotated. The D6 H4 entry was amended in place with a dated note; this entry, stating the same superseded proposition, was not \u2014 the FOURTH instance of the recurring 'corrected at the cited line, alive elsewhere' defect, this time in the file the amendment edited.",
+      "repro": "sed -n '183,184p;28,30p;355,359p' evals/heldout/README.md",
+      "acceptance": "README:180-186 carries a dated note that the amendment narrows the ground it states (and whether the gs-2002 burn still stands on another limb, e.g. ADR-013 having shipped code), so no sentence asserts a declined fix burns while :28-30 says a ruling does not."
+    },
+    {
+      "id": "R18",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "\u00a7g's headline asserts both that the burn rule fires and that neither case is burned, without the 'under the rule as written' qualifier its own body supplies 30 lines later.",
+      "evidence": "ADR-034:533-534 vs :565-566. Under the rule as amended it does not fire; under the rule as written it does. The bold headline is the sentence a skimming reader keeps.",
+      "repro": "sed -n '533,534p;565,566p' specs/decisions/ADR-034-pointer-and-fanout-rulings.md",
+      "acceptance": "The headline reads 'fires under the rule as it stood' or equivalent."
+    }
+  ]
+}

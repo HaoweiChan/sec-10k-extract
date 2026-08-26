@@ -23,6 +23,78 @@ it; influence does.** A burned case goes through `failure-triage`, moves to
 `evals/adversarial/`, and is replaced with a fresh filing at the next
 expansion. Budget 2 spare filings per milestone for that cycle.
 
+**Amendment, 2026-08-26 — owner decision, taken on the D9 escalation
+(PR #56 R3/R8; `specs/decisions/ADR-034-pointer-and-fanout-rulings.md` §g).**
+A **decision that cites a held-out outcome but authors no case, moves no
+fixture, changes no threshold and ships no code does NOT burn the case.**
+Influence still burns; a *ruling* is not influence.
+
+**D9's own two artifacts, adjudicated** (PR #56 R14). D9 did raise a threshold
+and did ship a `.py` file, so the clause above is applied to it in the open:
+
+1. **`evals/adversarial/ledger-line-refs.json` `min_refs` 9 → 11.** A
+   ledger-hygiene floor: how many `<file>:<line>` citations `tasks/TODO.md` must
+   carry before the check fails closed. Not an extraction threshold, reads no
+   filing, no relationship to any held-out label, fixture or outcome.
+   **Not the influence this rule targets.**
+2. **`tasks/reviews/d9_class_scan.py`, and its `BODY_MAX = 700`.** This one
+   needs an argument, not a dismissal — the file reads
+   `evals/heldout/fixtures` directly and its knob is a number someone chose.
+   *Why it reads held-out at all*: D9's ledger row required measuring both
+   classes' prevalence **including on the held-out set**; reading a fixture to
+   report a count about it is the assignment, not tuning against it.
+   *Why `BODY_MAX` is not fitted to held-out labels*: 700 sits in a plateau
+   whose **both edges are dev values** — nearest below `intc-2002` item 5 at
+   629, nearest above `ibm-1997` item 5 at 805 — so every bound in 630..805
+   gives an identical dev result and nothing held-out defines that interval.
+   One held-out span falls inside it, `mrk-1995` item 8 at 738, and that item is
+   an *external*-document pointer ("incorporated by reference to pages 38
+   through 49 … of the Company's 1995 Annual Report") which the class rule
+   rejects anyway, exactly as its siblings 5 and 7 already are. **Every figure
+   D9 published is therefore unchanged across the whole dev-determined
+   plateau**, and the constant was written once and never revised
+   (`git log -p -- tasks/reviews/d9_class_scan.py`).
+   **Not the influence this rule targets.**
+
+   *Stated honestly, the part that does not fully close*: the dev plateau runs
+   to 805 while the held-out set is unchanged only up to 738, so a different
+   in-plateau choice — 780, say — would have admitted `mrk-1995` item 8 as a
+   candidate. It would then have been rejected, changing no published number,
+   which is why the verdict holds; but "any in-plateau value is equivalent" is
+   true of D9's *conclusions*, not of the candidate list. A reader who wants the
+   stronger property should read the four bullets above as the claim and this
+   paragraph as its limit.
+
+*Why this is the right line.* The rule exists to stop labels being tuned
+against — the danger is an implementation shaped, however indirectly, by
+knowing what the held-out filings do. A ruling that shapes no extraction
+behaviour tunes nothing: reading an outcome and writing down "we are not
+building this" leaves the pipeline exactly as unable to pass the exam as it was
+before. (This paragraph previously argued that no artifact in the tree could
+have absorbed the labels. That was **false as written** — `d9_class_scan.py` is
+such an artifact — and it is withdrawn; the two artifacts are adjudicated in the
+numbered list above instead. PR #56 R14.)
+
+*What this now permits that it did not before, stated because it is a real
+loosening.* A future decision row may cite `intc-2025`'s and `c-2025`'s
+outcomes, and the next one may too, without either case ever being burned.
+Repeated over enough rulings that is a slow leak: the labels become common
+knowledge to whoever writes the milestones even though no code was touched,
+and the exam's value decays without any single decision being wrong. The
+owner took that risk knowingly, against the alternative of burning both cases
+and destroying D11's exam outright — D11's ledger row and `c-2025`'s own
+provenance each require it to pass those filings having never trained on them.
+
+*What would make this amendment wrong.* Any of: (a) a decision that cites a
+held-out outcome is later found to have carried a threshold or a code change
+after all — then it was influence and the exemption did not apply to it;
+(b) D11 ships and passes `intc-2025` or `c-2025` in a way that traces back to
+a decision document rather than to the dev proxies (`cvx-2015`, `jpm-2024`),
+which would show the leak is real and not theoretical; (c) the count of
+rulings citing an unburned held-out outcome grows past a handful — the
+amendment assumes this is rare, and it stops being safe when it stops being
+rare. Instrument for (c): `grep -rl 'intc-2025\|c-2025' specs/decisions/`.
+
 ## Authoring discipline
 
 Every case here was verified by an **independent tag-strip regex scan that
@@ -151,6 +223,18 @@ hand; the burn rule names "a threshold choice" as burning, and a documented
 decision to decline a fix is at least as much influence. Counting it in a
 held-out denominator would have overstated that denominator. Replaced by
 `pgr-2023`, which carries two predictions recorded before its first run.
+
+> **Narrowed 2026-08-26 by the Burn-rule amendment above (PR #56 R17).** The
+> clause "a documented decision to decline a fix is at least as much influence"
+> is **no longer the rule** — the amendment says a ruling that ships no case,
+> fixture, threshold or code does not burn. This entry is left standing as the
+> reasoning of its date rather than rewritten. **The `gs-2002` burn itself still
+> stands, on another limb**: ADR-013 did not merely decline a fix, it shipped
+> code and set thresholds — its ruling promotes a bare heading's title when it
+> clears `SIM_FLOOR` and escalates `doc_status` to `ambiguous` past a 25%
+> missing-item threshold. That is influence under the amended rule as squarely
+> as under the original, so the burn is unaffected and no replacement decision
+> is needed.
 
 **H2, 2026-08-17, 5/5** — the T8 milestone run, triaged in
 `docs/evals/audits/2026-08-17-h2-heldout.md`. Worth less than H1's 1/5: only
@@ -316,5 +400,14 @@ open discrepancy for D7/D8, not resolved here.
 Together they are the postmortem §8 asymmetry on one page: same sensor, same
 absence of a usable "the fast path is stuck" signal, 0.95 on one document and
 0.40 on the other. Both cases stay **untouched** — D8/D9/D11 must not read
-their labels while iterating, and the first fix, threshold or declined fix
-taken with either outcome in hand burns that case under the rule above.
+their labels while iterating, and the first fix or threshold taken with either
+outcome in hand burns that case under the rule above.
+
+**Amended 2026-08-26 by the same owner decision as the Burn-rule section.**
+This sentence originally also named "declined fix" as burning, and D9
+(`ADR-034`) is exactly that: a decision row that read both outcomes and ruled
+on them while shipping no code. Under the sentence as first written both cases
+were burned; the owner ruled to amend the rule rather than apply it, so
+**neither case is burned and both remain held out**. `intc-2025` and `c-2025`
+are still unseen by every code path, and D11's exam is intact. The clause is
+narrowed here rather than left to contradict the Burn-rule section above it.
