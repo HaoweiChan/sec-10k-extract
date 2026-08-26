@@ -251,8 +251,9 @@ then RE-OPENED AND SHIPPED AS A TRIGGERED TIER (D11, 2026-08-26,
 [ADR-036](../../specs/decisions/ADR-036-tiered-escalation.md)).** What ships is
 narrower than the candidate described below and is entered only on a measured
 signal: `deterministic → llm_localize (openai/gpt-5-mini, the unattributed
-text only) → llm_extract (anthropic/claude-opus-5, the whole document)`, via
-OpenRouter (ADR-036 §h1), behind
+text only) → llm_extract (anthropic/claude-opus-5, the document up to
+1,250,000 chars)`, via OpenRouter (ADR-036 §h1); both rungs' inputs are
+capped so one call's price is bounded on arbitrary input (§h2), behind
 `extract_items(path, escalate=True)`, entered only when `low_item_coverage`
 fires (0 of 28 real dev filings), with every returned offset re-derived by
 `escalate.verify` before use. Cache-by-content-hash, prompt-version keying and

@@ -204,3 +204,41 @@ full.
   **raises** on a slug it does not carry — which it did, loudly, the moment the
   rung constants still named the old model ids. A price that cannot go stale
   silently is worth more than a price that is convenient to read.
+
+## Round 3 (PR #58 round-2 repair, 2026-08-27) — two corrections and a rule
+
+- **Assumed:** the §d4 sweep figure was arithmetic, so recomputing it carefully
+  by hand would fix it.
+- **Eval said:** it was wrong again, a second consecutive round. The cost model
+  was never the problem — it reproduces every other published figure to the
+  digit. The **character counts** had been retyped into the ADR, and five of
+  twelve were wrong; `reac-2015` by 3.3×.
+- **Corrected:** `tasks/reviews/d11_sweep_cost.py` derives every §d figure from
+  the same census `d11_trigger_scan.py` produces, and its committed output is
+  pasted into the ADR. The rule worth keeping: **a number that carries an
+  argument must be derived by a committed script, not retyped.** §c1's figures
+  had a script from the start and were never wrong; §d's did not and were wrong
+  twice. That is the whole difference.
+
+- **Assumed:** locks that were verified to WORK were locks that were protected.
+- **Eval said:** setting `ESCALATION_ENABLED = True` and building the process
+  `Budget` with an infinite ceiling left invariant 76/76, fast 139/139 and both
+  CI self-checks green — on the code that guards a credential about to go onto
+  a public, unauthenticated host. This is the R3 defect, one round later, on
+  the money.
+- **Corrected:** an AST check (`escalation_locks`) that reads the *shape* of
+  the arming comparison and the `Budget` construction, proven both ways: the
+  reviewer's mutations now take the gate to 77/78, the real file returns clean,
+  and the mutation fixture returns exactly five. The generalisation: *verifying
+  a guard behaves correctly says nothing about whether the guard can be
+  removed*, and those are separate tests.
+
+- **Assumed:** rung 2 "sees the whole document" was a design statement.
+- **Eval said:** on the deployment the document is attacker-supplied and capped
+  only by a 25 MB upload limit, so one uncapped call at $5/MTok roughly doubled
+  the configured ceiling — a ceiling checked only against what has *already*
+  been spent.
+- **Corrected:** rung 2's input is capped at the largest committed dev filing
+  rounded up, so no published figure moves and one call's price is bounded on
+  arbitrary input; and §h2 states the effective ceiling as MAX_USD **plus one
+  call**, because that is what it has always been.

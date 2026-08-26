@@ -1,7 +1,8 @@
 {
   "catalogue": {
     "models_returned": 417,
-    "sha256_of_full_response": "4f3b4a028357e481ed6a16bfd8b4578874da7ff0218a86fad20711033e7de671"
+    "sha256_of_full_response": "4f3b4a028357e481ed6a16bfd8b4578874da7ff0218a86fad20711033e7de671",
+    "what_the_sha_pins": "A FETCH RECEIPT, not a reproducible check. The 417-model response it hashes is NOT committed, and OpenRouter's catalogue mutates, so a reader cannot re-fetch and reproduce this digest. It records that these two records were pruned from one specific response on one specific day. What a reader CAN verify is everything downstream: the two pricing values below, that llm.price() reads them from this file, and that an absent slug raises rather than falling back (PR #58 R16)."
   },
   "fetched_utc": "2026-08-27",
   "models": {
@@ -303,7 +304,7 @@
       }
     }
   },
-  "pruned_because": "the full response is 417 models and ~1.5 MB; only the two rungs this repo calls are kept, with their records verbatim. The sha256 above pins the full response the pruning came from.",
+  "pruned_because": "the full response is 417 models and ~1.5 MB; only the two rungs this repo calls are kept, with their records verbatim. See catalogue.what_the_sha_pins for what the digest above does and does not let a reader check.",
   "pruned_to": [
     "openai/gpt-5-mini",
     "anthropic/claude-opus-5"

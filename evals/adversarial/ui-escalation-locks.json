@@ -1,0 +1,13 @@
+{
+  "id": "ui-escalation-locks",
+  "task": "repo_hygiene",
+  "suites": ["invariant", "fast"],
+  "input": {"checks": ["escalation_locks"]},
+  "expect": {},
+  "triage": {
+    "class": "cost-regression",
+    "note": "PR #58 R9 — PR #58 R3's failure mode reappearing on the code that guards the credential. The two ADR-036 §h2 locks on the public deployment's money WORK (the reviewer exercised them live), but nothing in the gate stopped them being removed: setting `ESCALATION_ENABLED = True` and building the process `Budget` with an effectively infinite ceiling left invariant 76/76, fast 139/139 and BOTH module self-checks green. `app.py` imports fastapi, so it cannot carry a self-check the dependency-free CI unit job would run, and the only checks over it were two `WIRE_API` source-text pins that read neither the constant's definition nor the budget's construction. This reads the SHAPE with `ast`: the arming constant must be a comparison of `os.environ.get('SEC10K_ESCALATION_ENABLED')` against a constant and never a bare `True`; both ceilings must be read from their own env vars; the one `Budget(...)` must be constructed from those two NAMES rather than literals; and something must actually call `server_budget()`.",
+    "note_negative_space": "It does not prove FastAPI binds the routes, that the deployment sets either variable, or that the ceiling is the right SIZE — only that both locks are still wired, which is the property that silently disappeared under mutation. The size question is ADR-036 §h2's, and the effective ceiling is MAX_USD plus one capped call, stated there."
+  },
+  "provenance": "PR #58 round 2, created 2026-08-27 from the reviewer's own two mutations, before the check existed, per hard rule 2. Red-first record and the both-ways proof (mutation red, real file green) in tasks/reviews/pr58-r2-red.txt."
+}

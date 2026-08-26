@@ -207,9 +207,11 @@ them all); the example once showed `lenient_match`, which nothing emits.
   warning in `warnings` carries a code in `escalate.TRIGGER_CODES`
   (`low_item_coverage` today); `trigger.items` names the items D8 flagged as
   stubs or pointers and is a hint to the tiers, not an escalation on its own
-  (ADR-035 §c). Each `tiers` entry is `{tier, model, items, outcome, cost,
-  ...}` with `outcome` ∈ `resolved` | `rejected` | `unparseable` |
-  `unavailable`; a tier that answered from the response cache carries
+  (ADR-035 §c). Each `tiers` entry is `{tier, model, items, input_chars,
+  truncated, outcome, cost, ...}` with `outcome` ∈ `resolved` | `rejected` |
+  `unparseable` | `unavailable`; `input_chars`/`truncated` report what that
+  rung was actually shown, since both rungs' inputs are capped (ADR-036 §h2)
+  and a resolution over a clipped document must say so; a tier that answered from the response cache carries
   `cached: true` and a zero cost. `resolved` names exactly the items whose
   `method` is an escalation method, and `routing.cost` is exactly the sum of
   its own tiers' costs, which is exactly the envelope's top-level `cost` —

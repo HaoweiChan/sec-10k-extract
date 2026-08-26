@@ -6,11 +6,12 @@ rung at a time, and every rung is recorded in the envelope:
 
     rung 0  deterministic     always, $0
     rung 1  llm_localize      cheap model, bounded input: WHERE is the content
-    rung 2  llm_extract       big model, whole document: same question, more $
+    rung 2  llm_extract       big model, the document up to EXTRACT_WINDOW:
+                              same question, wider view, more $
 
 Both paid rungs answer the same question and differ only in cost class and
 input scope — rung 1 sees only the text no item claimed, rung 2 sees the whole
-document — which is what makes the ladder cost-proportionate rather than
+document up to a cap — which is what makes the ladder cost-proportionate rather than
 decorative. Neither rung's answer is trusted: `verify()` re-derives every
 offset against the deterministic output and the contract's own invariants, and
 a proposal that does not verify is DISCARDED, with the rejection published.
@@ -20,6 +21,8 @@ deterministic layers already agree is unattributed, contiguous and in order.
 Three things this module deliberately does NOT do, each a ruling in ADR-036:
 
 * it does not render anything (no vision rung — §e, two independent reasons);
+* it does not send an unbounded prompt: BOTH rungs' inputs are capped, so one
+  call's price is bounded even on an attacker-chosen upload (§h2, PR #58 R12);
 * it does not touch a document the trigger left quiet, so default-flag output
   is byte-identical (§f, and `evals/snapshot.py` is the harness that proves it);
 * it does not import `llm` at module scope. The import is inside `route()`, so
@@ -76,6 +79,29 @@ RUNGS = (
 )
 MAX_TOKENS = 2048        # the answer is a small JSON map of offsets, not prose
 LOCALIZE_WINDOW = 60_000  # chars of unattributed text rung 1 is allowed to see
+
+# Chars of the document rung 2 is allowed to see. PR #58 R12: rung 2 used to
+# send the WHOLE document, and on the deployed inspector the document is
+# attacker-supplied and bounded only by `MAX_BYTES` (25 MB) — so a ~4M-char
+# upload was a single ~$5.00 call, which `Budget` can take at spent=$4.99
+# because it checks what has already been spent (§d3). One uncapped call
+# therefore roughly doubled the configured deployment ceiling.
+#
+# 1,250,000 is not a round number pulled from nowhere: it is the largest
+# committed dev filing (jpm-2024, 1,213,284 chars) rounded up. So no document
+# in the corpus is truncated, every published figure in ADR-036 §d is
+# unchanged, and one call's price on ARBITRARY input is now bounded by the
+# same worst case the dev corpus already measured — an estimated $1.5638 at
+# rung 2's price. The effective deployment ceiling is MAX_USD plus that, and
+# ADR-036 §h2 states it that way rather than claiming MAX_USD alone.
+#
+# Truncation is never silent: the tier record publishes `input_chars` and
+# `truncated`, so a resolution over a clipped document says so.
+# ponytail: a char cap, not a token estimate. Ceiling: a document whose real
+# content sits past 1.25M chars cannot be resolved by rung 2 at all. Upgrade
+# path once the first live run has real token counts — cap on projected COST
+# instead, which also fixes §d3's overshoot in the same move.
+EXTRACT_WINDOW = 1_250_000
 
 SYSTEM = (
     "You locate SEC 10-K item content by character offset. You are given the "
@@ -299,12 +325,19 @@ def route(text, items, warnings, budget=None):
         if rung == "llm_localize":
             shown, offset = _window_text(text, free, LOCALIZE_WINDOW)
         else:
-            shown, offset = text, 0
+            # PR #58 R12: bounded like rung 1, so one call's price is bounded
+            # on arbitrary input. offset stays 0 — the window starts at the
+            # document's start, so every offset the rung returns still means
+            # what it says without translation.
+            shown, offset = text[:EXTRACT_WINDOW], 0
         prompt = (f"Item codes to locate: {', '.join(codes)}\n"
                   f"Text length: {len(shown)} characters.\n"
                   f"Offsets are relative to the start of the text below.\n\n"
                   f"<filing>\n{shown}\n</filing>")
         entry = {"tier": rung, "model": model, "items": list(codes),
+                 # what the rung was actually SHOWN, so a resolution over a
+                 # clipped document is visible rather than implied (R12)
+                 "input_chars": len(shown), "truncated": len(shown) < len(text),
                  "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0}}
         try:
             got = call(model, SYSTEM, prompt, MAX_TOKENS, budget)
@@ -382,6 +415,13 @@ def _demo():
                     {"code": "item_span_near_empty", "item": "7", "message": "m"}])
     assert loud["fired"] and loud["codes"] == ["low_item_coverage"]
     assert loud["items"] == ["1", "7"], loud
+
+    # --- PR #58 R12: both rungs' inputs are bounded, so one call's price is
+    #     bounded on arbitrary input. Asserted on the constant AND on the slice,
+    #     because a cap nothing slices by is a comment.
+    assert EXTRACT_WINDOW >= 1_213_284, "the cap must not truncate any dev filing"
+    big = "x" * (EXTRACT_WINDOW + 5000)
+    assert len(big[:EXTRACT_WINDOW]) == EXTRACT_WINDOW
 
     # --- unattributed windows
     assert _windows("x" * 100, [{"start": 10, "end": 20}, {"start": 60, "end": 70}]) \

@@ -202,7 +202,7 @@ def _body(model, system, user, max_tokens):
     file. The previous Anthropic client sent a reasoning-effort knob in a
     nested config object; OpenRouter's chat-completions surface has no
     equivalent, so it is DROPPED rather than mapped onto something that means
-    something else, and this body has exactly four keys.
+    something else, and this body has exactly three keys.
     """
     return {"model": model, "max_tokens": max_tokens,
             "messages": [{"role": "system", "content": system},

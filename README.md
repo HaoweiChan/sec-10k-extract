@@ -151,7 +151,7 @@ Full rationale in `specs/decisions/` (18 ADRs). The ones that shaped the system:
   (ADR-000/003, settled in ADR-020, **superseded 2026-08-26 by ADR-036, D11**).
   No model is in the DEFAULT extraction path, and cost on that path is
   structurally $0 — not "cheap", zero. ADR-036 adds an opt-in slow path
-  (`extract_items(path, escalate=True)`) that is entered only when D8's
+  (`extract_items(path, escalate=True)`, via OpenRouter) that is entered only when D8's
   document-level `low_item_coverage` fires — measured on **0 of 28 real dev
   filings**, so the default stays free — and whose answers are discarded unless
   a deterministic re-check accepts their offsets. With no API credential it

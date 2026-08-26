@@ -2611,6 +2611,130 @@ def check_routing_provenance(case):
     return bad
 
 
+
+def _assign(tree, name):
+    """The value node of the last module-level `name = ...`, or None."""
+    got = None
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(
+                isinstance(t, ast.Name) and t.id == name for t in node.targets):
+            got = node.value
+    return got
+
+
+def _env_get(node):
+    """`os.environ.get("X" ...)` -> "X", else None. Accepts a surrounding
+    `int(...)` / `float(...)` coercion, which is how the two numeric knobs
+    are written."""
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) \
+            and node.func.id in ("int", "float") and node.args:
+        node = node.args[0]
+    if isinstance(node, ast.BoolOp):          # `os.environ.get(...) or default`
+        node = node.values[0]
+    if not isinstance(node, ast.Call):
+        return None
+    f = node.func
+    if not (isinstance(f, ast.Attribute) and f.attr == "get"
+            and isinstance(f.value, ast.Attribute) and f.value.attr == "environ"):
+        return None
+    return node.args[0].value if node.args and isinstance(
+        node.args[0], ast.Constant) else None
+
+
+def check_escalation_locks(case):
+    """ADR-036 §h2. The two locks on the PUBLIC deployment's money, bound by a
+    runnable check instead of by prose.
+
+    PR #58 R9, and it is PR #58 R3 reappearing on the code that guards the
+    credential: the locks WORK — the reviewer exercised them — but nothing in
+    the gate stopped them being removed. Setting `ESCALATION_ENABLED = True`
+    and building the process `Budget` with an effectively infinite ceiling left
+    invariant 76/76, fast 139/139 and BOTH module self-checks green
+    (`tasks/reviews/pr58-r2-red.txt`). `app.py` imports fastapi so it cannot
+    carry a CI self-check the dependency-free unit job would run, and the only
+    checks over it were two `WIRE_API` source-text pins that read neither
+    the constant's definition nor the budget's construction.
+
+    So this reads the SHAPE, with `ast`, not the text:
+
+    1. `ESCALATION_ENABLED` is a comparison of `os.environ.get(<arming var>)`
+       against a constant — never a bare `True`, and never a truthiness check
+       on the credential. A key arriving must not mean "spend it".
+    2. `SEC10K_ESCALATION_MAX_CALLS` and `SEC10K_ESCALATION_MAX_USD` are each
+       read from the environment into their own module constant.
+    3. the process `Budget(...)` is constructed from those two NAMES, not from
+       literals — which is the mutation that made the ceiling infinite.
+    4. `_run` passes that budget into `extract_items`, so the ceiling is
+       actually reached (`WIRE_API` pins the call's text; this pins that the
+       budget argument is the process one and not a fresh instance).
+
+    What it does NOT prove: that fastapi binds the routes, that the deployment
+    sets either variable, or that the ceiling is the right size. It proves the
+    two locks are still WIRED, which is exactly the property that silently
+    disappeared under mutation.
+    """
+    inp = case.get("input", {})
+    src = (ROOT / inp.get("file", API_FILE)).read_text()
+    bad = []
+    try:
+        tree = ast.parse(src)
+    except SyntaxError as e:
+        return [f"{inp.get('file', API_FILE)} does not parse: {e}"]
+
+    arm_var = inp.get("arming_var", "SEC10K_ESCALATION_ENABLED")
+    armed = _assign(tree, "ESCALATION_ENABLED")
+    if armed is None:
+        bad.append("no module-level `ESCALATION_ENABLED = ...` — the arming "
+                   "lock is gone entirely")
+    elif not isinstance(armed, ast.Compare):
+        bad.append(f"`ESCALATION_ENABLED` is {ast.dump(armed)[:60]}, not a "
+                   f"comparison against {arm_var} — a constant here arms paid "
+                   "work on a public, unauthenticated deployment")
+    elif _env_get(armed.left) != arm_var:
+        bad.append(f"`ESCALATION_ENABLED` does not compare "
+                   f"os.environ.get({arm_var!r}); left is "
+                   f"{_env_get(armed.left)!r}")
+
+    knobs = {"SERVER_MAX_CALLS": inp.get("calls_var", "SEC10K_ESCALATION_MAX_CALLS"),
+             "SERVER_MAX_USD": inp.get("usd_var", "SEC10K_ESCALATION_MAX_USD")}
+    for const, envvar in knobs.items():
+        got = _assign(tree, const)
+        if got is None:
+            bad.append(f"no module-level `{const} = ...`")
+        elif _env_get(got) != envvar:
+            bad.append(f"`{const}` is not read from os.environ[{envvar!r}] "
+                       f"(got {_env_get(got)!r}) — a literal here is a ceiling "
+                       "the operator cannot lower")
+
+    budgets = [n for n in ast.walk(tree)
+               if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+               and n.func.id == "Budget"]
+    if len(budgets) != 1:
+        bad.append(f"expected exactly one `Budget(...)` construction in "
+                   f"{API_FILE}, found {len(budgets)} — a second one is a "
+                   "second ceiling, which is no ceiling")
+    for b in budgets:
+        kw = {k.arg: k.value for k in b.keywords}
+        if sorted(kw) != ["max_calls", "max_usd"]:
+            bad.append(f"`Budget(...)` keywords {sorted(kw)} != "
+                       "['max_calls', 'max_usd'] — a positional or missing "
+                       "ceiling falls back to llm.Budget's per-document default")
+        for arg, want in (("max_calls", "SERVER_MAX_CALLS"),
+                          ("max_usd", "SERVER_MAX_USD")):
+            v = kw.get(arg)
+            if not (isinstance(v, ast.Name) and v.id == want):
+                bad.append(f"`Budget({arg}=...)` is not the constant {want} — "
+                           "a literal here is the mutation that made the "
+                           "process ceiling infinite (PR #58 R9)")
+    if budgets and not any(
+            isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+            and n.func.id == "server_budget"
+            for n in ast.walk(tree)):
+        bad.append("nothing calls `server_budget()` — the process budget is "
+                   "constructed and never passed, so nothing is bounded")
+    return bad
+
+
 CHECKS = {
     "adr_headers": lambda case: check_adr_headers(),
     "adr_index": lambda case: check_index(),
@@ -2644,6 +2768,7 @@ CHECKS = {
     "deep_link": check_deep_link,
     "escalation_seam": check_escalation_seam,
     "routing_provenance": check_routing_provenance,
+    "escalation_locks": check_escalation_locks,
 }
 
 
