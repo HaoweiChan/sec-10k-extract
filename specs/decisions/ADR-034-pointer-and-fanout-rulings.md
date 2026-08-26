@@ -7,9 +7,22 @@ count corrected from 23 to **13 of 23** and the coverage figure named as the
 load-bearing one (R2); §c1 — a false bolded claim about `c-2025` replaced with the
 causal claim it meant (R1), the hit denominator corrected 17→18 (R4) and every hit
 enumerated including the synthetics (R5); §g — the burn-rule ground **withdrawn** as
-falsified and the burn-or-amend choice **escalated to the owner, undecided** (R3);
+falsified, the burn-or-amend choice escalated, and the owner's ruling of
+2026-08-26 to **amend the rule rather than apply it** recorded — neither
+held-out case is burned and D11's exam survives (R3/R8);
 §d — the sonnet-5 row re-dated (R7); Verification — suite sizes dropped (R6). None of
-the three rulings moved. Implements D9, the decision row
+the three rulings moved. **Repaired again 2026-08-26 under PR #56 round 2**
+(3 MEDIUM, 3 LOW; `tasks/reviews/pr56-r2.json`): §g's New-Debt list still
+carried a settled negative answer to the burn question, fifty lines below the
+text withdrawing its ground (R8); §c1 claimed a string-plus-missing
+co-occurrence unique to `axp-2008` that its own `c-2025` paragraph contradicted
+and `xom-2021` falsifies independently (R9); the bucket arithmetic summed
+fixtures while claiming to account for all 39 hits, and filed `gs-2002` and
+`xom-2021` under one bucket each when their hits fall in two (R10); plus R11-R13.
+The recurring defect across both rounds was correcting the cited line and leaving
+a restatement alive elsewhere, so round 3 swept each claim repo-wide —
+`tasks/reviews/pr56-r2-red.txt` carries the sweep. Again no ruling moved.
+Implements D9, the decision row
 "promote internal-pointer resolution and combined-heading fan-out, or decline
 with evidence" (`tasks/TODO.md`). Rules on two Debt rows —
 "Internal pointer to a paginated section" (ADR-019 §e) and "Combined
@@ -175,6 +188,12 @@ territory and a different class:** `mrk-1995` items 5 and 7 and `ge-1994` item
 So the class is **14 items across 5 real dev filings** — 1.9% of 744 dev items
 — plus **13 items on one held-out filing**, 8.8% of 147 held-out items.
 
+Two of those five filings were **never enumerated anywhere**: `bac-2006` items
+3, 6 and 7A, and `spatz-2014` item 8. The Debt row names `cvx-2015`, `ge-1994`
+and `jpm-2024`. The row understates its own class by two filings and, on
+`cvx-2015` and `jpm-2024`, by five items beyond the ones it lists. That is
+logged as Debt (§g), not fixed here.
+
 ### b3a) `intc-2025`, adjudicated on the same rule — 13 of 23, not 23
 
 The first draft asserted "all 23" and applied §b3's rejection rules to the dev
@@ -206,12 +225,6 @@ report `extracted` over pointer-only bodies naming an external document, which
 is the same shape as the `mrk-1995` items already logged as Debt in §g. That
 Debt row is widened to name them rather than a second row being opened.
 
-Two of those five filings were **never enumerated anywhere**: `bac-2006` items
-3, 6 and 7A, and `spatz-2014` item 8. The Debt row names `cvx-2015`, `ge-1994`
-and `jpm-2024`. The row understates its own class by two filings and, on
-`cvx-2015` and `jpm-2024`, by five items beyond the ones it lists. That is
-logged as Debt (§g), not fixed here.
-
 ### b4) What the recall actually is, per document
 
 "Items lost" is the wrong unit for this class, because the item is not lost —
@@ -241,8 +254,12 @@ table as a gap, not a gradient — A1 sits at 0.3%, A2's worst at 23.1%.
 The scan's multi-code detector returns hits on **18 fixtures** (PR #56 R4: the
 first draft said 17 and, downstream, "sixteen other"). Adjudicated, **one is a
 body heading over item content**: `axp-2008` at normalized offset 328679,
-`ITEMS 10, 11, 12 and 13`, the heading ADR-020 enumerated. The other seventeen,
-enumerated in full rather than swept (PR #56 R5):
+`ITEMS 10, 11, 12 and 13`, the heading ADR-020 enumerated. The other seventeen
+**fixtures**, enumerated in full rather than swept (PR #56 R5). **The buckets
+below are over the 18 hit FIXTURES, not over the 39 individual hits the scan
+emits** (PR #56 R10 — the first draft's closing sum said it accounted for
+"every hit" while adding up fixtures). Two filings hit in more than one bucket
+and are listed under each:
 
 - **a cover-page Documents-Incorporated-by-Reference sentence** — `jpm-2024`,
   `wfc-2008`, `gs-2002`, `ba-2003` and `c-2025` all carry
@@ -257,29 +274,51 @@ enumerated in full rather than swept (PR #56 R5):
   bare-code index of §b1 — and a fan-out over its cover sentence reaches none
   of them, as the paragraph below spells out. On the other four the string is
   boilerplate and no Part III item is missing.
+- **a financial-statements index heading** — `gs-2002` again, at offset 135012:
+  `ITEMS 14(a)(1) AND 14(a)(2)`, heading the exhibit/financial-statement index.
+  It names item 14 twice in sub-part form rather than several distinct codes, so
+  it is not the `axp-2008` shape and `gs-2002` loses no item to it.
 - **a numeric table artifact** — `Items 3,926 12,392 16` in `xom-2021`,
   `items 917 965` in `msft-2013`, `Items 2025 2024` in `aapl-2025`,
   `items. 14` in `cat-2023`, `items 119 80` in `ge-1994`. Digits from adjacent
   columns, not item codes.
 - **a prose cross-reference inside an item body** — `intc-2002`
   (`items 5 and 6`), `textron-2001` (`Items 5 and 7`), `wmt-2010`
-  (`Items 1, 2, 3, 5, 6, 7, 7A`). A sentence referring to sibling items, not a
-  heading introducing them; none of these filings has a missing item.
+  (`Items 1, 2, 3, 5, 6, 7, 7A`), and `xom-2021` again at offset 39731
+  (`Items 1, 1A, 2, 7 and 7A`, inside forward-looking-statement prose). A
+  sentence referring to sibling items, not a heading introducing them.
 - **a table-of-contents line** — `nvda-2024`.
 - **synthetic fixtures, out of scope for a real-filing ruling** —
   `heading-unnumbered` (a TOC line in an `nvda-2024` mutation),
   `ibr-pointer-first` (a `ge-1994` mutation, inherits its table artifact), and
-  `interior-span-dominates`. `interior-span-dominates`
-  is worth naming rather than hiding: it carries `Items 1, 2, 3, 5, 6, 7, 7A`
-  at offset 105383 **with items 1A/1B/2/3 missing** — the string-plus-missing
-  co-occurrence this section otherwise finds only on `axp-2008`. It is a
-  hand-built fixture for ADR-030's dominance rule, so it is not evidence about
-  real filers and the ruling stands; but "only `axp-2008`" is true of the real
-  corpus, not of the scan output, and the first draft did not make that
-  distinction.
+  `interior-span-dominates`, which carries `Items 1, 2, 3, 5, 6, 7, 7A` at
+  offset 105383 **with items 1A/1B/2/3 missing**. It is a hand-built fixture for
+  ADR-030's dominance rule, so it is not evidence about real filers.
 
-The five buckets account for every hit: 1 body heading + 5 cover sentences + 5
-numeric artifacts + 3 prose cross-references + 1 TOC line + 3 synthetic = 18.
+**The claim this section defends, stated in the only form it can bear.**
+`axp-2008` is **the only filing in 49 whose multi-code string is a body heading
+over item content** — that is the class, and it is what the 1-in-49 count and
+the ruling rest on. It is **not** true that `axp-2008` is the only filing where
+a multi-code string and missing items co-occur; **two real filings falsify
+that** (PR #56 R9):
+
+| filing | the string | items missing | causal link? |
+|---|---|---|---|
+| `c-2025` (held-out, real) | `Items 10, 11, 12, 13 and 14` on the cover, offset 4054 | 10, 11, 12, 13, 14 — and 16 more | **No.** They are missing because the filing writes no body item headings anywhere (§b1's bare-code index). The cover sentence is the boilerplate every proxy-incorporating filer writes |
+| `xom-2021` (dev, real) | `Items 1, 1A, 2, 7 and 7A` in forward-looking prose, offset 39731 | 6 | **No.** Item 6 is not in the document at all — ADR-020 §b measured `Selected Financial Data` at zero occurrences. The string does not name item 6 |
+
+Co-occurrence is not the class; a **body heading** that names several codes and
+takes their content with it is. The first draft asserted the weaker
+co-occurrence claim, and it was already contradicted twenty lines above by this
+section's own `c-2025` paragraph — a self-contradiction introduced by the
+round-1 R1 repair and caught by round 2.
+
+Bucket arithmetic, over **fixtures**: 1 body heading + 5 cover sentences +
+1 index heading + 5 numeric artifacts + 4 prose cross-references + 1 TOC line +
+3 synthetic = 20 bucket entries over **18 distinct fixtures**, because
+`gs-2002` and `xom-2021` each appear in two buckets. The scan emits **39**
+individual hits across those 18 fixtures; this section adjudicates them by
+fixture and by shape, not one offset at a time.
 
 Recall at stake: **4 items, 1 real filing, 0.45% of 891** (ADR-020's 4 of 768 =
 0.52%, re-derived on the grown corpus; the ruling does not turn on the third
@@ -491,9 +530,10 @@ foreign; the fan-out being cheap to write, which §c2 shows it is not.
 
 ## g) Consequences
 
-**The held-out burn rule fires on this ADR, the choice of what to do about it
-is the owner's, and this document does NOT decide it.** The first draft ruled
-"not burned" and gave a ground that PR #56 R1's reviewer falsified. That ground
+**The held-out burn rule fires on this ADR; the owner ruled to amend the rule
+rather than apply it, so neither case is burned.** The first draft answered
+that question in the negative and gave a ground that PR #56 **R3** falsified —
+that answer is withdrawn, and no part of this document now carries it. The ground
 is withdrawn here rather than patched, and the withdrawal is stated before the
 question, because the wrong reason is the more instructive half.
 
@@ -525,22 +565,53 @@ load-bearing: §e1 rests A1's subsumption on `intc-2025`'s outcome, and §c3
 rests ADR-020's narrowing on `c-2025`'s 21 `missing` items. Under the rule as
 written, both cases are burned.
 
-**What that costs, which is why the choice is escalated and not taken here.**
-Applying the burn means moving `evals/heldout/{c,intc}-2025-heldout.json` to
+**What that cost, and why the choice was not the loop's to take.** Applying the
+burn means moving `evals/heldout/{c,intc}-2025-heldout.json` to
 `evals/adversarial/` and both fixtures to `evals/fixtures/`, and budgeting two
-replacement filings. That would delete the exam D11's own ledger row and
-`c-2025`'s provenance each demand it sit — "D11 must pass this filing WITHOUT
-ever having trained on it". The alternative is amending the README's rule and
-its D6 H4 sentence. Both are decisions about the eval set's integrity, they
-trade off against each other, and neither is a decision-row implementer's or a
-review loop's to make.
+replacement filings. That deletes the exam D11's own ledger row and `c-2025`'s
+provenance each demand it sit — "D11 must pass this filing WITHOUT ever having
+trained on it". The alternative was amending the README's rule and its D6 H4
+sentence. Both are decisions about the eval set's own integrity, they trade off
+against each other, and neither was a decision-row implementer's or a review
+loop's to make. The question was escalated.
 
-**Ruling: the question is recorded, open, and owned by the human.** The two
-options are (a) apply the burn as the README states it, with replacements
-budgeted, or (b) amend the README rule and its D6 H4 sentence in the same
-commit that relies on these outcomes. Pending that call, both cases stay where
-they are — which is the status quo, not a ruling that the rule does not apply.
-It is logged as a Debt row carrying both options and this section's number.
+**OWNER DECISION, 2026-08-26: amend the rule. Neither case is burned.** This is
+recorded as a decision taken by the owner on the escalation, not as a ground
+this document reasoned its way to — the ground it originally reasoned to was
+withdrawn above as falsified, and nothing here revives it. The burn does not
+fire on this ADR **because the rule was changed**, not because the original
+no-case-authored argument was sound. Those are different claims and this
+document makes only the second.
+
+The amendment lands in `evals/heldout/README.md`'s Burn-rule section and in the
+D6 H4 entry quoted above, both dated and both pointing here. Its substance: a
+decision that cites a held-out outcome but **authors no case, moves no fixture,
+changes no threshold and ships no code** does not burn the case. Influence still
+burns; a ruling is not influence. The reasoning the owner accepted is that the
+rule exists to stop labels being *tuned against*, and a document that ships no
+code and no threshold tunes nothing — there is no artifact in the tree that
+could have absorbed the labels.
+
+**What it costs, stated because the amendment weakens a rule this repo wrote
+deliberately.** It now permits a future decision row to cite `intc-2025`'s and
+`c-2025`'s outcomes, and the next one to do it again, without either case ever
+being burned. Repeated often enough that is a slow leak: the labels become
+common knowledge to whoever writes the milestones even though no code was
+touched, and the exam decays without any single ruling being wrong. The owner
+took that risk against the alternative of destroying D11's exam outright.
+
+**Consequence for D11, which is the point of the call.** `intc-2025` and
+`c-2025` stay in `evals/heldout/`, unseen by every code path. D11's held-out
+exam survives intact and its ledger row's success criterion — pass both filings
+having never trained on them — remains satisfiable.
+
+**What would make the amendment wrong** (also recorded in the README): a
+decision that cited a held-out outcome turning out to have carried a threshold
+or code change after all; D11 passing either filing by a route that traces to a
+decision document rather than to the dev proxies `cvx-2015` and `jpm-2024`; or
+the number of rulings leaning on an unburned held-out outcome growing past a
+handful — the amendment assumes that is rare and stops being safe when it is
+not. Instrument for the last: `grep -rl 'intc-2025\|c-2025' specs/decisions/`.
 
 **Two Debt rows are updated, and neither is closed.** The internal-pointer row
 gains the A1/A2 split, the two filings it never named, and a pointer to this
@@ -560,8 +631,16 @@ that existed at their SHA and remain valid for it.
    `bac-2006` items 3/6/7A and `spatz-2014` item 8 are unenumerated instances,
    and `cvx-2015` items 2/7A and `jpm-2024` items 1C/7A are unnamed members of
    named filings.
-2. Whether this ADR trips the held-out burn rule (§g above) is ruled NO on the
-   no-case-authored, no-code ground. Recorded for challenge.
+2. ~~The held-out burn rule question~~ — **CLOSED 2026-08-26 by owner decision**,
+   recorded above in this section and in `evals/heldout/README.md`. The rule was
+   amended, so neither held-out case is burned; this is not debt and is not
+   carried as a ledger row. It is listed here only so the numbering of items 1
+   and 3 is stable across revisions. (Through PR #56 R8 this list instead
+   carried a settled negative answer resting on the ground this section
+   withdraws as falsified — it survived the round-1 repair unedited, because
+   that repair was applied to §g's prose and not to §g's own list fifty lines
+   below it. The superseded phrasing is described rather than quoted, so a
+   reader grepping this file for the withdrawn ground finds nothing.)
 3. `mrk-1995` items 5 and 7 **and `intc-2025` items 11, 12, 13 and 14** report
    `extracted` over bodies that are pure external-document pointers — the
    Annual Report in the first case, the 2026 Proxy Statement in the second
