@@ -49,7 +49,9 @@ first run, so it cannot be retrofitted afterwards.
 | `cost-2022/filing.htm` | sec.gov/Archives/edgar/data/909832/000090983222000021/cost-20220828.htm | 0000909832-22-000021 | 2022-10-05 | 2022-08-28 | iXBRL, retail, **August** FY end; separates every item code from its title with an **em dash**, a heading shape no dev fixture contains | 1,861,894 |
 | `mrk-1995/filing.txt` | sec.gov/Archives/edgar/data/64978/0000950130-96-000896.txt | 0000950130-96-000896 | 1996-03-20 | 1995-12-31 | pre-2001 txt, **pharmaceutical** (the sector jnj-2016 took with it when H1 burned it); form 10-K405; earliest filing in either set that predates Item 7A, so the 14-code taxonomy is exercised by a real document; **no table of contents at all** | 322,618 |
 | ~~`axp-2008/filing.htm`~~ | sec.gov/Archives/edgar/data/4962/000119312509041008/d10k.htm | 0001193125-09-041008 | 2009-02-27 | 2008-12-31 | **BURNED AND MOVED 2026-08-19 (T12, ADR-020)** — now `evals/fixtures/axp-2008/filing.htm`, case now `evals/adversarial/axp-2008-combined-heading-burned.json`. legacy HTML, **crisis-era financial**. It DOES have a table of contents — raw bytes carry `<A NAME="toc"></A>TABLE OF CONTENTS` at offset 13689, and the contents page lists Part III's four items individually — but the pipeline's `toc_manifest` comes back **empty** on it, because those entries are bare `10.` / `11.` / `12.` / `13.` with no `Item` prefix and so generate no heading candidates. *(Corrected 2026-08-19, repair round 2: this row and the original case provenance both claimed 'no table of contents', and the stratum rationale — a filing that gives the TOC machinery nothing to work with — was built on it. The machinery does come back empty; the stated reason was wrong.)* The original row here also read "the strings 'Item 10' through 'Item 13' occur **zero** times: Part III is addressed without its item headings" — the first clause is true of the SINGULAR forms and the second does not follow from it. There is one combined heading, at raw offset 1225493: `<B>ITEMS&nbsp;10,&nbsp;11,&nbsp;12&nbsp;and&nbsp;13.</B>` plus the four-item title. See the burn note below. Replaced `wfc-2008`, moved to the dev set before its first run | 1,296,375 |
-| `spg-2019/filing.htm` | sec.gov/Archives/edgar/data/1063761/000155837020001135/spg-20191231x10k.htm | 0001558370-20-001135 | 2020-02-21 | 2019-12-31 | iXBRL, **REIT** — Item 2 Properties runs ~101K chars of mall-by-mall tables, an order of magnitude past any other Item 2; the FY2017–FY2020 window; the first filing in either set with a **present and substantive Item 16**; 9.8 MB, second-largest anywhere here | 9,812,403 |
+| `spg-2019/filing.htm` | sec.gov/Archives/edgar/data/1063761/000155837020001135/spg-20191231x10k.htm | 0001558370-20-001135 | 2020-02-21 | 2019-12-31 | iXBRL, **REIT** — Item 2 Properties runs ~101K chars of mall-by-mall tables, an order of magnitude past any other Item 2; the FY2017–FY2020 window; the first filing in either set with a **present and substantive Item 16**; 9.8 MB — third-largest committed filing anywhere in the repo since D6 added `c-2025` (16.15 MB); `jpm-2024` (12.85 MB, dev set) is second. It was second-largest when this row was written; the clause was corrected under PR #52 R3 | 9,812,403 |
+| `intc-2025/filing.htm` | sec.gov/Archives/edgar/data/50863/000005086326000011/intc-20251227.htm | 0000050863-26-000011 | 2026-01-23 | 2025-12-27 | iXBRL, **post-2019 Intel reorg layout** — narrative organized by Intel's own section names and mapped to SEC item codes ONLY by a trailing `Form 10-K Cross-Reference Index`. All 23 item codes occur **exactly once each**, all of them index rows in the last 0.63% of the document; there is no body item heading anywhere. Added by **D6** as one of the two 2026-08-24 demo-failing filings; the maximal form of the ADR-015 stub-collapse trap, a layout class no fixture covers (`intc-2002` is pre-reorg) | 3,320,720 |
+| `c-2025/filing.htm` | sec.gov/Archives/edgar/data/831001/000083100126000011/c-20251231.htm | 0000831001-26-000011 | 2026-02-20 | 2025-12-31 | iXBRL, **money-center bank** — the postmortem's #1 known-difficult class, and Citigroup appeared in no set anywhere. Contains **zero** `Item <digit>` strings naming a 10-K item: the whole form mapping is a `FORM 10-K CROSS-REFERENCE INDEX` of BARE codes (`1.`, `1A.`, …), the `axp-2008` shape applied to every item rather than four. Added by **D6** as the second demo-failing filing. 16.1 MB, the largest file in either set | 16,150,764 |
 
 Re-fetch pattern, same as `evals/fixtures/README.md`:
 
@@ -92,9 +94,22 @@ normalizer.
 
 ## Disjointness from the dev set
 
-No filer appears in both sets. Sector coverage held here that `evals/fixtures/`
+**One filer now appears in both sets, deliberately: Intel.** `evals/fixtures/intc-2002/`
+is the 2001–2019 legacy-HTML filing whose trailing echo index produced ADR-015;
+`intc-2025` here is the post-2019 reorg layout, which shares the filer and
+nothing else — different format era, different item taxonomy, different
+document structure, and the 2002 filing has real body item headings while the
+2025 one has none at all. The owner's D6 placement call (postmortem §7) is that
+the two demo-failing filings are the exam the D11 slow path must pass, and no
+substitute filer files this layout. Recording it rather than asserting the old
+blanket claim: filer-level leakage from `intc-2002` is possible in principle
+and is the one contamination channel this set does not close. Citigroup appears
+nowhere in the dev set.
+
+Sector coverage held here that `evals/fixtures/`
 does not have at all: fire/marine/casualty insurance, computer-communications
-equipment, retail warehouse, pharmaceutical, real-estate investment trust.
+equipment, retail warehouse, pharmaceutical, real-estate investment trust,
+money-center banking.
 Fiscal-year ends held here: July (52/53-week) and August — every dev fixture
 ends in December, June, May, January or September.
 
@@ -203,3 +218,103 @@ crisis-era stratum rides T14's expansion.
 
 Next refresh should retire `csco-2016` and `cost-2022`, now run three times each,
 and replace `axp-2008`.
+
+## D6 expansion, 2026-08-26 — the hard set
+
+Two filings added: `intc-2025` and `c-2025`, the two 10-Ks that failed live at
+the 2026-08-24 demo (`docs/evals/audits/2026-08-25-demo-intel-citi-postmortem.md`).
+The set is now **7 cases**. These two are not a refresh and not a stratum fill;
+they are an **exam**, placed here by the owner's call in postmortem §7 precisely
+because they are the filings the D11 slow path exists to complete and therefore
+the filings it must never train on. Development iterates on dev-side proxies
+(`cvx-2015`, `jpm-2024` for the pointer class; a synthetic cross-reference-index
+fixture if D11 needs one, added red-first).
+
+**Both are expected to fail the baseline run. That is the recorded outcome of
+D6, not a defect to fix in it** — the fixes are D8 (item-level escalation), D9
+(the decision row) and D11 (tiered escalation).
+
+Each case carries a prediction frozen into its provenance before the first run.
+Between them they should exercise **both faces** of the D8 sensor problem
+(postmortem §8): `intc-2025` is the high-confidence face (23 index rows are the
+only heading candidates in the file, they match canonical titles, so spans
+collapse onto them at 0.95) and `c-2025` is the low-confidence face (no
+`Item <digit>` string exists in the file at all, so nothing matches and every
+item lands `missing` at 0.40). Where my structural reading disagrees with what
+the demo reported — it does, on Citigroup's 0.95 — the disagreement is written
+into the case rather than resolved in my favour.
+
+Both cases were authored from an independent tag-strip regex scan importing
+nothing from `src/`, with **every character-level claim re-read from the raw
+bytes**. That rule paid for itself immediately: `c-2025`'s cover renders as
+`December 31 , 2025` in the scan — the `pgr-2023` floating comma, the second of
+the six failures recorded above this section (the H4 write-up below became the
+seventh; the running count is stated once, at the H4 entry, and not repeated
+here) — and the raw bytes show it is a tag
+boundary (`December&#160;31</ix:nonNumeric>, 2025`). The claim was withdrawn
+before it was made rather than corrected after a run.
+
+**H4, 2026-08-26, 5/7** — the D6 baseline, `evals/report/20260826-005839-fast.json`,
+git SHA `9b2ace08` = the labels-only commit, so run-after-labels is provable from
+history. The two new cases failed and the five incumbents passed. **No fix, no
+label correction, and no triage follows in D6** — the failures are the
+deliverable. For the seventh time the reader should ask whether the instrument
+or the pipeline is at fault, and **the seventh time the answer is the
+instrument** — not in the labels, which held, but in this very write-up, which
+first reported `c-2025` as 22 items `missing` and named one deviation from its
+frozen prediction when the committed report shows 21 `missing`, two `omitted`,
+and TWO deviations. See the correction at the `c-2025` paragraph below; it is
+the entry that takes the seventh slot in this file's tally.
+
+What IS true, and is the reason the run is still worth what it cost, is
+narrower than the sentence that used to stand here: **the extractor behaved as
+both cases predicted it would** — the stub collapse at 0.95 on `intc-2025` and
+the total non-resolution at 0.40 on `c-2025`, each frozen into its provenance
+before the run. That is the first time a prediction about the pipeline has held
+on this set. It is not the same claim as "both frozen predictions came true":
+`c-2025`'s prediction also said all 23 items would be `missing` at 0.40, and two
+of them were not.
+
+`intc-2025` — **branch (a), the predicted stub collapse, and worse than
+`intc-2002` was.** All 23 items `extracted`, all at confidence **0.95** via
+`heading_strict`, `doc_status` **`success_with_warning`**. Every span is a row
+of the trailing cross-reference index: 20 to 226 chars, **1,727 chars in
+total** across the whole 10-K, against a 571,466-char tag-strip scan of the
+document (~0.3%). ADR-015 closed by saying "the next mis-dated item repeats
+this exactly"; it did, on the same filer, 23 years later. Note what did **not**
+fire: `no_empty_success` passed, because `NO_EMPTY_SUCCESS_FLOOR` is 1,000 and
+1,727 clears it — the check named for this failure mode is 727 chars short of
+catching the maximal instance of it. The five red checks are the four
+`min_chars` floors and the one `text_contains` anchor; every structural check
+(`expected_set_complete`, `only_items`, `known_items_only`, `verbatim`,
+`no_overlap_ordered`, `deterministic`) passed. That is the pre-B audit's
+finding 4 demonstrated on a real filing: **a presence-and-status case would
+have scored this document green.**
+
+`c-2025` — **as predicted, the opposite face.** 23 items, **zero** extracted;
+**21 `missing` at 0.40 and TWO `omitted` at 0.75 — items 9C and 16** — with
+`doc_status` **`ambiguous`**. **TWO** deviations from the frozen prediction, which
+said all 23 would be `missing` at 0.40. *(Corrected 2026-08-26 under PR #52 R2: this
+paragraph, the `353e8f1` commit message and the `tasks/TODO.md` D6 row all read "22
+`missing`" and "the one deviation", dropping item 16 — an asserted number the
+committed artifact does not support, in the file whose stated purpose is that
+predictions cannot be retrofitted. The seventh entry in this file's tally of the
+instrument rather than the pipeline being at fault. Repro:*
+`python3 -c "import json,collections; r=json.load(open('evals/report/20260826-005839-fast.json')); print(collections.Counter((i['status'],i['confidence']) for c in r['results'] if c['id']=='c-2025-heldout' for i in c['items_summary']))"`
+*→ `Counter({('missing', 0.4): 21, ('omitted', 0.75): 2})`.)* Item 16 is the more
+interesting of the two deviations: the case's own declination (a) called `omitted`
+"the natural reading" for item 16 and declined to assert it anyway, on the
+`csco-2016` precedent — and the run then produced exactly that. Declining was
+still right, because the reasoning was about what the document states rather than
+about what the pipeline would do; but the outcome is now on the record. The tension the case flagged is
+also resolved, and not in my favour on the surface: the demo reported
+`conf 0.95` on Citigroup and this run reports 0.40 — the structural reading was
+right about *this* document, so either the demo ran a different Citigroup
+filing or the panel number seen there came from somewhere else. Recorded as an
+open discrepancy for D7/D8, not resolved here.
+
+Together they are the postmortem §8 asymmetry on one page: same sensor, same
+absence of a usable "the fast path is stuck" signal, 0.95 on one document and
+0.40 on the other. Both cases stay **untouched** — D8/D9/D11 must not read
+their labels while iterating, and the first fix, threshold or declined fix
+taken with either outcome in hand burns that case under the rule above.

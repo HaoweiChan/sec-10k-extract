@@ -1,0 +1,21 @@
+{
+  "id": "ledger-line-refs",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "ledger_line_refs"
+    ],
+    "files": [
+      "tasks/TODO.md"
+    ],
+    "min_refs": {
+      "tasks/TODO.md": 9
+    }
+  },
+  "expect": {},
+  "provenance": "PR #52 review round 2, finding R9. The D6 repair inserted 10 lines into specs/decisions/ADR-021-benchmark-instrument.md and thereby falsified line refs BELOW the insert — including two inside the very Debt row written to enumerate stale references by file:line, and three more in tasks/TODO.md:178, a row the diff never touched. This is the SECOND recorded occurrence of an ADR insertion silently invalidating ledger line refs in this repo; the pending ADR-019 line-ref item is the first. A line number is a pointer with no checksum. A line number PLUS a quotation of the sentence it means is self-verifying, and this check verifies it on every gate run — see the wiring note below, because for one commit it did not. WATCHED RED BEFORE THE FIX: on the tree at 52843af it reported two failures — tasks/TODO.md:178 citing ADR-021:379 for a sentence that had moved to :389, and tasks/TODO.md:195 citing specs/001-sec10k-contract.md:133 for a sentence at :157, a PRE-EXISTING stale ref that no review round had flagged and that the class sweep for R9 found. Adjacency is the discriminator: a quotation immediately after the ref is a quotation OF it. Matching any quote within the same sentence produced four false positives on the committed tree; matching adjacently produces none. FAILS CLOSED on min_refs (PR #52 R11's lesson applied pre-emptively to a second instrument): rewriting the rows to drop their quotations would drop the coverage silently, so the count of verifiable refs is committed. LIMIT, STATED SO IT IS NOT MISTAKEN FOR COVERAGE: 9 of the roughly 60 file:line citations in tasks/TODO.md quote their target and are therefore checkable. A bare `src/sec10k/web/app.py:126` with nothing quoted beside it cannot be verified by any means short of re-reading the author's intent; the remedy is to quote it when the row is next touched, and min_refs is what stops the quoted population from shrinking in the meantime. An existence-only rule over the bare refs was tried and rejected: six of them are deliberate shorthand (app.py:127, segment.py:508, normalize.py:271, prompts/008, prompts/009, boilerplate._demo) that no path resolution should be asked to reconcile. HOW THE RED WAS OBSERVED — CORRECTED UNDER PR #52 R14, WHICH CAUGHT THIS SENTENCE OVERSTATING ITSELF. The pre-fix red quoted above was observed by CALLING THE CHECK FUNCTION DIRECTLY, not by running the suite. That distinction is not pedantic: this case shipped without an `input.checks` key, `run_case` silently defaulted to `adr_headers`/`adr_index`, and the gate therefore reported [PASS] on a tree where this check was red — a case that could not fail, counted in the suite total. Fixed at the root by deleting that default, so a repo_hygiene case naming no check now fails loudly. RE-OBSERVED THROUGH THE RUNNER after the wiring fix, `python3 -m evals.run --suite invariant`: a wrong line number (:389 -> :399) gives [FAIL] ledger-line-refs, invariant 60/61; deleting a quotation gives [FAIL] via the min_refs floor, 60/61; altering a quotation gives [FAIL], 60/61; the clean tree gives [PASS], 61/61."
+}
