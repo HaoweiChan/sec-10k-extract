@@ -370,24 +370,37 @@ the harness. What binds them instead:
   seven `item_field` checks across three cases (`xref-index-collapse`,
   `cvx-2015-pointer-flagged`, `nvda-2024-shallow`) assert it BY VALUE, true
   and false.
-- `meta.coverage` — `envelope_shape` requires the key AND recomputes the
-  contract's own definition of it from the items the same envelope publishes,
-  refusing any envelope whose published figure disagrees; two `meta_field`
-  checks pin the literal at both ends of the range (`xref-index-collapse`
-  0.0303, `cat-2023-shallow` 0.982).
+- `meta.coverage` — **the PUBLISHED figure only.** `envelope_shape` requires
+  the key and recomputes the contract's own definition of it from the items
+  the same envelope publishes, refusing any envelope whose published figure
+  disagrees; two `meta_field` checks pin the literal at both ends of the range
+  (`xref-index-collapse` 0.0303, `cat-2023-shallow` 0.982). **Nothing binds
+  the figure `validate()` thresholds on.** `coverage()` is called twice —
+  `extract.py` publishes one result, `validate.py` thresholds another — and no
+  committed case reads the second. That gap is open, measured, and carried as
+  debt (`tasks/TODO.md`, Origin: PR #57 R4).
 
-*(Corrected 2026-08-26 under PR #57 R1. This paragraph first claimed
-`meta.coverage`'s value was "bounded from both sides by the two
-`low_item_coverage` band pins". **That was false**, and the reviewer proved
-it: `validate()` calls `coverage()` itself, so the band pins judge a number
-`extract.py` never published, and a tree with `meta["coverage"] = 1.0`
+*(Corrected twice, 2026-08-26, and the second correction is the one to read.*
+
+*Under **PR #57 R1**: this paragraph first claimed `meta.coverage`'s value was
+"bounded from both sides by the two `low_item_coverage` band pins". That was
+false — `validate()` calls `coverage()` itself, so the band pins judge a
+number `extract.py` never published, and a tree with `meta["coverage"] = 1.0`
 hard-coded passed invariant 69/69, fast 132/132 and every unit self-check. The
-`meta_field` check type and the `envelope_shape` recomputation above are the
-repair; the mutant is now red on 24 cases. Red-first record with its sha:
-`tasks/reviews/pr57-r1-red.txt`. The two `coverage()` call sites are kept —
-one function, two callers — and it is their AGREEMENT that is now pinned,
-which is stronger than collapsing them into one producer would have been: a
-single producer could still publish a figure no case ever reads.)*
+`meta_field` check type and the `envelope_shape` recomputation above are that
+repair, and the mutant is now red on 24 cases (`tasks/reviews/pr57-r1-red.txt`).*
+
+*Under **PR #57 R4**: the replacement sentence was **also** false. It said the
+two call sites were "pinned by their AGREEMENT" — they are not. The
+`envelope_shape` recomputation judges the publisher and only the publisher;
+`validate.py`'s `cov = coverage(text, items)` is read by no check, and
+changing it to count `extracted` spans only leaves invariant 69/69 and fast
+132/132 green while 24 of the 39 span-bearing dev fixtures threshold a
+different number from the one they publish. That is the SAME defect class the
+sentence it replaced had. The claim is withdrawn rather than replaced a third
+time: what is pinned is the publication, the second call site's agreement is
+not pinned, and the gap is a debt row. See that row for why the cheap fix the
+finding suggests does not work and what the real one costs.)*
 
 ### f2. Held-out — read-only, reported, not acted on
 

@@ -10,12 +10,12 @@
    "route": "repair",
    "disposition": "fixed",
    "what_changed": [
-    "src/sec10k/eval_adapter.py: new `meta_field` check type — `item_field`'s counterpart for the contract's normative `meta` keys, asserting one by value.",
-    "src/sec10k/eval_adapter.py::envelope_shape: recomputes the contract's own definition of coverage (span-carrying chars / normalized chars, 4 dp) from the items the SAME envelope publishes, and refuses any envelope whose published `meta.coverage` disagrees. This is the root-cause binding for the finding's second-order point: extract.py publishes and validate.py thresholds from two calls to one function, and it is their AGREEMENT that is now pinned.",
-    "evals/adversarial/xref-index-collapse.json: `meta_field coverage 0.0303` — the low end of the published range.",
-    "evals/golden/cat-2023-shallow.json: `envelope_shape` + `meta_field coverage 0.982` — the high end.",
-    "src/sec10k/test_eval_adapter.py: new `test_meta_field`, plus four assertions in `test_envelope_shape` covering the agreement check and the refusal path (self-check 20/20 -> 21/21).",
-    "specs/decisions/ADR-034 §f1 corrected — its claimed compensation was false as written; it now states what actually binds each field, with a dated correction note naming PR #57 R1.",
+    "src/sec10k/eval_adapter.py: new `meta_field` check type \u2014 `item_field`'s counterpart for the contract's normative `meta` keys, asserting one by value.",
+    "src/sec10k/eval_adapter.py::envelope_shape: recomputes the contract's own definition of coverage (span-carrying chars / normalized chars, 4 dp) from the items the SAME envelope publishes, and refuses any envelope whose published `meta.coverage` disagrees. [CORRECTED under PR #57 R4: this bullet originally went on to call this 'the root-cause binding' for the finding's second-order point, on the grounds that extract.py's and validate.py's two calls to coverage() were now pinned by their AGREEMENT. That was FALSE. The check judges the publisher only; validate.py's `cov = coverage(text, items)` is read by no committed case. What this bullet actually delivers is the binding of the PUBLISHED figure to the contract definition \u2014 which is real, and which R4 left closed \u2014 and nothing more.]",
+    "evals/adversarial/xref-index-collapse.json: `meta_field coverage 0.0303` \u2014 the low end of the published range.",
+    "evals/golden/cat-2023-shallow.json: `envelope_shape` + `meta_field coverage 0.982` \u2014 the high end.",
+    "src/sec10k/test_eval_adapter.py: new `test_meta_field`, plus four assertions in `test_envelope_shape` covering the published-figure recomputation and the refusal path (self-check 20/20 -> 21/21). [Wording corrected under PR #57 R4: this read 'the agreement check', which invited the false reading R4 falsified \u2014 the check compares the PUBLISHED figure against the items, not the two coverage() call sites against each other.]",
+    "specs/decisions/ADR-034 \u00a7f1 corrected \u2014 its claimed compensation was false as written; it now states what actually binds each field, with a dated correction note naming PR #57 R1.",
     "specs/decisions/ADR-034 Enforced-by and Verification updated."
    ],
    "covered_by": [
@@ -27,9 +27,10 @@
    ],
    "watched_red_at_sha": "ec2d0a50f59f54c95457157e8374f04310c11e21",
    "red_first_record": "tasks/reviews/pr57-r1-red.txt",
-   "red_evidence": "The reviewer's own mutant (`meta[\"coverage\"] = 1.0`) applied verbatim at ec2d0a5: first reproduced the finding (invariant 69/69 = 1.000, fast 132/132 = 1.000 while every document publishes coverage 1.0), then the pins were added against the STILL-MUTATED tree and went red for the right reason — `meta.coverage 1.0 != 0.0303` and `!= 0.982`, with 24 cases red across the full suites (invariant 62/69 = 0.899, fast 108/132 = 0.818). Mutant reverted: all green.",
+   "red_evidence": "The reviewer's own mutant (`meta[\"coverage\"] = 1.0`) applied verbatim at ec2d0a5: first reproduced the finding (invariant 69/69 = 1.000, fast 132/132 = 1.000 while every document publishes coverage 1.0), then the pins were added against the STILL-MUTATED tree and went red for the right reason \u2014 `meta.coverage 1.0 != 0.0303` and `!= 0.982`, with 24 cases red across the full suites (invariant 62/69 = 0.899, fast 108/132 = 0.818). Mutant reverted: all green.",
    "kept_two_call_sites": true,
-   "note": "One producer was considered and NOT taken. Collapsing extract.py and validate.py onto a single computed value is a behaviour-neutral refactor whose blast radius would still have to be re-measured, and it would not fix the defect — a single producer can still publish a figure no case ever reads. Pinning the agreement is the smaller and the stronger change. Recorded in ADR-034 §f1."
+   "note": "[CORRECTED under PR #57 R4 \u2014 the original text of this field was: 'One producer was considered and NOT taken. Collapsing extract.py and validate.py onto a single computed value is a behaviour-neutral refactor whose blast radius would still have to be re-measured, and it would not fix the defect \u2014 a single producer can still publish a figure no case ever reads. Pinning the agreement is the smaller and the stronger change. Recorded in ADR-034 s.f1.' Its last clause was false: no agreement is pinned. The two call sites can still silently diverge, which is exactly the defect class R1 raised. The correct statement is that the PUBLICATION is bound to the contract definition and the second call site's agreement is UNPINNED; that gap is now carried as a debt row in tasks/TODO.md (Origin: PR #57 R4), and the disposition is recorded in tasks/reviews/pr57-r2-resolution.json.]",
+   "kept_two_call_sites_note": "Kept, and their agreement is NOT pinned \u2014 see the corrected `note`. Added under PR #57 R4 so this field cannot be read as a claim of coverage."
   },
   {
    "id": "R2",
@@ -37,7 +38,7 @@
    "route": "debt",
    "disposition": "debt",
    "debt_row": "tasks/TODO.md :: Open debt, carried deliberately :: '`review_required` never reaches `/api/extract`' (Origin: PR #57 R2)",
-   "note": "Claim, evidence and repro carried verbatim into the row. It names D11's routing display as the landing place, per the finding's own acceptance, and records that `evidence.warnings` — the exact list the boolean derives from — does reach the view and is rendered by D7, so the UI is not silent."
+   "note": "Claim, evidence and repro carried verbatim into the row. It names D11's routing display as the landing place, per the finding's own acceptance, and records that `evidence.warnings` \u2014 the exact list the boolean derives from \u2014 does reach the view and is rendered by D7, so the UI is not silent."
   },
   {
    "id": "R3",
@@ -57,5 +58,18 @@
   "baseline": ".eval-baseline.json untouched; no --update-baseline, no --no-verify"
  },
  "blast_radius_moved": false,
- "blast_radius_note": "No pipeline behaviour changed. The repair lives entirely in the judge (src/sec10k/eval_adapter.py) and in two case files; src/sec10k/extract.py and src/sec10k/validate.py are byte-identical to ec2d0a5, so ADR-034 §f's digests (dev b39eae8b -> 58364186, heldout dd67647b -> f8002569) still stand and are not re-cited."
+ "blast_radius_note": "No pipeline behaviour changed. The repair lives entirely in the judge (src/sec10k/eval_adapter.py) and in two case files; src/sec10k/extract.py and src/sec10k/validate.py are byte-identical to ec2d0a5, so ADR-034 \u00a7f's digests (dev b39eae8b -> 58364186, heldout dd67647b -> f8002569) still stand and are not re-cited.",
+ "corrections": [
+  {
+   "under": "PR #57 R4",
+   "date": "2026-08-26",
+   "fields": [
+    "resolutions[0].what_changed[1]",
+    "resolutions[0].note",
+    "resolutions[0].kept_two_call_sites_note",
+    "resolutions[0].what_changed[4]"
+   ],
+   "why": "This artifact asserted that extract.py's and validate.py's two calls to coverage() were pinned by their agreement. The round-2 reviewer falsified it: mutating validate.py's call to count `extracted` spans only leaves invariant 69/69 and fast 132/132 green while 24 of the 39 span-bearing dev fixtures threshold a different number from the one they publish. Corrected in place rather than silently, because a committed resolution artifact is read as verified-correct \u2014 the same reason ADR-034 s.f1 carries its own correction note."
+  }
+ ]
 }
