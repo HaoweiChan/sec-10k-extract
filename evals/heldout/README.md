@@ -29,12 +29,51 @@ A **decision that cites a held-out outcome but authors no case, moves no
 fixture, changes no threshold and ships no code does NOT burn the case.**
 Influence still burns; a *ruling* is not influence.
 
+**D9's own two artifacts, adjudicated** (PR #56 R14). D9 did raise a threshold
+and did ship a `.py` file, so the clause above is applied to it in the open:
+
+1. **`evals/adversarial/ledger-line-refs.json` `min_refs` 9 → 11.** A
+   ledger-hygiene floor: how many `<file>:<line>` citations `tasks/TODO.md` must
+   carry before the check fails closed. Not an extraction threshold, reads no
+   filing, no relationship to any held-out label, fixture or outcome.
+   **Not the influence this rule targets.**
+2. **`tasks/reviews/d9_class_scan.py`, and its `BODY_MAX = 700`.** This one
+   needs an argument, not a dismissal — the file reads
+   `evals/heldout/fixtures` directly and its knob is a number someone chose.
+   *Why it reads held-out at all*: D9's ledger row required measuring both
+   classes' prevalence **including on the held-out set**; reading a fixture to
+   report a count about it is the assignment, not tuning against it.
+   *Why `BODY_MAX` is not fitted to held-out labels*: 700 sits in a plateau
+   whose **both edges are dev values** — nearest below `intc-2002` item 5 at
+   629, nearest above `ibm-1997` item 5 at 805 — so every bound in 630..805
+   gives an identical dev result and nothing held-out defines that interval.
+   One held-out span falls inside it, `mrk-1995` item 8 at 738, and that item is
+   an *external*-document pointer ("incorporated by reference to pages 38
+   through 49 … of the Company's 1995 Annual Report") which the class rule
+   rejects anyway, exactly as its siblings 5 and 7 already are. **Every figure
+   D9 published is therefore unchanged across the whole dev-determined
+   plateau**, and the constant was written once and never revised
+   (`git log -p -- tasks/reviews/d9_class_scan.py`).
+   **Not the influence this rule targets.**
+
+   *Stated honestly, the part that does not fully close*: the dev plateau runs
+   to 805 while the held-out set is unchanged only up to 738, so a different
+   in-plateau choice — 780, say — would have admitted `mrk-1995` item 8 as a
+   candidate. It would then have been rejected, changing no published number,
+   which is why the verdict holds; but "any in-plateau value is equivalent" is
+   true of D9's *conclusions*, not of the candidate list. A reader who wants the
+   stronger property should read the four bullets above as the claim and this
+   paragraph as its limit.
+
 *Why this is the right line.* The rule exists to stop labels being tuned
 against — the danger is an implementation shaped, however indirectly, by
-knowing what the held-out filings do. A document that ships no code and no
-threshold tunes nothing: there is no artifact in the tree that could have
-absorbed the labels. Reading an outcome and writing down "we are not building
-this" leaves the pipeline exactly as unable to pass the exam as it was before.
+knowing what the held-out filings do. A ruling that shapes no extraction
+behaviour tunes nothing: reading an outcome and writing down "we are not
+building this" leaves the pipeline exactly as unable to pass the exam as it was
+before. (This paragraph previously argued that no artifact in the tree could
+have absorbed the labels. That was **false as written** — `d9_class_scan.py` is
+such an artifact — and it is withdrawn; the two artifacts are adjudicated in the
+numbered list above instead. PR #56 R14.)
 
 *What this now permits that it did not before, stated because it is a real
 loosening.* A future decision row may cite `intc-2025`'s and `c-2025`'s
@@ -184,6 +223,18 @@ hand; the burn rule names "a threshold choice" as burning, and a documented
 decision to decline a fix is at least as much influence. Counting it in a
 held-out denominator would have overstated that denominator. Replaced by
 `pgr-2023`, which carries two predictions recorded before its first run.
+
+> **Narrowed 2026-08-26 by the Burn-rule amendment above (PR #56 R17).** The
+> clause "a documented decision to decline a fix is at least as much influence"
+> is **no longer the rule** — the amendment says a ruling that ships no case,
+> fixture, threshold or code does not burn. This entry is left standing as the
+> reasoning of its date rather than rewritten. **The `gs-2002` burn itself still
+> stands, on another limb**: ADR-013 did not merely decline a fix, it shipped
+> code and set thresholds — its ruling promotes a bare heading's title when it
+> clears `SIM_FLOOR` and escalates `doc_status` to `ambiguous` past a 25%
+> missing-item threshold. That is influence under the amended rule as squarely
+> as under the original, so the burn is unaffected and no replacement decision
+> is needed.
 
 **H2, 2026-08-17, 5/5** — the T8 milestone run, triaged in
 `docs/evals/audits/2026-08-17-h2-heldout.md`. Worth less than H1's 1/5: only

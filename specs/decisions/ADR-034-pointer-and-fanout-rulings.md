@@ -258,8 +258,9 @@ body heading over item content**: `axp-2008` at normalized offset 328679,
 **fixtures**, enumerated in full rather than swept (PR #56 R5). **The buckets
 below are over the 18 hit FIXTURES, not over the 39 individual hits the scan
 emits** (PR #56 R10 — the first draft's closing sum said it accounted for
-"every hit" while adding up fixtures). Two filings hit in more than one bucket
-and are listed under each:
+"every hit" while adding up fixtures). Several filings hit in more than one
+bucket and are listed under each; the buckets group by shape and do not
+partition the hits:
 
 - **a cover-page Documents-Incorporated-by-Reference sentence** — `jpm-2024`,
   `wfc-2008`, `gs-2002`, `ba-2003` and `c-2025` all carry
@@ -313,12 +314,16 @@ co-occurrence claim, and it was already contradicted twenty lines above by this
 section's own `c-2025` paragraph — a self-contradiction introduced by the
 round-1 R1 repair and caught by round 2.
 
-Bucket arithmetic, over **fixtures**: 1 body heading + 5 cover sentences +
-1 index heading + 5 numeric artifacts + 4 prose cross-references + 1 TOC line +
-3 synthetic = 20 bucket entries over **18 distinct fixtures**, because
-`gs-2002` and `xom-2021` each appear in two buckets. The scan emits **39**
-individual hits across those 18 fixtures; this section adjudicates them by
-fixture and by shape, not one offset at a time.
+**No entry-count arithmetic is published here, deliberately** (PR #56 R15). The
+scan returns **39 hits across 18 fixtures**; several fixtures hit in more than
+one bucket, and the buckets above group them by shape rather than partitioning
+them. A summed entry count was published twice and was wrong twice — first as
+18, then as 20 on the claim that only `gs-2002` and `xom-2021` were multi-bucket,
+which the scan falsifies (`ba-2003` @56848, `gs-2002` @21527, `jpm-2024` @197103
+and `axp-2008` @334794 are further multi-bucket hits). Two facts carry this
+section and neither needs a sum: **39 hits over 18 fixtures**, and **exactly one
+of those hits is a body heading over item content** — `axp-2008` at 328679. That
+single adjudication is what the ruling rests on.
 
 Recall at stake: **4 items, 1 real filing, 0.45% of 891** (ADR-020's 4 of 768 =
 0.52%, re-derived on the grown corpus; the ruling does not turn on the third
@@ -530,8 +535,8 @@ foreign; the fan-out being cheap to write, which §c2 shows it is not.
 
 ## g) Consequences
 
-**The held-out burn rule fires on this ADR; the owner ruled to amend the rule
-rather than apply it, so neither case is burned.** The first draft answered
+**The held-out burn rule fires on this ADR under the rule as it stood; the owner
+ruled to amend the rule rather than apply it, so neither case is burned.** The first draft answered
 that question in the negative and gave a ground that PR #56 **R3** falsified —
 that answer is withdrawn, and no part of this document now carries it. The ground
 is withdrawn here rather than patched, and the withdrawal is stated before the
@@ -543,18 +548,21 @@ fixture *and* moved the fixture into the dev corpus, so a decline that does
 neither is distinguishable. That is a conjunctive test the precedents
 explicitly disclaim, and it is false on its face for one of them:
 
-- `evals/heldout/README.md:193-195`, on the `axp-2008` burn, reads "The burn
+- `evals/heldout/README.md:278-280`, on the `axp-2008` burn, reads "The burn
   rule names both of those as influence" — **both, each independently**, not a
   required pair. The draft inverted trigger and remedy: authoring a case and
   moving the fixture are consequences of a burn, not preconditions for one.
-- `evals/heldout/README.md:149-152`, the `gs-2002` precedent the draft leaned
+- `evals/heldout/README.md:222-225`, the `gs-2002` precedent the draft leaned
   on hardest, burned on "a documented decision to decline a fix" **alone** and
   names no new case at all. So the sentence "the `gs-2002` and `axp-2008` burns
   both authored a new adversarial case" was simply not true of `gs-2002`. I
   built a distinguishing ground on a precedent I did not read.
 
 **The sentence the first draft never addressed**, and which names D9 by name —
-`evals/heldout/README.md:318-321`, the D6 H4 entry, verbatim:
+the D6 H4 entry — quoted here **as it read before the 2026-08-26 amendment**,
+because the amendment narrowed it and the string below no longer appears in the
+file. Today's text is at `evals/heldout/README.md:401-404`; what it said when
+this finding was raised was:
 
 > Both cases stay **untouched** — D8/D9/D11 must not read
 > their labels while iterating, and the first fix, threshold or declined fix
@@ -589,9 +597,31 @@ D6 H4 entry quoted above, both dated and both pointing here. Its substance: a
 decision that cites a held-out outcome but **authors no case, moves no fixture,
 changes no threshold and ships no code** does not burn the case. Influence still
 burns; a ruling is not influence. The reasoning the owner accepted is that the
-rule exists to stop labels being *tuned against*, and a document that ships no
-code and no threshold tunes nothing — there is no artifact in the tree that
-could have absorbed the labels.
+rule exists to stop labels being *tuned against*, and a ruling that shapes no
+extraction behaviour tunes nothing.
+
+**D9's own two artifacts are adjudicated against that clause rather than assumed
+past it** (PR #56 R14) — D9 did raise a threshold and did ship a committed
+`.py`, so the earlier claim here that "there is no artifact in the tree that
+could have absorbed the labels" was **false as written** and is withdrawn. The
+adjudication is in `evals/heldout/README.md`'s amendment block, so a reader who
+reaches the rule first gets the same answer this section publishes, and it is:
+
+- **`evals/adversarial/ledger-line-refs.json` `min_refs` 9 → 11** — a ledger
+  citation floor. Not an extraction threshold, reads no filing, unrelated to any
+  held-out label. Not the influence the rule targets.
+- **`tasks/reviews/d9_class_scan.py::BODY_MAX = 700`** — 700 lies in a plateau
+  whose **both edges are dev values** (`intc-2002` item 5 at 629 below,
+  `ibm-1997` item 5 at 805 above), so every bound in 630..805 gives an identical
+  dev result and no held-out value defines that interval. The single held-out
+  span inside it, `mrk-1995` item 8 at 738, is an external-document pointer the
+  class rule rejects regardless — the same verdict its siblings 5 and 7 already
+  get. **Every figure this ADR publishes is invariant across that whole
+  plateau**, and the constant was written once and never revised. Not the
+  influence the rule targets. The README records the one part that does not
+  fully close: the dev plateau extends past 738, so a different in-plateau
+  choice would have changed the *candidate list* though not any published
+  number.
 
 **What it costs, stated because the amendment weakens a rule this repo wrote
 deliberately.** It now permits a future decision row to cite `intc-2025`'s and
@@ -607,8 +637,11 @@ exam survives intact and its ledger row's success criterion — pass both filing
 having never trained on them — remains satisfiable.
 
 **What would make the amendment wrong** (also recorded in the README): a
-decision that cited a held-out outcome turning out to have carried a threshold
-or code change after all; D11 passing either filing by a route that traces to a
+decision that cited a held-out outcome turning out to have carried an
+**extraction** threshold or a change under `src/` — the falsifier as first
+written said "a threshold or code change after all", which this ADR itself trips
+at the moment of writing via `min_refs` and `d9_class_scan.py`, both adjudicated
+above as outside what the rule targets (PR #56 R14); D11 passing either filing by a route that traces to a
 decision document rather than to the dev proxies `cvx-2015` and `jpm-2024`; or
 the number of rulings leaning on an unburned held-out outcome growing past a
 handful — the amendment assumes that is rare and stops being safe when it is

@@ -1,0 +1,173 @@
+PR #56 round 3 (bounded, final) — evidence and post-fix claim sweep.
+Tree at start: 16f9686 | review artifact 16f9686
+Scope: R14 R15 R16 R17 R18 and nothing else.
+
+========================================================================
+R14 — the BODY_MAX adjudication, VERIFIED before publishing
+========================================================================
+The coordinator's suggested framing was that 700 'sits above every observed
+value in both dev and held-out'. I checked that FIRST and it is FALSE — the
+page-pointer candidate pool at any length runs to 1,010,422 chars (jpm-2024
+item 15). BODY_MAX is a stub cutoff, not an upper bound. The claim actually
+supportable is a plateau argument, and here is the measurement:
+
+   dev: nearest below 700 = 629 (intc-2002 item 5); nearest at/above = 805 (ibm-1997 item 5)
+   dev: plateau containing 700 = 630..805
+  held: nearest below 700 = 247 (mrk-1995 item 7); nearest at/above = 738 (mrk-1995 item 8)
+  held: plateau containing 700 = 248..738
+VERDICT, and it is NOT the clean story I was handed:
+  * The plateau around 700 is bounded on BOTH sides by DEV values (629
+    intc-2002 item 5, 805 ibm-1997 item 5). Every bound in 630..805 gives an
+    identical dev result. Nothing held-out defines that interval.
+  * Held-out's own plateau is 248..738 — much wider, so it cannot be what
+    pinned 700.
+  * Exactly ONE held-out span sits inside the dev plateau: mrk-1995 item 8,
+    738 chars. Its body:
+      "ITEM 8.  FINANCIAL STATEMENTS AND SUPPLEMENTARY DATA.\n\n     (A) FINANCIAL STATEMENTS\n\n     The consolidated balance sheet of Merck & Co., Inc. and subsidiaries as of\nDecember 31, 1995 and 1994, ...
+    -> an EXTERNAL-document pointer, which the class rule already rejects for
+       its siblings 5 and 7. So even at the top of the plateau it changes no
+       published figure.
+  * The constant was written once and never revised:
+      4ecc1e5 D9: rule on the internal-pointer class and the combined-heading fan-out (ADR-034)
+
+WHAT DOES NOT FULLY CLOSE, published rather than hidden: the dev plateau runs
+to 805 while held-out is unchanged only to 738. A different in-plateau choice
+(780) would have admitted mrk-1995 item 8 as a CANDIDATE — then rejected it,
+changing no number. So 'any in-plateau value is equivalent' is true of D9's
+CONCLUSIONS, not of the candidate list. Recorded in README and §g.
+
+========================================================================
+R16 — the three §g refs, before and after
+========================================================================
+  old ref :193-195 now points at: ''
+  old ref :149-152 now points at: ''
+  old ref :318-321 now points at: ''
+  correct locations now:
+    275:(`evals/adversarial/axp-2008-combined-part-iii.json`). The burn rule names b
+    219:hand; the burn rule names "a threshold choice" as burning, and a documented
+    400:their labels while iterating, and the first fix or threshold taken with eith
+  The 'verbatim' block quote string, after the amendment:
+    grep -c 'the first fix, threshold or declined fix' README -> 0
+    -> 0 in the README, so §g now labels it as the entry AS IT READ BEFORE
+       the 2026-08-26 amendment and cites today's text separately.
+
+
+########################################################################
+POST-FIX CLAIM SWEEP — every superseded claim, across all six live files
+########################################################################
+Files: specs/decisions/ADR-034-pointer-and-fanout-rulings.md
+       specs/decisions/INDEX.md
+       specs/decisions/ADR-020-fallback-not-justified.md
+       tasks/TODO.md
+       evals/heldout/README.md
+       evals/adversarial/axp-2008-combined-part-iii.json
+       evals/adversarial/cvx-2015-internal-pointer.json
+Review artifacts (tasks/reviews/pr56-r*) excluded: they quote old wording as
+evidence. Every hit below is listed and adjudicated; none is filtered away.
+
+--- R8 burn settled-answer
+      'ruled NO'                                   -> 1
+        tasks/TODO.md:32:sanctioned, data-gated exception — ruled NOT JUSTIFIED, archived to DONE.md). Rubric target: "A
+          -> PRE-EXISTING, UNRELATED — 'ruled NOT JUSTIFIED' is the T12/ADR-020 LLM-fallback ruling. Substring false positive on 'ruled NO'.
+      'no-case-authored'                           -> 1
+        specs/decisions/ADR-034-pointer-and-fanout-rulings.md:591:no-case-authored argument was sound. Those are differe
+          -> *** UNEXPLAINED — MUST FIX ***
+      'not burned'                                 -> 0
+      'NOT burned'                                 -> 0
+--- R9 co-occurrence unique
+      'otherwise finds only'                       -> 0
+      'only on .axp-2008.'                         -> 0
+--- R10/R15 entry arithmetic
+      'account for every hit'                      -> 0
+      '20 bucket entries'                          -> 2
+        tasks/TODO.md:236:| **Four LOW findings from PR #56 round 1, all CORRECTED IN PLACE in the same pass** (added 20
+          -> *** UNEXPLAINED — MUST FIX ***
+        evals/adversarial/axp-2008-combined-part-iii.json:47:    "note": "ENUMERATED DEBT, NOT A BUG BEING FIXED. Americ
+          -> *** UNEXPLAINED — MUST FIX ***
+      '1+5+5+3+1+3'                                -> 0
+--- R14 false ground
+      'no artifact in the tree that'               -> 2
+        specs/decisions/ADR-034-pointer-and-fanout-rulings.md:605:`.py`, so the earlier claim here that "there is no art
+          -> *** UNEXPLAINED — MUST FIX ***
+        evals/heldout/README.md:71:threshold tunes nothing: there is no artifact in the tree that could have
+          -> *** UNEXPLAINED — MUST FIX ***
+--- R16 dead block-quote string
+      'the first fix, threshold or declined fix'   -> 1
+        specs/decisions/ADR-034-pointer-and-fanout-rulings.md:568:> their labels while iterating, and the first fix, thr
+          -> THE §g BLOCK QUOTE, now explicitly labelled 'as it read before the 2026-08-26 amendment' with today's text cited separately (R16). Historical quotation, correct.
+--- R17 declined-fix-burns, undated
+      'is at least as much influence'              -> 2
+        evals/heldout/README.md:220:decision to decline a fix is at least as much influence. Counting it in a
+          -> THE gs-2002 ENTRY, now carrying a dated narrowing note directly beneath it (R17), which states the clause is no longer the rule and that the burn stands on ADR-013's shipped code and thresholds.
+        evals/heldout/README.md:225:> clause "a documented decision to decline a fix is at least as much influence"
+          -> THE gs-2002 ENTRY, now carrying a dated narrowing note directly beneath it (R17), which states the clause is no longer the rule and that the burn stands on ADR-013's shipped code and thresholds.
+--- R12 stale suite sizes
+      'fast 130/130'                               -> 0
+      '130/130'                                    -> 2
+        specs/decisions/ADR-034-pointer-and-fanout-rulings.md:740:  the first draft published "67/67, 130/130" which was
+          -> A CORRECTION QUOTING WHAT IT CORRECTS (R6/R12 repair notes).
+        tasks/TODO.md:236:| **Four LOW findings from PR #56 round 1, all CORRECTED IN PLACE in the same pass** (added 20
+          -> A CORRECTION QUOTING WHAT IT CORRECTS (R6/R12 repair notes).
+      '67/67'                                      -> 2
+        specs/decisions/ADR-034-pointer-and-fanout-rulings.md:740:  the first draft published "67/67, 130/130" which was
+          -> A CORRECTION QUOTING WHAT IT CORRECTS (R6/R12 repair notes).
+        tasks/TODO.md:236:| **Four LOW findings from PR #56 round 1, all CORRECTED IN PLACE in the same pass** (added 20
+          -> A CORRECTION QUOTING WHAT IT CORRECTS (R6/R12 repair notes).
+
+Total hits 13; UNEXPLAINED 5
+
+
+########################################################################
+SWEEP PASS 2 — after fixing what pass 1 caught
+########################################################################
+Pass 1 returned 13 hits, 5 of them unexplained. THREE were real survivors
+that NO finding in pr56-r3.json named — the recurring defect, caught only by
+the sweep, for the fifth time:
+  1. evals/heldout/README.md:71 — the false R14 ground ('no artifact in the
+     tree that could have absorbed the labels') was fixed in ADR-034 §g and
+     left ALIVE in the README. R14 cites only §g:592-594.
+  2. tasks/TODO.md:236 — the round-1/2 debt row restated the '20 bucket
+     entries over 18 distinct fixtures' arithmetic that R15 removes.
+  3. evals/adversarial/axp-2008-combined-part-iii.json — same restatement.
+R15 and R14 each name only ADR-034. All three are now fixed.
+
+  R8       'ruled NO'                                   -> 1
+      tasks/TODO.md:32:sanctioned, data-gated exception — ruled NOT JUSTIFIED, archived to DONE.md). Rubric ta
+        -> PRE-EXISTING, UNRELATED — the ADR-020 'ruled NOT JUSTIFIED' fallback ruling. Substring false positive.
+  R8       'no-case-authored'                           -> 1
+      specs/decisions/ADR-034-pointer-and-fanout-rulings.md:591:no-case-authored argument was sound. Those are
+        -> REQUIRED DISCLAIMER — the sentence that REJECTS the withdrawn ground. Naming it once, in the sentence rejecting it, is what makes the disclaimer checkable.
+  R8       'not burned'                                 -> 0
+  R8       'NOT burned'                                 -> 0
+  R9       'otherwise finds only'                       -> 0
+  R9       'only on .axp-2008.'                         -> 0
+  R10/R15  'account for every hit'                      -> 0
+  R10/R15  '20 bucket entries'                          -> 0
+  R10/R15  '1+5+5+3+1+3'                                -> 0
+  R14      'no artifact in the tree that'               -> 1
+      specs/decisions/ADR-034-pointer-and-fanout-rulings.md:605:`.py`, so the earlier claim here that "there i
+        -> A WITHDRAWAL QUOTING WHAT IT WITHDRAWS — both hits are the new R14 text stating the claim was false and is withdrawn.
+  R16      'the first fix, threshold or declined fix'   -> 1
+      specs/decisions/ADR-034-pointer-and-fanout-rulings.md:568:> their labels while iterating, and the first 
+        -> THE §g BLOCK QUOTE, now labelled 'as it read before the 2026-08-26 amendment', with today's text cited separately (R16).
+  R17      'is at least as much influence'              -> 2
+      evals/heldout/README.md:223:decision to decline a fix is at least as much influence. Counting it in a
+        -> THE gs-2002 ENTRY and its own dated narrowing note directly beneath it (R17): the clause is no longer the rule, and the burn stands on ADR-013's shipped code and thresholds.
+      evals/heldout/README.md:228:> clause "a documented decision to decline a fix is at least as much influen
+        -> THE gs-2002 ENTRY and its own dated narrowing note directly beneath it (R17): the clause is no longer the rule, and the burn stands on ADR-013's shipped code and thresholds.
+  R12      'fast 130/130'                               -> 0
+  R12      '130/130'                                    -> 2
+      specs/decisions/ADR-034-pointer-and-fanout-rulings.md:740:  the first draft published "67/67, 130/130" w
+        -> A CORRECTION QUOTING WHAT IT CORRECTS (R6/R12 repair notes).
+      tasks/TODO.md:236:| **Four LOW findings from PR #56 round 1, all CORRECTED IN PLACE in the same pass** (
+        -> A CORRECTION QUOTING WHAT IT CORRECTS (R6/R12 repair notes).
+  R12      '67/67'                                      -> 2
+      specs/decisions/ADR-034-pointer-and-fanout-rulings.md:740:  the first draft published "67/67, 130/130" w
+        -> A CORRECTION QUOTING WHAT IT CORRECTS (R6/R12 repair notes).
+      tasks/TODO.md:236:| **Four LOW findings from PR #56 round 1, all CORRECTED IN PLACE in the same pass** (
+        -> A CORRECTION QUOTING WHAT IT CORRECTS (R6/R12 repair notes).
+
+Total hits 10; UNEXPLAINED 0
+
+R15's own replacement text asserts no entry count:
+  grep -c '20 bucket entries' over live files -> 0
