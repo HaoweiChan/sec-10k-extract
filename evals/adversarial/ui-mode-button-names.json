@@ -1,0 +1,24 @@
+{
+  "id": "ui-mode-button-names",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "mode_button_names"
+    ],
+    "buttons": {
+      "go-fx": "fixture",
+      "go-up": "upload",
+      "go-url": "URL"
+    }
+  },
+  "expect": {},
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "D10 defect 4, postmortem shape S3. The three input modes each rendered `<button id=\"go-…\">Extract</button>`: role `button`, accessible name \"Extract\", three times. Any plan targeting the button resolves to 3 matches — the ambiguity failure the browser-agent repo's M38 exists for. Red against the pre-D10 file (3cdfbf4), re-measured with the current check, three failures, one per button: `#go-fx: no accessible name of its own — all three modes read \"Extract\", which is the 3-match ambiguity (it carries neither aria-label nor aria-labelledby)`, and the same message for `#go-up` and `#go-url`. Green once each carries a distinct aria-label (fixture / uploaded file / EDGAR URL). The VISIBLE label stays \"Extract\" on all three deliberately — that is what the button does in every mode; the mode is what differs, and that is what the accessible name now says. PR #55 R3 found that distinctness was the WHOLE check, and distinctness is not correctness: labelling #go-fx \"Upload\" and #go-up \"Fixture\" keeps three distinct non-empty names and passed at invariant 63/63 = 1.000, while an accessibility-first reader picking by name then lands in the file-upload mode when it asked for the fixture — worse than the ambiguity the row set out to remove. Two clauses were added and both go red on exactly that mutation: each name must carry the substring naming its OWN mode, and each name must contain the button's own VISIBLE text (WCAG 2.5.3 Label in Name, which is what keeps a speech-input user's \"click Extract\" working once an aria-label is in play). The second clause is the one that makes this case back the row's 'screen-reader correctness, not agent special-casing' claim rather than merely asserting it. Red on that mutation, re-measured, four failures quoted whole: `#go-fx: accessible name 'Upload' does not name its own mode ('fixture') — distinct names that point at the wrong mode are worse than no names`; `#go-fx: accessible name 'Upload' does not contain its visible label 'Extract' (WCAG 2.5.3 Label in Name — speech input targets the word the user can see)`; `#go-up: accessible name 'Fixture' does not name its own mode ('upload') — distinct names that point at the wrong mode are worse than no names`; `#go-up: accessible name 'Fixture' does not contain its visible label 'Extract' (WCAG 2.5.3 Label in Name — speech input targets the word the user can see)`."
+  },
+  "provenance": "D10, created 2026-08-26 before the ARIA fix, per hard rule 2; per-mode and Label-in-Name clauses added in the PR #55 round-1 repair, red-first on the reviewer's own swapped-label mutation. Every output quoted above was pasted from a run observed during the round-2 repair (PR #55 R10 asked for exactly this audit): the pre-D10 red was re-measured with the current check, and the four mutation failures are now quoted whole rather than truncated mid-message as an earlier revision of this note had them. Narrative: browser-agent repo docs/evals/2026-08-24-demo-sec10k-inspector-postmortem.md section 1 (S3) and section 3, remediation item 4."
+}

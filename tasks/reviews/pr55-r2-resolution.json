@@ -1,0 +1,55 @@
+{
+ "pr": 55,
+ "task": "D10",
+ "round": 2,
+ "date": "2026-08-26",
+ "implementer": "task/D10 round-2 repair",
+ "base": "d968ed3",
+ "gate_after_repair": {
+  "invariant": "63/63 = 1.000",
+  "fast": "126/126 = 1.000",
+  "baseline": ".eval-baseline.json untouched, fast 1.0",
+  "table_fidelity": "cells 427/427, rows 34/34",
+  "structure_fidelity": "blocks 61/61, bounds 61/61",
+  "index_html": "unchanged this round and unchanged since 5c44c4a — only the checks that read it, and the notes that describe them, moved"
+ },
+ "routing_note": "R9 and R10 are fixed here. R11 and R12 were routed to debt by the orchestrator; each carries `Origin: PR #55 R11` / `R12` in tasks/TODO.md's Open-debt table. R12's acceptance (relabel the R4 row's evidence as paraphrased) was deliberately NOT applied — the orchestrator's instruction is explicit that the correction IS the R12 row's content, so R4 stands as it was. tasks/TODO.md:72 Status is still untouched (R8, orchestrator-owned).",
+ "method_note": "Both R9 mutations were reproduced against the round-1 check before anything changed, and both new behaviours were then measured against the fixed check. Mutations were applied in place to src/sec10k/web/static/index.html and reverted with `git checkout --`; the file is byte-identical to 5c44c4a at commit time. Per R10, every output quoted in a case note or in this artifact was pasted from a run observed during THIS round — including the pre-D10 red, which was re-measured by checking out 3cdfbf4's index.html rather than carried over from the original run.",
+ "resolutions": [
+  {
+   "id": "R9",
+   "severity": "MEDIUM",
+   "status": "fixed",
+   "reproduced": "Yes, both directions, exactly as reported. FALSE GREEN: `deepLink();` moved into the catch arm (`}catch(e){ $(\"#sha\").textContent = \"meta unavailable\"; deepLink(); }`) gave `[PASS] ui-deep-link`, invariant 63/63 = 1.000, with the deep link running only when /api/meta fails. FALSE RED: the whole `function deepLink(){…}` declaration hoisted above `async function boot(){` — behaviour-identical, declarations hoist — gave `[FAIL] ui-deep-link`, 62/63 = 0.984, `out of order: 'if(!want || ![...$(\"#fx\").options].some(o => o.value === want)) return;' (@15053) runs before 'deepLink();' (@15416)`.",
+   "route_taken": "Acceptance route 1 (containment), not the reduced-scope route. Route 2 as written does not satisfy the acceptance's own final sentence: reducing `order` to the options-assignment -> call-site pair leaves mutation (a) GREEN, because the call site is still textually after the options assignment when it sits inside the catch arm. Containment is the only one of the two offered mechanisms that makes (a) red. No third mechanism was invented.",
+   "fix": "All ordering machinery is deleted from check_deep_link — no `order` input, no `flat.find()` comparison, no `deep_link_order` info key. The call site is pinned by CONTAINMENT instead: `wire`'s first entry is one contiguous span running from the `$(\"#fx\").innerHTML = m.fixtures…` assignment, through the `}catch(e){…}` arm, to `deepLink();`. Any relocation out of `boot()`'s straight-line tail — into the catch arm, ahead of the fetch, or anywhere else — is simply a missing pin, and the span also covers the options assignment being moved away from in front of it. The standalone pins for those two expressions were dropped as redundant, so `wire` is 6 pins. The docstring no longer claims the guard's or run trigger's position means anything, because it does not: both live inside the function body, whose textual position says nothing about when it runs.",
+   "covered_by": "evals/adversarial/ui-deep-link.json (invariant + fast), check `deep_link`, first entry of `input.wire`",
+   "mutation_a_now_red": "[FAIL] ui-deep-link (adversarial, 0.0s) / [eval] suite 'invariant': 62/63 = 0.984 -- missing pinned expression (the deep link's wire): $(\"#fx\").innerHTML = m.fixtures.map(f => `<option>${esc(f)}</option>`).join(\"\");\n  }catch(e){ $(\"#sha\").textContent = \"meta unavailable\"; }\n  deepLink();",
+   "mutation_b_now_green": "[PASS] ui-deep-link (adversarial, 0.0s) / [eval] suite 'invariant': 63/63 = 1.000",
+   "regression_check": "Round 1's own mutation (`deepLink();` moved to the first line of `boot()`) stays red under the containment pin, with the same missing-pin message as mutation (a) — so nothing the previous shape caught was lost."
+  },
+  {
+   "id": "R10",
+   "severity": "MEDIUM",
+   "status": "fixed",
+   "reproduced": "Yes. The round-1 note quoted `(@11395)` / `(@11405)`; the reviewer's mutation produces 14984/15084, which is what pr55-r1-resolution.json R1 recorded, so the two artifacts disagreed and the note's pair was never emitted by anything. The 10-character gap is also arithmetically impossible, `_squash('deepLink();')` being 11 characters. The same note said \"six pinned expressions missing, six failures\" while `input.wire` held seven.",
+   "fix": "The ui-deep-link note is rewritten from runs observed this round and quotes NO offsets at all — the check emits none any more, and offsets were brittle by nature. The pin count is now genuinely six and was verified by running the case against 3cdfbf4's index.html (six pins, six failures, each quoted). Audit of the other artifacts, per the instruction to go beyond the literal fix: (a) all three ARIA case notes quoted a pre-round-1 form of their 'watched red against the unmodified file' message — real when written, but no longer emittable, because R2's `_why_unnamed` and R3's clauses changed the message text. All three were re-measured against 3cdfbf4's index.html with the CURRENT checks and rewritten, and each note now says so explicitly. (b) ui-mode-button-names quoted its mutation failures truncated mid-message ('and the pair of the same for #go-up'), presented as verbatim; all four are now quoted whole. (c) pr55-r1-resolution.json R2 and R3 `red_output_verbatim` were re-measured and match character for character — no change needed. (d) pr55-r1-resolution.json R1 is marked `superseded` with a note that its quoted output was real at the time but is not reproducible against the current tree, rather than being rewritten: that file is the record of round 1.",
+   "covered_by": "evals/adversarial/ui-deep-link.json, ui-banner-status-role.json, ui-item-text-region.json, ui-mode-button-names.json (all four triage notes + provenance); tasks/reviews/pr55-r1-resolution.json (R1 superseded, audit_note_round2)",
+   "audit_found": "Two further defects of the same class beyond the reported one, both fixed: the three stale pre-round-1 quotes, and the truncated-as-verbatim mode-button quotes."
+  },
+  {
+   "id": "R11",
+   "severity": "LOW",
+   "status": "debt",
+   "became": "tasks/TODO.md Open-debt row **`_named` resolves an IDREF to an element's EXISTENCE, not to a non-empty computed name** (`Origin: PR #55 R11`)",
+   "note": "Routed to debt by the orchestrator; claim, evidence and acceptance carried verbatim in the row. The reviewer states R2 itself is closed. The docstring ceiling this round already says the labelledby form answers 'is it named' rather than 'what does it say'; R11's point is that it does not even fully answer the first, which the row records. The better half of the acceptance — the walk asserting a non-empty computed name via get_by_role — lands with the walk regeneration R4/R5 already queue."
+  },
+  {
+   "id": "R12",
+   "severity": "LOW",
+   "status": "debt",
+   "became": "tasks/TODO.md Open-debt row **The R4 debt row says \"Evidence verbatim\" over evidence that was reworded** (`Origin: PR #55 R12`)",
+   "note": "Routed to debt by the orchestrator; claim, evidence and acceptance carried verbatim in the row (the reviewer's evidence quotes a JS logical-or, so the operator is spelled out in the cell for the very reason the finding is about). NOT applied this round on explicit instruction. Worth recording: writing this row hit the same wall a second time — `ledger_table_shape` went red on a code span containing an escaped pipe inside the R12 row itself — which is why the row argues the lasting close is a convention (label such cells 'paraphrased' by default) rather than a one-line edit."
+  }
+ ]
+}

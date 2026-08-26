@@ -1,0 +1,46 @@
+{
+  "pr": 55,
+  "task": "D10",
+  "round": 2,
+  "result": "REQUEST_CHANGES",
+  "gate": "invariant 63/63 = 1.000; fast 126/126 = 1.000 (>= baseline 1.0)",
+  "scope": "Repair diff 5c44c4a..d968ed3 plus the standing round-1 findings. R2 and R3 confirmed closed by the reviewer; R1's fix is superseded by R9. No fresh full-diff sweep.",
+  "findings": [
+    {
+      "id": "R9",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "check_deep_link's new `order` list asserts textual file position, not the execution dependency it claims, so it is green on a relocation that leaves the deep link permanently dead and red on a semantics-preserving one.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:1814-1821 compares `flat.find()` offsets over four pins, two of which (`if(!want || ![...$(\"#fx\").options]...) return;` and `if(q.get(\"run\") === \"1\") $(\"#go-fx\").click();`) live inside the *body* of `function deepLink(){...}` (index.html:406-412) whose position is irrelevant to when it runs. False green: move the call site into the catch arm \u2014 `}catch(e){ $(\"#sha\").textContent = \"meta unavailable\"; deepLink(); }` at index.html:393-394 \u2014 and the deep link runs ONLY when /api/meta fails, i.e. never on the happy path; `?fixture=aapl-2025&run=1` renders nothing, the same user-visible symptom as round 1's R1, and run_case returns passed=True with invariant 63/63 = 1.000 (measured). False red: hoist the whole `function deepLink(){...}` declaration above `async function boot(){` \u2014 behaviour identical (declarations hoist) \u2014 and the case fails with `out of order: 'if(!want || ![...$(\"#fx\").options].some(o => o.value === want)) return;' (@15053) runs before 'deepLink();' (@15416)` (measured). The quoted diagnostic, the docstring at :1789-1801 (\"a pin that moves ahead of its predecessor is red wherever it moved to\") and the case note in evals/adversarial/ui-deep-link.json all state a guarantee only the first of the three pairs actually provides.",
+      "repro": "rsync the tree to a scratch dir; (a) move `deepLink();` from boot()'s tail into the catch arm, then `python3 -m evals.run --suite invariant` -> [PASS] ui-deep-link, 63/63 = 1.000. (b) cut the `function deepLink(){...}` block and paste it immediately above `async function boot(){`, same command -> [FAIL] ui-deep-link.",
+      "acceptance": "Either the chain is pinned as containment rather than position (e.g. the call site pin is the whole `}catch(e){...}\\n  deepLink();` span, so moving it out of boot()'s straight-line tail is a missing pin), or `order` is reduced to the one pair that is a real file-order dependency (options assignment -> call site) and the docstring/case note stop claiming the guard and run positions are asserted dependencies. Mutation (a) goes red; mutation (b) stays green."
+    },
+    {
+      "id": "R10",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The rewritten ui-deep-link case note quotes a `verbatim` red output whose offsets the check cannot produce, so the note's red-first evidence is fabricated.",
+      "evidence": "evals/adversarial/ui-deep-link.json triage.note ends: \"that mutation is red at `out of order: 'deepLink();' (@11395) runs before '$(\\\"#fx\\\").innerHTML = m.fixtures.map(f => `<option>${esc(f)}</option>`).join(\\\"\\\");' (@11405)`\". Running the reviewer's own mutation produces @14984 / @15084 \u2014 which is exactly what tasks/reviews/pr55-r1-resolution.json R1 `red_output_verbatim` records, so the resolution artifact and the case note disagree. The quoted 10-character gap is arithmetically impossible for any placement of the call site: `_squash('deepLink();')` is 11 characters, so the earliest the next pin can start is prev+11. Same note also still says \"all six pinned expressions missing, six failures\" while `input.wire` is now seven pins.",
+      "repro": "In a scratch copy move `deepLink();` to the first line of `boot()`, then `python3 -c \"import json,sys;sys.path.insert(0,'.');from src.repo_hygiene.eval_adapter import run_case;print(run_case(json.load(open('evals/adversarial/ui-deep-link.json')))['failures'])\"` -> offsets 14984/15084, not 11395/11405.",
+      "acceptance": "The note quotes the offsets the check actually emits (or drops the offsets and quotes only the stable prose of the message), and the pin count in the historical red-first sentence matches the current `wire` length."
+    },
+    {
+      "id": "R11",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "`_named`'s IDREF resolution answers \"does an element with that id exist\" rather than \"does the name compute non-empty\", so a labelledby pointing at an element with no accessible text still reads as named \u2014 the same defect class R2 was raised for.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:1649 `all(re.search(r'\\bid=\"' + re.escape(t) + r'\"', live) ...)`. Concrete input: `<div id=\"banner\" class=\"s-idle\" role=\"status\" aria-labelledby=\"up\">` \u2014 `id=\"up\"` is the `<input type=\"file\">` at index.html:303, whose accname computes to the empty string, so `get_by_role('status', name=...)` still matches nothing; measured `run_case(...)` passed=True, failures=[]. R2's stated acceptance (\"resolves every token against an id present in the same live file\") is met, so R2 is closed; the docstring's ceiling at :1638-1643 says the limit is \"what does it say\", which under-describes this \u2014 the limit is also \"is it named at all\".",
+      "repro": "In a scratch copy `sed -i '' 's/role=\"status\" aria-label=\"doc_status\"/role=\"status\" aria-labelledby=\"up\"/' src/sec10k/web/static/index.html && python3 -m evals.run --suite invariant` -> [PASS] ui-banner-status-role, 63/63 = 1.000.",
+      "acceptance": "Either the docstring ceiling names this case explicitly (a resolving reference to a text-less element is still accepted), or the browser walk asserts the banner's computed name non-empty via `get_by_role('status', name=...)` so the static check is not the only thing standing behind the claim."
+    },
+    {
+      "id": "R12",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The R4 debt row labels its evidence \"Evidence verbatim\" and the resolution artifact claims all three fields were \"carried verbatim\", but R4's evidence was reworded to get past `ledger_table_shape`.",
+      "evidence": "tasks/TODO.md:211 renders `el => el.getAttribute('aria-label') || el.textContent` (tasks/reviews/pr55-r1.json R4 evidence) as \"(an `evaluate` returning `el.getAttribute('aria-label')` falling back to `el.textContent`)\", and drops the leading claim clause; a normalized substring comparison of the four debt rows against pr55-r1.json shows R4 claim and R4 evidence as the only two that differ. tasks/reviews/pr55-r1-resolution.json:53 nonetheless states \"claim, evidence and acceptance carried verbatim in the row\". The substance of the finding is preserved \u2014 this is a labelling inaccuracy, not a dropped finding.",
+      "repro": "Compare each debt row against `json.load(open('tasks/reviews/pr55-r1.json'))['findings']` with backticks/asterisks stripped: R5/R6/R7 claim+evidence are exact substrings, R4's are not.",
+      "acceptance": "The R4 row says the evidence is paraphrased (pipes are not representable in a ledger cell) rather than \"verbatim\", and the resolution note for R4 says the same."
+    }
+  ]
+}

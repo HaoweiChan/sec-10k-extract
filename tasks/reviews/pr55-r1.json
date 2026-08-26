@@ -1,0 +1,82 @@
+{
+  "pr": 55,
+  "task": "D10",
+  "round": 1,
+  "result": "REQUEST_CHANGES",
+  "gate": "invariant 63/63 = 1.000; fast 126/126 = 1.000 (>= baseline 1.0)",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "check_deep_link asserts the wrong ordering — it pins guard-before-run inside deepLink()'s own body (inert, since that order is fixed by the function text), but not the ordering that actually makes the feature work, so moving `deepLink();` above the `/api/meta` fetch turns the deep link into a permanent no-op with the whole gate green.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:1744-1750 (`gi, ri = flat.find(guard), flat.find(run)`) vs src/sec10k/web/static/index.html:394 and 404-407, whose comment explicitly claims 'Runs after the meta fetch because the option list it validates against comes from that response'. State that triggers it: `deepLink();` relocated to the first line of `boot()`. `$(\"#fx\").options` is then empty, `![...options].some(...)` is true, the guard returns, and `?fixture=aapl-2025&run=1` silently renders nothing. Case triage note in evals/adversarial/ui-deep-link.json claims 'Because a pin set can be satisfied in the wrong order, the guard's position is asserted structurally too' — the assertion made does not cover this order.",
+      "repro": "Copy the tree to a scratch dir, move `deepLink();` from after the try/catch to before `try{` in `boot()`, then `python3 -m evals.run --suite invariant` -> `[PASS] ui-deep-link`, suite 63/63 = 1.000. (Verified by reviewer.)",
+      "acceptance": "check_deep_link asserts that the `deepLink();` call site appears after the `$(\"#fx\").innerHTML = m.fixtures...` assignment (or the wire pin is a single expression spanning both), and the mutation above goes red before the fix lands."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "`_named()` accepts an `aria-labelledby` value without resolving the IDREF, so both new ARIA cases stay green on an element whose computed accessible name is empty — exactly the anonymous-`generic` defect they were written to prevent.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:62-64 `return (attrs.get(\"aria-label\") or attrs.get(\"aria-labelledby\") or \"\").strip()`, consumed by check_banner_status_role:89 and check_item_text_region:116. Concrete input: `<div id=\"banner\" class=\"s-idle\" role=\"status\" aria-labelledby=\"no-such-id\">` — dangling IDREF, name computes to empty, and `get_by_role('status', name=...)` (the exact form the walk uses at d10_agent_walk.py:111) matches nothing. Same hole on the item region with `aria-labelledby=\"ghost-${esc(it.item)}\"`, which even satisfies the `label_must_interpolate` clause.",
+      "repro": "`sed 's/role=\"status\" aria-label=\"doc_status\"/role=\"status\" aria-labelledby=\"no-such-id\"/'` on index.html in a scratch copy, then `python3 -m evals.run --suite invariant` -> `[PASS] ui-banner-status-role`, 63/63 = 1.000. (Verified by reviewer.)",
+      "acceptance": "When the name comes from `aria-labelledby`, the check resolves every token in the value against an `id=\"...\"` present in the same live file and fails on a dangling reference; the mutation above goes red."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "check_mode_button_names enforces only that the three names are non-empty and distinct, not that each name matches its own mode or contains the button's visible label, so labels that are distinct but wrong (or that drop 'Extract' entirely, breaking WCAG 2.5.3 Label in Name) pass the gate.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:128-152 — no per-button expected substring, no visible-label containment. Concrete input: `#go-fx` labelled `\"Upload\"` and `#go-up` labelled `\"Fixture\"` (index.html:298, 302). All three visible labels remain `Extract`, so the accessible names no longer contain the visible label (2.5.3 fails for speech input), and an accessibility-first agent picking by name clicks the file-upload mode when it wanted the fixture. The row's Reviewer-evidence claim is 'correct ARIA is screen-reader correctness, not agent special-casing' — nothing in the eval set backs that claim.",
+      "repro": "In a scratch copy replace `aria-label=\"Extract the selected committed fixture\"` with `aria-label=\"Upload\"` and `aria-label=\"Extract the uploaded filing\"` with `aria-label=\"Fixture\"`, then `python3 -m evals.run --suite invariant` -> `[PASS] ui-mode-button-names`, 63/63 = 1.000. (Verified by reviewer.)",
+      "acceptance": "The case pins a per-button substring (fixture / upload / URL) AND that each accessible name contains the button's visible text `Extract`; both mutations above go red."
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The walk artifact misdescribes its own method: `a11y_names()` docstring says it reads names 'through the ARIA engine (not the DOM attribute)' while its body reads the DOM attribute, and the module docstring's 'never through a CSS selector on the attribute we just added' is contradicted by three id-selector `get_attribute` reads.",
+      "evidence": "tasks/reviews/d10_agent_walk.py:47-53 `el => el.getAttribute('aria-label') || el.textContent`, vs the claim at :48-49 and the module claim at :15-18; the direct attribute reads are at :89, :117, :141-142. Visible consequence in the committed evidence: tasks/reviews/d10-agent-walk.json:33 records an empty-string button name, which is the `<input type=\"file\" id=\"up\">` whose real accessible name is 'upload a filing (.htm / .html / .txt)' from its `<label for=\"up\">`. The recorded name list is therefore not an accessibility-tree reading and shows a phantom unnamed button.",
+      "repro": "Read d10_agent_walk.py:47-53 against d10-agent-walk.json:31-35; or re-run the walk and compare `a11y_names(page,'button')` with `page.locator('#up').aria_snapshot()`.",
+      "acceptance": "`a11y_names` uses the computed accessible name (e.g. Playwright `aria_snapshot()` or `evaluate` over the a11y tree), or the docstrings are corrected to say the recorded lists are DOM-attribute reads while only the `get_by_role(..., name=...)` assertions go through the ARIA engine; the regenerated JSON no longer carries a nameless button."
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The new Debt row cites a field of the walk artifact that cannot support the claim it makes — the row names two specific 404 URLs, the cited field holds one deduped URL-less string.",
+      "evidence": "tasks/TODO.md:210 claims `GET /api/source/aapl-20250927_g1.jpg 404` and `_g2.jpg 404`, evidence column `tasks/reviews/d10-agent-walk.json, steps.deep_link.console_errors_ungraded`. That field (d10-agent-walk.json:14-16) is `[\"Failed to load resource: the server responded with a status of 404 (Not Found)\"]` — one entry, no URL, no method, no path. The underlying fact is independently true (`evals/fixtures/aapl-2025/` contains only `filing.htm`, whose `<img src=\"aapl-20250927_g1.jpg\">` / `_g2.jpg` have nothing to serve), but the named artifact is not where it is recorded.",
+      "repro": "`python3 -c \"import json;print(json.load(open('tasks/reviews/d10-agent-walk.json'))['steps']['deep_link']['console_errors_ungraded'])\"` and compare against tasks/TODO.md:210.",
+      "acceptance": "Either the walk records `m.location` / the request URL alongside each console error so the artifact carries the two paths, or the Debt row cites where the two URLs were actually observed (server log) instead of the artifact."
+    },
+    {
+      "id": "R6",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "`aria-label=\"doc_status\"` names the live region with an internal envelope field name that duplicates the region's own visible text, which is naming for the agent rather than for a screen-reader user — cutting against the row's stated evidence claim.",
+      "evidence": "src/sec10k/web/static/index.html:327 `aria-label=\"doc_status\"`; the banner's own rendered content is `doc_status: <status>` (index.html:831). The PR's own artifact shows the duplication: tasks/reviews/d10-agent-walk.json:107 `- status \"doc_status\": \"doc_status: success - 18 extracted . 5 incorporated_by_reference fixture: aapl-2025\"`. A screen reader announcing name-then-content speaks the token twice. `check_banner_status_role` accepts any non-empty name, so nothing binds this either way.",
+      "repro": "Read tasks/reviews/d10-agent-walk.json:107; or run the walk and inspect `aria_snapshot_excerpt`.",
+      "acceptance": "The banner carries a human-readable name (e.g. 'extraction status') that is not a verbatim repeat of its own leading text, or the row's 'screen-reader correctness' evidence claim is qualified to say the name was chosen to match the envelope field."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "`role=\"region\"` was added to two scrollable containers without `tabindex=\"0\"`, so the page now advertises named regions that a keyboard-only user is told exist but cannot scroll on engines lacking auto-focusable scroll containers.",
+      "evidence": "src/sec10k/web/static/index.html:212 `pre.text{...overflow:auto}` and :217-219 `.text.md{...overflow:auto}`, now carrying `role=\"region\"` at :918-919. Concrete state: aapl-2025 Item 1A renders 68,162 characters into a fixed-height `overflow:auto` box with no focusable descendants. Mitigated on Chrome 127+/current Firefox (auto-focusable scrollers), not elsewhere.",
+      "repro": "Load `/?fixture=aapl-2025&run=1`, select Item 1A, Tab through the page — focus never enters the region; the scrollbar is mouse-only on engines without focusable-scroller support.",
+      "acceptance": "Both containers carry `tabindex=\"0\"` alongside `role=\"region\"` (the ARIA APG scrollable-region pattern), pinned by the same `ui-item-text-region` case."
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The D10 ledger Status still reads `UI gate UNRUN` after the UI gate ran green, so the row understates its own evidence and does not distinguish the clause that genuinely has not run (post-deploy browser-agent re-probe / M41).",
+      "evidence": "tasks/TODO.md:72 Status `in-progress — UI gate UNRUN`, while the Validation column's first two clauses are done: the four `repo_hygiene` UI cases exist and pass (`python3 -m evals.run --suite invariant` -> 63/63 = 1.000, verified) and the browser walk is committed at tasks/reviews/d10-agent-walk.json with `\"failures\": []`. Hard rule 3 makes Status the place the gate state is named.",
+      "repro": "`python3 -m evals.run --suite invariant` (63/63 = 1.000, four ui-* D10 cases PASS) against tasks/TODO.md:72.",
+      "acceptance": "Status names what ran and what did not, e.g. `in-progress — UI cases + browser walk GREEN; post-deploy M41 re-probe UNRUN`.",
+      "route_note": "Orchestrator-owned field: the Status column is rewritten by the orchestrator at the EVIDENCE transition, so this is absorbed there rather than becoming a separate Debt row."
+    }
+  ]
+}
