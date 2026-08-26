@@ -154,3 +154,53 @@ full.
   check loop, which sits outside that scope.
 - **Corrected:** the whole of `run_case` runs inside `_no_credential()`, so a
   case cannot spend money on its second run of a file either.
+
+## Round 2 (PR #58 review repair, 2026-08-27) — three more corrections
+
+- **Assumed:** `verify`'s guards were about OFFSETS, so the item they name did
+  not need checking.
+- **Eval said:** the reviewer fed it a proposal naming a `missing` item. It was
+  accepted with an empty rejection list; `apply` wrote `start`/`end` onto an
+  item the contract says has none; and because `meta.coverage` sums every item
+  with a non-null `start`, that one malformed item moved a document's coverage
+  from **0.0030 to 0.6142** — the exact number the D8 trigger thresholds on.
+  `c-2025`, one of the two exam filings, is 21 `missing` + 2 `omitted`, so the
+  first live run would have hit it.
+- **Corrected:** `verify` refuses any code whose status is not span-bearing,
+  AND `envelope_shape` now asserts the contract's null-span rule in both
+  directions so the guard binds every producer rather than the one that broke
+  it. The honest footnote: on the real fixture the pre-fix hole was
+  *accidentally* covered by the neighbouring title-similarity check, so the
+  case's red is weaker than the unit repro — both the case provenance and the
+  red record say so instead of presenting the fixture red as the proof.
+
+- **Assumed:** publishing "all-or-nothing" in an ADR and a docstring made it
+  true, and `_demo` covered it.
+- **Eval said:** the loop returned the survivors of a mixed proposal. Every
+  mixed proposal `_demo` happened to construct tripped the ordering check as a
+  *side effect*, so the property had never once been watched — a test that
+  passes for the wrong reason is indistinguishable from one that passes.
+- **Corrected:** the code was changed to match the claim (the ADR's own stated
+  rationale is right), the ADR carries a marked correction saying the paragraph
+  was false as published, and both the new `_demo` block and the eval case use
+  a mixed proposal that does *not* trip ordering.
+
+- **Assumed:** naming two `_demo`s under an ADR's **Enforced by** line made
+  them enforcement.
+- **Eval said:** replacing every trust-boundary guard in `verify` and both
+  `Budget` ceilings with `if False:` left invariant 75/75 and fast 138/138
+  fully green. This repo had already ruled on exactly this at PR #25 R1 — "a
+  self-check no job runs is a claim, not enforcement" — six lines above where
+  the two new lines now sit in `ci.yml`.
+- **Corrected:** both self-checks wired into CI's unit-tests job, and the
+  mutation re-run afterwards now turns *both* the eval gate and that job red.
+  The general lesson, which is the one worth keeping: an "Enforced by" line is
+  a claim about the repo's wiring, and it needs checking against the wiring.
+
+- **Assumed (owner instruction, not a defect):** the provider was Anthropic's
+  Messages API and prices could live in a table in the code.
+- **Corrected:** OpenRouter, stdlib client unchanged; and prices are no longer
+  written down at all. `usd()` reads the committed dated catalogue record and
+  **raises** on a slug it does not carry — which it did, loudly, the moment the
+  rung constants still named the old model ids. A price that cannot go stale
+  silently is worth more than a price that is convenient to read.

@@ -17,12 +17,23 @@
           so a model-moved span reads like any heading match.
        6. the upload mode drops the flag from the query string, so one of the
           three input modes can never escalate at all.
+       7. (PR #58 R6) the box is offered unconditionally: the page never asks
+          the server whether escalation is armed, never disables the control,
+          and never renders the server's own refusal. On an unarmed deployment
+          that is a tickable box whose value is silently discarded — which is
+          the dishonesty this milestone exists to remove, wearing the costume
+          of a working feature. Three pinned hops, three failures.
 
      Caught by evals/adversarial/ui-routing-provenance-regression.json
      (expect.min_failures/max_failures). -->
 <label class="opt"><input type="checkbox" id="escalate" checked disabled> escalate on trigger</label>
 <script>
 function escalateOn(){ const c = $("#escalate"); return !!(c && c.checked); }
+// shape 7: arming is never consulted; the box is always live and always sent
+async function boot(){
+  const m = await (await fetch("/api/meta")).json();
+  $("#fx").innerHTML = m.fixtures.map(f => `<option>${esc(f)}</option>`).join("");
+}
 function routingStrip(r){
   if(!r) return "";
   const tiers = (r.tiers || []).map(t => `${esc(t.tier)} → <b>${esc(t.outcome)}</b>`).join("; ");

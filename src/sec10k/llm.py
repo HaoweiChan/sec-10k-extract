@@ -1,33 +1,37 @@
 """The ONLY module in this repo that can talk to a paid API (ADR-036, D11).
 
-Nothing on the gate path imports it. `src/sec10k/escalate.py` imports it
-INSIDE the one function that spends money, so `python3 -m evals.run` never
-pulls `urllib` in at all — the property is asserted dynamically by
-`repo_hygiene`'s `escalation_seam` check, which imports the extractor in a
-subprocess and reads `sys.modules`.
+Provider: **OpenRouter** (`https://openrouter.ai/api/v1/chat/completions`),
+owner instruction 2026-08-27. The Anthropic Messages API client this replaced
+is gone, not renamed: the auth header, the request body, the response shape,
+the model ids and the pricing source all changed (ADR-036 §h1).
 
-Written on stdlib `urllib.request` + `json` and NOT on the `anthropic` SDK, by
-constraint, not by preference: `requirements.txt` is `fastapi` + `uvicorn`,
-CI runs no `pip install` at all (ADR-003), and the extraction pipeline and the
-eval harness must stay importable with zero third-party packages. That is the
-documented exception to "use the official SDK" — a raw-HTTP client because the
-project cannot take the dependency.
+Nothing on the gate path imports this module. `src/sec10k/escalate.py` imports
+it INSIDE the one function that spends money, so `python3 -m evals.run` never
+pulls `urllib` in at all — asserted dynamically by `repo_hygiene`'s
+`escalation_seam` check, which imports the extractor in a subprocess and reads
+`sys.modules`.
 
-Three properties this module exists to guarantee, all of them ADR-036 rulings:
+Written on stdlib `urllib.request` + `json` and NOT on a vendor SDK, by
+constraint: `requirements.txt` is `fastapi` + `uvicorn`, CI runs no
+`pip install` at all (ADR-003), and the pipeline and eval harness must stay
+importable with zero third-party packages.
 
-1. **No credential, no output.** `ANTHROPIC_API_KEY` is read from the
+Four properties this module exists to guarantee, all of them ADR-036 rulings:
+
+1. **No credential, no output.** `OPENROUTER_API_KEY` is read from the
    environment and nowhere else. When it is absent every call raises
-   `EscalationUnavailable` before a socket is opened. It is never defaulted,
-   never prompted for, never logged, and never written to the cache key.
-2. **No unbudgeted spend.** Every call goes through a `Budget`, which counts
-   calls and dollars and raises `BudgetExceeded` rather than continuing
-   (cost-discipline rule 3). `Budget(max_calls=0)` is a hard offline mode.
+   `EscalationUnavailable` before a socket is opened. Never defaulted, never
+   prompted for, never logged, never part of a cache key.
+2. **No unbudgeted spend.** Every call goes through a `Budget` (cost-discipline
+   rule 3). `Budget(max_calls=0)` is a hard offline mode. Read `Budget`'s own
+   docstring for what its ceiling does and does NOT bound — PR #58 R6.
 3. **Re-running is free.** Every response is cached under a content hash of
-   everything that could change it — model, prompt version, system, user,
-   max_tokens, effort (cost-discipline rule 2). A second run of the same eval
-   costs $0.
+   everything that could change it (cost-discipline rule 2).
+4. **No invented price.** `usd()` reads per-token pricing out of the committed
+   OpenRouter catalogue record and raises on a slug that is not in it. There is
+   no hand-maintained price table to go stale (PR #58, owner instruction).
 
-Self-check: python3 -m src.sec10k.llm
+Self-check: python3 -m src.sec10k.llm   (wired into CI's unit-tests job — PR #58 R3)
 """
 import hashlib
 import json
@@ -38,53 +42,103 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 
-API_VERSION = "2023-06-01"
-DEFAULT_BASE_URL = "https://api.anthropic.com"
-# bumped whenever a prompt in escalate.py changes: it is part of the cache key,
-# so a reworded prompt cannot silently be answered from an old response.
-PROMPT_VERSION = "d11.1"
+DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
+# bumped whenever a prompt in escalate.py or the request shape changes: it is
+# part of the cache key, so a reworded prompt — or a different provider's
+# request body — cannot be answered from an old response.
+PROMPT_VERSION = "d11.2-openrouter"
 
-# USD per 1M tokens, (input, output). Cached from the Anthropic pricing table
-# 2026-06-24 and used ONLY to turn a response's own reported token counts into
-# the `usd` figure the routing record publishes. A stale price makes the
-# published cost wrong, which is why it is a named constant with a date rather
-# than a literal inside a formula.
-PRICES = {
-    "claude-opus-5": (5.00, 25.00),
-    "claude-sonnet-5": (2.00, 10.00),
-    "claude-haiku-4-5": (1.00, 5.00),
-}
+# The two rungs, as OpenRouter SLUGS. Not guessed: both are present verbatim in
+# the committed catalogue record below, and `usd()` refuses a slug that is not.
+#   openai/gpt-5-mini       $0.25/$2.00 per MTok, 400,000 ctx — the cheap rung.
+#   anthropic/claude-opus-5 $5.00/$25.00 per MTok, 1,000,000 ctx — the strong one,
+#   deliberately the SAME model the pre-swap ADR costed, so every figure in
+#   ADR-036 §d moves for exactly one reason: the cheap rung got cheaper.
+# `escalate.RUNGS` names them; this module only prices and calls them.
+
+# Pricing lives in a dated, committed artifact rather than in this file, so the
+# published cost of the ladder is sourced and re-derivable (owner instruction,
+# PR #58). It is read at call time from disk — never fetched — because fetching
+# it would put a network module back on the seam `escalation_seam` protects.
+PRICES_FILE = ROOT / "tasks" / "reviews" / "2026-08-27-openrouter-models.json"
 
 CACHE_DIR = Path(os.environ.get("SEC10K_LLM_CACHE") or (ROOT / "evals" / "cache" / "llm"))
 
 
 class EscalationUnavailable(RuntimeError):
-    """The slow path cannot run: no credential, or the API refused/failed.
+    """The slow path cannot run: no credential, budget spent, or the API
+    refused/failed.
 
     Raised, never swallowed into a fabricated answer. `escalate.route` catches
     exactly this class and records it verbatim in the routing record and as a
-    doc-level warning, which is the "fail loudly and refuse" half of repo rule
-    4 — the fast path's result still stands, and nothing claims a tier ran.
+    doc-level warning — the "fail loudly and refuse" half of repo rule 4.
     """
 
 
 class BudgetExceeded(EscalationUnavailable):
-    """The run's call or dollar budget is spent. A subclass because a caller
-    that already handles "the slow path could not run" handles this too."""
+    """The budget's call or dollar ceiling is spent. A subclass because a
+    caller that already handles "the slow path could not run" handles this."""
+
+
+def _catalogue():
+    """The committed OpenRouter model record. Raises if it is missing."""
+    try:
+        return json.loads(PRICES_FILE.read_text())
+    except OSError as e:
+        raise EscalationUnavailable(
+            f"the OpenRouter pricing record {PRICES_FILE.name} is unreadable ({e}) — "
+            "refusing to price or make a call without it") from None
+
+
+def price(model):
+    """(input, output) USD per 1M tokens for `model`, from the committed record.
+
+    FAILS LOUDLY on a slug the record does not carry. There is deliberately no
+    default and no fallback constant: a wrong price makes the published cost
+    wrong, and a silently stale one is worse than a crash (owner instruction,
+    PR #58).
+    """
+    models = _catalogue().get("models", {})
+    if model not in models:
+        raise KeyError(
+            f"model {model!r} is not in {PRICES_FILE.name} (which carries "
+            f"{sorted(models)}) — refusing to invent a price. Re-fetch "
+            "https://openrouter.ai/api/v1/models and re-commit that artifact.")
+    p = models[model].get("pricing") or {}
+    try:
+        # OpenRouter publishes USD per TOKEN as strings
+        return float(p["prompt"]) * 1e6, float(p["completion"]) * 1e6
+    except (KeyError, TypeError, ValueError) as e:
+        raise KeyError(f"model {model!r} has no usable pricing in "
+                       f"{PRICES_FILE.name}: {p!r} ({e})") from None
 
 
 def usd(model, input_tokens, output_tokens):
     """Cost of one response in dollars, from its own reported token counts."""
-    if model not in PRICES:
-        raise KeyError(f"no price on record for model {model!r} — refusing to "
-                       "publish a cost figure this module cannot compute")
-    cin, cout = PRICES[model]
+    cin, cout = price(model)
     return round((input_tokens * cin + output_tokens * cout) / 1_000_000, 6)
 
 
 class Budget:
-    """A per-run ceiling on paid work, enforced BEFORE the call (cost-discipline
-    rule 3). `max_calls=0` is the offline mode the eval suites run under."""
+    """A ceiling on paid work, enforced BEFORE the call (cost-discipline rule 3).
+
+    **What it bounds, stated exactly, because the previous docstring said
+    "per-run" and that was false (PR #58 R6).** A `Budget` instance bounds the
+    calls and dollars charged THROUGH THAT INSTANCE. Its scope is therefore
+    whatever the caller gives it:
+
+      * `extract_items(path, escalate=True)` with no `budget=` creates one per
+        DOCUMENT — 2 calls / $1.00 for that document and no more;
+      * a caller sweeping many documents must pass ONE `Budget` to every
+        `extract_items` call to get a per-sweep ceiling. `evals/snapshot.py`
+        and the eval adapter never escalate at all, so neither needs one;
+      * the web layer passes a single process-wide `Budget` created at import
+        (`web.app.SERVER_BUDGET`), so an unauthenticated deployment cannot be
+        driven past it however many requests arrive (ADR-036 §h2).
+
+    `max_calls=0` is a hard offline mode and is what a zero-budget refusal
+    looks like.
+    """
 
     def __init__(self, max_calls=2, max_usd=1.00):
         self.max_calls = max_calls
@@ -100,15 +154,14 @@ class Budget:
         # dev corpus is jpm-2024's rung 2 at an estimated $1.52 against a $1.00
         # default (ADR-036 §d3). Upgrade path when it matters: estimate input
         # tokens from len(user)/4 and refuse before the call. Not built here
-        # because the estimate is the very thing the first live run exists to
-        # replace, and a wrong pre-check refuses work that would have been
-        # affordable. Carried as debt, not hidden.
+        # because that estimate is the very thing the first live run exists to
+        # replace, and a wrong pre-check refuses affordable work. Debt row.
         if self.calls >= self.max_calls:
             raise BudgetExceeded(
-                f"run budget spent: {self.calls} of {self.max_calls} calls used")
+                f"budget spent: {self.calls} of {self.max_calls} calls used")
         if self.spent >= self.max_usd:
             raise BudgetExceeded(
-                f"run budget spent: ${self.spent:.4f} of ${self.max_usd:.2f}")
+                f"budget spent: ${self.spent:.4f} of ${self.max_usd:.2f}")
         self.calls += 1
 
     def charge(self, dollars, tokens):
@@ -120,8 +173,8 @@ class Budget:
                 "usd": round(self.spent, 6)}
 
 
-def _cache_key(model, system, user, max_tokens, effort):
-    blob = json.dumps([PROMPT_VERSION, model, system, user, max_tokens, effort],
+def _cache_key(model, system, user, max_tokens):
+    blob = json.dumps([PROMPT_VERSION, model, system, user, max_tokens],
                       sort_keys=True, ensure_ascii=False).encode()
     return hashlib.sha256(blob).hexdigest()
 
@@ -129,74 +182,87 @@ def _cache_key(model, system, user, max_tokens, effort):
 def _credential():
     """The key, from the environment and nowhere else.
 
-    Not defaulted, not read from a file, not prompted for. An empty or
-    whitespace-only value is treated as absent — an exported-but-empty
-    variable is the shape a half-finished `export` leaves behind, and taking
-    it as a credential would turn a loud refusal into a 401.
+    An empty or whitespace-only value is treated as absent — that is the shape
+    a half-finished `export` leaves behind, and taking it as a credential turns
+    a loud refusal into a 401.
     """
-    key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
+    key = (os.environ.get("OPENROUTER_API_KEY") or "").strip()
     if not key:
         raise EscalationUnavailable(
-            "ANTHROPIC_API_KEY is not set — the slow path refuses rather than "
+            "OPENROUTER_API_KEY is not set — the slow path refuses rather than "
             "degrading. The deterministic result above stands on its own; no "
             "tier ran and nothing was inferred.")
     return key
 
 
-def call(model, system, user, max_tokens, budget, effort="low", timeout=120):
-    """One Messages API request. Returns {"text", "usage", "usd", "cached"}.
+def _body(model, system, user, max_tokens):
+    """The OpenAI-shaped request body OpenRouter expects.
 
-    Cache first (free, and does not touch the budget or the credential), then
-    budget, then credential, then the socket — in that order, so the cheapest
-    refusal wins and a cached eval run needs no key at all.
+    Its own function so `_demo` can assert the SHAPE rather than text-match the
+    file. The previous Anthropic client sent a reasoning-effort knob in a
+    nested config object; OpenRouter's chat-completions surface has no
+    equivalent, so it is DROPPED rather than mapped onto something that means
+    something else, and this body has exactly four keys.
     """
-    key_hash = _cache_key(model, system, user, max_tokens, effort)
+    return {"model": model, "max_tokens": max_tokens,
+            "messages": [{"role": "system", "content": system},
+                         {"role": "user", "content": user}]}
+
+
+def call(model, system, user, max_tokens, budget, timeout=120):
+    """One OpenRouter chat-completions request.
+
+    Returns {"text", "usage", "usd", "model", "cached"}.
+
+    Cache first (free, and touches neither the budget nor the credential), then
+    budget, then credential, then the socket — cheapest refusal wins, and a
+    cached eval run needs no key at all.
+    """
+    key_hash = _cache_key(model, system, user, max_tokens)
     hit = CACHE_DIR / f"{key_hash}.json"
     if hit.exists():
-        got = json.loads(hit.read_text())
-        return {**got, "cached": True}
+        return {**json.loads(hit.read_text()), "cached": True}
 
     budget.take()
     api_key = _credential()
-    body = {
-        "model": model,
-        "max_tokens": max_tokens,
-        # `effort` replaces the removed `budget_tokens` on this model family;
-        # sending `budget_tokens` to Opus 5 / Haiku 4.5 is a 400.
-        "output_config": {"effort": effort},
-        "system": system,
-        "messages": [{"role": "user", "content": user}],
-    }
-    base = os.environ.get("ANTHROPIC_BASE_URL") or DEFAULT_BASE_URL
+    body = _body(model, system, user, max_tokens)
+    base = os.environ.get("OPENROUTER_BASE_URL") or DEFAULT_BASE_URL
     req = urllib.request.Request(
-        base.rstrip("/") + "/v1/messages",
+        base.rstrip("/") + "/chat/completions",
         data=json.dumps(body).encode("utf-8"),
         headers={"content-type": "application/json",
-                 "anthropic-version": API_VERSION,
-                 "x-api-key": api_key},
+                 "authorization": f"Bearer {api_key}"},
         method="POST")
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             payload = json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
-        # the body may carry the API's own error message; the KEY may not
-        # appear in it, and does not — it travelled in a header we do not echo
+        # the body may carry the provider's own error message; the key travels
+        # in a header we do not echo, so it cannot appear here
         detail = e.read().decode("utf-8", "replace")[:400]
         raise EscalationUnavailable(f"API returned HTTP {e.code}: {detail}") from None
     except (urllib.error.URLError, TimeoutError, OSError) as e:
         raise EscalationUnavailable(f"API unreachable: {e}") from None
 
-    if payload.get("stop_reason") == "refusal":
+    # OpenRouter returns provider errors INSIDE a 200 body as often as not
+    if payload.get("error"):
+        raise EscalationUnavailable(f"API error: {payload['error']}")
+    try:
+        choice = payload["choices"][0]
+        text = choice["message"]["content"] or ""
+    except (KeyError, IndexError, TypeError) as e:
         raise EscalationUnavailable(
-            f"model refused: {(payload.get('stop_details') or {}).get('category')}")
-    text = "".join(b.get("text", "") for b in payload.get("content", [])
-                   if b.get("type") == "text")
+            f"unparseable response shape ({type(e).__name__}: {e}): "
+            f"{json.dumps(payload)[:300]}") from None
+    if choice.get("finish_reason") == "content_filter":
+        raise EscalationUnavailable("provider refused: finish_reason=content_filter")
+
     u = payload.get("usage") or {}
     got = {
         "text": text,
-        "usage": {"input_tokens": u.get("input_tokens", 0),
-                  "output_tokens": u.get("output_tokens", 0)},
-        "usd": usd(model, u.get("input_tokens", 0), u.get("output_tokens", 0)),
+        "usage": {"input_tokens": u.get("prompt_tokens", 0),
+                  "output_tokens": u.get("completion_tokens", 0)},
+        "usd": usd(model, u.get("prompt_tokens", 0), u.get("completion_tokens", 0)),
         "model": model,
     }
     budget.charge(got["usd"], sum(got["usage"].values()))
@@ -206,74 +272,108 @@ def call(model, system, user, max_tokens, budget, effort="low", timeout=120):
 
 
 def _demo():
-    """The three properties above, each as an assertion that fails if the
-    property breaks. No network, no key, no fabricated response."""
-    import tempfile
+    """Every property above that can be proven without spending money.
 
-    # 1. no credential -> refusal, raised before anything else happens
-    saved = os.environ.pop("ANTHROPIC_API_KEY", None)
+    No network, no key, no fabricated API response. Run by CI's unit-tests job
+    (PR #58 R3) — before that, deleting every guard below left both gate suites
+    100% green, which is recorded in tasks/reviews/pr58-r1-red.txt.
+    """
+    import tempfile
+    from src.sec10k.escalate import RUNGS
+
+    # 0. the provider swap is real, not a rename
+    assert "openrouter.ai" in DEFAULT_BASE_URL
+    src = Path(__file__).read_text()
+    # spelled in halves so this assertion is not itself the occurrence it forbids
+    for gone in ("ANTHROPIC" + "_API_KEY", "x-api" + "-key"):
+        assert gone not in src, f"{gone!r} is Anthropic-transport residue — swap incomplete"
+    # the request body is OpenAI-shaped and carries no reasoning-effort knob —
+    # asserted on the SHAPE, so a text pin cannot be satisfied by a comment
+    b = _body("m", "sys", "usr", 7)
+    assert set(b) == {"model", "max_tokens", "messages"}, sorted(b)
+    assert [m["role"] for m in b["messages"]] == ["system", "user"]
+    assert b["messages"][0]["content"] == "sys" and b["max_tokens"] == 7
+
+    # 1. pricing comes from the committed record, and an unknown slug RAISES
+    for _, model in RUNGS:
+        cin, cout = price(model)
+        assert cin > 0 and cout > 0, (model, cin, cout)
+    # the exact figures ADR-036 §d is derived from, pinned so a re-fetch that
+    # moves them cannot silently invalidate every published dollar
+    assert price("openai/gpt-5-mini") == (0.25, 2.0), price("openai/gpt-5-mini")
+    assert price("anthropic/claude-opus-5") == (5.0, 25.0)
+    assert usd("anthropic/claude-opus-5", 1_000_000, 1_000_000) == 30.0
+    assert usd("openai/gpt-5-mini", 1_000_000, 0) == 0.25
+    try:
+        usd("no/such-model", 1, 1)
+        raise AssertionError("an unpriced model must not yield a cost figure")
+    except KeyError as e:
+        assert "refusing to invent a price" in str(e)
+
+    saved = os.environ.pop("OPENROUTER_API_KEY", None)
     try:
         with tempfile.TemporaryDirectory() as td:
             global CACHE_DIR
             real_cache, CACHE_DIR = CACHE_DIR, Path(td)
+            model = RUNGS[0][1]
+
+            # 2. no credential -> refusal, raised before anything else happens
             b = Budget(max_calls=5)
             try:
-                call("claude-haiku-4-5", "s", "u", 64, b)
+                call(model, "s", "u", 64, b)
                 raise AssertionError("a keyless call must refuse, not proceed")
             except EscalationUnavailable as e:
-                assert "ANTHROPIC_API_KEY" in str(e), e
+                assert "OPENROUTER_API_KEY" in str(e), e
             # the budget is decremented BEFORE the credential check, so a
             # keyless run cannot loop forever pretending it never tried
             assert b.calls == 1, b.calls
 
             # an exported-but-empty variable is not a credential
-            os.environ["ANTHROPIC_API_KEY"] = "   "
+            os.environ["OPENROUTER_API_KEY"] = "   "
             try:
-                call("claude-haiku-4-5", "s", "u", 64, Budget())
+                call(model, "s", "u", 64, Budget())
                 raise AssertionError("an empty key must refuse")
             except EscalationUnavailable:
                 pass
-            del os.environ["ANTHROPIC_API_KEY"]
+            del os.environ["OPENROUTER_API_KEY"]
 
-            # 2. a zero budget refuses before the credential is even read
+            # 3. a zero budget refuses before the credential is even read
             try:
-                call("claude-opus-5", "s", "u", 64, Budget(max_calls=0))
+                call(model, "s", "u", 64, Budget(max_calls=0))
                 raise AssertionError("a zero budget must refuse")
             except BudgetExceeded as e:
                 assert "budget spent" in str(e), e
             assert isinstance(BudgetExceeded("x"), EscalationUnavailable)
+            # ...and so does a spent DOLLAR ceiling, which is a separate guard
+            spent = Budget(max_calls=9, max_usd=0.10)
+            spent.charge(0.11, 10)
+            try:
+                spent.take()
+                raise AssertionError("a spent dollar budget must refuse")
+            except BudgetExceeded as e:
+                assert "$0.1100 of $0.10" in str(e), e
 
-            # 3. a cached response is served without budget or credential.
-            #    Written here through the cache's own key function — this is
-            #    the CACHE being tested, not a fabricated API result: nothing
-            #    downstream of this file ever sees it.
-            k = _cache_key("claude-opus-5", "s", "u", 64, "low")
+            # 4. a cached response is served without budget or credential. This
+            #    is the CACHE under test, written through its own key function;
+            #    nothing downstream of this file ever sees it.
+            k = _cache_key(model, "s", "u", 64)
             (CACHE_DIR / f"{k}.json").write_text(json.dumps(
                 {"text": "{}", "usage": {"input_tokens": 1, "output_tokens": 1},
-                 "usd": 0.00003, "model": "claude-opus-5"}))
+                 "usd": 0.0, "model": model}))
             zero = Budget(max_calls=0)
-            got = call("claude-opus-5", "s", "u", 64, zero)
+            got = call(model, "s", "u", 64, zero)
             assert got["cached"] is True and zero.calls == 0
             # ...and a different prompt is a different key, so a reworded
             # prompt can never be answered from the old response
             try:
-                call("claude-opus-5", "s", "u2", 64, Budget(max_calls=0))
+                call(model, "s", "u2", 64, Budget(max_calls=0))
                 raise AssertionError("a different prompt must miss the cache")
             except BudgetExceeded:
                 pass
             CACHE_DIR = real_cache
     finally:
         if saved is not None:
-            os.environ["ANTHROPIC_API_KEY"] = saved
-
-    # pricing arithmetic, and the refusal to invent a price
-    assert usd("claude-opus-5", 1_000_000, 1_000_000) == 30.0
-    assert usd("claude-haiku-4-5", 200_000, 0) == 0.2
-    try:
-        usd("gpt-not-a-model", 1, 1)
-        raise AssertionError("an unpriced model must not yield a cost figure")
-    except KeyError:
-        pass
+            os.environ["OPENROUTER_API_KEY"] = saved
 
     b = Budget(max_calls=1, max_usd=0.10)
     b.take(); b.charge(0.02, 500)

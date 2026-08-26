@@ -292,6 +292,22 @@ def eval_check(result, chk, path=None):
                 return f"item {i['item']} method {i['method']!r} not in contract enum"
             if i["status"] not in STATUSES:
                 return f"item {i['item']} status {i['status']!r} not in contract enum"
+            # PR #58 R1. `specs/001-sec10k-contract.md`: "For status: missing /
+            # omitted: start/end are null — there is no span." Nothing in the
+            # vocabulary asserted it, so an envelope publishing offsets on a
+            # `missing` item was green — and because `meta.coverage` (checked
+            # above) sums every item with a non-null start, that malformed
+            # envelope also inflated the number the D8 trigger thresholds on.
+            # Asserted here rather than only in `escalate.verify` so it binds
+            # every producer, not just the one that broke it.
+            spanned = i["status"] in SPAN_STATUSES
+            if not spanned and (i["start"] is not None or i["end"] is not None):
+                return (f"item {i['item']} is {i['status']!r} but carries "
+                        f"offsets [{i['start']}, {i['end']}) — the contract says "
+                        "missing/omitted spans are null")
+            if spanned and (i["start"] is None or i["end"] is None):
+                return (f"item {i['item']} is {i['status']!r} but has null "
+                        "offsets — a span-carrying status must carry a span")
     elif t == "known_items_only":
         bad = [i["item"] for i in result["items"] if i["item"] not in CANONICAL]
         bad += [i["item"] for i in result["items"] if i["status"] not in STATUSES]
@@ -380,6 +396,45 @@ def eval_check(result, chk, path=None):
             blob = " ".join(x.get("error", "") for x in r["tiers"])
             if chk["error_contains"] not in blob:
                 return f"no tier error contains {chk['error_contains']!r}; got {blob!r}"
+    elif t == "verify_guards":
+        # PR #58 R1/R2/R7. Until this existed NO eval case reached
+        # `escalate.verify` at all — `escalation-trigger-quiet` returns at the
+        # quiet branch and `escalation-no-credential` breaks at the refusal —
+        # so every trust-boundary guard in the module could be deleted with
+        # both suites 100% green (repro: tasks/reviews/pr58-r1-red.txt).
+        #
+        # It feeds constructed proposals to `verify` against THIS fixture's own
+        # real items and real normalized_text. Nothing is mocked: the offsets
+        # come from the envelope the pipeline just produced (`like_item` names
+        # the item whose span to borrow), and the only thing the case supplies
+        # is which item the proposal claims — which is exactly the thing a
+        # model gets to choose, and therefore the thing that must be guarded.
+        from src.sec10k.escalate import verify
+        for sub in chk["cases"]:
+            proposal = {}
+            for code, spec in sub["proposal"].items():
+                if isinstance(spec, dict) and "like_item" in spec:
+                    src = by_code.get(spec["like_item"])
+                    if src is None or src.get("start") is None:
+                        return (f"{sub['name']}: like_item {spec['like_item']} "
+                                "has no span in this fixture")
+                    proposal[code] = [src["start"], src["end"]]
+                else:
+                    proposal[code] = spec
+            asked = set(sub["asked"]) if "asked" in sub else None
+            got, why = verify(result["normalized_text"], result["items"],
+                              proposal, asked=asked)
+            if sub["expect"] == "reject":
+                if got:
+                    return (f"{sub['name']}: verify ACCEPTED {sorted(got)} — "
+                            f"it must reject the whole proposal (why={why})")
+                if not any(sub["why_contains"] in w for w in why):
+                    return (f"{sub['name']}: rejected, but for the wrong reason "
+                            f"— no rejection contains {sub['why_contains']!r}: {why}")
+            else:
+                if sorted(got) != sorted(sub["accepts"]):
+                    return (f"{sub['name']}: verify accepted {sorted(got)} != "
+                            f"{sorted(sub['accepts'])} (why={why})")
     elif t == "escalation_invariant":
         # ADR-036 §f, asserted as the equality the ADR claims it is rather than
         # left to `evals/snapshot.py` alone: run the same file with the flag on
@@ -973,8 +1028,8 @@ def table_fidelity(result, chk):
 
 
 def _no_credential():
-    """Remove `ANTHROPIC_API_KEY` from this process's environment, restoring it
-    on exit. Every sec10k case runs inside this.
+    """Remove `OPENROUTER_API_KEY` from this process's environment, restoring
+    it on exit. Every sec10k case runs inside this.
 
     Cost-discipline rule 4 — "the `fast` suite makes zero paid calls" — is
     enforced HERE, structurally, rather than trusted: a case declaring
@@ -992,12 +1047,12 @@ def _no_credential():
 
     @contextlib.contextmanager
     def _ctx():
-        saved = os.environ.pop("ANTHROPIC_API_KEY", None)
+        saved = os.environ.pop("OPENROUTER_API_KEY", None)
         try:
             yield
         finally:
             if saved is not None:
-                os.environ["ANTHROPIC_API_KEY"] = saved
+                os.environ["OPENROUTER_API_KEY"] = saved
     return _ctx()
 
 

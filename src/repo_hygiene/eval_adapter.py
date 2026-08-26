@@ -893,14 +893,24 @@ UNIQUE_UI = [
 ]
 
 WIRE_API = [
-    # S9 (ADR-032) added the Markdown flag to the same call; the pin moved
-    # with it deliberately, and the wire was re-checked (see the ADR). D11
-    # (ADR-036) added `escalate=escalate` the same way — same rule, same
-    # re-check: the flag reaches `extract_items` unmodified, and the pin now
-    # spans two source lines because the call does.
-    ("_run forwards the flag into extract_items unmodified",
+    # S9 (ADR-032) added the Markdown flag to the same call; the pin moved with
+    # it deliberately, and the wire was re-checked (see the ADR). D11 (ADR-036)
+    # added the escalate flag the same way.
+    #
+    # PR #58 R6 changes what this pin ASSERTS, not just how it is spelled, and
+    # that is worth reading twice. The boilerplate and Markdown flags reach
+    # `extract_items` unmodified. The escalate flag deliberately does NOT: it
+    # is ANDed with the deployment's arming switch first, so a public,
+    # unauthenticated host cannot be made to spend money by a request alone.
+    # Both halves are pinned — the gate expression and the call — because
+    # either one going missing re-opens the exposure, and because a pin that
+    # said "unmodified" here would now be pinning a lie.
+    ("_run gates escalation on the deployment's arming switch",
+     "armed = escalate and ESCALATION_ENABLED"),
+    ("_run forwards the two display flags unmodified, and the GATED escalate "
+     "flag with the process-wide budget",
      "extract_items(path, exclude_boilerplate=exclude_boilerplate, "
-     "blocks=markdown, escalate=escalate)"),
+     "blocks=markdown, escalate=armed, budget=server_budget() if armed else None)"),
 ]
 
 # no trailing `\)`: `@app.post("/api/extract/x", response_model=None)` is
@@ -2535,6 +2545,19 @@ ROUTING_UI = [
     ("...naming the tier that replaced it", "<b>${esc(it.method)}</b>"),
     ("the checkbox is read at request time, like every other flag",
      'function escalateOn(){ const c = $("#escalate"); return !!(c && c.checked); }'),
+    # PR #58 R6. The owner is putting a real credential on a public,
+    # unauthenticated deployment, so the page must not offer a control the
+    # server will ignore. Three pinned expressions, one per hop: the page asks
+    # the server whether it is armed, the helper DISABLES the box rather than
+    # leaving it tickable-and-discarded, and the response's own refusal is
+    # rendered. Silently ignoring the box is the dishonesty this milestone
+    # exists to remove, so "it just does nothing" is not an acceptable state.
+    ("the page asks the server whether escalation is armed",
+     "setEscalationArmed(m.escalation_enabled !== false)"),
+    ("...and an unarmed server DISABLES the box rather than ignoring it",
+     "c.disabled = !armed;"),
+    ("...and the response's own refusal is shown",
+     "dis.hidden = !v.escalation_disarmed;"),
 ]
 
 

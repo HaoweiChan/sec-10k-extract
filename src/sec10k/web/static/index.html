@@ -139,7 +139,7 @@ button:disabled{opacity:.5;cursor:default}
    band inside either one would break that alignment to say it. Borrowed from
    .warn on purpose (same shape, ambiguous rather than warning accent): this is
    a stated limit of the display, not a validator firing. */
-#bp-note{border:1px solid var(--line);border-left:3px solid var(--amb);
+#bp-note,#escalate-note{border:1px solid var(--line);border-left:3px solid var(--amb);
   border-radius:var(--r);padding:8px 11px;margin-bottom:12px;background:var(--panel);
   font-size:13px;color:var(--dim)}
 #bp-note code{font:12px var(--mono);color:var(--amber-ink)}
@@ -337,7 +337,8 @@ footer a{color:var(--accent)}
     tiers and report what each tier cost. Off by default and silent on a clean
     filing: 42 of 43 committed fixtures never reach a tier, so the default
     price stays $0.00. With no API credential on the server the tier refuses
-    and says so; it never guesses (ADR-036).</span></label>
+    and says so; it never guesses (ADR-036).</span><span class="hint"
+    id="escalate-state"></span></label>
   <label class="opt"><input type="checkbox" id="render-md"> render as Markdown
     <span class="hint">— shows the extracted item as headings, paragraphs and
     tables derived from the filing's block structure instead of the flat text
@@ -358,6 +359,7 @@ footer a{color:var(--accent)}
      True whenever the flag was merely asked for. This note ASSERTS the two
      panes differ, so it needs the field that says one of them changed. It
      states the limit; it does not fix it, and must not read as if it did. -->
+<div id="escalate-note" hidden></div>
 <div id="bp-note" hidden>Boilerplate exclusion applies to the
   derived <code>normalized_text</code> only. The compare pane serves the raw
   filing bytes, so it still shows every page break and running head the
@@ -415,6 +417,13 @@ async function boot(){
     const m = await (await fetch("/api/meta")).json();
     $("#sha").textContent = "build " + m.git_sha;
     $("#fx").innerHTML = m.fixtures.map(f => `<option>${esc(f)}</option>`).join("");
+    // ADR-036 §h2. A deployment that is not armed for paid escalation must not
+    // offer a control the server will ignore — silent ignoring is exactly the
+    // dishonesty this milestone exists to remove. Done HERE and not in the
+    // markup so the shipped file still has an unchecked, enabled box (which is
+    // what a local run with SEC10K_ESCALATION_ENABLED=1 gets, and what
+    // `routing_provenance` pins); the server's own answer is what disables it.
+    setEscalationArmed(m.escalation_enabled !== false);
   }catch(e){ $("#sha").textContent = "meta unavailable"; }
   deepLink();
   loadCapabilities();
@@ -726,6 +735,19 @@ function renderMd(){ const c = $("#render-md"); return !!(c && c.checked); }
 // the tiers THIS response ran, so it must not be redrawn from a checkbox the
 // viewer flipped afterwards.
 function escalateOn(){ const c = $("#escalate"); return !!(c && c.checked); }
+// D11 / PR #58 R6: reflect the SERVER's arming state onto the control. Unarmed
+// means the box is unticked, disabled, and carries a visible reason — not a
+// tickable box whose value is thrown away.
+function setEscalationArmed(armed){
+  const c = $("#escalate"); if(!c) return;
+  c.disabled = !armed;
+  if(!armed){ c.checked = false; }
+  const note = $("#escalate-state");
+  if(note) note.textContent = armed ? "" :
+    " — unavailable on this deployment: the server is not armed for paid " +
+    "escalation (SEC10K_ESCALATION_ENABLED is unset), so this box would do " +
+    "nothing and is disabled rather than ignored.";
+}
 
 // S9: the smallest honest renderer for exactly the Markdown subset
 // src/sec10k/markdown.py emits — ATX headings, paragraphs (a whole-paragraph
@@ -970,6 +992,11 @@ function render(v){
   // disagreement nobody could see. The note claims a difference, so it must
   // key off a field that means a difference exists.
   $("#bp-note").hidden = !v.boilerplate_applied;
+  // ADR-036 §h2: the server refused to escalate because this deployment is not
+  // armed. Read off the RESPONSE, like every other honesty note on this page.
+  const dis = $("#escalate-note");
+  if(dis){ dis.hidden = !v.escalation_disarmed;
+           dis.textContent = v.escalation_disarmed || ""; }
 
   const items = v.items || [];
   $("#sidebar").innerHTML = items.length ? items.map((it,i) => {

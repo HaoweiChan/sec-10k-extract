@@ -317,7 +317,7 @@ def _demo():
     assert off["routing"] is None and md["routing"] is None
     rec = {"trigger": {"fired": True, "codes": ["low_item_coverage"],
                        "items": ["1"], "message": "3%"},
-           "tiers": [{"tier": "llm_localize", "model": "claude-haiku-4-5",
+           "tiers": [{"tier": "llm_localize", "model": "openai/gpt-5-mini",
                       "outcome": "unavailable", "error": "no key",
                       "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0}}],
            "resolved": [], "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0}}

@@ -76,6 +76,11 @@ them all); the example once showed `lenient_match`, which nothing emits.
   (offsets only — no second copy of the text). The key is absent on every
   other item.
 - For `status: missing` / `omitted`: `start`/`end` are null — there is no span.
+  Conversely a span-carrying status (`extracted`, `incorporated_by_reference`)
+  must have both. **Enforced by `envelope_shape` since 2026-08-27** (PR #58 R1);
+  before that this rule was documented and unchecked, and ADR-036's escalation
+  tier could write offsets onto a `missing` item — which also inflated
+  `meta.coverage`, since that figure sums every item with a non-null `start`.
 - All statuses require `confidence` (how sure are we it's actually
   absent/incorporated, not missed).
 - All statuses require **`review_required`** (bool, ADR-035 §e): true exactly

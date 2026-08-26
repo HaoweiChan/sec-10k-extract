@@ -42,19 +42,37 @@ from src.sec10k.validate import SPAN_FLOOR
 # item is a fact about that ITEM and not a verdict on the document — it warns,
 # sets `review_required`, and deliberately does not escalate `doc_status`. The
 # router inherits that ruling rather than re-deciding it: escalating on
-# `item_span_near_empty` would send 9 real dev filings (cvx-2015, jpm-2024,
-# ge-1994, xom-2021, ko-1997, nvda-2024, reac-2015, sandston-2021, spatz-2014)
-# to a paid tier to resolve the A2 class that ADR-034 §e2 DECLINED as
-# not-agreed-to-be-broken, and would put the dev escalation rate at 28%
-# against a ledger row that requires it near zero.
+# `item_span_near_empty` would send 9 real dev filings to a paid tier and put
+# the dev escalation rate at 32% against a ledger row that requires it near
+# zero. Of those 9, exactly FOUR — cvx-2015, jpm-2024, ge-1994, spatz-2014 —
+# are members of the A2 set ADR-034 §d1 enumerates and §e2 DECLINED (the
+# fifth A2 filing, bac-2006, does not fire). The other five (xom-2021,
+# ko-1997, nvda-2024, reac-2015, sandston-2021) were never in D9's scope and
+# are an UNRULED population, not a declined one — PR #58 R5. And the reason
+# for the decline is that items 7/8 are UNADJUDICATED: ADR-034 §e2 records
+# the auditor's blind sample adjudicating cvx-2015 item **6** CORRECT and
+# says in terms that "items 7 and 8 were never independently adjudicated".
 TRIGGER_CODES = ("low_item_coverage",)
 
+# The statuses that carry offsets (`specs/001-sec10k-contract.md`: "For status:
+# missing / omitted: start/end are null — there is no span", and ADR-011 for
+# why IBR is in). A tier may not resolve an item outside this set: doing so
+# publishes a non-null span on an item the contract says has none, and — the
+# part that bites — `meta.coverage` sums every item with a non-null start, so a
+# resolved `missing` item inflates the exact number the D8 trigger thresholds
+# on. Measured on the repro in `tasks/reviews/pr58-r1-red.txt`: 0.0030 -> 0.6142
+# on one item. PR #58 R1. Pinned against `eval_adapter.SPAN_STATUSES` in _demo.
+SPAN_STATUSES = ("extracted", "incorporated_by_reference")
+
 # rung -> (model, the `method` an item carries when that rung produced its span)
-# Model choice is the cost-discipline ladder, small before big. Prices live in
-# `llm.PRICES`; the per-document estimates are ADR-036 §d.
+# Model choice is the cost-discipline ladder, small before big. These are
+# OpenRouter SLUGS (owner instruction 2026-08-27), both present verbatim in
+# `tasks/reviews/2026-08-27-openrouter-models.json`, which is also where
+# `llm.usd()` reads their per-token price — there is no hand-maintained price
+# table. Per-document estimates: ADR-036 §d.
 RUNGS = (
-    ("llm_localize", "claude-haiku-4-5"),
-    ("llm_extract", "claude-opus-5"),
+    ("llm_localize", "openai/gpt-5-mini"),
+    ("llm_extract", "anthropic/claude-opus-5"),
 )
 MAX_TOKENS = 2048        # the answer is a small JSON map of offsets, not prose
 LOCALIZE_WINDOW = 60_000  # chars of unattributed text rung 1 is allowed to see
@@ -114,43 +132,68 @@ def _windows(text, items):
     return sorted(free, key=lambda w: w[1] - w[0], reverse=True)
 
 
-def verify(text, items, proposal):
+def verify(text, items, proposal, asked=None):
     """Deterministically re-check a rung's answer. Returns (accepted, why_not).
 
-    `proposal` is {item_code: [start, end]}. ALL-OR-NOTHING: either every
-    proposed span survives every check, or none of them is used. That is
-    stricter than necessary — a mixed answer could in principle be applied
-    item by item — and it is deliberate for a first shipping version, because
-    the invariants at stake (INV-S1 ordering, INV-S2 offsets) are properties
-    of the item list as a WHOLE, and partial application makes the failure
-    mode "some items moved, ordering held by luck".
+    `proposal` is {item_code: [start, end] | None}. `asked` is the set of codes
+    the rung was actually given; when omitted, every item of the document is
+    admissible (which is what `route` never does).
+
+    **ALL-OR-NOTHING, and now actually so.** If ANY non-null proposed span
+    fails ANY check, nothing is applied — `({}, why)`. Until PR #58 R2 the
+    docstring and ADR-036 §b both claimed this while the loop `continue`d past
+    failures and returned the survivors; the reviewer's mixed proposal is
+    recorded in `tasks/reviews/pr58-r1-red.txt` and pinned by
+    `evals/adversarial/escalation-verify-guards.json`. The claim was kept and
+    the code was changed to match it, on the ADR's own stated rationale: the
+    invariants at stake (INV-S1 ordering, INV-S2 offsets) are properties of the
+    item list as a WHOLE, so partial application leaves ordering holding by
+    accident. A null answer is NOT a failure — "I could not locate item 8" is
+    the honest answer the prompt asks for, and it neither applies nor discards.
     # ponytail: all-or-nothing; go per-item only once a live run shows mixed
     # answers are common AND the ordering check is re-derived per item.
 
     The checks, in order, and why each one is here:
 
-    1. every proposed code exists and is one the trigger actually flagged —
-       a rung may not invent an item or resolve one nobody asked about;
-    2. bounds: 0 <= start < end <= len(text) (INV-S2);
-    3. length >= SPAN_FLOOR — resolving a stub to another stub is not a
+    1. the code is an item of this document, and — when `asked` is given — one
+       the rung was actually given. A rung may not invent an item or resolve
+       one nobody asked about;
+    2. that item CARRIES A SPAN. `missing` and `omitted` items have null
+       offsets by contract (`specs/001-sec10k-contract.md`), and resolving one
+       both publishes a malformed envelope and inflates `meta.coverage`, the
+       number the D8 trigger itself thresholds on. PR #58 R1 — this is the
+       check whose absence would have been hit by the first live run, since
+       one of the two exam filings is 21 `missing` + 2 `omitted`;
+    3. bounds: 0 <= start < end <= len(text) (INV-S2);
+    4. length >= SPAN_FLOOR — resolving a stub to another stub is not a
        resolution, and SPAN_FLOOR is the constant D8 already measured for
        exactly this question;
-    4. the whole item list, after substitution, is still disjoint and in
-       ascending offset order (INV-S1, the same property
-       `no_overlap_ordered` asserts);
     5. the span opens with something that reads like this item's heading, by
        the SAME `title_similarity` / `SIM_FLOOR` cut the segmenter uses to
        accept a heading in the first place. This is the check that makes a
        hallucinated offset expensive to pass: a model must land on real
-       heading text, not merely on a plausible-looking number.
+       heading text, not merely on a plausible-looking number;
+    6. the whole item list, after substitution, is still disjoint and in
+       ascending offset order (INV-S1, the same property `no_overlap_ordered`
+       asserts).
     """
-    flagged = {i["item"] for i in items}
+    by_code = {i["item"]: i for i in items}
     merged, why = {}, []
     for code, span in sorted(proposal.items()):
         if span is None:
-            continue
-        if code not in flagged:
+            continue                       # "could not locate" is not a failure
+        it = by_code.get(code)
+        if it is None:
             why.append(f"item {code}: not an item of this document")
+            continue
+        if asked is not None and code not in asked:
+            why.append(f"item {code}: not among the items this tier was asked "
+                       f"about ({sorted(asked)})")
+            continue
+        if it["status"] not in SPAN_STATUSES:
+            why.append(f"item {code}: status {it['status']!r} carries no span — "
+                       f"only {list(SPAN_STATUSES)} may be resolved, and writing "
+                       "offsets here would inflate meta.coverage")
             continue
         if not (isinstance(span, (list, tuple)) and len(span) == 2
                 and all(isinstance(v, int) for v in span)):
@@ -173,10 +216,13 @@ def verify(text, items, proposal):
             continue
         merged[code] = {"start": s, "end": e, "title_similarity": sim}
 
+    # ALL-OR-NOTHING (R2): one rejected sibling discards the whole proposal.
+    if why:
+        return {}, why
     if not merged:
-        return {}, why or ["no rung returned a locatable span"]
+        return {}, ["no rung returned a locatable span"]
 
-    # 4. ordering and disjointness over the list AS IT WOULD BE
+    # 6. ordering and disjointness over the list AS IT WOULD BE
     after = [(merged[i["item"]]["start"], merged[i["item"]]["end"], i["item"])
              if i["item"] in merged
              else (i["start"], i["end"], i["item"])
@@ -285,7 +331,7 @@ def route(text, items, warnings, budget=None):
             entry.update(outcome="unparseable", error=f"{type(e).__name__}: {e}")
             record["tiers"].append(entry)
             continue
-        accepted, why = verify(text, items, proposal)
+        accepted, why = verify(text, items, proposal, asked=set(codes))
         entry["rejections"] = why
         if accepted:
             apply(items, accepted, rung)
@@ -391,6 +437,43 @@ def _demo():
     assert bad == {} and any("INV-S1" in w for w in why), why
     # null answers are not failures, they are "could not locate"
     assert verify(text, items, {"1": None})[0] == {}
+
+    # --- PR #58 R1: an item whose status carries no span may NOT be resolved.
+    #     This is the check the first live run would have hit: one of the two
+    #     exam filings is 21 `missing` + 2 `omitted`.
+    from src.sec10k.eval_adapter import SPAN_STATUSES as ADAPTER_SPANNED
+    assert set(SPAN_STATUSES) == set(ADAPTER_SPANNED), (
+        "escalate and the contract checker must agree on which statuses carry "
+        "offsets", SPAN_STATUSES, ADAPTER_SPANNED)
+    for bad_status in ("missing", "omitted"):
+        gone = [dict(items[0], status=bad_status, start=None, end=None,
+                     method="status_keyword", heading_text=None), items[1]]
+        bad, why = verify(text, gone, {"1": [at, at + len(body)]})
+        assert bad == {}, (bad_status, bad)
+        assert "carries no span" in why[0], why
+        # ...and the reason it matters, asserted rather than asserted-about:
+        # apply() would otherwise write a start onto an item meta.coverage sums
+        after = [dict(i) for i in gone]
+        apply(after, bad, "llm_localize")
+        assert after[0]["start"] is None and after[0]["status"] == bad_status
+
+    # --- PR #58 R7: a code the tier was never asked about is refused
+    bad, why = verify(text, items, {"7": [at7, at7 + len(body7)]}, asked={"1"})
+    assert bad == {} and "not among the items this tier was asked about" in why[0], why
+    assert verify(text, items, {"7": [at7, at7 + len(body7)]}, asked={"1", "7"})[0]
+
+    # --- PR #58 R2: ALL-OR-NOTHING, on a mixed proposal that does NOT trip
+    #     INV-S1 as a side effect (which is how _demo missed this before).
+    #     Item 7's real body verifies on its own; item 1's 40-char stub does not.
+    solo, _ = verify(text, items, {"7": [at7, at7 + len(body7)]})
+    assert set(solo) == {"7"}, solo
+    mixed, why = verify(text, items, {"7": [at7, at7 + len(body7)], "1": [0, 40]})
+    assert mixed == {}, ("one rejected sibling must discard the whole "
+                         "proposal — ADR-036 §b", mixed)
+    assert any("SPAN_FLOOR" in w for w in why), why
+    # a null sibling is NOT a rejection and must not discard the survivor
+    with_null, why = verify(text, items, {"7": [at7, at7 + len(body7)], "1": None})
+    assert set(with_null) == {"7"}, (with_null, why)
 
     # --- apply(): the deterministic answer survives, the invariants hold
     it = [dict(items[0]), dict(items[1])]

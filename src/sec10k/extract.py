@@ -162,7 +162,7 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
     is spent, and the only difference from a default run is the presence of the
     `routing` key itself.
 
-    THE SLOW PATH REFUSES RATHER THAN DEGRADES. With no `ANTHROPIC_API_KEY` in
+    THE SLOW PATH REFUSES RATHER THAN DEGRADES. With no `OPENROUTER_API_KEY` in
     the environment, or with a spent `budget`, a fired trigger produces a
     `routing` record whose tier outcome is `unavailable` plus an
     `escalation_unavailable` warning. It never invents an item, never quietly

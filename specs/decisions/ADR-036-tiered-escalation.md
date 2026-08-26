@@ -1,7 +1,14 @@
 # ADR-036 — D11: the model tier ships, but only behind the D8 document-level trigger, and it is never trusted without a deterministic re-check
 
 Date: 2026-08-26. Status: accepted, **with one part of its acceptance criteria
-UNRUN and said so in §k**. **Supersedes
+UNRUN and said so in §k**. **AMENDED 2026-08-27 in the PR #58 round-1 repair**:
+the provider swapped from the Anthropic Messages API to OpenRouter on owner
+instruction (§h1, and every dollar figure in §d is recomputed on OpenRouter's
+published pricing); the deployed inspector gained two independent locks before
+a credential lands on it (§h2); `verify` gained the span-status guard the
+reviewer's HIGH finding named and its all-or-nothing claim was made true (§b);
+and §c1/§c3/§d4 are corrected where their cited evidence did not match the
+source. Each correction is marked in place. **Supersedes
 [ADR-020](ADR-020-fallback-not-justified.md)**, whose ruling — "no LLM fallback
 ships; `method: llm_fallback` stays in the contract enum, unemitted, and the
 pipeline stays stdlib-only at $0.00 cost" — is now wrong in its first clause
@@ -14,9 +21,9 @@ envelope key, two new `method` values), `README.md` (the scope row is
 RE-AFFIRMED, not moved — §e). Narrative:
 `docs/evals/audits/2026-08-25-demo-intel-citi-postmortem.md` §7.
 
-**Ruling**: four decisions. (1) The ladder is `deterministic → llm_localize (small model, unattributed text only) → llm_extract (large model, whole document)`, entered **only** when `low_item_coverage` fires, opt-in behind `escalate=True`, and no rung's answer is used until `escalate.verify` re-derives its offsets against the deterministic output (bounds, `SPAN_FLOOR`, INV-S1 ordering, and a `SIM_FLOOR` heading match). (2) **Text-less / scanned filings stay OUT of scope** and the README row is re-affirmed, so **no vision rung is built** (§e). (3) The envelope publishes a `routing` record and two new `method` values, and the inspector renders both. (4) With no `ANTHROPIC_API_KEY` the slow path **refuses loudly** — a `routing` outcome of `unavailable` plus an `escalation_unavailable` warning — and never degrades silently.
+**Ruling**: four decisions. (1) The ladder is `deterministic → llm_localize (small model, unattributed text only) → llm_extract (large model, whole document)`, entered **only** when `low_item_coverage` fires, opt-in behind `escalate=True`, and no rung's answer is used until `escalate.verify` re-derives its offsets against the deterministic output (bounds, `SPAN_FLOOR`, INV-S1 ordering, and a `SIM_FLOOR` heading match). (2) **Text-less / scanned filings stay OUT of scope** and the README row is re-affirmed, so **no vision rung is built** (§e). (3) The envelope publishes a `routing` record and two new `method` values, and the inspector renders both. (4) With no `OPENROUTER_API_KEY` the slow path **refuses loudly** — a `routing` outcome of `unavailable` plus an `escalation_unavailable` warning — and never degrades silently.
 **Because**: measured over all 43 dev filing fixtures, `low_item_coverage` fires on **1 of 43 (0.0233), and on 0 of 28 real EDGAR filings**, so the ladder's default cost is exactly $0.00 and the whole dev corpus escalates for an estimated $0.056; the item-level `item_span_near_empty` fires on 12 of 43 (9 of 28 real) and is deliberately NOT the trigger, because escalating on it would spend money on the A2 class ADR-034 §e2 declined and put the dev escalation rate at 27.9%.
-**Enforced by**: `evals/adversarial/escalation-trigger-quiet.json` and `evals/adversarial/escalation-no-credential.json` (fast + invariant), `evals/adversarial/ui-routing-provenance.json` + `evals/adversarial/ui-routing-provenance-regression.json` (its 7-failure mutation fixture `evals/fixtures/repo_hygiene/routing-strip-missing.html`), `evals/adversarial/escalation-seam-offline.json`, `src/sec10k/escalate.py::_demo`, `src/sec10k/llm.py::_demo`, `src/sec10k/web/view.py::_demo`, `src/sec10k/eval_adapter.py::_routing_shape` + the `routing` / `escalation_invariant` check types. Red-first record with its sha: `tasks/reviews/d11-red-first.txt`. Measurement: `tasks/reviews/d11_trigger_scan.py`.
+**Enforced by**: `evals/adversarial/escalation-trigger-quiet.json` and `evals/adversarial/escalation-no-credential.json` (fast + invariant), `evals/adversarial/ui-routing-provenance.json` + `evals/adversarial/ui-routing-provenance-regression.json` (its 7-failure mutation fixture `evals/fixtures/repo_hygiene/routing-strip-missing.html`), `evals/adversarial/escalation-seam-offline.json`, `src/sec10k/escalate.py::_demo`, `src/sec10k/llm.py::_demo`, `src/sec10k/web/view.py::_demo`, `evals/adversarial/escalation-verify-guards.json` (PR #58 R1/R2/R7 — the first case that reaches `verify` at all), `src/sec10k/eval_adapter.py::_routing_shape` + the `routing` / `escalation_invariant` / `verify_guards` check types, and `.github/workflows/ci.yml`'s unit-tests job, which runs both `_demo`s (PR #58 R3: before it did, every guard in this ADR was deletable with the gate 100% green). Red-first record with its sha: `tasks/reviews/d11-red-first.txt`. Measurement: `tasks/reviews/d11_trigger_scan.py`.
 
 ---
 
@@ -53,11 +60,11 @@ collapsed document can be billed.
 rung 0   deterministic        always, $0, unchanged
    │     … `low_item_coverage` in warnings?  no → STOP. This is 42/43 dev documents.
    ▼
-rung 1   llm_localize         claude-haiku-4-5, input = the largest UNATTRIBUTED
+rung 1   llm_localize         openai/gpt-5-mini, input = the largest UNATTRIBUTED
    │                          region only, capped at 60,000 chars
    │     … verify() accepts the answer?      yes → STOP.
    ▼
-rung 2   llm_extract          claude-opus-5, input = the whole normalized text
+rung 2   llm_extract          anthropic/claude-opus-5, the whole normalized text
          … verify() accepts?  no → the deterministic spans stand, and the
                                    envelope says the ladder resolved nothing.
 ```
@@ -75,18 +82,29 @@ the only one that pays to read the whole filing.
 it is used, and a proposal that fails any check is discarded with the rejection
 published in the routing record:
 
-1. the code must be an item of this document — a rung may not invent one;
-2. `0 <= start < end <= len(normalized_text)` (INV-S2);
-3. `end - start >= SPAN_FLOOR` (1,500) — resolving a stub to another stub is
+1. the code must be an item of this document, and one this tier was actually
+   asked about — a rung may not invent an item or resolve one nobody asked
+   about (the second half was claimed but not implemented until PR #58 R7);
+2. **that item must carry a span at all.** `missing` and `omitted` items have
+   null offsets by contract, and `meta.coverage` sums every item with a
+   non-null start — so resolving one both publishes a malformed envelope and
+   inflates the exact number the D8 trigger thresholds on. Added 2026-08-27
+   (PR #58 R1, HIGH): measured on the reviewer's repro, one resolved `missing`
+   item moved a document's coverage from 0.0030 to 0.6142. `c-2025`, one of
+   the two held-out exam filings, is 21 `missing` + 2 `omitted`, so the first
+   live run would have hit this. `envelope_shape` now asserts the contract's
+   null-span rule too, so the guard binds every producer and not just this one;
+3. `0 <= start < end <= len(normalized_text)` (INV-S2);
+4. `end - start >= SPAN_FLOOR` (1,500) — resolving a stub to another stub is
    not a resolution, and `SPAN_FLOOR` is the constant D8 already measured for
    precisely this question (ADR-035 §b1);
-4. the item list, **after substitution**, is still disjoint and in ascending
+5. the item list, **after substitution**, is still disjoint and in ascending
    offset order — the same property `no_overlap_ordered` asserts (INV-S1);
-5. the span must open with something that reads like this item's heading, by
+6. the span must open with something that reads like this item's heading, by
    the same `title_similarity` / `SIM_FLOOR` cut `find_candidates` uses to
    accept a heading in the first place.
 
-Check 5 is the one that matters most and the one to attack. It means a
+Check 6 is the one that matters most and the one to attack. It means a
 hallucinated offset does not merely have to be plausible — it has to land on
 real heading text that the deterministic segmenter would itself have accepted
 had it looked there. `escalate._demo` pins the hallucination shape directly: a
@@ -94,10 +112,22 @@ long, in-bounds, correctly-ordered span pointing at the document's tail is
 rejected on similarity, not on luck.
 
 **All-or-nothing.** Either every proposed span survives or none is used.
-Stricter than necessary, and deliberate: checks 4 and 5 are properties of the
-item list as a whole, and partial application makes the failure mode "some
+Stricter than necessary, and deliberate: the ordering check is a property of
+the item list as a whole, and partial application makes the failure mode "some
 items moved and the ordering held by accident". Carried with its upgrade path
 in a `ponytail:` comment in `verify`'s docstring.
+
+> **Correction, 2026-08-27 (PR #58 R2).** This paragraph was FALSE when first
+> published. The loop `continue`d past each failing entry and returned the
+> survivors; only an ordering failure discarded the whole proposal, and every
+> mixed proposal `_demo` happened to construct tripped ordering as a side
+> effect, so the property had never once been watched. The reviewer's repro is
+> in `tasks/reviews/pr58-r1-red.txt`. **The claim was kept and the code was
+> changed to match it** — on this paragraph's own rationale, which is right —
+> and `evals/adversarial/escalation-verify-guards.json` now pins both
+> directions: a mixed proposal is discarded entirely, and a *null* sibling
+> ("I could not locate item 8") is not a rejection and does not discard the
+> survivor.
 
 **What a resolved item looks like.** Its `start`/`end` move, its `method`
 becomes `llm_localize` or `llm_extract`, its `heading_text` becomes `null` (the
@@ -142,12 +172,24 @@ of weight:
 2. **The cost budget the D11 ledger row itself imposes.** The row requires
    "dev escalation rate stays near zero so the default cost stays $0". 0/28 on
    real filings is near zero. 9/28 is not.
-3. **It would spend money on a class ADR-034 §e2 DECLINED.** The nine real
-   filings `item_span_near_empty` hits are the A2 class — a few pointer-bodied
-   items inside an otherwise well-extracted filing — which D9 declined
-   precisely because "two independent reads still disagree that it is a
-   defect". Building a paid capability to fix something not agreed to be
-   broken is the shape ADR-026 §a's test exists to catch.
+3. **It would spend money on a class nobody has ruled is broken.** Stated
+   precisely, because the first version of this paragraph over-claimed and the
+   reviewer caught it (PR #58 R5). Of the nine real filings
+   `item_span_near_empty` hits, exactly **four** — `cvx-2015`, `jpm-2024`,
+   `ge-1994`, `spatz-2014` — are members of the A2 set `ADR-034` §d1
+   enumerates and §e2 DECLINED. (A2's fifth member, `bac-2006`, does not fire
+   at all.) The other five — `xom-2021`, `ko-1997`, `nvda-2024`, `reac-2015`,
+   `sandston-2021` — **were never in D9's scope and are an unruled population,
+   not a declined one.** So the accurate statement is: four filings belong to a
+   class D9 declined, and five belong to no ruling at all. Neither group is
+   agreed to be defective, and building a paid capability to fix something not
+   agreed to be broken is the shape ADR-026 §a's test exists to catch.
+   Correspondingly, ADR-034's reason for declining A2 is not that two reads
+   disagreed about items 7 and 8 — its §e2 says in terms that the auditor's
+   blind sample adjudicated `cvx-2015` item **6** CORRECT and that "items 7
+   and 8 were never independently adjudicated". The flag reaches items 1/7/8
+   and never item 6. **Unadjudicated, not disagreed**, wherever this document
+   says otherwise.
 
 `item_span_near_empty` is not ignored: `trigger.items` carries every item it
 flagged, and that list is what the rungs are asked about **once
@@ -216,15 +258,20 @@ silent on all five. Read against D8's item-level code, it does not. So:
 
 * **A2 is not reachable by this ladder as built**, because the ladder does not
   route on the item-level code, for the three reasons in §c1.
-* **"Declined" stands, and its stated reason is amended.** The correct reason
-  is not "nothing reaches it" — something does — but "what reaches it is a
-  non-escalating item-level flag whose class two independent reads still
-  disagree is a defect, and D11 declines to spend money resolving a
-  disagreement." That is a weaker reason than D9 published, and saying so is
-  the point of this paragraph.
+* **"Declined" stands, and its stated reason is amended — twice.** The correct
+  reason is not "nothing reaches it" (something does) and not "two reads
+  disagree" (they did not; PR #58 R5). It is: **what reaches those items is a
+  non-escalating item-level flag over spans that were never independently
+  adjudicated at all, and D11 declines to spend money resolving a question
+  nobody has answered.** ADR-034 §e2 is explicit — its blind sample adjudicated
+  `cvx-2015` item **6**, not 7 or 8, and records that 7 and 8 "were never
+  independently adjudicated". That is a weaker reason than D9 published and a
+  weaker one than this ADR first published; saying so twice over is the point
+  of this paragraph.
 * **What would change it**, stated as its own falsifier: an adjudication that
   settles whether a pointer-bodied item 7/8 inside a well-extracted filing is a
-  defect. If it is, A2 becomes a one-line change here (`TRIGGER_CODES` gains
+  defect — which, per the paragraph above, would be the FIRST such adjudication
+  rather than a tie-break between two existing ones. If it is, A2 becomes a one-line change here (`TRIGGER_CODES` gains
   `item_span_near_empty`) whose measured price is in §d4 — and that is the
   whole reason the price is published.
 
@@ -235,22 +282,49 @@ silent on all five. Read against D8's item-level code, it does not. So:
 
 **The estimated half, and why it is an estimate.** Nothing here has been
 billed. Token counts come from a **4 characters ≈ 1 token** proxy over
-`normalized_text`, not from `count_tokens` — which is itself an API call this
-pass may not make — and prices are the 2026-06-24 table in `llm.PRICES`. Every
-figure below is therefore an ESTIMATE and is labelled one everywhere it
-appears, including in this ADR's own headline. `llm.call` records the
-response's own `usage` and computes `usd` from it, so the first live run
-replaces every estimate with a measurement, in the routing record, without a
-code change.
+`normalized_text`, not from a tokenizer call. Every figure below is therefore
+an ESTIMATE and is labelled one everywhere it appears, including in this ADR's
+own headline. `llm.call` records the response's own `usage` and computes `usd`
+from it, so the first live run replaces every estimate with a measurement, in
+the routing record, without a code change.
+
+**Where the prices come from (recomputed 2026-08-27, PR #58 + owner
+instruction).** Not from a table in this document and not from a constant in
+the code. `GET https://openrouter.ai/api/v1/models` was fetched
+unauthenticated on **2026-08-27**, and the two rungs' records are committed
+verbatim at `tasks/reviews/2026-08-27-openrouter-models.json` — with the
+sha256 of the full 417-model response, so the pruning is checkable.
+`llm.usd()` reads that file and **raises** on a slug it does not carry, so
+there is no stale constant to fall back to:
+
+| rung | OpenRouter slug | input $/MTok | output $/MTok | context |
+|---|---|---|---|---|
+| 1 `llm_localize` | `openai/gpt-5-mini` | 0.25 | 2.00 | 400,000 |
+| 2 `llm_extract` | `anthropic/claude-opus-5` | 5.00 | 25.00 | 1,000,000 |
+
+Rung 2 is deliberately the **same model** the pre-swap version costed, so every
+figure below moves for exactly one reason: rung 1 got 4× cheaper on input.
+Rung 1's slug is a judgement call, and the honest form of it is: the verifier
+makes a wrong answer safe but not free, so a rung 1 that always fails is pure
+waste. `openai/gpt-5-mini` is the cheapest tier plausibly competent at exact
+offset arithmetic over a 60,000-char window, and **whether it actually is** is
+one of the things the first live run exists to find out (§k). Its slug is one
+constant in `escalate.RUNGS`.
 
 ### d1. Per-document estimate
 
-| document | chars | rung 1 (haiku-4-5) | rung 2 (opus-5) | full ladder |
+| document | chars | rung 1 (`gpt-5-mini`) | rung 2 (`claude-opus-5`) | full ladder |
 |---|---|---|---|---|
-| `xref-index-collapse` (the only dev document that escalates) | 33,061 | ~$0.0093 | ~$0.0463 | **~$0.056** |
-| median span-bearing dev filing | 102,529 | ~$0.0160 | ~$0.1332 | ~$0.149 |
-| `bac-2006` (2nd largest) | 705,848 | ~$0.0160 | ~$0.8873 | ~$0.903 |
-| `jpm-2024` (largest) | 1,213,284 | ~$0.0160 | ~$1.5216 | ~$1.538 |
+| `xref-index-collapse` (the only dev document that escalates) | 33,061 | ~$0.0024 | ~$0.0463 | **~$0.0488** |
+| median span-bearing dev filing | 102,529 | ~$0.0041 | ~$0.1332 | ~$0.1373 |
+| `bac-2006` (2nd largest) | 705,848 | ~$0.0041 | ~$0.8873 | ~$0.8914 |
+| `jpm-2024` (largest) | 1,213,284 | ~$0.0041 | ~$1.5216 | ~$1.5257 |
+
+The arithmetic, once, so the rest re-derives: rung 1 on the median filing is
+`(min(102529, 60000)/4 + 250) = 15,250` input tokens at $0.25/MTok = $0.003813,
+plus 150 output tokens at $2.00/MTok = $0.000300, = **$0.0041**. Rung 2 on the
+same document is `102529/4 + 250 = 25,882` input tokens at $5.00/MTok =
+$0.129410, plus 150 output at $25.00/MTok = $0.003750, = **$0.1332**.
 
 Rung 1's price is flat above 60,000 chars because `LOCALIZE_WINDOW` caps what
 it is shown — which is the point of having a cheap rung at all.
@@ -258,26 +332,53 @@ it is shown — which is the point of having a cheap rung at all.
 ### d2. Per-corpus estimate
 
 A full `escalate=True` sweep of all 43 dev filings costs an estimated
-**$0.056**, because 42 of them stop at rung 0. A default-flag sweep costs
-**$0.00**, measured, not estimated: no tier is reachable.
+**$0.0488**, because 42 of them stop at rung 0 — the sweep price IS
+`xref-index-collapse`'s ladder price, and that identity is the cost argument in
+one line. A default-flag sweep costs **$0.00**, measured, not estimated: no
+tier is reachable.
 
 ### d3. Where the budget does not hold, said plainly
 
 `Budget` checks the dollar ceiling against what has **already** been spent, not
 against what the next call is projected to cost, so one call can overshoot
 `max_usd` by its own price. The measured worst case on the dev corpus is
-`jpm-2024`'s rung 2 at an estimated $1.52 against a $1.00 default. The call
-budget (`max_calls`, default 2) is a hard ceiling and is not affected. Carried
-as debt with its upgrade path, in a `ponytail:` comment on `Budget.take` and a
-row in the ledger.
+`jpm-2024`'s rung 2 at an estimated $1.5216 against a $1.00 default. The call
+budget (`max_calls`) is a hard ceiling and is not affected. Carried as debt
+with its upgrade path, in a `ponytail:` comment on `Budget.take` and a row in
+the ledger.
+
+**And a correction about what a `Budget` bounds at all (PR #58 R6).** Its
+docstring said "per-run" and this section read as if $1.00 were a ceiling on a
+sweep. It is not: a `Budget` bounds the calls and dollars charged through THAT
+INSTANCE, and `extract_items` with no `budget=` creates one per DOCUMENT. A
+caller sweeping many documents must pass one `Budget` to every call to get a
+per-sweep ceiling; the web layer now does exactly that with a single
+process-wide instance (§h2). The docstring says this in full.
 
 ### d4. The price of the trigger this ADR did NOT choose
 
-Published because §c3's falsifier turns on it: routing on
-`item_span_near_empty` as well would escalate 12 of 43 dev documents, including
-`jpm-2024` and `bac-2006`, for an estimated **$3.4 per dev sweep** — roughly
-60× the chosen trigger — to resolve a class ADR-034 declined. That number is
-the argument.
+Published because §c3's falsifier turns on it. **Recomputed 2026-08-27 (PR #58
+R4): the figure first published here — "$3.4, roughly 60×, including
+`jpm-2024` and `bac-2006`" — was wrong twice over.** It did not re-derive from
+this section's own model (the reviewer got $4.7032, an independent
+recomputation on the pre-swap prices got $4.3492, and no subset reached $3.4),
+and it named `bac-2006` as escalating when §c3 and the census both say
+`bac-2006` is silent and it is absent from the twelve. Since this ADR says of
+this figure "that number is the argument", a wrong one is a wrong argument.
+
+Routing on `item_span_near_empty` as well would escalate **12 of 43** dev
+documents — `jpm-2024`, `cvx-2015`, `xom-2021`, `ibr-pointer-first`,
+`ge-1994`, `nvda-2024`, `fy2021-item9c`, `sandston-2021`, `ko-1997`,
+`spatz-2014`, `xref-index-collapse`, `reac-2015`, and **not** `bac-2006` — for
+an estimated **$4.2252 per dev sweep on OpenRouter pricing, 86.7× the chosen
+trigger's $0.0488**. The working, at §d1's level of detail: each document pays
+`(min(chars, 60000)/4 + 250)` input tokens at $0.25/MTok plus 150 output at
+$2.00/MTok for rung 1, then `(chars/4 + 250)` at $5.00/MTok plus 150 at
+$25.00/MTok for rung 2. The four largest contributions are `jpm-2024` $1.5257,
+`cvx-2015` $0.5310, `xom-2021` $0.4952 and `ibr-pointer-first` $0.4625; the
+smallest is `reac-2015` at $0.0370. 86.7× is a bigger number than the one this
+section first published, so the correction strengthens the ruling rather than
+weakening it — which is exactly why it had to be checked rather than trusted.
 
 ## e) Ruling on text-less / scanned inputs — OUT of scope, and the README row is re-affirmed
 
@@ -384,11 +485,15 @@ Everything else is.
 ### g1. New
 
 `src/sec10k/llm.py` (the only module that can talk to a paid API: credential,
-budget, cache, pricing), `src/sec10k/escalate.py` (trigger, windows, verify,
+budget, cache, pricing — rewritten for OpenRouter 2026-08-27, §h1),
+`tasks/reviews/2026-08-27-openrouter-models.json` (the committed pricing
+source `llm.usd()` reads), `src/sec10k/escalate.py` (trigger, windows, verify,
 apply, route), `tasks/reviews/d11_trigger_scan.py` (§c's instrument), five eval
 cases, one mutation fixture, two `repo_hygiene` checks (`escalation_seam`,
 `routing_provenance`), two `sec10k` check types (`routing`,
-`escalation_invariant`), `_routing_shape` in `envelope_shape`.
+`escalation_invariant`, `verify_guards`), `_routing_shape` and the
+missing/omitted null-span rule in `envelope_shape`, and two `ci.yml` lines that
+make this ADR's two `_demo`s enforcement rather than a claim (PR #58 R3).
 
 ### g2. Pins that moved because the wire moved
 
@@ -403,7 +508,80 @@ banner pin moved for the same reason (the banner now also calls
 `routingStrip`). **A moved pin is the one change in this diff that can hide a
 regression**, so it is listed here explicitly rather than buried in a diff.
 
-## h) The seam — the gate stays offline and $0, and it is measured
+## h1) The provider is OpenRouter, not the Anthropic API (2026-08-27, owner instruction)
+
+A real swap, not a rename. `OPENROUTER_API_KEY` replaces the Anthropic
+credential everywhere including the eval adapter's credential-stripping;
+`Authorization: Bearer` replaces `x-api-key`; the endpoint is
+`https://openrouter.ai/api/v1/chat/completions`; the body is OpenAI-shaped
+(`messages: [{role: system}, {role: user}]`) and has exactly three keys; the
+response is read from `choices[0].message.content` and usage from
+`usage.prompt_tokens` / `usage.completion_tokens`; the model ids are
+OpenRouter slugs (§d). Two provider-shaped failure modes the previous client
+did not have are handled: OpenRouter returns provider errors inside a **200**
+body, and it signals a filtered completion with `finish_reason:
+"content_filter"` — both raise `EscalationUnavailable` rather than yielding
+empty text that would parse as an empty proposal.
+
+**Dropped rather than mapped.** The Anthropic client sent a reasoning-effort
+knob in a nested config object. OpenRouter's chat-completions surface has no
+equivalent, so it is gone and its plumbing with it — mapping it onto a
+different provider's different concept would have been an invented
+equivalence. `llm._demo` asserts the request body's SHAPE (three keys, two
+messages in order) rather than text-matching the file, so a comment cannot
+satisfy the pin.
+
+**Still no new dependency.** `requirements.txt` is unchanged; the client is
+stdlib `urllib.request` + `json`. `PROMPT_VERSION` moved to
+`d11.2-openrouter`, so no cached response from the old transport can be served
+for a new-transport request.
+
+## h2) The deployed inspector: two locks, because a real credential is about to land on it
+
+PR #58 R6, and the reason it was repaired rather than disclosed: the owner is
+putting a credential on a **public, unauthenticated** Zeabur deployment whose
+three extract endpoints all accept an `escalate` flag, and whose only existing
+limit is a 25 MB upload cap. With a key present and nothing else changed, an
+anonymous caller could upload collapsed filings and drive opus-class calls
+until the account ran dry — and nothing bounded aggregate spend, because
+`route()` builds a fresh per-document `Budget` and no caller passed one.
+
+**Lock 1 — a credential alone never arms paid work.** The server refuses to
+escalate unless `SEC10K_ESCALATION_ENABLED=1` is *also* set. Deliberately a
+second variable rather than a truthiness check on the key: the key arrives for
+its own reasons, and "a key exists" must not mean "spend it". Verified with a
+key exported and the variable unset — `escalation_enabled: false`, no routing
+record, `cost` all zeros.
+
+**Lock 2 — one process-wide ceiling, not one per document.** `web.app`
+constructs a single `Budget` (`SEC10K_ESCALATION_MAX_CALLS`, default 20;
+`SEC10K_ESCALATION_MAX_USD`, default $5.00) and passes it to every
+`extract_items` call, so the bound is on the DEPLOYMENT. Verified: with the
+ceiling set to one call, request 1 attempts a tier and requests 2 and 3 come
+back `outcome: "unavailable"`, `"budget spent: 1 of 1 calls used"`. It does not
+reset on its own; restarting the process is the deliberate act that refills it.
+
+**And the refusal is never silent, which is the whole milestone.** An unarmed
+deployment does not quietly ignore a ticked box. `/api/meta` publishes
+`escalation_enabled`, the page disables the control and says why, and any
+request that asked anyway comes back with an `escalation_disarmed` message
+rendered above the banner. Three hops, three pinned expressions, and a
+7th mutation shape in `routing-strip-missing.html` whose whole content is "the
+box is offered unconditionally" — the dishonesty this row exists to remove,
+wearing the costume of a working feature.
+
+**Neither lock touches a local run.** The eval suites, `python3 -m
+src.sec10k.escalate` and a direct `extract_items(..., escalate=True)` all
+bypass `web.app` entirely; a developer who exports both variables gets the
+tier with the default per-document budget.
+
+**What is still not bounded**, said plainly: there is no authentication and no
+rate limit on the deployment, so an anonymous caller can still consume the
+process budget — denying the capability to everyone else — and can still cost
+CPU. The locks bound *spend*, which is the irreversible resource; availability
+is not bounded and is a debt row.
+
+## h3) The seam — the gate stays offline and $0, and it is measured
 
 `requirements.txt` is unchanged (`fastapi`, `uvicorn`). No `pip install` runs
 in CI. The client is stdlib `urllib.request` + `json`, not the `anthropic` SDK,
@@ -423,7 +601,7 @@ that one line is the edit that would break the seam while every other check
 stayed green.
 
 Belt and braces on the money: `src/sec10k/eval_adapter.run_case` removes
-`ANTHROPIC_API_KEY` from the environment for the whole of every sec10k case,
+`OPENROUTER_API_KEY` from the environment for the whole of every sec10k case,
 restoring it after. So a case declaring `escalate: true` behaves identically on
 a machine with a credential and one without, and the `fast` suite makes zero
 paid calls **by construction** rather than by convention (cost-discipline
@@ -506,7 +684,7 @@ cannot be produced without a credential.
 
 **The held-out exam is UNRUN.** The D11 ledger row defines success on held-out
 — "the slow path completes the D6 filings it never trained against". That run
-has not happened and cannot: `ANTHROPIC_API_KEY` is not set in this
+has not happened and cannot: `OPENROUTER_API_KEY` is not set in this
 environment, and repo rule 4 forbids fabricating the result. The exam is
 therefore **intact and unspent**, which is the one good thing about this
 column being empty. `intc-2025` and `c-2025` were not read, not adjudicated and
@@ -525,7 +703,12 @@ reasons are published in full.
 
 **No browser walk** (§i). **No vision rung** (§e). **A2 remains unreached**
 (§c3). **The `Budget` dollar ceiling can be overshot by one call's own price**
-(§d3).
+(§d3). **Rung 1's slug is a judgement, not a measurement** — whether
+`openai/gpt-5-mini` can actually do exact offset arithmetic over a 60,000-char
+window is unknown, and if it cannot then rung 1 is pure waste that always
+escalates to rung 2 (§d). **The deployment has no authentication and no rate
+limit** — the §h2 locks bound spend, not availability (§h2's closing
+paragraph).
 
 ## l) Falsifiers
 
