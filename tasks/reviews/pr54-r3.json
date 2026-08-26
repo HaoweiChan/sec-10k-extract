@@ -1,0 +1,57 @@
+{
+  "pr": 54,
+  "task": "D12",
+  "round": 3,
+  "date": "2026-08-26",
+  "result": "APPROVED",
+  "scope": "repair diff e633b99..b037285 plus the standing round-2 findings; no fresh full-diff sweep",
+  "gate": "invariant 60/60 = 1.000; fast 123/123 = 1.000 (baseline fast 1.0)",
+  "standing_findings_adjudicated": {
+    "R4": "resolved — mutation battery run by the reviewer: `norm = hit[1]`, `norm = hit[2]; norm = hit[1]`, tuple-unpack rebind, own-line second bind, and the [:100] prefix are all RED; black-style reflow of the Response(...) call and an added comment are both GREEN, so no false positive on innocent reformatting. Orchestrator independently re-ran the two round-2 mutants: both RED.",
+    "R5": "resolved — the deleted comparison is confirmed to have been implied by the surviving slice_[:DISPLAY_MAX] check and carried no independent falsification power; reverting README.md's step-4 line alone is still RED on the text pin.",
+    "audit_trail_honesty": "Reviewer flattened a key-by-key diff of tasks/reviews/pr54-r1-resolution.json across e633b99..b037285: the two corrected `what_changed` strings are the only semantic changes (everything else is em-dash re-serialization), and both carry an explicit `[Corrected in round 2, PR #54 R4/R5: ...]` label. The audit trail is honest — a labelled correction, not a silent rewrite."
+  },
+  "orchestrator_routing_note": "All four findings are LOW and the reviewer APPROVED. Under the pr-loop scope rule LOW findings go to debt; three of these (R6, R8, R9) are nonetheless the same committed-artifact-overclaim class this PR was repaired for twice, and R7 is a two-token code fix. Because the reviewer specified literal replacement wording for each acceptance, they were applied as a BOUNDED CORRECTION PASS with no fourth review round: the implementer applies the reviewer's own dictated text, the orchestrator re-runs the gate and verifies the diff contains nothing beyond those corrections. Opening a fourth round to re-review a reviewer's own dictated wording would loop without adding verification; shipping four statements known to be false would violate the honesty condition the earlier rounds enforced.",
+  "findings": [
+    {
+      "id": "R6",
+      "severity": "LOW",
+      "route": "repair",
+      "no_further_review_round": true,
+      "claim": "The triage note's blanket assertion that Store-node counting means 'every binding form Python has is covered' is false — `except X as norm`, `import x as norm`, `def norm`, `global/nonlocal norm`, and match-statement capture patterns all rebind the name with zero Name(ctx=Store) nodes, and a match capture reproduces the R1 defect with the whole gate green.",
+      "evidence": "evals/adversarial/ui-offset-reproduction-contract.json triage note against src/repo_hygiene/eval_adapter.py:1704-1711, which counts only ast.Name with ctx=Store. Inserting a `match hit: case (_ct, norm, _n): pass` after src/sec10k/web/app.py:293 leaves _binds(...) == 1 (MatchAs.name is a bare str, not a Name node) while norm is rebound to hit[1], the raw filing. Reproduced: passed=True, 0 failures.",
+      "repro": "Apply the three-line match/case insertion after src/sec10k/web/app.py:293 and run run_case on the case -> passed=True, 0 failures.",
+      "acceptance": "The triage note drops the unqualified 'every binding form Python has is covered' and carries the same enumerated list the code comment (eval_adapter.py:1698-1699) and pr54-r2-resolution.json already use — assignment, augmented, walrus, tuple unpack, for-target — or _binds also counts ExceptHandler.name / alias.asname / MatchAs.name. Chasing the residual further is not asked for: `hit = (hit[0], hit[1], hit[1])` before the pinned binding is also green with the raw filing served, and no norm-binding guard can ever close it — the inherent ceiling of allow-list pinning, not a defect of the ast choice."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "route": "repair",
+      "no_further_review_round": true,
+      "claim": "_binds matches only ast.FunctionDef, so converting the FastAPI handler to `async def` — a routine refactor, not a rename — makes the case RED with a message that misdiagnoses the cause as 'the function is gone or renamed'.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:1708 `isinstance(node, ast.FunctionDef)` never matches ast.AsyncFunctionDef. Changing src/sec10k/web/app.py:257 to `async def api_normalized(token: str):` yields: 'binds norm None times, expected 1 ... (None means the function is gone or renamed)'. Fail-loud, so no wrong output — but it is the same red-for-the-wrong-reason class the round-1 note recorded for the decorator-keyed window.",
+      "repro": "sed `def api_normalized(` -> `async def api_normalized(` in src/sec10k/web/app.py, run run_case -> 1 failure blaming a rename.",
+      "acceptance": "isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)), or the message stops asserting a cause it cannot distinguish."
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "route": "repair",
+      "no_further_review_round": true,
+      "claim": "The R5 correction of tasks/reviews/pr54-r1-resolution.json fixed what_changed but left the sibling covered_by field on the same object still naming the mechanism that round 2 deleted.",
+      "evidence": "tasks/reviews/pr54-r1-resolution.json:26 still reads covered_by = 'ui-offset-reproduction-contract (SNIPPET_ASSERT pin + the truncated-item requirement in the live loop)', while resolutions[1].what_changed two lines below now states that the truncated-item requirement was deleted and no truncated counter remains anywhere in the offset check. pr54-r2-resolution.json's R5 claims_corrected lists only 'R2 what_changed'.",
+      "repro": "python3 -c \"import json;print(json.load(open('tasks/reviews/pr54-r1-resolution.json'))['resolutions'][1]['covered_by'])\" vs grep -n truncated src/repo_hygiene/eval_adapter.py (no hit inside check_offset_reproduction_contract).",
+      "acceptance": "covered_by reads 'ui-offset-reproduction-contract (SNIPPET_ASSERT text pin)'."
+    },
+    {
+      "id": "R9",
+      "severity": "LOW",
+      "route": "repair",
+      "no_further_review_round": true,
+      "claim": "Two artifacts in this repair say the round-1 window bug 'shipped', contradicting round 1's own committed record that it was found and fixed before commit.",
+      "evidence": "prompts/021-d12-offset-reproduction-contract.md:142 ('the off-by-one that shipped in round 1') and src/repo_hygiene/eval_adapter.py:1700 ('the off-by-one that shipped in it for one run') versus tasks/reviews/pr54-r1-resolution.json resolutions[0].note: 'One defect in the repair itself, found and fixed before commit'. Inspecting the round-1 shipped code at e633b99, the window is correct for both functions — nothing off-by-one shipped.",
+      "repro": "git show e633b99:src/repo_hygiene/eval_adapter.py | sed -n '1680,1695p' next to tasks/reviews/pr54-r1-resolution.json resolutions[0].note.",
+      "acceptance": "Both sentences say the defect was caught during round 1 and never committed, matching the round-1 artifact — or they cite the commit where it did ship."
+    }
+  ]
+}

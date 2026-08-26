@@ -10,6 +10,7 @@ full text — the invariant survives and the payload stays sane.
 
 Self-check: python3 -m src.sec10k.web.view
 """
+import hashlib
 from collections import Counter
 
 from src.sec10k.boilerplate import strip_chrome
@@ -102,6 +103,12 @@ def build_view(result, display_max=DISPLAY_MAX):
         "trace": _scrub(_jsonable(result.get("trace", []))[:TRACE_MAX]),
         "items": items,
         "norm_chars": len(text),
+        # D12: the sha a consumer verifies the /api/normalized/{token}
+        # download against before trusting the offsets against it. Of the
+        # NORMALIZED text — `meta.input_sha256` already pins the raw file,
+        # and those two shas are exactly the distinction the recipe exists
+        # to teach. Derived here, like every other field: no second copy.
+        "norm_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
         "counts": _counts(result.get("items", [])),
         # so the pane can SAY it is hiding text. `chars` still reports the
         # full span, so without this the two numbers silently disagree.
@@ -188,6 +195,10 @@ def _demo():
     # short item is not marked truncated
     assert v["items"][1]["truncated"] is (len(text) - cut > 20)
     assert v["counts"] == {"extracted": 2, "omitted": 1}
+    # D12: the sha binds a normalized-text download to THIS run, so it has
+    # to be of the normalized text and of nothing else — not the raw file.
+    assert v["norm_sha256"] == hashlib.sha256(text.encode("utf-8")).hexdigest()
+    assert v["norm_chars"] == len(text)
     # the trace must not hand a stranger the server's directory layout
     assert v["trace"][0]["path"] == "filing.htm"
     assert v["trace"][1] == {"layer": "candidates", "found": 40}
@@ -197,6 +208,7 @@ def _demo():
     # an empty/refused envelope must not blow up
     empty = build_view({"doc_status": "failed", "normalized_text": "", "items": []})
     assert empty["items"] == [] and empty["counts"] == {}
+    assert empty["norm_sha256"] == hashlib.sha256(b"").hexdigest()
     json.dumps(empty)
 
     # S8: the same envelope plus ADR-026's `boilerplate` key renders the

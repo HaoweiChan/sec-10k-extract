@@ -1,0 +1,106 @@
+{
+ "pr": 57,
+ "round": 3,
+ "task": "D8",
+ "reviewed_head": "e04d46c",
+ "repaired_at": "a665daa (R5/R6 repair), then merged with origin/main 6b37ffa",
+ "note_on_process": "The circuit breaker fired at round 3 (three rounds without approval, CLAUDE.md per-feature loop). The human's ruling was: resolve the conflicts and merge if CI passes, no fourth review round — but NOT by merging a sentence the reviewer proved false. So R5 and R6 were closed first, on the round-3 reviewer's own acceptance wording, and the merge came after. No round-4 review was requested and none was run; the last reviewer verdict on record is round 3 REQUEST_CHANGES.",
+ "resolutions": [
+  {
+   "id": "R5",
+   "severity": "MEDIUM",
+   "route": "repair",
+   "disposition": "fixed",
+   "branch_taken": "(i) — add the pin, delete the debt row",
+   "finding_accepted": true,
+   "reproduced": "The reviewer's measurement was reproduced before anything was changed, at a8cedcb. `stub` is 10,018 chars; `validate(stub, ibr_only, {\"1\": {}}, [])` emits `low_item_coverage` reading \"only 0.2% of the document lies inside an item span (17 of 10,018 chars)\" unmutated, and \"only 0.0% ... (0 of 10,018 chars)\" under the round-2 mutant (`cov = coverage(text, [i for i in items if i[\"status\"] == \"extracted\"])` at validate.py:318). Exactly as the finding states.",
+   "what_changed": [
+    "src/sec10k/validate.py: two lines (plus a three-line comment) beside the existing `ibr_only` construction — `ibr_w = [x for x in validate(stub, ibr_only, {\"1\": {}}, []) if x[\"code\"] == \"low_item_coverage\"]` / `assert \"0.2%\" in ibr_w[0][\"message\"], ibr_w`. That is the first thing in the repo to read the figure `validate()` thresholds on.",
+    "tasks/TODO.md: the `Origin: PR #57 R4` debt row is DELETED. The gap it carried is closed; rewriting its rationale would have left a fourth compensating sentence where a two-line check belongs.",
+    "specs/decisions/ADR-034 §f1: the `meta.coverage` bullet no longer describes a gap. It now has two bullets — the published figure and what binds it, and the thresholded figure and what binds it — plus the plain statement that neither call site is pinned to the OTHER's value (each is pinned to a literal, which is what makes a divergence between them red). A third dated correction note records that the deferral's cost claim was this round's false sentence.",
+    "specs/decisions/ADR-034 Enforced-by line: `validate.py::_demo` now names this pin and its red-first record.",
+    "tasks/reviews/pr57-r2-resolution.json: `why_not_branch_a`, `what_changed[2]`, `debt_row` and `when_to_take_the_real_fix` corrected in place, each quoting its own original, plus a `corrections` entry.",
+    "tasks/reviews/pr57-r1-resolution.json: no longer cites the deleted debt row or the superseded cost claim; second `corrections` entry added."
+   ],
+   "watched_red_at_sha": "a8cedcb00a1e809a9cd161c44be9a9eff49a5777",
+   "red_first_record": "tasks/reviews/pr57-r3-red.txt",
+   "red_evidence": "Three steps, in order, all in the transcript. (1) Mutant applied, pin NOT yet added: `python3 -m src.sec10k.validate` -> `[validate self-check] ok`, exit 0 — the finding reproduced, the mutant invisible. (2) Pin added against the STILL-MUTATED tree: AssertionError, `\"0.2%\" in ibr_w[0][\"message\"]` false, actual message \"only 0.0% ... (0 of 10,018 chars)\" — red for the right reason, not for a typo. (3) Mutant reverted, pin kept: `[validate self-check] ok`. CI runs this self-check (.github/workflows/ci.yml:30), which is the same standard PR #25 R1 set for `boilerplate._demo`.",
+   "why_not_ii": "(i) verified exactly as the reviewer measured, so the fallback was not needed. It is also the smaller net change: it deletes a 2,683-byte debt row instead of rewriting its rationale and adding more prose.",
+   "blast_radius": "None. No signature change, no pipeline code, no new fixture — the whole R5 diff outside documents is six lines inside `_demo`. Re-measured against origin/main 6b37ffa anyway; see `blast_radius_note`."
+  },
+  {
+   "id": "R6",
+   "severity": "LOW",
+   "route": "repair (the reviewer routed it debt; taken here because the merge made the fix free — see note)",
+   "disposition": "fixed",
+   "finding_accepted": true,
+   "reproduced": "The reviewer's repro run verbatim on the merged tree: `low_item_coverage` fires on `xref-index-collapse` (coverage 0.0303, 0 IBR spans), held-out `intc-2025` (0.0033, 0 IBR) and held-out `c-2025` (0.0, 0 IBR). Three committed documents, not one, and all three zero-IBR — so the byte-identical-message argument that falsifies acceptance (a)'s fixture route is unchanged. Only the count was wrong, exactly as the finding says.",
+   "what_changed": [
+    "tasks/TODO.md: the sentence went with the deleted R4 debt row (R5), so there was nothing left to correct there.",
+    "tasks/reviews/pr57-r2-resolution.json `why_not_branch_a`: the original is quoted in full, and the correction under it reads \"`low_item_coverage` fires on one dev fixture (`xref-index-collapse`) and on held-out `intc-2025` and `c-2025` — three committed documents, not one\", matching ADR-034 §j:504."
+   ],
+   "note": "One of the two sentences the finding names ceased to exist as a side effect of the R5 repair; the other is corrected. No new claim was added in either place.",
+   "heldout": "`intc-2025` and `c-2025` were MEASURED and REPORTED only. No case label was read, no threshold revisited, no held-out suite run. `evals/heldout/README.md`'s burn rule holds; they remain D11's exam."
+  }
+ ],
+ "merge": {
+  "into": "task/D8",
+  "from": "origin/main 6b37ffa99d053fa3d849df7820fd5bded4fc215b (D12 / PR #54)",
+  "merge_base": "5a44758",
+  "conflicts": [
+   {
+    "file": "evals/report/history.jsonl",
+    "kind": "append-only log",
+    "resolution": "Union: base 791 lines + this branch's 29 + main's 18 = 838, verified arithmetically and by parsing every line as JSON (0 bad, 0 duplicate (ts, suite) keys). Git's default resolution would have dropped one side's run records."
+   },
+   {
+    "file": "tasks/DONE.md",
+    "kind": "ledger",
+    "resolution": "Both sides kept, by intent. This branch archived D6 and D7; main archived D12. origin/main's DONE.md carries no D6/D7/D10 row at all, so the two additions are disjoint and both survive, in completion order D6, D7, D12."
+   },
+   {
+    "file": "tasks/TODO.md",
+    "kind": "ledger",
+    "resolution": "Both sides' debt rows kept (this branch's four: PR #57 R2, PR #57 R3, D8 iXBRL, D8 span-floor scope; main's three: PR #54 R3, D12 UI affordance, D12 route binding). The milestone table needed no reconciliation: this branch had already removed the D6/D7 rows and corrected D10's status, and main had already removed D12's, so the auto-merge landed on D8/D9/D10/D11 with correct statuses. Separately, the R4 debt row deleted under R5 is absent, as intended."
+   }
+  ],
+  "auto_merged_and_verified": [
+   "tasks/pr-loop-ledger.jsonl — no conflict because this branch never touched it. Base 25 lines, main 26, result 26 and byte-identical to main's. D8 has no ledger row yet; that is the orchestrator's close-out bookkeeping, not this repair's, and it is called out as a residual below.",
+   "src/repo_hygiene/eval_adapter.py, src/sec10k/web/app.py, src/sec10k/web/view.py — main's D12 additions, kept whole; this branch changed none of them.",
+   "README.md — both sides' edits merged without conflict."
+  ],
+  "line_refs_reverified": {
+   "why": "main's `ledger-line-refs` check (PR #52 R9) validates only the ~9 citations in tasks/TODO.md that quote their target adjacently, so it is green while an unquoted ref is wrong. Every `file:line` citation in the table pointing into a file this branch or the merge touched was therefore checked by hand against the merged tree.",
+   "repaired_in_place": [
+    "tasks/TODO.md:80 (PR #57 R2 row) — `src/sec10k/web/view.py:83-93` -> `:84-94` and `(view.py:99)` -> `(view.py:100)`. Broken BY THE MERGE: D12 added `import hashlib` at view.py:13, shifting everything below by one. The quoted code is unchanged.",
+    "tasks/TODO.md:217 (PR #53 R6 row, which this branch never touched) — `src/sec10k/extract.py:208` -> `:212`, `extract.py:229-237` -> `:242-257`, `src/sec10k/validate.py:301-303` -> `:387-389`. Broken by D8's OWN diff, which inserted above all three. This is the identical failure mode PR #52 R9 was raised for: a diff invalidating refs in a row it never edited."
+   ],
+   "verified_correct_no_change": [
+    "tasks/TODO.md:81 -> src/sec10k/extract.py:236, src/sec10k/validate.py:112",
+    "tasks/TODO.md:80 -> specs/001-sec10k-contract.md:81",
+    "tasks/TODO.md:199 -> specs/001-sec10k-contract.md:182",
+    "ADR-034 §f1 -> src/sec10k/validate.py:318 and :537, .github/workflows/ci.yml:30"
+   ],
+   "found_stale_but_not_ours": "Five further refs (tasks/TODO.md:90, :96, :116, :120, :199 into eval_adapter.py / extract.py / view.py) are wrong at origin/main 6b37ffa as well, so neither D8 nor the merge moved them. Folded into the existing `Origin: PR #54 R3` row rather than given a new one — a new row would shift every `tasks/TODO.md:NNN` self-reference below it and add to the rot it describes. They belong to the pending ADR-019 line-ref pass."
+  }
+ },
+ "gate_after_merge": {
+  "binding": "This is the merged-tree run, not the pre-merge branch gate.",
+  "invariant": "70/70 = 1.000 (+3 enumerated debt, unscored)",
+  "fast": "133/133 = 1.000 (+3 enumerated debt, unscored)",
+  "table_fidelity": "cells 1.0000 (427/427), rows 1.0000 (34/34)",
+  "structure_fidelity": "blocks 1.0000 (61/61), bounds 1.0000 (61/61)",
+  "baseline": ".eval-baseline.json untouched and unread-from; no --update-baseline. fast 1.0 >= baseline fast 1.0, all four fidelity floors met.",
+  "counts_moved_why": "69 -> 70 invariant and 132 -> 133 fast: main's D12 brought one new case, `evals/adversarial/ui-offset-reproduction-contract.json`. No case of this branch's was lost.",
+  "unit": "validate self-check ok (now including the R5 pin); eval_adapter 21/21."
+ },
+ "blast_radius_moved": false,
+ "blast_radius_note": "Re-measured against origin/main 6b37ffa, not against this branch's older baseline, with `python3 evals/snapshot.py <root> <out.json>` on both trees and the OUTPUT FILES diffed — not the printed shas eyeballed. Result: ADR-034 §f's four digests are unchanged and reproduce exactly. dev before b39eae8b945e932366cde5306cd08f22db5ea4c4ba299d18c5dc9a6a3c08d033, heldout before dd67647b16369ac309a43ad856c3358cc3da8bdd00f08e7b526ad81e38ccbd26; dev after 58364186aff9dad3f7443de4b5447ae3a7894e76fc01ad1592fd03a4b4479d0f, heldout after f80025699bc34f06af6ea0fb3457106593ec858c4d89d4144870e339b00e191a — the after pair taken on the MERGED tree. Not one digit moved, so §f needed no correction. HOW THE `before` PAIR IS CONSTRUCTED, since §f does not spell it out and the number is otherwise unreproducible: it is the pre-D8 CODE over the POST-D8 CORPUS — 820cf0c's tree with `evals/fixtures/xref-index-collapse/` copied in, 58 dev files. 820cf0c's tree as committed has 57 dev files and digests to d6f7b81e16e6c9767e01ec53f7e5125919f2d629604f97d4838ddbce228ff1a8, which is a different comparison (corpus AND code differ) and is not what §f cites. Both constructions were run here. Doing the same over origin/main 6b37ffa's tree gives a `before` file BYTE-IDENTICAL to 820cf0c's (`cmp` clean, not merely equal shas): D12 changed the web and hygiene layers only, and moved no extraction output at all.",
+ "residuals": [
+  "No fourth review round was run. The R5 and R6 repairs above have not been reviewed by anyone but their implementer, which is the cost the human accepted when the breaker fired.",
+  "`tasks/pr-loop-ledger.jsonl` has no D8 row. Every other closed task has one and it is written at close-out by the orchestrator, not by the implementer; flagged rather than invented.",
+  "The D8 milestone row in tasks/TODO.md still reads `in-progress ... awaiting review + merge`. Left as-is deliberately: the human merges, and the row should not claim otherwise before that happens.",
+  "The five stale line refs described under `line_refs_reverified` are still stale. They were stale before this branch existed and are logged, not fixed.",
+  "`tasks/reviews/pr57-r3.json` routed R6 to debt; it was repaired instead. The repair was two words in one artifact and the other half of it had already vanished with the deleted debt row, so a debt row would have cost more than the fix. Recorded here as a routing disagreement, not hidden."
+ ]
+}
