@@ -580,8 +580,9 @@ recorded as a decision taken by the owner on the escalation, not as a ground
 this document reasoned its way to — the ground it originally reasoned to was
 withdrawn above as falsified, and nothing here revives it. The burn does not
 fire on this ADR **because the rule was changed**, not because the original
-no-case-authored argument was sound. Those are different claims and this
-document makes only the second.
+no-case-authored argument was sound. Those are different claims; this
+document asserts only that the rule was changed, and never that the withdrawn
+ground was sound.
 
 The amendment lands in `evals/heldout/README.md`'s Burn-rule section and in the
 D6 H4 entry quoted above, both dated and both pointing here. Its substance: a
