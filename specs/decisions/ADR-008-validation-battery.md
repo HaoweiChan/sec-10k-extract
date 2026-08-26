@@ -1,10 +1,10 @@
 # ADR-008 — T5: the validator battery that survived measurement
 
 Date: 2026-08-16. Status: accepted. Amended by: ADR-013, ADR-018, ADR-027,
-ADR-030, ADR-034 (the last four in place — each amended figure carries its marker).
+ADR-030, ADR-035 (the last four in place — each amended figure carries its marker).
 Implements layers 8-9 (`src/sec10k/validate.py`).
 
-**Ruling**: ship six label-free validators with measured thresholds (TOC manifest, unattributed content, last-item domination, boundary hygiene, relative numeric density, keyword fingerprints) — seven since ADR-013 added `expected_items_mostly_missing` (amended 2026-08-22, ADR-027 §g; `grep -c 'warn("' src/sec10k/validate.py` → 7), eight since ADR-030 added `item_dominates` (amended 2026-08-23; the same grep → 8), ten since ADR-034 (D8) added `item_span_near_empty` and `low_item_coverage` (amended 2026-08-26; the same grep → 10); reject the other four proposed ("Item 8 longest", "1A ≫ 1B", "spans end at sentence punctuation", part-region consistency) as false-positive generators.
+**Ruling**: ship six label-free validators with measured thresholds (TOC manifest, unattributed content, last-item domination, boundary hygiene, relative numeric density, keyword fingerprints) — seven since ADR-013 added `expected_items_mostly_missing` (amended 2026-08-22, ADR-027 §g; `grep -c 'warn("' src/sec10k/validate.py` → 7), eight since ADR-030 added `item_dominates` (amended 2026-08-23; the same grep → 8), ten since ADR-035 (D8) added `item_span_near_empty` and `low_item_coverage` (amended 2026-08-26; the same grep → 10); reject the other four proposed ("Item 8 longest", "1A ≫ 1B", "spans end at sentence punctuation", part-region consistency) as false-positive generators.
 **Because**: a validator that cries wolf is a defect, not caution — each rejected check was measured to misfire on real fixtures (AAPL, Premier Pacific, JPM).
 **Enforced by**: `src/sec10k/validate.py`; `evals/golden/*-structure.json` cases; `evals/adversarial/heading-unnumbered.json`
 
@@ -27,8 +27,8 @@ false-positive rates rather than quietly omitted.
 | Boundary hygiene | any | every span must open with its own heading; 0 failures across 14 fixtures, kept as a tripwire |
 | Numeric density, relative | d(8) ≤ d(1A) | absolute bands overlap across filers (d(1A) 0.001–0.008 vs d(8) 0.008–0.095 — they touch), but the *ordering* holds in 9 of 9 filings where both items are substantive |
 | Keyword fingerprints | no prior word present | gated to spans ≥ 5,000 chars |
-| Per-item span floor, items 1/7/8 (*added 2026-08-26, ADR-034*) | < 1,500 chars | all 14 item-1/7/8 spans under 2,094 chars on the dev corpus are pointers or stubs; every span at or above it is substantive. Band (930 ko-1997 item 8, 2,094 tgt-2002 item 1), midpoint to 2 s.f.; both edges pinned. Items 1A/7A excluded — "not required for smaller reporting companies" is a complete 41-129-char answer on 6 fixtures |
-| Document coverage (*added 2026-08-26, ADR-034*) | < 13% | the lowest real dev filing places 23.06% of its text in item spans (ge-1994), the synthetic stub collapse places 3.03%. Band midpoint; both edges pinned; escalating |
+| Per-item span floor, items 1/7/8 (*added 2026-08-26, ADR-035*) | < 1,500 chars | all 14 item-1/7/8 spans under 2,094 chars on the dev corpus are pointers or stubs; every span at or above it is substantive. Band (930 ko-1997 item 8, 2,094 tgt-2002 item 1), midpoint to 2 s.f.; both edges pinned. Items 1A/7A excluded — "not required for smaller reporting companies" is a complete 41-129-char answer on 6 fixtures |
+| Document coverage (*added 2026-08-26, ADR-035*) | < 13% | the lowest real dev filing places 23.06% of its text in item spans (ge-1994), the synthetic stub collapse places 3.03%. Band midpoint; both edges pinned; escalating |
 
 `SUBSTANTIVE_MIN = 5000` gates both content-shape validators. It is a judgment
 call, not a measured gap — item lengths are a continuum — but the classes it
@@ -82,13 +82,13 @@ Only `toc_manifest_mismatch` and `last_item_dominates` may push `doc_status`
 to `ambiguous` (*amended 2026-08-22, ADR-027 §g: three codes since ADR-013
 added `expected_items_mostly_missing` — `len(AMBIGUOUS_CODES)` → 3; amended
 2026-08-23, ADR-030 §c: four since `item_dominates` joined — `len(AMBIGUOUS_CODES)`
-→ 4; amended 2026-08-26, ADR-034 §d: five since `low_item_coverage` joined —
+→ 4; amended 2026-08-26, ADR-035 §d: five since `low_item_coverage` joined —
 the same expression → 5*).
 `unattributed_content` deliberately may not: IBM 1997 leaves
 43% of its document outside every item and Textron 28%, because those filings
 incorporate by reference — that shape is normal, the honest report is a
 warning, and the eval set agrees (both cases require `success` or
-`success_with_warning`). *(Amended 2026-08-26, ADR-034 §d: that ruling stands
+`success_with_warning`). *(Amended 2026-08-26, ADR-035 §d: that ruling stands
 and `unattributed_content` is unchanged. `low_item_coverage` is a different
 measurement — what the items HOLD, not what the preamble and tail leave — at a
 threshold 13%, an order of magnitude below the IBM/Textron shape this

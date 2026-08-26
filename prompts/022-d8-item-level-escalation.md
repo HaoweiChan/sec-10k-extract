@@ -9,7 +9,7 @@ postmortem's §8 addendum widened D8 from "make the number honest" to three
 explicit rulings: (a) a doc-level coverage field with an escalation threshold,
 (b) what the consumer receives when a validator hits an item, (c) whether the
 iXBRL numeric cross-check is worth building. Ruling:
-[ADR-034](../specs/decisions/ADR-034-item-level-escalation.md). "Declined with
+[ADR-035](../specs/decisions/ADR-035-item-level-escalation.md). "Declined with
 its cost named" was an allowed outcome for all three; two ruled in, (c) ruled
 out with four measurements behind it.
 
@@ -21,7 +21,7 @@ out with four measurements behind it.
   Item 1Bs saying "None.", on 23 of 27 Item 6s saying "[Reserved]", and on 6
   Item 1As whose entire lawful answer is "Not required for smaller reporting
   companies". Only items 1, 7 and 8 have an empty band, so only those three
-  get the floor. The census is printed in full in ADR-034 §b1 (all 14 spans
+  get the floor. The census is printed in full in ADR-035 §b1 (all 14 spans
   under the gap, with what each one says) precisely so a reader can disagree
   with the ruling on the evidence rather than on the summary.
 
@@ -53,7 +53,7 @@ out with four measurements behind it.
 
 - **Held-out is measured, never tuned on.** Both bands come from dev values
   only, and both constants were fixed before the held-out table was read. The
-  measurement is reported (ADR-034 §b4, §f2) because the D8 row demands blast
+  measurement is reported (ADR-035 §b4, §f2) because the D8 row demands blast
   radius on every fixture; `intc-2025` and `c-2025` were not read, not
   adjudicated, and no case label of theirs was consulted. `mrk-1995` and
   `pgr-2023` items 7/8 fire and are explicitly NOT adjudicated — reading them
@@ -74,7 +74,7 @@ out with four measurements behind it.
   warning-free `success` was the overclaim. The case becomes the real-filing
   pointer pin, the exact-`success` audit pin moves to `cat-2023-shallow`
   (which is genuinely clean and 2 orders of magnitude clear of the floor), and
-  ADR-034 §e2 records the swap with the offsets behind it.
+  ADR-035 §e2 records the swap with the offsets behind it.
 
 - **Assumed:** the D8 row's other option — coupling `unattributed_content` to
   the items whose spans abut the unattributed region — was a plausible
@@ -85,7 +85,7 @@ out with four measurements behind it.
   floor fires on, the first span is item 1 on all 12 and the last is item
   14/15/16 on all 12. The coupling names a flagged item on 1 of 12, and
   nothing at all on the eleven real pointer filings.
-- **Corrected:** rejected in ADR-034 §b3 as a rule about item ORDER rather
+- **Corrected:** rejected in ADR-035 §b3 as a rule about item ORDER rather
   than item content, with the 1-of-12 count, instead of being left as an
   unexplored "and/or" in the ledger row.
 

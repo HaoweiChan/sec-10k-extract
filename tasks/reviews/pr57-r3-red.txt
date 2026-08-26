@@ -70,5 +70,5 @@ $ python3 -m src.sec10k.validate
 exit=0
 
 Blast radius: none. No signature changed, no pipeline code changed, no fixture
-added. The diff is two lines inside `_demo`. ADR-034 §f's digests are untouched
+added. The diff is two lines inside `_demo`. ADR-035 §f's digests are untouched
 by it.

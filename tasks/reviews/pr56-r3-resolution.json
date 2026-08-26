@@ -1,0 +1,67 @@
+{
+  "pr": 56,
+  "round": 3,
+  "scope": "BOUNDED \u2014 R14, R15, R16, R17, R18 and nothing else. Final round; no round 5.",
+  "responder": "implementer, same worktree, branch task/D9",
+  "red_evidence": "tasks/reviews/pr56-r3-red.txt \u2014 the BODY_MAX verification, the R16 before/after, and a two-pass claim sweep across all six live files.",
+  "summary": {
+    "fixed": 5,
+    "rejected": 0,
+    "debt_rows": 1,
+    "sweep_caught_unnamed": 3,
+    "rulings_moved": 0
+  },
+  "findings": [
+    {
+      "id": "R14",
+      "severity": "HIGH",
+      "disposition": "fixed \u2014 ADJUDICATE branch, exemption clause NOT narrowed",
+      "verification_outcome": "THE ADJUDICATION SURVIVED, but NOT in the form I was handed, and the difference is published rather than smoothed.",
+      "what_i_was_asked_to_verify": "that 700 sits above every observed value in dev and held-out.",
+      "what_i_found": "FALSE. BODY_MAX is a stub cutoff, not an upper bound \u2014 the page-pointer candidate pool at any length reaches 1,010,422 chars (jpm-2024 item 15). Publishing that framing would have been a manufactured exemption.",
+      "what_is_actually_true": "A plateau argument, measured: 700 lies in an interval whose BOTH edges are dev values \u2014 nearest candidate below is intc-2002 item 5 at 629, nearest above is ibm-1997 item 5 at 805 \u2014 so every bound in 630..805 yields an identical dev result and no held-out value defines that interval. Held-out's own plateau is 248..738, far wider, so it cannot be what pinned 700. Exactly one held-out span sits inside the dev plateau: mrk-1995 item 8 at 738, whose body is 'incorporated by reference to pages 38 through 49 ... of the Company's 1995 Annual Report' \u2014 an external-document pointer the class rule rejects anyway, the same verdict its siblings 5 and 7 already get. So every figure D9 published is invariant across the entire dev-determined plateau. The constant was written once and never revised (single commit 4ecc1e5).",
+      "limit_published_not_hidden": "The dev plateau runs to 805 while held-out is unchanged only to 738. A different in-plateau choice (780) would have admitted mrk-1995 item 8 as a CANDIDATE \u2014 then rejected it, changing no published number. So 'any in-plateau value is equivalent' is true of D9's CONCLUSIONS, not of the candidate list. Stated in both the README and \u00a7g.",
+      "min_refs_verdict": "ledger-line-refs min_refs 9->11 is a ledger citation floor: not an extraction threshold, reads no filing, unrelated to any held-out label. Not the influence the rule targets.",
+      "fix": "Both artifacts adjudicated in evals/heldout/README.md's amendment block (both verdicts inside lines 26-57, so the acceptance test holds: a reader of the rule alone reaches the same answer \u00a7g publishes) and again in \u00a7g. \u00a7g's false ground ('there is no artifact in the tree that could have absorbed the labels') is WITHDRAWN in both files. The \u00a7g falsifier is restated to name an EXTRACTION threshold or a src/ change, so it is no longer tripped by this ADR at the moment of writing.",
+      "clause_not_narrowed": "Per the owner's ruling the exemption clause text is unchanged and stays broad."
+    },
+    {
+      "id": "R15",
+      "severity": "MEDIUM",
+      "disposition": "fixed \u2014 second acceptance branch (drop the arithmetic)",
+      "accepted": "In full. The entry count was published wrong twice (18, then 20 on a two-multi-bucket claim the scan falsifies via ba-2003 @56848, gs-2002 @21527, jpm-2024 @197103, axp-2008 @334794).",
+      "fix": "\u00a7c1 publishes NO entry-count arithmetic. It states 39 hits over 18 fixtures, says the buckets group by shape and do not partition the hits, names that several fixtures are multi-bucket, and rests on the one adjudication that carries the ruling: exactly one hit is a body heading over item content, axp-2008 at 328679. Fewer asserted numbers, fewer things to be wrong."
+    },
+    {
+      "id": "R16",
+      "severity": "MEDIUM",
+      "disposition": "fixed + debt logged",
+      "accepted": "In full \u2014 self-inflicted by the round-2 amendment's 33 inserted lines.",
+      "fix": "All three \u00a7g refs repointed and each VERIFIED to contain the sentence it quotes: :278-280 (axp-2008 burn), :222-225 (gs-2002 precedent), :401-404 (D6 H4 today). The block quote is now labelled 'as it read before the 2026-08-26 amendment' with today's text cited separately, because the quoted string no longer exists in the file. Refs were re-derived AFTER the last README edit, not before.",
+      "debt_row": "tasks/TODO.md \u2014 'ledger-line-refs checks tasks/TODO.md only, so line citations INTO other files rot unnoticed'. Not extended this round: bounded scope, and extending it to specs/decisions and the heldout README has a real blast radius nobody has audited."
+    },
+    {
+      "id": "R17",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "accepted": "In full \u2014 the fourth instance of the recurring defect, inside the file the amendment itself edited.",
+      "fix": "The gs-2002 burn entry carries a dated block note stating the 'a documented decision to decline a fix is at least as much influence' clause is no longer the rule, left standing as the reasoning of its date rather than rewritten.",
+      "other_limb_answered": "YES, decisively, and checked rather than assumed: ADR-013 did not merely decline a fix \u2014 its ruling promotes a bare heading's title when it clears SIM_FLOOR and escalates doc_status to ambiguous past a 25% missing-item threshold. That is shipped code AND thresholds, so the gs-2002 burn stands under the amended rule as squarely as under the original. No replacement decision needed."
+    },
+    {
+      "id": "R18",
+      "severity": "LOW",
+      "disposition": "fixed",
+      "fix": "\u00a7g's headline now reads 'fires on this ADR under the rule as it stood', so it is no longer simultaneously true and false."
+    }
+  ],
+  "sweep_caught_that_no_finding_named": [
+    "evals/heldout/README.md:71 \u2014 R14's false ground was fixed in ADR-034 \u00a7g and left ALIVE in the README. R14 cites only \u00a7g:592-594. FIFTH instance of the recurring defect.",
+    "tasks/TODO.md:236 \u2014 the round-1/2 debt row restated the '20 bucket entries over 18 distinct fixtures' arithmetic R15 removes. R15 cites only ADR-034.",
+    "evals/adversarial/axp-2008-combined-part-iii.json \u2014 the same restatement in the triage note.",
+    "Sweep pass 1 returned 13 hits with 5 unexplained; I examined all 5 rather than tuning the pattern. Three were the real survivors above; two were a stale line-number key and a legitimate withdrawal-quoting-what-it-withdraws. Pass 2: 10 hits, 0 unexplained."
+  ],
+  "rejected": [],
+  "scope_held": "No ruling touched. ADR-034 \u00a7e and \u00a7f byte-identical. Nothing under src/ or evals/*.py. No prose improved in passing.",
+  "gate": "invariant and fast both score 1.000 through the real pre-commit hook, baseline untouched; bench --self-check ok; --check-docs 68 checked / 0 unmatched."
+}

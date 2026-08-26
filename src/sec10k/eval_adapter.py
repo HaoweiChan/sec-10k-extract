@@ -155,7 +155,7 @@ def eval_check(result, chk, path=None):
     elif t == "meta_field":
         # PR #57 R1. `item_field`'s counterpart for `meta`. The contract makes
         # three `meta` keys normative on the non-refusal path (`taxonomy_era`,
-        # `toc_manifest`, ADR-034's `coverage`) and `envelope_shape` could only
+        # `toc_manifest`, ADR-035's `coverage`) and `envelope_shape` could only
         # test them for PRESENCE — so a build publishing a hard-coded
         # `coverage: 1.0` on every document passed the whole gate. Asserts any
         # scalar `meta` field by name.
@@ -229,7 +229,7 @@ def eval_check(result, chk, path=None):
         if not refusal:
             # set only once the filing is accepted (SD-6): a refused document
             # has no era and no manifest to report
-            # ADR-034 §d adds `coverage` on the same terms: a document the
+            # ADR-035 §d adds `coverage` on the same terms: a document the
             # pipeline refused has no items, so no coverage to report
             meta_keys |= {"taxonomy_era", "toc_manifest", "coverage"}
         if not meta_keys <= set(result["meta"]):
@@ -239,7 +239,7 @@ def eval_check(result, chk, path=None):
             # extract.py and THRESHOLDED by validate.py from two separate calls
             # to the same function, so nothing made the published number agree
             # with the judged one — the band pins stayed green with the field
-            # hard-coded. This restates the contract's own definition (ADR-034
+            # hard-coded. This restates the contract's own definition (ADR-035
             # §d: span-carrying chars over normalized chars, 4 dp) against the
             # items the SAME envelope publishes, so it binds every case that
             # runs `envelope_shape`, not just the two that pin a literal.
@@ -261,7 +261,7 @@ def eval_check(result, chk, path=None):
                 return f"warning not in contract shape: {w}"
         item_keys = {"item", "part", "title", "heading_text", "start", "end",
                      "status", "confidence", "method", "evidence",
-                     "review_required"}  # ADR-034 §e
+                     "review_required"}  # ADR-035 §e
         for i in result["items"]:
             if not item_keys <= set(i):
                 return f"item {i.get('item')} missing {sorted(item_keys - set(i))}"

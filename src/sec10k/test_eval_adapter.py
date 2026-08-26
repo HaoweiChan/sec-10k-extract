@@ -403,12 +403,12 @@ def _envelope(**over):
            "warnings": [],
            "meta": {"extractor_version": "t", "input_sha256": "s", "format_era": "html",
                     "document_selected": "d", "taxonomy_era": "modern", "toc_manifest": [],
-                    "coverage": 1.0},  # ADR-034 §d
+                    "coverage": 1.0},  # ADR-035 §d
            "trace": [], "timings": {"total_ms": 1}, "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0},
            "items": [{"item": "1", "part": "I", "title": "Business", "heading_text": "Item 1. Business",
                       "start": 0, "end": 18, "status": "extracted", "confidence": 0.95,
                       "method": "heading_strict", "evidence": {},
-                      "review_required": False}]}  # ADR-034 §e
+                      "review_required": False}]}  # ADR-035 §e
     env.update(over)
     return env
 

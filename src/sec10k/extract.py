@@ -18,7 +18,7 @@ from src.sec10k.segment import (
 )
 from src.sec10k.validate import AMBIGUOUS_CODES, STRICT_SIM, coverage, score, validate
 
-# 0.9 and not 0.8.1: ADR-034 (D8) adds a REQUIRED item field
+# 0.9 and not 0.8.1: ADR-035 (D8) adds a REQUIRED item field
 # (`review_required`) and a required non-refusal `meta` key (`coverage`), which
 # ADR-029/032/033's optional envelope keys were not — an old consumer's item
 # loop is unaffected, but a schema check written against 0.8.x is not.
@@ -215,7 +215,7 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
         warnings.append({"code": "period_end_unknown", "item": None,
                          "message": "no period of report found; expected item set is a guess"})
 
-    # ADR-034 §d: the coverage figure is PUBLISHED, not only thresholded — it
+    # ADR-035 §d: the coverage figure is PUBLISHED, not only thresholded — it
     # is the number interviewer feedback found undisclosed at the API level
     # (postmortem §8 gap 1), and `unattributed_content`'s message is not it
     # (that one is preamble + tail, ADR-019 §d). Non-refusal path only, beside
@@ -242,7 +242,7 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
     ambiguous = not extracted or any(w["code"] in AMBIGUOUS_CODES for w in warnings)
     for i in items:
         i["confidence"], i["evidence"] = score(i, warnings, doc_ambiguous=ambiguous)
-        # ADR-034 §e: the consumer-facing half. A validator that fires on an
+        # ADR-035 §e: the consumer-facing half. A validator that fires on an
         # item must not leave that item reading like any other `extracted` one
         # (postmortem §8 gap 2) — `status` still answers "what did the filing
         # do with this item", so the review signal is its own boolean rather

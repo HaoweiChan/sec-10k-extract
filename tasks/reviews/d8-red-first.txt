@@ -1,4 +1,4 @@
-D8 / ADR-034 — RED-FIRST RECORD (CLAUDE.md hard rule 2)
+D8 / ADR-035 — RED-FIRST RECORD (CLAUDE.md hard rule 2)
 =======================================================
 
 git sha of the tree these runs were taken at:

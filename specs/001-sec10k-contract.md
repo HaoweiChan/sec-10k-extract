@@ -43,7 +43,7 @@ unchanged; field rationale lives in `docs/product/task2-problem-definition.md`.
 ```
 
 The example is the non-refusal shape. `meta.taxonomy_era`,
-`meta.toc_manifest` and `meta.coverage` (ADR-034) are present **on the
+`meta.toc_manifest` and `meta.coverage` (ADR-035) are present **on the
 non-refusal path only**
 (`success` / `success_with_warning` / `ambiguous`): a document the pipeline
 refused (`unsupported` / `failed`) has no era and no manifest to report
@@ -78,7 +78,7 @@ them all); the example once showed `lenient_match`, which nothing emits.
 - For `status: missing` / `omitted`: `start`/`end` are null — there is no span.
 - All statuses require `confidence` (how sure are we it's actually
   absent/incorporated, not missed).
-- All statuses require **`review_required`** (bool, ADR-034 §e): true exactly
+- All statuses require **`review_required`** (bool, ADR-035 §e): true exactly
   when some warning in `warnings` carries this item's code, excluding
   `expected_item_missing` (which only restates `status: missing`). It is the
   same set of hits that moves `confidence` by `WARN_PENALTY`, so the two can
@@ -89,7 +89,7 @@ them all); the example once showed `lenient_match`, which nothing emits.
   a document-level warning (`item: null`) does not set it, because
   `doc_status` already carries that, and an `ambiguous` document separately
   caps every item at 0.75 (ADR-027 §a).
-- **`meta.coverage`** (float in [0,1], ADR-034 §d): the fraction of
+- **`meta.coverage`** (float in [0,1], ADR-035 §d): the fraction of
   `normalized_text` that lies inside SOME item's span — every span-carrying
   status, `extracted` and `incorporated_by_reference` alike, summed (INV-S1
   makes the spans disjoint, so the sum is exact) and rounded to 4 dp. It is
@@ -209,10 +209,10 @@ them all); the example once showed `lenient_match`, which nothing emits.
   `expected_items_mostly_missing` (ADR-008, ADR-013) and `item_dominates`
   (ADR-030 — a non-last span above `ITEM_MAX`; produced end to end on
   `evals/adversarial/interior-span-dominates.json`, per ADR-016's rule that a
-  listed code is one a path produces) and `low_item_coverage` (ADR-034 —
+  listed code is one a path produces) and `low_item_coverage` (ADR-035 —
   `meta.coverage` below `COVERAGE_MIN`; produced end to end on
   `evals/adversarial/xref-index-collapse.json`). Every other warning code is
-  non-escalating — including `item_span_near_empty` (ADR-034 §c), which
+  non-escalating — including `item_span_near_empty` (ADR-035 §c), which
   carries an item code, moves that item's `confidence` and sets its
   `review_required`, and says nothing about the document.
 - `unsupported`/`failed` mean the pipeline **refused** — it must never emit a

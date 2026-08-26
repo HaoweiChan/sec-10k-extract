@@ -1,0 +1,181 @@
+PR #56 round 1 — RED EVIDENCE, captured BEFORE any repair.
+Tree: 2cd8141 (review artifact 2cd8141; only this file untracked)
+Repo rule: every confirmed repair finding is watched failing before it is fixed.
+These are documentation-fact findings, so 'failing' is the finding's own `repro`
+command printing a value the published text contradicts. Each block runs that
+command verbatim from tasks/reviews/pr56-r1.json and shows the published claim
+beside it. Nothing below is edited yet.
+
+========================================================================
+R1 (MEDIUM) — §c1's bolded claim is FALSE for c-2025
+========================================================================
+PUBLISHED, ADR-034:193-196 —
+  `wfc-2008`, `gs-2002`, `ba-2003` and `c-2025` all carry
+  `Items 10, 11, 12, 13 and 14`-shaped proxy pointers on their cover or in a
+  footnote. **Every one of those filings reports zero `missing` Part III
+  items.** The string is boilerplate; the failure is not.
+
+$ python3 -c "...extract_items('evals/heldout/fixtures/c-2025/filing.htm')..."
+[('10', 'missing', 0.4, None), ('11', 'missing', 0.4, None), ('12', 'missing', 0.4, None), ('13', 'missing', 0.4, None), ('14', 'missing', 0.4, None)]
+
+RED: all five Part III items are `missing`. 'Every one of those filings reports
+zero missing Part III items' is false for c-2025, and the ADR contradicts its own
+§a table at :64, which already reports 21 missing.
+
+The same claim, copied:
+  axp-2008 triage:  ......
+  tasks/TODO.md:    ...s carry an Items-N-M-and-K string and every one is a cover-page proxy sentence, a numeric table artifact or a TOC line, losing no items. Rec...
+
+========================================================================
+R2 (MEDIUM) — the '23 of 23' figure defining A1 is wrong; the author's own
+             instrument prints 13
+========================================================================
+PUBLISHED, ADR-034:98 / :141 / :16 / INDEX.md / TODO.md:69,:88 —
+  :98   contains. Every one of its 23 item bodies is a page reference into this same
+  :141  | `intc-2025` | held-out | real EDGAR | all 23 | 20 to 226 |
+  :16   ...'23 of 23 items, 0.3% of the text in spans'...
+
+$ python3 tasks/reviews/d9_class_scan.py | grep 'intc-2025 (held-out'
+  intc-2025 (held-out, real EDGAR): 13 items -> [('1', 147), ('1A', 35), ('1C', 34), ('2', 33), ('3', 41), ('5', 128), ('7', 226), ('7A', 78), ('8', 66), ('9A', 43), ('9B', 114), ('10', 78), ('15', 75)]
+
+RED: 13, not 23. Full hit-by-hit adjudication of all 23 bodies:
+      1  internal page pointer  'General development of business\nPages 3-5, 18\n\nDescripti'
+     1A  internal page pointer  'Pages 37-51'
+     1B  status keyword         'None'
+     1C  internal page pointer  'Cybersecurity\n\nPage 54'
+      2  internal page pointer  'Pages 11, 32'
+      3  internal page pointer  'Pages 102-105'
+      4  status keyword         'None\n\nPart II'
+      5  internal page pointer  "Market for Registrant's Common Equity, Related Stockhold"
+      6  status keyword         ''
+      7  internal page pointer  'Liquidity and capital resources\nPages 29-32\n\nResults of '
+     7A  internal page pointer  'Pages 33'
+      8  internal page pointer  'Pages 56-108'
+      9  status keyword         'None'
+     9A  internal page pointer  'Page 109'
+     9B  internal page pointer  'Disclosure pursuant to Section 13(r) of the Securities E'
+     9C  status keyword         'None\n\nPart III'
+     10  internal page pointer  'Page 52 (a)'
+     11  external proxy (a)     '(a)'
+     12  external proxy (a)     '(a)'
+     13  external proxy (a)     '(a)'
+     14  external proxy (a)     '(a)\n\nPart IV'
+     15  internal page pointer  'Pages 56-108, 110-115'
+     16  status keyword         'None'
+  internal page pointer  13: ['1', '1A', '1C', '2', '3', '5', '7', '7A', '8', '9A', '9B', '10', '15']
+  status keyword          6: ['1B', '4', '6', '9', '9C', '16']
+  external proxy (a)      4: ['11', '12', '13', '14']
+  -> 13 + 6 + 4 = 23. NOTE the review says 5 status-keyword bodies (1B/4/6/9/9C)
+     and misses item 16 ('None'), so the split is 13/6/4, not 13/5/4. Its count
+     of 13 for the class itself is right and matches the scan.
+  -> The four `(a)` bodies resolve at normalized offset 516118 to:
+     ' by reference to the applicable section of the 2026 Proxy Statement.\n\nSupplemental De'
+     which is the EXTERNAL-document shape §b3:148-152 already rejects out of
+     Class A for mrk-1995, gs-2002 item 10, ibm-1997 item 12, ge-1994 item 6
+     and xom-2021 item 15. The ADR applies its own rule to dev filings and not
+     to the held-out one that carries the ruling.
+  -> Derived figure '15.6% of 147 held-out items' is therefore also wrong:
+     13/147 = 0.088 = 8.8%.
+  -> The 0.3% coverage figure is UNAFFECTED and is what actually carries A1:
+     1,727 chars in spans of 517,976.
+
+========================================================================
+R3 (MEDIUM) — §g's distinguishing ground is wrong under either outcome
+========================================================================
+PUBLISHED, ADR-034 §g:
+**Neither held-out case is burned, and the question is answered rather than
+skipped.** `evals/heldout/README.md`'s burn rule names "a declined fix
+documented with its outcome in hand" as influence, and the `gs-2002` precedent
+ADR-020 §g cites establishes that declining burns a case as surely as fixing
+does. This ADR is a documented decline that cites both outcomes, so the rule
+plainly points at it. It is ruled **not burned**, on this ground: the
+`gs-2002` and `axp-2008` burns both **authored a new adversarial case from the
+fixture and moved the fixture into the dev corpus**, so the declined capability
+could afterwards be developed against it. D9 authors no case from either
+filing, moves no fixture, and ships no code, threshold or fix — nothing in the
+tree can have trained on them, which is the property the burn rule protects.
+Burning them would also destroy the exam D11's own row and `c-2025`'s
+provenance both demand it sit for. **The reading is recorded for challenge, not
+settled** — it is logged as a Debt row so a reviewer can overturn it, and the
+burn fires the moment D8 or D11 uses either filing.
+
+$ sed -n '149,152p;193,195p;318,321p' evals/heldout/README.md
+--- README:149-152 (the gs-2002 burn) ---
+and ADR-013's decision *not* to fix the era model was taken with its outcome in
+hand; the burn rule names "a threshold choice" as burning, and a documented
+decision to decline a fix is at least as much influence. Counting it in a
+held-out denominator would have overstated that denominator. Replaced by
+--- README:193-195 (the axp-2008 burn) ---
+for a documented decision to decline a fix, and produced a new case from it
+(`evals/adversarial/axp-2008-combined-part-iii.json`). The burn rule names both
+of those as influence, and the `gs-2002` precedent above already established
+--- README:318-321 (D6 H4 — names D9 BY NAME) ---
+0.40 on the other. Both cases stay **untouched** — D8/D9/D11 must not read
+their labels while iterating, and the first fix, threshold or declined fix
+taken with either outcome in hand burns that case under the rule above.
+
+RED, and worse than the review states. Two independent falsifications:
+  (1) README:193-195 says the rule 'names BOTH of those as influence' —
+      each independently. §g asserts the precedents required a conjunction
+      (declined fix AND a new case AND a fixture move). That inverts trigger
+      and remedy.
+  (2) The gs-2002 precedent at README:149-152 burned on a documented decision
+      to decline ALONE — it names no new case at all. So §g's claim that 'the
+      gs-2002 and axp-2008 burns BOTH authored a new adversarial case from the
+      fixture' is FALSE ON ITS FACE for gs-2002. I did not check the precedent
+      I built the ground on.
+  (3) README:318-321 names D9 explicitly and says a 'declined fix taken with
+      either outcome in hand burns that case'. §g never quotes or addresses it.
+REPAIR SCOPE: the ground is removed because it is wrong under BOTH outcomes.
+The burn-or-amend choice is ESCALATED and is NOT decided here.
+
+========================================================================
+R4 (LOW) — multi-code prevalence denominator off by one
+========================================================================
+PUBLISHED, ADR-034:188 / :204 —
+  :188  The scan's multi-code detector returns hits on 17 fixtures. Adjudicated, **one
+  :204  decimal place). **Zero held-out items.** The class does not generalize: sixteen
+
+$ python3 tasks/reviews/d9_class_scan.py | awk '/CLASS B regex/,0' | grep -c '^  [a-z]'
+18
+RED: 18 fixtures, so 'seventeen other', not 'sixteen'. Copied into TODO.md:90
+and the axp-2008 triage note. The 1-in-49 ruling is unaffected.
+
+========================================================================
+R5 (LOW) — 'Each is adjudicated below' / 'Every other hit is' are overstated
+========================================================================
+$ grep -c <fixture> ADR-034   (0 = never mentioned)
+    ibr-pointer-first        0
+    ibr-security-holders     0
+    cat-2023                 0
+    wmt-2010                 0
+    interior-span-dominates  0
+RED: named as adjudicated, never mentioned. interior-span-dominates carries
+'Items 1, 2, 3, 5, 6, 7, 7A' at normalized offset 105383 WITH items 1A/1B/2/3
+missing — the co-occurrence §c1 concludes exists only on axp-2008. It is a
+synthetic fixture, so the real-filing ruling stands, but the sweep sentence
+does not.
+
+========================================================================
+R6 (LOW) — published gate figures already stale at HEAD
+========================================================================
+PUBLISHED: 'invariant 67/67, fast 130/130' in ADR-034 Verification and TODO.md:69
+$ python3 -m evals.run --suite invariant | tail -1
+[eval] suite 'invariant': 68/68 = 1.000  (+3 enumerated debt, unscored)
+$ python3 -m evals.run --suite fast
+[eval] suite 'fast': 131/131 = 1.000  (+3 enumerated debt, unscored)
+RED: 68/68 and 131/131 after this PR's own merge of origin/main (D12). The D6
+row in DONE.md already names quoting suite sizes as the R8 defect and declines
+to do it; ADR-034 did it anyway.
+
+========================================================================
+R7 (LOW) — the sonnet-5 row is dated to a table that does not carry it
+========================================================================
+PUBLISHED: §d says the price basis is 'the same basis and the same date ADR-020
+§d cited' (2026-06-24), and separately that a 1M-context $2.00/MTok tier
+'now exists'.
+$ grep -n '2026-06-24' -A3 ADR-020 | grep -ci sonnet
+0
+RED: 0. ADR-020 §d's price paragraph enumerates only claude-opus-5 and
+claude-haiku-4-5. Every arithmetic cell in §d reproduces at chars/4 and the
+stated prices — the numbers are fine; the DATING of the sonnet-5 row is not.

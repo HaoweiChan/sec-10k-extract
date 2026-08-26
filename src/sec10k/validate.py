@@ -10,7 +10,7 @@ alone, and only the five named in `AMBIGUOUS_CODES` may push `doc_status` to
 `ambiguous`. Every threshold below states its measured basis or names itself
 a judgment call (SUBSTANTIVE_MIN, and MISSING_MAX's floor-not-midpoint), and
 each is pinned from both sides of its measured empty band by a committed case
-(ADR-027 §c, ADR-030 §f and ADR-034 §f list the pins); ADR-008 carries the
+(ADR-027 §c, ADR-030 §f and ADR-035 §f list the pins); ADR-008 carries the
 original distributions and the priors this battery REJECTED after measuring
 them.
 
@@ -56,13 +56,13 @@ ITEM_MAX = 0.55
 # spans-transposed's 22,955-char Item 8. Pinned on both.
 SUBSTANTIVE_MIN = 5000
 
-# ADR-034 (D8): the per-item near-empty floor ADR-031 §i named as unbuilt, and
+# ADR-035 (D8): the per-item near-empty floor ADR-031 §i named as unbuilt, and
 # the item-level half ADR-019 §e left open. It applies to the three items whose
 # answer is never legitimately one sentence — Business, MD&A, Financial
 # Statements — because those three are the only ones with a measured empty
 # band. Measured 2026-08-26 over the 90 extracted item-1/7/8 spans of the 38
 # span-bearing dev fixtures at 820cf0c: all 14 spans under 2,094 chars are pointers or
-# stubs (censused in ADR-034 §b1) and every span at or above it is substantive.
+# stubs (censused in ADR-035 §b1) and every span at or above it is substantive.
 # Band (930 ko-1997 item 8, 2,094 tgt-2002 item 1), midpoint 1,512, taken to
 # two significant figures as ITEM_MAX was; margins 1.40x under the smallest
 # legitimate span and 1.61x over the largest pointer. Pinned on both edges
@@ -76,7 +76,7 @@ SUBSTANTIVE_MIN = 5000
 SPAN_FLOOR = 1500
 SUBSTANCE_ITEMS = ("1", "7", "8")
 
-# ADR-034 §d: the fraction of the document that lands inside SOME item span —
+# ADR-035 §d: the fraction of the document that lands inside SOME item span —
 # published at `meta.coverage`, and NOT the same number as
 # `1 - unattributed_content`, which measures only the preamble and the tail and
 # understates true non-coverage by up to 9.7 points on the 7 EXEC_OFFICERS_RE
@@ -100,13 +100,13 @@ COVERAGE_MIN = 0.13
 # filing — ADR-013's cost asymmetry decides the rest (a false `ambiguous` is a
 # report a consumer can inspect; a false `success` on a swallowed document is
 # the silent failure this battery exists for).
-# `low_item_coverage` IS (ADR-034 §d): its threshold is two orders of magnitude
+# `low_item_coverage` IS (ADR-035 §d): its threshold is two orders of magnitude
 # below the shape ADR-008 was protecting, and the demo's Intel document — every
 # item resolved to a cross-reference-index row, 0.3% of the text spanned —
 # reported `success_with_warning` over a column of 0.95s because nothing here
 # escalated on it. `item_span_near_empty` is deliberately NOT among them: one
 # pointer item is a fact about that item, not a verdict on the document, and
-# escalating it would take 9 real dev filings to `ambiguous` (ADR-034 §c).
+# escalating it would take 9 real dev filings to `ambiguous` (ADR-035 §c).
 AMBIGUOUS_CODES = {"toc_manifest_mismatch", "last_item_dominates",
                    "expected_items_mostly_missing", "item_dominates",
                    "low_item_coverage"}
@@ -140,7 +140,7 @@ FINGERPRINTS = {
 
 
 def coverage(text, items):
-    """Fraction of `text` that lies inside SOME item's span (ADR-034 §d).
+    """Fraction of `text` that lies inside SOME item's span (ADR-035 §d).
 
     Spans are disjoint and ordered (INV-S1), so the sum is exact. IBR pointer
     spans count: they are real, addressable text this pipeline attributed to an
@@ -291,7 +291,7 @@ def validate(text, items, accepted, manifest):
                  f"item {code} contains none of {words} — span may not be its item",
                  item=code)
 
-    # 7 (ADR-034 §c). The per-item span floor. Carries the item CODE, which is
+    # 7 (ADR-035 §c). The per-item span floor. Carries the item CODE, which is
     # the whole point: before this, the four item-targeted codes could not fire
     # on a stub or a pointer at all, so `WARN_PENALTY` never reached the 0.95
     # the demo showed (postmortem §1). It does not escalate `doc_status` and it
@@ -309,7 +309,7 @@ def validate(text, items, accepted, manifest):
                      f"{SPAN_FLOOR:,}-char floor for this item — a pointer or a "
                      "stub, not the item's own content", item=code)
 
-    # 8 (ADR-034 §d). Document coverage, the escalating half. Check 2 above
+    # 8 (ADR-035 §d). Document coverage, the escalating half. Check 2 above
     # measures the preamble and the tail; this measures what the items actually
     # hold. On a document whose spans collapsed onto index rows the two diverge
     # by nothing at all — but check 2 does not escalate by ADR-008's ruling and
@@ -500,7 +500,7 @@ def _demo():
              if x.get("item") == "1A"]
     assert "keyword_fingerprint" in codes, codes
 
-    # ADR-034 §c: the per-item floor. A pointer-sized item 8 beside a
+    # ADR-035 §c: the per-item floor. A pointer-sized item 8 beside a
     # substantive item 1 fires on 8 and only 8, and the code carries the item.
     ptr = ("Item 1. Business\n" + "We sell things. " * 400 +
            "\nItem 8. Financial Statements and Supplementary Data\n"
@@ -521,7 +521,7 @@ def _demo():
     # smaller reporting company's whole answer to item 1A is one sentence.
     assert "1A" not in SUBSTANCE_ITEMS and "7A" not in SUBSTANCE_ITEMS
 
-    # ADR-034 §d: coverage is the placed fraction, IBR spans included, and the
+    # ADR-035 §d: coverage is the placed fraction, IBR spans included, and the
     # doc-level code escalates. The pointer document above places nearly all of
     # itself, so it must stay silent; a document that places 3% must not.
     assert coverage(ptr, p_items) > 0.99, coverage(ptr, p_items)

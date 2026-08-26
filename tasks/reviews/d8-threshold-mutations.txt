@@ -1,4 +1,4 @@
-D8 / ADR-034 — THRESHOLD MUTATION PINS (post-change tree)
+D8 / ADR-035 — THRESHOLD MUTATION PINS (post-change tree)
 =========================================================
 
 Each block mutates ONE constant in src/sec10k/validate.py and re-runs the

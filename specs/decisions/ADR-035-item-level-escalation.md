@@ -1,6 +1,25 @@
-# ADR-034 — D8: a stub or pointer span is flagged at the item that carries it, and a document whose items hold almost none of it escalates
+# ADR-035 — D8: a stub or pointer span is flagged at the item that carries it, and a document whose items hold almost none of it escalates
 
-Date: 2026-08-26. Status: accepted. Implements D8 — the item-level half
+Date: 2026-08-26. Status: accepted. **Renumbered ADR-034 → ADR-035 at the
+PR #57 merge with main (2026-08-26)**, on the same rule and for the same
+reason ADR-032 and ADR-033 record: PR #56 (D9) published its own ADR-034
+([ADR-034](ADR-034-pointer-and-fanout-rulings.md), the internal-pointer and
+combined-heading rulings) to main first, so this one moves. Git could not
+flag the collision — different filenames, no overlapping hunks, and both
+`adr_headers` and `adr_index` pass on either branch alone; only the merged
+tree is wrong. Records written before the merge —
+`tasks/reviews/pr57-r1..r3.json` and their resolutions, `tasks/reviews/d8-red-first.txt`, `d8-threshold-mutations.txt`,
+`tasks/reviews/pr57-r3-red.txt`,
+`prompts/022-d8-item-level-escalation.md`, and every eval-case provenance —
+cite this document by number and were renumbered with it so they still
+resolve; they are otherwise unedited, so the handful that cite it by LINE
+still point into the tree as it stood at their own review round — this
+header shifts every line below by **+16**, and two of those refs
+(`pr57-r2.json`'s `:386-390`, `pr57-r3.json`'s `:504`) were ALREADY stale
+before the merge, one of them quoting text the R4 repair withdrew. Carried
+as debt rather than silently re-pointed. A reader who finds "ADR-034" in an
+older artifact outside this repo should read it as this document, not D9's.
+Implements D8 — the item-level half
 [ADR-019](ADR-019-silent-failure-rate.md) §e named and did not build, and the
 per-item near-empty validator [ADR-031](ADR-031-footnote-marker-ibr.md) §i
 listed as NOT built. Sanctioned exception to the T8 feature freeze
