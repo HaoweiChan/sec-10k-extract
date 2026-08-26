@@ -1,0 +1,94 @@
+{
+  "pr": 58,
+  "round": 3,
+  "result": "REQUEST_CHANGES",
+  "circuit_breaker": "FIRED \u2014 three review rounds without approval",
+  "scope": "repair diff 45d2a9b..HEAD plus standing round-2 findings",
+  "counts": {
+    "HIGH": 1,
+    "MEDIUM": 4,
+    "LOW": 2
+  },
+  "round2_verified_closed": [
+    "R10",
+    "R11",
+    "R13",
+    "R14",
+    "R15",
+    "R16"
+  ],
+  "round2_still_open": [
+    "R8 via R20 \u2014 the correction did not reach the Ruling header",
+    "R12 via R19/R21 \u2014 the cap is unenforced and three descriptions still say 'whole document'",
+    "R9 via R18 \u2014 the lock check is evadable"
+  ],
+  "structural_pattern": "Each repair round's NEW safety mechanism is itself unbound. R3 fixed 'guards not enforced'; R9 added locks that were unenforced (found in round 2); R9's fix is evadable (R18) and R12's cap is unenforced (R19) \u2014 the same defect three levels deep, twice introduced inside the commit that fixed the previous level.",
+  "orchestrator_verified": [
+    "R18's evasion reproduced: `!= \"0\"` yields ESCALATION_ENABLED True with the env var UNSET, check_escalation_locks returns [], invariant stays 78/78"
+  ],
+  "findings": [
+    {
+      "id": "R17",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "The routing strip added by the R12 repair renders a false provenance sentence for rung 1: it says 'saw only the first N chars' whenever `truncated` is true, but rung 1's window starts at an arbitrary offset, not at 0.",
+      "evidence": "index.html:958-960 maps the clause over EVERY tier entry; escalate.py:326 sets rung 1's input via `_window_text` (:390-400) returning `text[s:s+budget], s` with s = the largest unattributed region's start, and :340 records `truncated` while recording no offset. On axp-2008 \u2014 the filing ADR-034 \u00a7e3 ruled 'subsumed by D11' \u2014 rung 1's window is offset=178,087, shown=60,000, so the strip states 'saw only the first 60,000 chars' for a model shown chars 178,087-238,087. bac-2006: offset=663,941, shown=41,907. 18 of 43 dev documents produce a rung-1 entry with truncated=true and offset>0. The tier record publishes no offset, so the envelope cannot disambiguate it either.",
+      "repro": "_window_text on axp-2008 -> len(t)=351503 offset=178087 shown=60000 truncated=True",
+      "acceptance": "The strip's sentence is true for both rungs \u2014 either the tier record carries the window's `offset` and the strip renders 'saw chars X-Y of Z', or the truncation clause is emitted only for the rung whose window genuinely starts at 0 \u2014 and an adversarial case goes red if it regresses."
+    },
+    {
+      "id": "R18",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "R9 is evadable: check_escalation_locks asserts the AST shape and the env-var name but never the comparison operator, the comparand, or the default value \u2014 so a one-token edit arms paid work by default and unbounds the process budget while the check returns [] and the gate stays green.",
+      "evidence": "repo_hygiene/eval_adapter.py:2686-2696 accepts any ast.Compare whose left is os.environ.get(arm_var); :2698-2707 accepts any _assign whose _env_get matches the name, ignoring the `or <default>` operand it explicitly steps over at :2622-2624. ORCHESTRATOR-VERIFIED: mutating app.py to `!= \"0\"` and defaults to 10**9 / 10.0**9 yields ESCALATION_ENABLED == True with the variable UNSET \u2014 defeating Lock 1's stated property 'a credential alone never arms paid work' (ADR-036:588) \u2014 and check_escalation_locks({'input':{}}) returns [] with invariant 78/78.",
+      "repro": "arming expr becomes os.environ.get('SEC10K_ESCALATION_ENABLED') != '0' -> True with var unset; check -> []; invariant 78/78",
+      "acceptance": "The check pins the arming SEMANTICS, not just the shape \u2014 operator is Eq against the literal the ADR names \u2014 and pins that neither numeric knob's default is unbounded; re-running the `!= \"0\"` and `10 ** 9` mutations turns ui-escalation-locks red."
+    },
+    {
+      "id": "R19",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "R12's cap and the entire truncation-visibility mechanism are invisible to the gate: deleting the slice, or deleting input_chars/truncated and the strip clause, leaves invariant 78/78, fast 141/141 and both _demos green.",
+      "evidence": "escalate.py:332 `shown, offset = text[:EXTRACT_WINDOW], 0` reverted to `text, 0` -> gate 100% green, both self-checks ok. The _demo block at :419-425 does not bind it: `assert len(big[:EXTRACT_WINDOW]) == EXTRACT_WINDOW` slices a LOCAL string, a tautology for any value of the constant, and never reaches `route` \u2014 contradicting its own comment 'Asserted on the constant AND on the slice, because a cap nothing slices by is a comment'. Deleting :340's input_chars/truncated and index.html:958-960's clause also leaves 78/78 and 141/141. This is the R3/R9 failure mode reintroduced INSIDE the R9 repair commit, and it violates CLAUDE.md hard rule 2.",
+      "repro": "sed 's/text[:EXTRACT_WINDOW], 0/text, 0/' -> invariant 78/78, escalate self-check ok",
+      "acceptance": "A runnable check fails when rung 2's slice or the tier record's input_chars/truncated is removed \u2014 e.g. _demo drives `route` with a stubbed `call` over a >EXTRACT_WINDOW document and asserts len(shown)/entry['truncated'], plus a shape in routing-strip-missing.html for the strip clause \u2014 watched red first."
+    },
+    {
+      "id": "R20",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "R8's correction did not sweep: ADR-036's own Ruling/Because header still publishes the pre-swap hand-typed '$0.056' for the whole-dev sweep, which \u00a7d2 derives as $0.0488.",
+      "evidence": "ADR-036:25 'the whole dev corpus escalates for an estimated $0.056' \u2014 unchanged since 88b4488, the pre-OpenRouter commit; $0.056 is the old rung-1 price and is 15% above the derived $0.0488. ADR-036:351 and d11-sweep-cost.txt both publish $0.0488, and pr58-r1-resolution.json:66 already recorded '$0.0488 (down from $0.056)' without editing line 25. prompts/023 carries the same stale pair.",
+      "repro": "grep -n '0\\.056' specs/decisions/ADR-036-tiered-escalation.md prompts/023-d11-tiered-escalation.md",
+      "acceptance": "Every dollar figure in ADR-036 including the Ruling header is one d11_sweep_cost.py prints; grep for 0.056 returns nothing but an explicitly-labelled withdrawn figure."
+    },
+    {
+      "id": "R21",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The R12 cap left three published descriptions of rung 2 as seeing the WHOLE document uncorrected, one of which contradicts itself inside a single line.",
+      "evidence": "ADR-036:24 \u2014 the binding Ruling clause \u2014 still reads 'llm_extract (large model, whole document)'; :67's ladder diagram reads 'the whole normalized text'; INDEX.md:44, a line this repair DID edit (it gained 'three locks' and '$1.5675'), still says 'whole document' while asserting in the same sentence that 'BOTH rungs' inputs [are] capped'. escalate.py's module docstring WAS corrected, so the sweep stopped at the module it started in.",
+      "repro": "grep -n 'whole document\\|whole normalized text' specs/decisions/ADR-036-tiered-escalation.md specs/decisions/INDEX.md",
+      "acceptance": "\u00a7a's Ruling, \u00a7b's ladder diagram and INDEX.md:44 all state rung 2's input as bounded by EXTRACT_WINDOW; no line of the decision record describes rung 2 as unbounded."
+    },
+    {
+      "id": "R22",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The comment justifying the EXTRACT_WINDOW value publishes a fourth hand-typed dollar figure, $1.5638, which is the derived $1.5675 with rung 2's output cost dropped.",
+      "evidence": "escalate.py:94 against ADR-036:613/615 and d11-sweep-cost.txt, which both say $1.5675. 1,250,000/4+250 = 312,750 input tokens x $5/MTok = $1.56375 \u2014 the comment omits the 150 output tokens x $25/MTok = $0.00375 that the ADR, the script and llm.usd() all include.",
+      "repro": "grep -n '1.5638' src/sec10k/escalate.py",
+      "acceptance": "escalate.py:94 says $1.5675, or cites the script rather than restating a number."
+    },
+    {
+      "id": "R23",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "ADR-036 \u00a7h2 closes with 'Neither lock touches a local run' under a heading that now says three locks, and the claim is false for the third.",
+      "evidence": "ADR-036:578 'three locks' vs :634 'Neither lock touches a local run. The eval suites, python3 -m src.sec10k.escalate and a direct extract_items(..., escalate=True) all bypass web.app entirely' \u2014 but the cap is applied at escalate.py:332 inside `route`, which every one of those paths reaches.",
+      "repro": "sed -n '578p;634p' specs/decisions/ADR-036-tiered-escalation.md",
+      "acceptance": "The sentence scopes itself to the two web.app locks and states that the input cap applies everywhere."
+    }
+  ]
+}
