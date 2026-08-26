@@ -1,0 +1,117 @@
+<!-- D7 regression fixture: THIRTEEN NUMBERED defects plus the R7 mislabel,
+     numbered (14) below, reported as FIFTEEN failures. The arithmetic, spelled
+     out because PR #53 R9 caught the earlier version of this header getting it
+     wrong: each of (1)-(13) produces exactly one failure, and (14) produces
+     TWO — a missing `must_say` ("unattributed content:") and a forbidden
+     `must_not_say` ("document coverage:") — so 13 + 2 = 15. Whole-body pinning
+     does NOT change the count: (4), (5) and (6) each produced one failure
+     before that mechanism landed and one after. Shapes (12) and (13) were
+     added at PR #53 round 1.
+
+     Everything is still PRESENT: both confidence sites render, all three
+     helpers exist, and the coverage strip is defined and even computes a real
+     percentage. That is the point — the demo defect was never a missing
+     element. It was a present number with nothing beside it, a helper that is
+     never reached, and a line that reads as reassurance, each of which looks
+     like a working page when you only read the file.
+     Caught by evals/adversarial/ui-confidence-honesty-regression.json. -->
+
+<div id="banner" class="s-idle">No filing extracted yet.</div>
+<div id="warnings"></div>
+<div class="split"><div id="sidebar"></div><div id="pane"></div></div>
+
+<script>
+// (3) QUALIFIED no longer lists `ambiguous`, so the one status the pipeline
+//     uses to say "I could not resolve this document" qualifies nothing —
+//     jpm-2024's column of 0.75s would read as plain numbers.
+const QUALIFIED = ["success_with_warning"];
+
+function docQual(){
+  // (4) hooked to a live control's current state rather than to the
+  //     RESPONSE's doc_status, which is the S8 read-at-request-time rule
+  //     broken in the qualifier instead of in the pane header: toggling
+  //     anything after an extraction would relabel a number it did not
+  //     recompute.
+  const st = ($("#doc-status-filter") || {}).value || "";
+  return QUALIFIED.includes(st) ? ` · doc ${esc(st)}` : "";
+}
+
+function itemQual(it){
+  // (5) re-derives "item-targeted" from the NUMBER instead of reading
+  //     score()'s own `hits` list. A second definition in the display layer,
+  //     and a wrong one: 0.85 is the ordinary base for an IBR item and 0.80
+  //     for an omitted one, so this flags clean items and stays silent on a
+  //     0.95 that no validator ever touched — which is every item in the
+  //     demo's own cvx-2015 shape.
+  const w = it.confidence < 0.9 ? ["low"] : [];
+  return w.length ? ` · ⚠ ${esc(w.join(", "))}` : "";
+}
+
+function coverageStrip(warns){
+  // (6) reads a different validator's evidence. `toc_manifest_mismatch` says
+  //     which items the filing's own table of contents lists and no heading
+  //     resolved; it carries no coverage figure at all, so the strip below
+  //     would print a percentage that came from nowhere.
+  const u = warns.find(x => x.code === "toc_manifest_mismatch");
+  if(!u) return "";
+  const m = /^(\d+)%/.exec(u.message || "");
+  // (14) PR #53 R7/R9. The label calls a NON-coverage figure "document
+  //      coverage:", so a reader who takes the label and the bolded number
+  //      without the clause between them reads 73% exactly backwards. This is
+  //      the one defect here that trips TWO pins, and it is why 13 numbered
+  //      defects report 15 failures.
+  // (7) the 9.7-point understatement caveat is gone.
+  // (8) so is the reason for it — that interior gaps are not counted.
+  // (9) instead the line reassures: it asserts the remainder is covered,
+  //     which is the exact claim the missing caveat exists to forbid.
+  // (10) it performs the inverted arithmetic at all — `100 - outside` is
+  //      pinned as forbidden on its own, because the interior gaps between
+  //      spans were never in that subtraction, so the complement is not a
+  //      coverage figure whatever it is then called.
+  // (11) and it labels the result an attributed share, which is the claim
+  //      the missing caveat exists to forbid. (10) and (11) are separate
+  //      catches on purpose: a strip that computed the complement but
+  //      labelled it honestly would fire only the first.
+  return ` <span class="src" id="coverage">document coverage: ${
+    m ? `<b>${esc(m[1])}%</b> of the document lies outside every item`
+      : esc(u.message)
+  } — the rest of the document is covered, and ${100 - (m ? +m[1] : 0)}% is attributed to items.</span>`;
+}
+
+function render(v){
+  VIEW = v;
+  const n = "", src = "";
+  // (12) PR #53 R1. `coverageStrip` above is DEFINED, and never called: the
+  //      banner assignment is otherwise the real one, ending at the source
+  //      ternary. Nothing is missing from the file — the function is right
+  //      there, it simply never runs, and round 0's case could not tell the
+  //      difference because it only ever read the function's body.
+  $("#banner").innerHTML = `doc_status: ${esc(v.doc_status)}` +
+    (n ? ` <span class="src">— ${esc(n)}</span>` : "") +
+    (src ? ` <span class="src">${esc(src)}</span>` : "");
+  // (1) the SIDE PANEL badge — the panel a viewer actually reads — prints a
+  //     bare number. This is the 2026-08-24 demo verbatim.
+  // (13) PR #53 R3. …and the badge class folds the document-level flag into
+  //      the item-level one, so an item its own validator flagged looks
+  //      exactly like the items none did. On jpm-2024 that is 23 identical
+  //      amber badges over one genuinely flagged item.
+  $("#sidebar").innerHTML = (v.items || []).map((it,i) => {
+    const flag = ((it.evidence && (it.evidence.warnings || []).length) || docQual()) ? " lo" : "";
+    return `<button class="it" data-i="${i}">
+    <div class="badges">
+      <span class="b st-${esc(it.status)}">${esc(it.status)}</span>
+      <span class="b${flag}">conf ${it.confidence ?? "—"}</span>
+    </div></button>`;
+  }).join("");
+}
+
+function show(i){
+  const it = VIEW.items[i];
+  // (2) the pane header carries the DOCUMENT qualifier but drops the item's
+  //     own warnings, so an item that a validator explicitly flagged reads
+  //     the same as one it never touched — half the link, which looks like
+  //     the whole of it.
+  const hdrRight = `Part ${esc(it.part || "—")} · ${esc(it.status)} · conf ${it.confidence ?? "—"}${docQual()} · via ${esc(it.method || "—")}`;
+  $("#pane").innerHTML = `<div class="src-hdr"><span class="lbl">${hdrRight}</span></div>`;
+}
+</script>

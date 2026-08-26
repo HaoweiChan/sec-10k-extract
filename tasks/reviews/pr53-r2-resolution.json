@@ -1,0 +1,46 @@
+{
+ "pr": 53,
+ "task": "D7",
+ "round": 2,
+ "base": "68c1b47",
+ "reviewed_head": "526cb4f",
+ "rejected_count": 0,
+ "summary": "Three findings, all correct, all fixed. R2 and R4 were each the SECOND falsification of the same published guarantee, and the orchestrator named the pattern: strengthening the mechanism alone had twice invited a new falsification. Both halves taken. The mechanism gaps are closed by three one-liners (declaration-count check, enclosing-interpolation scan, banner pin carrying its assignment target), and the published claim is rewritten in all four places to describe what the check READS rather than what it PREVENTS — because the root cause was never any single missing pin. A static text pin cannot make a claim about a program, and every version of that paragraph which tried was falsified by the next reviewer who looked. The claim now ends with an explicit statement that its list of residual holes is illustrative and not exhaustive, which is the sentence intended to end the loop.",
+ "red_first_evidence": "tasks/reviews/pr53-r2-red.txt — the three round-2 attacks added to the probe against the round-1 head 526cb4f with no other change, all three reporting GREEN (undetected), which is the finding. tasks/reviews/pr53_mutation_probe.py now carries ten attacks plus a control and re-runs them all; exit 0 with every attack red.",
+ "index_html_behaviour_unchanged_this_round": "The only edit to src/sec10k/web/static/index.html in round 2 is a comment. No rendered output changed, so tasks/reviews/d7-browser-walk.json stands as measured at round 1 and was not re-driven.",
+ "findings": [
+  {
+   "id": "R2",
+   "severity": "MEDIUM",
+   "disposition": "fixed",
+   "covered_by": "check_confidence_honesty declaration-count guard + the banner `wire` pin carrying its assignment target; tasks/reviews/pr53_mutation_probe.py cases 'a duplicate `docQual` hoisted above render()' and 'the pinned banner tail moved onto a dead local'",
+   "what_changed": "Both halves of the acceptance. MECHANISM: (1) before reading a pinned body, the check now requires `live.count(f\"function {fn}(\") == 1`. `_js_block` reads the FIRST declaration while JS runs the LAST, so a hoisted stub left the pinned body byte-equal and won at runtime; pinning a body says nothing about which body runs unless the name is declared once. (2) The banner pin is now the whole assignment including `$(\"#banner\").innerHTML =`, not the RHS tail, so the call must be in the expression that reaches the banner rather than in some expression. CLAIM: the 'WHAT THIS DOES AND DOES NOT GUARANTEE' paragraph is replaced in all four places by 'WHAT THIS CHECK IS, WRITTEN SO IT CANNOT BE READ AS MORE' — a list of the text the pins assert, an explicit statement that no static read of one file can assert what the page renders, a concrete list of what is out of reach, and the load-bearing sentence that the list is ILLUSTRATIVE, NOT EXHAUSTIVE.",
+   "red_observed": "Against the round-1 head, both attacks reported `GREEN — attack undetected`: `a duplicate docQual hoisted above render(): the pinned body is still byte-equal, and JS runs the LAST declaration` and `the pinned banner tail moved onto a dead local, with the real innerHTML set to something else`. After the fix: `docQual(): declared 2 times in the live markup, expected exactly 1 — a second declaration shadows the pinned one at runtime (JS runs the LAST), so the body pin below would be checking a function nothing calls`, and `missing pinned expression …: $(\"#banner\").innerHTML = …`.",
+   "why_the_prose_half_mattered_more": "The mechanism half of this finding was closable in two lines; it is the third time the same paragraph has been falsified. The pattern the orchestrator named is the actual defect, so the fix is a claim that does not outrun what a text pin can know, rather than a fourth attempt at a pin strong enough to justify the old wording."
+  },
+  {
+   "id": "R4",
+   "severity": "MEDIUM",
+   "disposition": "fixed",
+   "covered_by": "check_confidence_honesty enclosing-interpolation scan; tasks/reviews/pr53_mutation_probe.py case 'a site spelled `conf ${esc(it.confidence)}`'",
+   "what_changed": "Took the scan-widening half AND the prose half. The scan no longer matches `\\$\\{\\s*it\\.confidence` (interpolations the field STARTS); it finds every mention of `it.confidence`, walks back to the `${` that ENCLOSES it, and requires that whole interpolation to be the pinned marker — so wrapped, parenthesised or reordered spellings are reported as unpinned instead of skipped. The finding's point that this is the PLAUSIBLE edit is right and is now recorded in the code comment: every sibling badge in that template literal is already `${esc(...)}`.",
+   "red_observed": "Against the round-1 head: `GREEN — a site spelled conf ${esc(it.confidence)} — names the field, renders a bare number, does not START the interpolation`. After: `confidence rendered by an unpinned expression: 'conf ${esc(it.confidence)}</span> …'`.",
+   "additional_defect_found_and_fixed_in_the_same_pass": "The first version of the widened scan used `rfind(\"${\")` alone, which attaches a mention to the nearest PRECEDING `${` even when that interpolation already closed. It produced a false positive on the regression fixture's shape (5) — `const w = it.confidence < 0.9 ? …`, which renders nothing — reporting it at a misleading offset and pushing the fixture to 16 failures. A check that fires on correct code (a future `if (it.confidence == null)` guard would trip it) is worse than the hole it closes, so the candidate `${` is now brace-matched and must actually enclose the mention. A mention outside every interpolation is skipped, which is exactly the 'copied into a local first' hole the ceiling names out loud — consistent rather than silently inconsistent."
+  },
+  {
+   "id": "R9",
+   "severity": "LOW (escalated to repair)",
+   "disposition": "fixed",
+   "covered_by": "evals/adversarial/ui-confidence-honesty-regression.json `note`; evals/fixtures/repo_hygiene/confidence-honesty-bare.html header and new comment (14); tasks/reviews/pr53_mutation_probe.py docstring",
+   "what_changed": "All three counts corrected, and each was wrong as claimed. (a) The note said 'Two `must_say` halves are left INTACT'; after the R7 rename exactly ONE is — 'of the document lies outside every item' — and the fixture yields three of four missing-`must_say` failures. The note now says ONE, names which, and records that the R7 rename is what changed it. (b) The fixture header and note said 'THIRTEEN authored defects' while the numbered comments run (1)-(13) and the mislabel was an unnumbered fourteenth. The mislabel is now numbered (14) in the fixture, and the arithmetic is spelled out: each of (1)-(13) produces one failure, (14) produces two (a missing `must_say` and a forbidden `must_not_say`), 13 + 2 = 15. The old explanation led with whole-body pinning 'collapsing several defects into one failure', which the reviewer correctly says explains none of the delta — (4), (5) and (6) each produced exactly one failure before that mechanism landed and one after, so the collapse changes the count by zero. That sentence is now stated as the correction rather than deleted. (c) The probe docstring said 'mixed with sixteen others'; with 15 failures it is fourteen.",
+   "red_observed": "Not a check, so no red run: these are three arithmetic claims in committed prose, each verified against a live run of the regression case (15 failures, mapped one-to-one onto (1)-(13) plus two for (14)) rather than recounted by eye.",
+   "note": "The escalation reason is accepted rather than argued: these three sit in the files R2 and R4 already required editing, and the resolution's own collateral note claimed to guard against exactly this class."
+  }
+ ],
+ "counts_after_this_round": {
+  "regression_fixture": "15 failures from 13 numbered defects plus the R7 mislabel, unchanged by round 2 — the two new pins were already failing there through existing shapes",
+  "mutation_probe": "10 attacks + 1 control, all attacks red, control green, exit 0",
+  "gate": "invariant 61/61 = 1.000, fast 124/124 = 1.000, table 427/427 cells / 34/34 rows, structure 61/61 / 61/61",
+  "digests": "56 pre-existing dev fixtures byte-identical to unmodified main (8c002dced6acbbcb…), heldout 51de5a1167162142…, MOVED: []"
+ }
+}
