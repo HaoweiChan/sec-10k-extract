@@ -106,13 +106,13 @@ Full rationale in `specs/decisions/` (18 ADRs). The ones that shaped the system:
   revisit clause has never fired; malformed HTML normalizes cleanly.
 - **Offsets, not text** (contract + INV-S2). Makes drift structurally
   impossible rather than tested-against.
-- **A label-free validator battery** (ADR-008, ADR-013, ADR-030). Eight validators that
+- **A label-free validator battery** (ADR-008, ADR-013, ADR-030, ADR-034). Ten validators that
   need no annotations and therefore run on every filing, including ones the
   eval set has never seen. This is where robustness beyond the labelled
   fixtures comes from — and it earned its keep: on held-out filings it caught a
   real tail bleed unprompted and made a catastrophic under-extraction loud.
 - **Warn, don't hard-fail** (failure taxonomy F7). Validators emit warnings and
-  move confidence; only four may escalate `doc_status` to `ambiguous`.
+  move confidence; only five may escalate `doc_status` to `ambiguous`.
 - **Held-out discipline** (`evals/heldout/README.md`). Five filings authored
   frozen, structurally unreachable by the normal suites, results committed
   before any fix.

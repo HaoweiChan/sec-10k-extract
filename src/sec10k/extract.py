@@ -16,9 +16,13 @@ from src.sec10k.segment import (
     assign_boundaries, classify, expected_items, filter_candidates, footnote_pointer,
     item_label, find_candidates,
 )
-from src.sec10k.validate import AMBIGUOUS_CODES, STRICT_SIM, score, validate
+from src.sec10k.validate import AMBIGUOUS_CODES, STRICT_SIM, coverage, score, validate
 
-VERSION = "0.8.0-d4"  # meta.extractor_version — audits compare across runs
+# 0.9 and not 0.8.1: ADR-034 (D8) adds a REQUIRED item field
+# (`review_required`) and a required non-refusal `meta` key (`coverage`), which
+# ADR-029/032/033's optional envelope keys were not — an old consumer's item
+# loop is unaffected, but a schema check written against 0.8.x is not.
+VERSION = "0.9.0-d8"  # meta.extractor_version — audits compare across runs
 
 
 def _item(code, cand, status, period_end=None, footnote=None):
@@ -211,6 +215,15 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
         warnings.append({"code": "period_end_unknown", "item": None,
                          "message": "no period of report found; expected item set is a guess"})
 
+    # ADR-034 §d: the coverage figure is PUBLISHED, not only thresholded — it
+    # is the number interviewer feedback found undisclosed at the API level
+    # (postmortem §8 gap 1), and `unattributed_content`'s message is not it
+    # (that one is preamble + tail, ADR-019 §d). Non-refusal path only, beside
+    # `toc_manifest` and `taxonomy_era`, which are normative in `meta` the same
+    # way. 4 dp: enough to separate near-identical derivative fixtures
+    # (sandston-2021 0.7352 vs fy2021-item9c 0.7354) without float noise.
+    meta["coverage"] = round(coverage(text, items), 4)
+
     # layer 8: label-free validation, then layer 9 confidence from what it found
     findings = validate(text, items, accepted, manifest)
     warnings += findings
@@ -229,6 +242,13 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
     ambiguous = not extracted or any(w["code"] in AMBIGUOUS_CODES for w in warnings)
     for i in items:
         i["confidence"], i["evidence"] = score(i, warnings, doc_ambiguous=ambiguous)
+        # ADR-034 §e: the consumer-facing half. A validator that fires on an
+        # item must not leave that item reading like any other `extracted` one
+        # (postmortem §8 gap 2) — `status` still answers "what did the filing
+        # do with this item", so the review signal is its own boolean rather
+        # than a fifth status. Derived from the same item-targeted hits that
+        # already move the confidence, so the two can never disagree.
+        i["review_required"] = bool(i["evidence"]["warnings"])
     if ambiguous:
         doc_status = "ambiguous"
     elif warnings:

@@ -1,0 +1,33 @@
+{
+  "id": "xref-index-collapse",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/xref-index-collapse/filing.htm"},
+  "expect": {
+    "checks": [
+      {"type": "envelope_shape"},
+      {"type": "no_empty_success"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "expected_set_complete", "items": ["1","2","3","4","5","6","7","7A","8","9","10","11","12","13","14","15"]},
+      {"type": "only_items", "items": ["1","2","3","4","5","6","7","7A","8","9","10","11","12","13","14","15"]},
+
+      {"type": "warning_present", "code": "low_item_coverage"},
+      {"type": "warning_present", "code": "item_span_near_empty", "item": "1"},
+      {"type": "warning_present", "code": "item_span_near_empty", "item": "7"},
+      {"type": "warning_present", "code": "item_span_near_empty", "item": "8"},
+      {"type": "doc_status", "value": "ambiguous"},
+      {"type": "confidence", "max": 0.75},
+      {"type": "item_field", "item": "1", "field": "review_required", "value": true},
+      {"type": "item_field", "item": "8", "field": "review_required", "value": true},
+
+      {"type": "max_chars", "item": "1", "value": 200},
+      {"type": "max_chars", "item": "8", "value": 200},
+      {"type": "warning_absent", "code": "expected_items_mostly_missing"},
+      {"type": "warning_absent", "code": "toc_manifest_mismatch"},
+      {"type": "warning_absent", "code": "last_item_dominates"},
+      {"type": "warning_absent", "code": "item_dominates"}
+    ]
+  },
+  "provenance": "SELF-CREATED stub-collapse fixture, D8/ADR-034, added 2026-08-26. `evals/fixtures/xref-index-collapse/filing.htm` is `tgt-2002/filing.htm` with the FIRST raw occurrence of each of the 16 literal item labels deleted (`Item 1.` @8283, `Item 2.` @11009, `Item 3.` @11492, `Item 4.` @11908, `Item 5.` @25476, `Item 6.` @25969, `Item 7.` @26471, `Item 7a.` @27072, `Item 8.` @27597, `Item 9.` @28117, `Item 10.` @29069, `Item 11.` @29641, `Item 12.` @30335, `Item 13.` @35316, `Item 14.` @35645, `Item 15.` @37777) -- 119 bytes, nothing else touched; the derivation asserts that re-inserting the 16 labels at those offsets reproduces the source byte for byte. Each label occurs exactly TWICE in the source: the body heading (deleted) and the row of the trailing cross-reference index at raw 87068-89101 (kept). Titles, markup and prose are untouched, so each body heading becomes a title-only line (the `heading-unnumbered` / `items-stripped` shape) and the ONLY surviving heading candidates are the 16 index rows in the last 1,042 normalized chars.\n\nWHY IT EXISTS: this is the dev-side reproduction of the ADR-015 stub-collapse class in its maximal form -- the 2026-08-24 demo's Intel shape (postmortem §2, `evals/heldout/README.md` H4: `intc-2025` resolved all 23 items to index rows totalling 1,727 chars, `success_with_warning`, every item 0.95). Held-out `intc-2025` must not be tuned on, so the class needed a dev proxy. At `820cf0c` this fixture reports **exactly the demo failure**: 16 items `extracted`, all `heading_strict` at confidence **0.95**, spans of 18-117 chars totalling **1,003 chars of 33,061** (coverage 0.0303), `doc_status` **success_with_warning**, and the only warning is the deliberately non-escalating `unattributed_content`. `no_empty_success` PASSES -- 1,003 clears `NO_EMPTY_SUCCESS_FLOOR` (1,000) by three characters, the same 727-char miss recorded for `intc-2025` -- and it is included here to keep that on the record; it is not what turns this case red or green.\n\nWHAT IT PINS: `low_item_coverage` (ADR-034 §d, `COVERAGE_MIN = 0.13`) at the LOW edge of its measured band -- 0.0303 here against 0.2306 at the high edge (`ge-1994`, pinned `warning_absent` in `evals/adversarial/ge-1994-oldformat.json`) -- and the three `item_span_near_empty` warnings that carry item codes 1, 7 and 8 (`SPAN_FLOOR = 1500`). The four `warning_absent` checks close every OTHER route to `ambiguous`: 0 items missing, the manifest resolves in full, the last span is 76 chars and no span dominates -- so the case proves the new coverage code is what escalates, not a side effect. RED at `820cf0c` (pipeline before D8, this fixture and case present): `doc_status 'success_with_warning' != 'ambiguous'`, the three `item_span_near_empty` expectations, `low_item_coverage`, both `review_required` fields and `confidence 0.95 > 0.75`."
+}

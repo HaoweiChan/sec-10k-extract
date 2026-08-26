@@ -1,0 +1,24 @@
+{
+  "id": "cvx-2015-pointer-flagged",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/cvx-2015/filing.htm"},
+  "expect": {
+    "checks": [
+      {"type": "warning_present", "code": "item_span_near_empty", "item": "7"},
+      {"type": "warning_present", "code": "item_span_near_empty", "item": "8"},
+      {"type": "confidence", "item": "7", "value": 0.8},
+      {"type": "confidence", "item": "8", "value": 0.8},
+      {"type": "item_field", "item": "7", "field": "review_required", "value": true},
+      {"type": "item_field", "item": "8", "field": "review_required", "value": true},
+      {"type": "item_field", "item": "1", "field": "review_required", "value": false},
+      {"type": "item_present", "item": "7", "status": "extracted"},
+      {"type": "item_present", "item": "8", "status": "extracted"},
+      {"type": "text_contains", "item": "8", "value": "page FS-1"},
+      {"type": "doc_status", "value": "success_with_warning"},
+      {"type": "warning_absent", "code": "low_item_coverage"},
+      {"type": "warning_absent", "code": "item_span_near_empty", "item": "1"}
+    ]
+  },
+  "provenance": "The POINTER half of D8/ADR-034, on the dev proxy the postmortem names for the Citigroup class (§7: 'development iterates on dev proxies -- the cvx-2015/jpm-2024 pointer class'). Chevron FY2015 answers Item 7 in 280 chars and Item 8 in 189 ('The index to Management's Discussion and Analysis, Consolidated Financial Statements and Supplementary Data is presented on page FS-1.'), with 294,291 chars of the real MD&A and financial statements sitting unlabelled in the tail -- ADR-019 §e's internal-pointer-to-a-paginated-section class, enumerated there as permanently-red debt (`evals/adversarial/cvx-2015-internal-pointer.json`). This case does NOT re-litigate that debt: the status stays `extracted` (ADR-004's ruling is untouched and both `item_present` checks assert it), the item text stays served, and the offsets do not move. What changes is that the envelope stops calling it a 0.95 extraction: `item_span_near_empty` carries the item code, so `WARN_PENALTY` takes both items to 0.80 and `review_required` reads true on 7 and 8 and false on the substantive Item 1 (82,907 chars).\n\nIt is also the false-positive pin for the document-level half. Chevron puts only 27.18% of its text inside item spans -- the second-lowest coverage of any real dev filing, and the closest to `COVERAGE_MIN = 0.13` after `ge-1994`'s 0.2306 -- so `warning_absent low_item_coverage` here asserts that a legitimately pointer-heavy real filing does NOT escalate to `ambiguous`. RED at `820cf0c`: both `item_span_near_empty` expectations, both confidences (0.95 != 0.8) and all three `review_required` fields (the field did not exist)."
+}

@@ -5,6 +5,8 @@
   "input": {"path": "evals/fixtures/ge-1994/filing.txt"},
   "expect": {
     "checks": [
+      {"type": "warning_absent", "code": "low_item_coverage"},
+      {"type": "warning_present", "code": "item_span_near_empty", "item": "8"},
       {"type": "no_empty_success"},
       {"type": "known_items_only"},
       {"type": "no_overlap_ordered"},

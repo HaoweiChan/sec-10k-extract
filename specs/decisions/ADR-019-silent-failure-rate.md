@@ -6,7 +6,8 @@ the span-coverage validator as the live post-freeze candidate — marked in plac
 2026-08-22, ADR-027 §g) and ADR-004 (records, does not resolve,
 a standing disagreement over `cvx-2015` item 6). Ships the Executive-Officers
 boundary fix (`src/sec10k/segment.py`, `EXEC_OFFICERS_RE`). Amended by:
-ADR-030 (§d's successor built, noted in place 2026-08-23).
+ADR-030 (§d's successor built, noted in place 2026-08-23), ADR-034 (§e's
+item-level half built, noted in place 2026-08-26).
 
 **Ruling**: measure the silent-failure rate at 1/30 sampled (3.3%, CI [0.1%, 17.2%]) over the 447 confident-but-unchecked items; fix the Executive-Officers boundary bleed across 7 fixtures; retire the mis-specified span-coverage debt row; leave the internal-pointer-to-paginated-section class as recorded, unresolved debt.
 **Because**: metric 6 reads 0.0 by construction (the gate forces every declared check green), so the only way to see the real rate was to sample outside the checked population with an instrument the gate doesn't control.
@@ -228,6 +229,19 @@ ladder was honest — `last_item_dominates` fired, `doc_status` correctly read
 `ambiguous` — but item-level confidence on items 7 and 8 still read 0.95.
 Document-level and item-level honesty are separate properties here, and today
 only the first is defended by an escalation rule.
+
+*(2026-08-26, D8: the second is now defended too. [ADR-034](ADR-034-item-level-escalation.md)
+builds the item-level half as `item_span_near_empty`, a layer-8 validator
+carrying the item code, so `WARN_PENALTY` reaches the pointer item's own
+number: on this very table, `cvx-2015` items 7/8 and `ge-1994` item 8 move
+0.95 → 0.80, and `jpm-2024` items 7/8 gain the warning (their confidence was
+already capped at 0.75 by the document verdict, ADR-027 §a). The class itself
+stays open debt and every status here is unchanged — ADR-034 rules explicitly
+that a warning is not a status change, and the standing disagreement over
+`cvx-2015` item 6 is not settled by it: item 6 is outside the floored set. A
+fourth member of the class was found while measuring it — `nvda-2024` item 8,
+a 209-char internal pointer whose financial statements sit inside item 15's
+span, previously a warning-free `success` at 0.95.)*
 
 ## f) Ruling — Executive Officers (FIXED)
 

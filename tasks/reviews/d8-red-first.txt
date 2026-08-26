@@ -1,0 +1,118 @@
+D8 / ADR-034 — RED-FIRST RECORD (CLAUDE.md hard rule 2)
+=======================================================
+
+git sha of the tree these runs were taken at:
+    820cf0c26462f89e791da08d265493d056d5e3cc   (origin/task/D8, "pr-loop housekeeping")
+
+Tree state: the two new cases, the four amended cases and the new synthetic
+fixture were present; the PIPELINE WAS UNTOUCHED.
+    $ git diff --stat -- src/ evals/run.py evals/metrics.py evals/snapshot.py
+    (empty — no output)
+Run date: 2026-08-26T06:28:23Z
+
+Cases watched red (5):
+  xref-index-collapse        NEW  — the stub-collapse pin (synthetic Intel shape)
+  cvx-2015-pointer-flagged   NEW  — the pointer pin (ADR-019 §e dev proxy)
+  nvda-2024-shallow          amended — a fourth, unenumerated member of the pointer class
+  ko-1997-shallow            amended — SPAN_FLOOR band, LOW edge (item 8 at 930 chars)
+  ge-1994-oldformat          amended — COVERAGE_MIN band, HIGH edge + txt-era pointer
+
+Cases amended that are GREEN at this sha and red only under threshold mutation
+(the ADR-030 precedent — a pin for a code that does not yet exist cannot be red):
+  tgt-2002-shallow           SPAN_FLOOR band, HIGH edge (item 1 at 2,094 chars)
+  cat-2023-shallow           the exact-success pin, moved off nvda-2024
+
+===============================================================================
+1. python3 -m evals.run --suite invariant --no-report
+===============================================================================
+[eval] INVARIANT VIOLATION: invariants are absolute, 100% required
+[FAIL] cvx-2015-pointer-flagged (adversarial, 0.38s)
+[FAIL] ge-1994-oldformat (adversarial, 0.02s)
+[FAIL] xref-index-collapse (adversarial, 0.01s)
+[DEBT] axp-2008-combined-part-iii: STILL RED — combined-multi-item-heading
+[DEBT] cvx-2015-internal-pointer: STILL RED — internal-pointer-to-paginated-section
+[DEBT] msft-2013-website-block: STILL RED — spec-ambiguity
+[eval] suite 'invariant': 66/69 = 0.957  (+3 enumerated debt, unscored)
+    exit status: 1
+
+===============================================================================
+2. python3 -m evals.run --suite fast --no-report
+===============================================================================
+[eval] REGRESSION: 0.962 < baseline 1.000
+[FAIL] ko-1997-shallow (golden, 0.01s)
+[FAIL] nvda-2024-shallow (golden, 0.1s)
+[FAIL] cvx-2015-pointer-flagged (adversarial, 0.38s)
+[FAIL] ge-1994-oldformat (adversarial, 0.02s)
+[FAIL] xref-index-collapse (adversarial, 0.01s)
+[DEBT] axp-2008-combined-part-iii: STILL RED — combined-multi-item-heading
+[DEBT] cvx-2015-internal-pointer: STILL RED — internal-pointer-to-paginated-section
+[DEBT] msft-2013-website-block: STILL RED — spec-ambiguity
+[eval] suite 'fast': 127/132 = 0.962  (+3 enumerated debt, unscored)
+[eval] table fidelity: cells 1.0000 (427/427), rows 1.0000 (34/34)
+[eval] structure fidelity: blocks 1.0000 (61/61), bounds 1.0000 (61/61)
+    exit status: 1
+
+    (.eval-baseline.json is {"fast": 1.0}; 0.962 < 1.0, so the pre-commit gate
+     would refuse this tree. That is the point of the record.)
+
+===============================================================================
+3. Per-check failure reasons, same sha, via src.sec10k.eval_adapter.run_case
+===============================================================================
+[FAIL] cvx-2015-pointer-flagged  (evals/adversarial/cvx-2015-pointer-flagged.json)  doc_status=success_with_warning
+    - {"type": "warning_present", "code": "item_span_near_empty", "item": "7"}
+        -> expected warning 'item_span_near_empty', got ['unattributed_content']
+    - {"type": "warning_present", "code": "item_span_near_empty", "item": "8"}
+        -> expected warning 'item_span_near_empty', got ['unattributed_content']
+    - {"type": "confidence", "item": "7", "value": 0.8}
+        -> item 7 confidence 0.95 != 0.8
+    - {"type": "confidence", "item": "8", "value": 0.8}
+        -> item 8 confidence 0.95 != 0.8
+    - {"type": "item_field", "item": "7", "field": "review_required", "value": true}
+        -> item 7 review_required None != True
+    - {"type": "item_field", "item": "8", "field": "review_required", "value": true}
+        -> item 8 review_required None != True
+    - {"type": "item_field", "item": "1", "field": "review_required", "value": false}
+        -> item 1 review_required None != False
+
+[FAIL] ge-1994-oldformat  (evals/adversarial/ge-1994-oldformat.json)  doc_status=success_with_warning
+    - {"type": "warning_present", "code": "item_span_near_empty", "item": "8"}
+        -> expected warning 'item_span_near_empty', got ['unattributed_content']
+
+[FAIL] xref-index-collapse  (evals/adversarial/xref-index-collapse.json)  doc_status=success_with_warning
+    - {"type": "warning_present", "code": "low_item_coverage"}
+        -> expected warning 'low_item_coverage', got ['unattributed_content']
+    - {"type": "warning_present", "code": "item_span_near_empty", "item": "1"}
+        -> expected warning 'item_span_near_empty', got ['unattributed_content']
+    - {"type": "warning_present", "code": "item_span_near_empty", "item": "7"}
+        -> expected warning 'item_span_near_empty', got ['unattributed_content']
+    - {"type": "warning_present", "code": "item_span_near_empty", "item": "8"}
+        -> expected warning 'item_span_near_empty', got ['unattributed_content']
+    - {"type": "doc_status", "value": "ambiguous"}
+        -> doc_status 'success_with_warning' != 'ambiguous'
+    - {"type": "confidence", "max": 0.75}
+        -> item 1 confidence 0.95 > 0.75
+    - {"type": "item_field", "item": "1", "field": "review_required", "value": true}
+        -> item 1 review_required None != True
+    - {"type": "item_field", "item": "8", "field": "review_required", "value": true}
+        -> item 8 review_required None != True
+
+[PASS] cat-2023-shallow  (evals/golden/cat-2023-shallow.json)  doc_status=success
+
+[FAIL] ko-1997-shallow  (evals/golden/ko-1997-shallow.json)  doc_status=success_with_warning
+    - {"type": "warning_present", "code": "item_span_near_empty", "item": "8"}
+        -> expected warning 'item_span_near_empty', got ['unattributed_content']
+
+[FAIL] nvda-2024-shallow  (evals/golden/nvda-2024-shallow.json)  doc_status=success
+    - {"type": "doc_status", "value": "success_with_warning"}
+        -> doc_status 'success' != 'success_with_warning'
+    - {"type": "warning_present", "code": "item_span_near_empty", "item": "8"}
+        -> expected warning 'item_span_near_empty', got []
+    - {"type": "confidence", "item": "8", "value": 0.8}
+        -> item 8 confidence 0.95 != 0.8
+    - {"type": "item_field", "item": "8", "field": "review_required", "value": true}
+        -> item 8 review_required None != True
+    - {"type": "item_field", "item": "1", "field": "review_required", "value": false}
+        -> item 1 review_required None != False
+
+[PASS] tgt-2002-shallow  (evals/golden/tgt-2002-shallow.json)  doc_status=success_with_warning
+

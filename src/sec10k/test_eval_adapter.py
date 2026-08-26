@@ -402,11 +402,13 @@ def _envelope(**over):
     env = {"normalized_text": "Item 1. Business\nx", "doc_status": "success",
            "warnings": [],
            "meta": {"extractor_version": "t", "input_sha256": "s", "format_era": "html",
-                    "document_selected": "d", "taxonomy_era": "modern", "toc_manifest": []},
+                    "document_selected": "d", "taxonomy_era": "modern", "toc_manifest": [],
+                    "coverage": 1.0},  # ADR-034 §d
            "trace": [], "timings": {"total_ms": 1}, "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0},
            "items": [{"item": "1", "part": "I", "title": "Business", "heading_text": "Item 1. Business",
                       "start": 0, "end": 18, "status": "extracted", "confidence": 0.95,
-                      "method": "heading_strict", "evidence": {}}]}
+                      "method": "heading_strict", "evidence": {},
+                      "review_required": False}]}  # ADR-034 §e
     env.update(over)
     return env
 
@@ -421,7 +423,8 @@ def test_envelope_shape():
         assert eval_check(e, chk) is not None, k
     assert eval_check(_envelope(extra_key=1), chk) is not None
     # item-level mandatory fields and the normative method enum (SD-1)
-    for k in ("heading_text", "evidence", "method", "confidence", "part", "title"):
+    for k in ("heading_text", "evidence", "method", "confidence", "part", "title",
+              "review_required"):
         e = _envelope(); del e["items"][0][k]
         assert eval_check(e, chk) is not None, k
     e = _envelope(); e["items"][0]["method"] = "llm_magic"
@@ -532,7 +535,8 @@ def test_table_checks():
            "rows": [[[0, 1], [2, 3]], [[4, 5, 2], [6, 7]]]}
     r = {"normalized_text": text, "doc_status": "success", "warnings": [], "items": [],
          "meta": {"extractor_version": "x", "input_sha256": "x", "format_era": "html",
-                  "document_selected": "x", "taxonomy_era": "modern", "toc_manifest": []},
+                  "document_selected": "x", "taxonomy_era": "modern", "toc_manifest": [],
+                  "coverage": 0.0},
          "trace": [], "timings": {"total_ms": 0}, "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0},
          "tables": [tab]}
     good = {"type": "table", "anchor": "a b", "header": 1,
@@ -597,10 +601,11 @@ def test_image_checks():
             {"offset": 18, "src": "sig.jpg", "alt": "A's sig", "width": 1, "height": 1}]
     item = {"item": "1", "part": "I", "title": "Business", "heading_text": "Item 1",
             "start": 7, "end": 19, "status": "extracted", "confidence": 0.9,
-            "method": "heading_strict", "evidence": {}}
+            "method": "heading_strict", "evidence": {}, "review_required": False}
     r = {"normalized_text": text, "doc_status": "success", "warnings": [], "items": [item],
          "meta": {"extractor_version": "x", "input_sha256": "x", "format_era": "html",
-                  "document_selected": "x", "taxonomy_era": "modern", "toc_manifest": []},
+                  "document_selected": "x", "taxonomy_era": "modern", "toc_manifest": [],
+                  "coverage": 0.0},
          "trace": [], "timings": {"total_ms": 0}, "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0},
          "images": imgs}
     good = {"type": "image", "src": "chart.jpg", "alt": None, "width": 500, "height": 210,

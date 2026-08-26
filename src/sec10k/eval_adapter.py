@@ -219,7 +219,9 @@ def eval_check(result, chk, path=None):
         if not refusal:
             # set only once the filing is accepted (SD-6): a refused document
             # has no era and no manifest to report
-            meta_keys |= {"taxonomy_era", "toc_manifest"}
+            # ADR-034 §d adds `coverage` on the same terms: a document the
+            # pipeline refused has no items, so no coverage to report
+            meta_keys |= {"taxonomy_era", "toc_manifest", "coverage"}
         if not meta_keys <= set(result["meta"]):
             return f"meta missing {sorted(meta_keys - set(result['meta']))}"
         if not isinstance(result["trace"], list) or "total_ms" not in result["timings"] \
@@ -233,7 +235,8 @@ def eval_check(result, chk, path=None):
             if not {"code", "item", "message"} <= set(w):
                 return f"warning not in contract shape: {w}"
         item_keys = {"item", "part", "title", "heading_text", "start", "end",
-                     "status", "confidence", "method", "evidence"}
+                     "status", "confidence", "method", "evidence",
+                     "review_required"}  # ADR-034 §e
         for i in result["items"]:
             if not item_keys <= set(i):
                 return f"item {i.get('item')} missing {sorted(item_keys - set(i))}"
