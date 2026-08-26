@@ -109,6 +109,164 @@ def check_report_citations():
     return bad
 
 
+HELDOUT_DIR = ROOT / "evals" / "heldout"
+# The three claim shapes held-out provenances actually use for byte-level
+# facts. `evals/heldout/README.md` records SIX occasions on which the
+# verification instrument, not the pipeline, produced a wrong claim, and the
+# rule it settled on is that anything character-level must be read from the
+# raw bytes. Nothing enforced that: a provenance is free prose, so a
+# miscounted string or an offset off by eight bytes sat in the document of
+# record until a human re-derived it (PR #52 R4/R5). These re-derive it every
+# run, against the committed fixture, importing nothing from src/sec10k.
+# ponytail: pins the three phrasings in use, not prose in general — a claim
+# written some other way is simply unpinned, which is the same silence as
+# before, not a regression. Widen the patterns when a new phrasing appears.
+_Q = "['‘’]"  # ASCII or typographic single quote — PR #52 R11: swapping one
+                       # for the other silently disarmed every pin in a file
+_PROV_COUNT_RE = re.compile(_Q + r"([^'‘’]{1,120})" + _Q + r" (\d+)x")
+_PROV_OFFSET_RE = re.compile(
+    _Q + r"([^'‘’]{1,160})" + _Q + r"[^.]{0,40}?(?:\(|at )raw offset ([\d,]+)")
+_PROV_HITS_RE = re.compile(
+    r"[^.]*\bregex\b[^.]*?\breturns\b[^.]*?\b(\d+|one|two|three|four|five|six|"
+    r"seven|eight|nine|ten) hits[^.]*", re.I)
+_NUM_WORDS = {w: i for i, w in enumerate(
+    "zero one two three four five six seven eight nine ten".split())}
+_BACKTICKED_RE = re.compile(r"`([^`]+)`")
+
+
+def check_heldout_provenance_claims(case=None):
+    """Every byte-level claim in a held-out case's provenance must reproduce
+    against that case's committed fixture: `'<literal>' <N>x` occurrence
+    counts, `'<literal>' at raw offset <N>` positions, and any stated regex
+    hit count — which must name the regex in backticks so it can be run.
+
+    FAILS CLOSED (PR #52 R11, on the `evals/bench.check_docs` precedent): the
+    first version returned green when it extracted NOTHING, so the coverage it
+    advertises could be silently reduced to zero — swapping ASCII apostrophes
+    for typographic ones, or rewording `'X' 8x` to `'X' appears eight times`,
+    disarmed every pin in a file and left the gate at 123/123. `min_claims`
+    in the case commits how many claims each file must yield; a file that
+    yields fewer, or that has disappeared, is a failure. A check that can be
+    disarmed by a curly apostrophe is worse than none — it launders the
+    coverage claim."""
+    bad = []
+    floors = dict((case or {}).get("input", {}).get("min_claims") or {})
+    seen = {}
+    for f in sorted(HELDOUT_DIR.glob("*.json")):
+        hc = json.loads(f.read_text())
+        prov = hc.get("provenance", "")
+        where = f"evals/heldout/{f.name}"
+        raw = (ROOT / hc["input"]["path"]).read_bytes()
+        n_claims = 0
+        for lit, n in _PROV_COUNT_RE.findall(prov):
+            n_claims += 1
+            got = raw.count(lit.encode())
+            if got != int(n):
+                bad.append(f"{where}: claims {lit!r} {n}x, fixture has {got}x")
+        for lit, off in _PROV_OFFSET_RE.findall(prov):
+            n_claims += 1
+            want = int(off.replace(",", ""))
+            b = lit.encode()
+            if raw[want:want + len(b)] != b:
+                bad.append(f"{where}: claims {lit[:40]!r} at raw offset {want}, "
+                           f"actually at {raw.find(b)}")
+        for m in _PROV_HITS_RE.finditer(prov):
+            n_claims += 1
+            want = _NUM_WORDS.get(m.group(1).lower())
+            if want is None:
+                want = int(m.group(1))
+            pats = _BACKTICKED_RE.findall(m.group(0))
+            if not pats:
+                bad.append(f"{where}: states a regex hit count ({m.group(1)}) "
+                           f"without naming the regex in backticks — not reproducible")
+                continue
+            for pat in pats:
+                try:
+                    got = len(re.findall(pat.encode(), raw))
+                except re.error as e:
+                    bad.append(f"{where}: regex {pat!r} does not compile ({e})")
+                    continue
+                if got != want:
+                    bad.append(f"{where}: regex {pat!r} claimed {m.group(1)} hits, "
+                               f"produces {got}")
+        seen[f.name] = n_claims
+    for name, floor in sorted(floors.items()):
+        got = seen.get(name)
+        if got is None:
+            bad.append(f"evals/heldout/{name}: committed for {floor} pinned claims "
+                       f"but the case file is gone — coverage cannot silently vanish")
+        elif got < floor:
+            bad.append(f"evals/heldout/{name}: yields {got} pinned claims, "
+                       f"committed floor is {floor} — the check is failing closed "
+                       f"rather than laundering the coverage claim")
+    return bad
+
+
+LEDGER_LINE_REF_SHORT = {"ADR-021": "specs/decisions/ADR-021-benchmark-instrument.md"}
+# PR #52 R9. A ledger row that cites `<file>:<line>` and QUOTES the sentence it
+# means is self-verifying; the line number rots the moment anything is inserted
+# above it, and this repo has now done that twice (the pending ADR-019 line-ref
+# item is the first). Adjacency is the whole discriminator: a quotation that
+# immediately follows the ref is a quotation OF it, while one further along the
+# sentence belongs to a different clause — matching loosely produced four false
+# positives on the committed tree, matching adjacently produces none.
+# ponytail: pins refs that quote, which is the shape that CAN be checked. A
+# bare `file.py:126` with nothing quoted beside it is unpinnable by any means
+# short of re-reading the author's mind, and `min_refs` below is what stops
+# that silence from growing — the fix for a bare ref is to quote it.
+LEDGER_LINE_REF_RE = re.compile(
+    r"`(?P<path>[A-Za-z0-9_./-]*):(?P<line>\d+)(?:-\d+)?`"
+    r"\s*(?:reads|says)?\s*\(?\s*[\"“](?P<frag>[^\"”]{4,200})[\"”]")
+
+
+def _ledger_norm(s):
+    return re.sub(r"\s+", " ", re.sub(r"[`*_]", "", s)).strip()
+
+
+def check_ledger_line_refs(case):
+    """Every `<file>:<line>` citation in the ledger that quotes its target must
+    quote something actually on (or beside) that line. Fails closed on
+    `min_refs`: a rewrite that drops the quotations drops the coverage."""
+    bad, seen = [], {}
+    for rel in case.get("input", {}).get("files", LEDGER_FILES):
+        n_refs = 0
+        for n, line in enumerate((ROOT / rel).read_text().split("\n"), 1):
+            # `last` resets per row: a bare `:893` continuation always follows
+            # its full path inside the same row, and carrying it across rows let
+            # a deleted ref silently re-point its neighbours at another file
+            # (found by mutation-testing this check, PR #52 R9)
+            last = None
+            for m in LEDGER_LINE_REF_RE.finditer(line):
+                path = m.group("path") or last
+                path = LEDGER_LINE_REF_SHORT.get(path, path)
+                if m.group("path"):
+                    last = path
+                if not path:
+                    continue
+                target = ROOT / path
+                n_refs += 1
+                if not target.is_file():
+                    bad.append(f"{rel}:{n}: cites {path} — no such file")
+                    continue
+                src = target.read_text().split("\n")
+                lo = int(m.group("line"))
+                # ±2 lines: a quoted sentence legitimately wraps in the source
+                window = _ledger_norm(" ".join(src[max(0, lo - 2):lo + 2]))
+                for piece in re.split(r"…|\.\.\.", m.group("frag")):
+                    piece = _ledger_norm(piece)
+                    if len(piece) < 6:
+                        continue
+                    if piece not in window:
+                        bad.append(f"{rel}:{n}: {path}:{lo} does not contain the "
+                                   f"quoted {piece[:70]!r}")
+        seen[rel] = n_refs
+    for rel, floor in sorted((case.get("input", {}).get("min_refs") or {}).items()):
+        if seen.get(rel, 0) < floor:
+            bad.append(f"{rel}: {seen.get(rel, 0)} verifiable line refs, committed "
+                       f"floor is {floor} — failing closed")
+    return bad
+
+
 def check_ui_stylesheet(case):
     """WCAG AA over the inspector's token block + the .it selector-scoping rule.
 
@@ -1837,6 +1995,8 @@ CHECKS = {
     "adr_headers": lambda case: check_adr_headers(),
     "adr_index": lambda case: check_index(),
     "report_citations": lambda case: check_report_citations(),
+    "heldout_provenance_claims": check_heldout_provenance_claims,
+    "ledger_line_refs": check_ledger_line_refs,
     "ui_stylesheet": check_ui_stylesheet,
     "typography_floor": check_typography_floor,
     "layout_centering": check_layout_centering,
@@ -1861,7 +2021,21 @@ CHECKS = {
 
 
 def run_case(case):
-    names = case.get("input", {}).get("checks") or ["adr_headers", "adr_index"]
+    # PR #52 R14: this used to DEFAULT to ["adr_headers", "adr_index"] when a
+    # case named no checks, so `ledger-line-refs.json` — which declares
+    # `files`/`min_refs` and no `checks` — ran two unrelated ADR checks against
+    # a clean tree and reported PASS while its own check was red. A case that
+    # cannot fail is worse than no case: the suite count moved 60 -> 61 on it.
+    # Every repo_hygiene case in the repo declares `checks` explicitly, so the
+    # default was dead behaviour whose only effect was to swallow a
+    # misconfiguration. Deleted rather than guarded — the failure is now loud,
+    # and a case naming check parameters but no check goes red on sight.
+    names = case.get("input", {}).get("checks")
+    if not names:
+        return {"passed": False, "failures": [
+            f"case {case.get('id', case.get('_file'))!r} names no `input.checks` — "
+            f"a repo_hygiene case that declares no check cannot fail and must not "
+            f"report green (PR #52 R14)"]}
     failures, info = [], {}
     for name in names:
         got = CHECKS[name](case)

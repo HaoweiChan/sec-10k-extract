@@ -1,0 +1,75 @@
+{
+  "pr": 52,
+  "task": "D6",
+  "round": 1,
+  "date": "2026-08-26",
+  "scope": "full PR diff, 3cdfbf4..353e8f1",
+  "result": "REQUEST_CHANGES",
+  "gate": {"invariant": "59/59", "fast": "122/122 = 1.000", "table_fidelity": "427/427 cells, 34/34 rows", "structure_fidelity": "61/61 blocks, 61/61 bounds", "baseline_touched": false},
+  "routing_note": "R1 and R2 are MEDIUM and in scope on the published-number test. R3-R7 are LOW and would normally go to debt; each is routed to repair as a RECORDED EXCEPTION on the D5 precedent (DONE.md, PR #46 R7/R12): an artifact that contradicts ITSELF is a stale fact with one right answer, not a choice. R7 is split - its prose half meets that test, its floor half is a choice and is left to the implementer to argue either way in writing.",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "Adding two real EDGAR filings (19.47 MB) to `evals/heldout/fixtures/` silently invalidates the of-record sweep projection and five other counts in two documents of record, and the diff neither corrects them nor logs them as debt.",
+      "evidence": "`docs/analysis-report.md:553` (\"the five held-out filings in `evals/heldout/fixtures/`\" - there are now seven), `:893` (\"the five held-out filings ... include the second-largest filing in the repo (`spg-2019`, 9.36 MiB)\" - spg-2019 is now third behind c-2025 at 15.40 MiB and jpm-2024 at 12.25 MiB), `:902` the row marked ← of record (`real_edgar_committed | 33 | 2.104 MiB | 153 s | 1,072 s ≈ 18 min`), `:922` (\"the 28 real dev fixtures plus the 5 held-out filings\"). Same numbers in `specs/decisions/ADR-021-benchmark-instrument.md:211` - \"`real_edgar_committed` still 33 / 2.104 MiB - **no real filing joined the corpus**\", which this diff falsifies - plus `:214` and `:752`. `evals/bench.py:232 heldout_sizes()` reads the directory by `stat`, so the next bench run recomputes the population: 35 filings, mean (33*2.104 + 3.167 + 15.403)/35 = 2.514 MiB, a +19.5% move in the projection of record (153 s → ~183 s, 1,072 s → ~1,281 s ≈ 21 min). No eval case could have gone red on this: `src/repo_hygiene/eval_adapter.py` pins ADR headers and report-citation resolution, not population counts.",
+      "repro": "python3 -c \"print((33*2.104 + 3320720/1048576 + 16150764/1048576)/35)\"  # 2.5143 vs the 2.104 MiB printed at docs/analysis-report.md:902 and ADR-021:211,752; ls evals/heldout/fixtures | wc -l  # 7, against \"five held-out filings\"",
+      "acceptance": "Either the six stale statements are corrected (n=35, recomputed mean and sweep, spg-2019 no longer called second-largest, ADR-021 §b amended to record that two real filings joined) with a fresh bench artifact cited, or a Debt row in `tasks/TODO.md` names each stale location by file:line so the staleness is enumerated rather than latent - and ADR-021:211's \"no real filing joined the corpus\" is retracted either way."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The H4 write-up - the permanent record of the run it is the whole deliverable of - misstates the c-2025 result: it reports 22 items `missing` and \"the one deviation\" from the frozen prediction, when the committed report shows 21 `missing` and TWO items at `omitted`/0.75, so a second deviation from the frozen prediction goes unrecorded.",
+      "evidence": "`evals/report/20260826-005839-fast.json`, `c-2025-heldout.items_summary`: Counter({('missing', 0.4): 21, ('omitted', 0.75): 2}) - item 9C and item 16 are both `omitted` at 0.75. The frozen prediction in `evals/heldout/c-2025-heldout.json` provenance says \"all 23 era items reported `missing` with null offsets at BASE_MISSING 0.40\", so item 16 deviates from it exactly as 9C does. Three places state it wrong: `evals/heldout/README.md` H4 entry, commit message 353e8f1, and the `tasks/TODO.md` D6 row. This is the same class the README's own authoring-discipline section counts six times - an asserted number the artifact does not support - in a file whose stated purpose is that predictions cannot be retrofitted.",
+      "repro": "python3 -c \"import json,collections; r=json.load(open('evals/report/20260826-005839-fast.json')); print(collections.Counter((i['status'],i['confidence']) for c in r['results'] if c['id']=='c-2025-heldout' for i in c['items_summary']))\"",
+      "acceptance": "`evals/heldout/README.md` H4 and the `tasks/TODO.md` D6 row read 21 `missing` at 0.40 and TWO `omitted` at 0.75 (9C and 16), and name item 16 as the second deviation from the frozen prediction, noting that the case's own declination (a) called `omitted` \"the natural reading\" for 16, which the run then produced. Since 353e8f1 is pushed, the correction rides the next consolidated commit with its own honest message per CLAUDE.md rule 7."
+    },
+    {
+      "id": "R3",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The diff makes an unedited row of the file it edits false: `spg-2019`'s inventory row still says \"second-largest anywhere here\", contradicting the new `c-2025` row in the same table.",
+      "evidence": "`evals/heldout/README.md:52` - `spg-2019` row ends \"9.8 MB, second-largest anywhere here\" (9,812,403 bytes). The row added by this diff says c-2025 is \"16.1 MB, the largest file in either set\" (16,150,764), and `evals/fixtures/README.md` lists `jpm-2024` at 12,849,180. spg-2019 is now third.",
+      "repro": "wc -c evals/heldout/fixtures/*/filing.htm evals/fixtures/jpm-2024/filing.htm | sort -n",
+      "acceptance": "The `spg-2019` row reads third-largest (or drops the ranking clause), consistent with the c-2025 row asserted in the same table."
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The c-2025 provenance's \"exactly four hits\" enumeration for its case-insensitive item-plus-digit scan is not reproducible; the load-bearing claim behind it is verified and holds, but the enumeration is wrong in both directions.",
+      "evidence": "`evals/heldout/c-2025-heldout.json` provenance: \"A case-insensitive raw regex for item-plus-digit returns exactly four hits in the whole file ... the cover's combined pointer at raw offset 1,828,047, two Regulation S-K citations ('Item 402(v)' at 1,859,455 and 'Item 408' at 15,875,549), and one 'Reconciling Items' phrase.\" On the committed bytes `(?i)items?\\s*[0-9]` returns 3 hits at exactly those three offsets; the named fourth (\"Reconciling Items\") contains no digit and cannot match an item-plus-digit regex, and the loosest reading `(?i)item[^<]{0,4}[0-9]` returns 8 - the five extras are `Items)&#8221;` (the digits come from the entity). The claims that matter - `Item 1.` 0x, `ITEM ` 0x, `FORM 10-K CROSS-REFERENCE INDEX` 1x, anchor 1x, `DISCLOSURE CONTROLS AND PROCEDURES` 2x, `December 31, 2025` 159x / floating-comma 0x - all reproduce exactly, as do every intc-2025 raw-byte and scan offset re-derived independently (23 codes exactly once each, scan len 571,466, index at 567,879, Risk Factors 232,331→328,627).",
+      "repro": "python3 -c \"import re;b=open('evals/heldout/fixtures/c-2025/filing.htm','rb').read();print([m.start() for m in re.finditer(rb'(?i)items?\\s*[0-9]',b)]);print(len(re.findall(rb'(?i)item[^<]{0,4}[0-9]',b)))\"",
+      "acceptance": "The provenance states the exact regex used and a hit count that regex actually produces on the committed bytes (3 for `items?\\s*\\d`), and drops or re-describes the \"Reconciling Items\" entry."
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "Two byte-level/index details in the intc-2025 provenance are off - a raw offset by 8 bytes, and the Item 1 and Item 7 page maps omit ranges the index actually lists.",
+      "evidence": "`evals/heldout/intc-2025-heldout.json` provenance: \"The cover reads 'For the fiscal year ended December 27, 2025.' at raw offset 330847\" - the literal starts at 330839. Same paragraph: \"1 Business pages 3-5/3-24/33/52/72-75\" and \"7 MD&A 18-36\", where the committed index reads \"General development of business Pages 3 - 5 , 18\", \"Available information Page 2\" and, for Item 7, \"Critical accounting estimates Pages 34 - 36 , 65 - 72\". The omissions do not change any asserted label (both items are floored at a deliberately loose 2,000 precisely because the ranges are discontiguous), but a held-out provenance is the document of record for the frozen reading.",
+      "repro": "python3 -c \"b=open('evals/heldout/fixtures/intc-2025/filing.htm','rb').read();print(b.find(b'For the fiscal year ended December 27, 2025.'))\"  # 330839",
+      "acceptance": "Offset corrected to 330839 and the Item 1 / Item 7 page maps quoted in full (or explicitly marked as an abridged quotation)."
+    },
+    {
+      "id": "R6",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "Neither new case asserts `doc_status`, and neither case's enumerated declination list mentions the omission - an undeclared drop of the exact signal the postmortem says lied at the demo.",
+      "evidence": "`evals/heldout/intc-2025-heldout.json` and `evals/heldout/c-2025-heldout.json` `expect.checks` contain no `doc_status` check; three of the five incumbent held-out cases do (`cost-2022`, `csco-2016`, `pgr-2023`). Both cases carry an explicit \"WHAT THIS CASE DELIBERATELY DOES NOT ASSERT\" list (a)-(e) and `doc_status` appears in neither list. The run then produced `success_with_warning` on intc-2025 (23 stub items, 1,727 chars total) and `ambiguous` on c-2025, which is the postmortem §2 banner-vs-panel complaint the exam is meant to hold D8/D9/D11 to. The cases still fail on their floors, so this is not a green-scoring hole - it is an undeclared declination in a set whose discipline is that every declination is named.",
+      "repro": "python3 -c \"import glob;[print(p.split('/')[-1], 'doc_status' in open(p).read()) for p in sorted(glob.glob('evals/heldout/*.json'))]\"",
+      "acceptance": "Either a `doc_status` check is added, or the declination list gains an item saying `doc_status` is deliberately not asserted and why - matching the discipline the other five declinations already follow."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "`intc-2025` is satisfiable by repairing 4 of its 23 items: the other 19 may stay as 20-to-226-char index-row stubs at `extracted`/0.95 and every remaining check still passes; declination (c) states a reason for excluding item 9A that the committed index contradicts.",
+      "evidence": "`evals/heldout/intc-2025-heldout.json` puts floors/anchors only on items 1, 1A, 7, 8; `expected_set_complete`, `only_items`, `known_items_only`, `verbatim`, `no_overlap_ordered`, `no_empty_success` and `deterministic` all passed on the fully-collapsed baseline (`evals/report/20260826-005839-fast.json`, only 5 red checks). Declination (c) justifies dropping boundaries for \"items 2, 3, 5, 7A, 9A, 9B, 15, whose content the index scatters across single pages inside other sections\" - which the committed index bears out for 3 (Pages 102-105, nested in item 8's 56-108) and 15 (56-108, 110-115), but NOT for 9A, whose index row is a lone contiguous \"Page 109\" outside every other item's range and therefore as floorable as 1A's 37-51. A D11 slow path that repairs exactly items 1/1A/7/8 and leaves 9A on its 43-char stub scores this exam green.",
+      "repro": "python3 -c \"import re,html;b=open('evals/heldout/fixtures/intc-2025/filing.htm',encoding='utf-8',errors='replace').read();t=re.sub(r'\\s+',' ',html.unescape(re.sub(r'<[^>]+>',' ',b)));print(t[568400:569000])\"",
+      "acceptance": "Prose half (repair, self-contradiction test): declination (c) must not state a reason the committed index contradicts. Floor half (a CHOICE, argue it either way in writing): add a 9A floor derived from the index alone, or state why not - and address explicitly whether adding an assertion after the baseline run contaminates the case under the burn rule."
+    }
+  ]
+}

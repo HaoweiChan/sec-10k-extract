@@ -208,8 +208,18 @@ survived two sweeps that had both been claimed as complete; 13 in D2,
      for the 28 real dev filings — the ordering claim "seven of nine derive
      from the smallest" is not re-stated for 13; the measured means are. All
      41: 1.477 MiB mean; `real_edgar_dev` still 28 / 1.868 MiB and
-     `real_edgar_committed` still 33 / 2.104 MiB — no real filing joined the
-     corpus since — and the of-record sweep reads **~17.9 min** (1,071.9 s)
+     `real_edgar_committed` still 33 / 2.104 MiB — ~~no real filing joined the
+     corpus since~~ **RETRACTED 2026-08-26 (D6 / PR #52 R1): two real EDGAR
+     filings joined `evals/heldout/fixtures/` — `intc-2025` (3.167 MiB) and
+     `c-2025` (15.403 MiB) — so the population `evals/bench.py:232
+     heldout_sizes()` reads by `stat` is now n=35, and a fresh sweep would
+     recompute the mean to ~2.514 MiB (+19.5%). The 33 / 2.104 MiB figures
+     above stand as the record of the run that measured them and are NOT
+     edited; what is retracted is the claim that they still describe the
+     current corpus. No fresh bench sweep was run — that cost is not D6's, and
+     the staleness is enumerated by the `## Debt` row 'Bench population of
+     record is stale after D6' in `tasks/TODO.md`, which names every affected
+     file:line.** — and the of-record sweep reads **~17.9 min** (1,071.9 s)
      because the rate moved, ~6% down, not the multiplier. Sizes are still
      read for all 33 real filings, the 5 held-out among them by `stat`
      only.)*
