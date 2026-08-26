@@ -1,8 +1,12 @@
 """10-K item-level extraction. Contract: specs/001-sec10k-contract.md.
 
 Layers 1-9 and 11 are real: selection, normalization, candidates, TOC filter,
-boundaries, status, label-free validation, confidence, assembly. Layer 10
-(LLM fallback) stays deferred until residual-failure data justifies one.
+boundaries, status, label-free validation, confidence, assembly. Layer 10 — the
+model-based slow path ADR-020 ruled NOT JUSTIFIED in 2026-08-19 — now exists as
+a TRIGGERED tier behind `escalate=True` (ADR-036, which supersedes ADR-020).
+It is off by default, it runs only when the D8 document-level signal fires, and
+on a dev corpus where that signal fires on 0 of 28 real filings the default
+cost stays exactly $0.
 `success` is deliberately hard to earn — it requires the validator battery to
 find nothing at all.
 """
@@ -22,7 +26,14 @@ from src.sec10k.validate import AMBIGUOUS_CODES, STRICT_SIM, coverage, score, va
 # (`review_required`) and a required non-refusal `meta` key (`coverage`), which
 # ADR-029/032/033's optional envelope keys were not — an old consumer's item
 # loop is unaffected, but a schema check written against 0.8.x is not.
-VERSION = "0.9.0-d8"  # meta.extractor_version — audits compare across runs
+#
+# 0.9.1 and not 1.0: ADR-036 (D11) adds `routing`, which is opt-in and so an
+# ADR-026-class OPTIONAL key — absent unless the caller asked — plus two
+# `method` values no default-flag run can emit. Nothing an existing consumer
+# reads changes shape. This constant IS the one default-envelope field that
+# moves; `evals/snapshot.py`, whose FIELDS predate D11, reports every other
+# field identical (ADR-036 §f).
+VERSION = "0.9.1-d11"  # meta.extractor_version — audits compare across runs
 
 
 def _item(code, cand, status, period_end=None, footnote=None):
@@ -83,7 +94,7 @@ def _promote_item_headings(blocks, tables, items):
 
 def _envelope(doc_status, text="", items=None, warnings=None, meta=None,
               trace=None, t0=None, boilerplate=None, tables=None, blocks=None,
-              images=None):
+              images=None, routing=None):
     env = {
         "normalized_text": text,
         "doc_status": doc_status,
@@ -91,7 +102,12 @@ def _envelope(doc_status, text="", items=None, warnings=None, meta=None,
         "meta": {"extractor_version": VERSION, **(meta or {})},
         "trace": trace or [],
         "timings": {"total_ms": round((time.monotonic() - t0) * 1000, 1) if t0 else 0},
-        "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0},  # deterministic-only at B
+        # ADR-036 §g: still {0, 0, 0.0} on every path where no tier ran, which
+        # is every default-flag run. When the ladder does run this carries the
+        # routing record's own totals, so the contract's cost field and the
+        # routing record can never disagree — one is derived from the other.
+        "cost": dict(routing["cost"]) if routing else
+                {"llm_calls": 0, "tokens": 0, "usd": 0.0},
         "items": items or [],
     }
     if boilerplate is not None:
@@ -104,11 +120,13 @@ def _envelope(doc_status, text="", items=None, warnings=None, meta=None,
         env["blocks"] = blocks   # ADR-032: same rule again
     if images is not None:
         env["images"] = images   # ADR-033: and again
+    if routing is not None:
+        env["routing"] = routing  # ADR-036: and again — opt-in, never default
     return env
 
 
 def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
-                  images=False):
+                  images=False, escalate=False, budget=None):
     """Extract items from a 10-K filing.
 
     Returns {"normalized_text": str, "doc_status": str, "items": [...], ...}
@@ -132,6 +150,27 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
     `{offset, src, alt, width, height}`, the offset into `normalized_text`
     (ADR-033). Same annotation-not-edit rule; the image BYTES are not
     fetched, by ruling (ADR-033 §c).
+
+    `escalate=True` adds ONE key, `routing` — the tiered slow path's record
+    (ADR-036): whether the trigger fired, which tiers were attempted, each
+    tier's outcome and cost, and which items a tier resolved. Unlike the four
+    flags above this one is NOT a pure annotation: when the trigger fires AND a
+    tier's answer survives `escalate.verify`, the resolved items' spans,
+    `method` and `heading_text` move, with the deterministic answer preserved
+    under `evidence.deterministic`. When the trigger does NOT fire — 42 of 43
+    dev fixtures, every real EDGAR filing in the set — nothing moves, nothing
+    is spent, and the only difference from a default run is the presence of the
+    `routing` key itself.
+
+    THE SLOW PATH REFUSES RATHER THAN DEGRADES. With no `ANTHROPIC_API_KEY` in
+    the environment, or with a spent `budget`, a fired trigger produces a
+    `routing` record whose tier outcome is `unavailable` plus an
+    `escalation_unavailable` warning. It never invents an item, never quietly
+    falls back to the deterministic answer without saying so, and never reports
+    a cost it did not incur.
+
+    `budget` is an `llm.Budget` (calls and dollars, both enforced before each
+    call). Default: at most 2 calls and $1.00 for one document.
     """
     t0 = time.monotonic()
     raw_bytes = Path(path).read_bytes()
@@ -226,9 +265,43 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
 
     # layer 8: label-free validation, then layer 9 confidence from what it found
     findings = validate(text, items, accepted, manifest)
+    prior_findings = findings
     warnings += findings
     trace.append({"layer": "validate",
                   "checks_fired": [w["code"] for w in findings]})
+
+    # layer 10 (ADR-036, D11): the tiered slow path. Opt-in, and even then it
+    # reads the warnings layer 8 just produced and returns immediately unless
+    # the D8 document-level code is among them. This is the ONLY place in the
+    # pipeline that can spend money, and on every dev fixture but one it spends
+    # nothing at all.
+    routing = None
+    if escalate:
+        from src.sec10k.escalate import route   # NOT at module scope: keeping
+        # the import here is what makes `python3 -m evals.run` load no network
+        # module at all (ADR-036 §h, pinned by repo_hygiene's escalation_seam)
+        routing, extra = route(text, items, warnings, budget=budget)
+        warnings += extra
+        trace.append({"layer": "escalate", "trigger": routing["trigger"]["fired"],
+                      "tiers": [f"{t['tier']}:{t['outcome']}" for t in routing["tiers"]],
+                      "resolved": routing["resolved"], "cost": routing["cost"]})
+        if routing["resolved"]:
+            # spans moved, so EVERY number derived from them is now stale.
+            # Re-deriving is not optional politeness: `envelope_shape`
+            # recomputes `meta.coverage` from the items the envelope publishes
+            # and refuses an envelope where the two disagree.
+            resolved = set(routing["resolved"])
+            by_code = {i["item"]: i for i in items}
+            # a resolved span has no heading line — its whole extent is body,
+            # so the fingerprint's heading cut moves with it. The key stays in
+            # `accepted` so check 1 does not read the item as unresolved.
+            accepted = {c: ({**v, "heading_end": by_code[c]["start"]}
+                            if c in resolved else v)
+                        for c, v in accepted.items()}
+            findings = validate(text, items, accepted, manifest)
+            warnings = [w for w in warnings if w not in prior_findings] + findings
+            trace.append({"layer": "validate", "after": "escalate",
+                          "checks_fired": [w["code"] for w in findings]})
 
     if blks is not None:
         _promote_item_headings(blks, tabs, items)
@@ -255,6 +328,11 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
         doc_status = "success_with_warning"
     else:
         doc_status = "success"
+    # ADR-036 §g: recomputed here rather than only above, because a resolved
+    # tier moves spans and `meta.coverage` must describe the items this
+    # envelope actually publishes. On every non-escalated run this is the same
+    # arithmetic over the same spans and the same value.
+    meta["coverage"] = round(coverage(text, items), 4)
     return _envelope(doc_status, text, items=items, meta=meta,
                      warnings=warnings, trace=trace, t0=t0, boilerplate=chrome,
-                     tables=tabs, blocks=blks, images=imgs)
+                     tables=tabs, blocks=blks, images=imgs, routing=routing)

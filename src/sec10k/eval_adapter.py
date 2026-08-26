@@ -30,7 +30,16 @@ STATUSES = {"extracted", "missing", "incorporated_by_reference", "omitted"}
 # `llm_fallback` are in the contract by decision (ADR-027 / ADR-020): the
 # first is emitted for a weak-title heading match, the second never.
 DOC_STATUSES = {"success", "success_with_warning", "ambiguous", "unsupported", "failed"}
-METHODS = {"heading_strict", "heading_lenient", "status_keyword", "llm_fallback"}
+# ADR-036 (D11) adds `llm_localize` and `llm_extract` — the two escalation
+# rungs. An item carries one of them ONLY when that rung's proposed offsets
+# survived `escalate.verify`, so the value is a claim about how the PUBLISHED
+# span was produced, not about which tiers were attempted (that is `routing`).
+# `llm_fallback` stays in the enum and stays unemitted: it was ADR-020's name
+# for the unconditional fallback that never shipped, and ADR-036 §j keeps it
+# rather than reusing it for a triggered tier that means something else.
+METHODS = {"heading_strict", "heading_lenient", "status_keyword", "llm_fallback",
+           "llm_localize", "llm_extract"}
+ESCALATION_METHODS = {"llm_localize", "llm_extract"}
 # statuses that carry offsets, per ADR-011. `incorporated_by_reference` points
 # at the pointer paragraph — real, inspectable text — so every span-level check
 # must reach it. `missing`/`omitted` have no span by definition.
@@ -196,8 +205,9 @@ def eval_check(result, chk, path=None):
         top = {"normalized_text", "doc_status", "warnings", "meta", "trace",
                "timings", "cost", "items"}
         # the optional keys: ADR-026's `boilerplate`, ADR-029's `tables`,
-        # ADR-032's `blocks`, ADR-033's `images`
-        extra = set(result) - top - {"boilerplate", "tables", "blocks", "images"}
+        # ADR-032's `blocks`, ADR-033's `images`, ADR-036's `routing`
+        extra = set(result) - top - {"boilerplate", "tables", "blocks", "images",
+                                     "routing"}
         if not top <= set(result) or extra:
             return f"envelope keys: missing {sorted(top - set(result))}, undeclared {sorted(extra)}"
         if "images" in result:
@@ -221,6 +231,19 @@ def eval_check(result, chk, path=None):
             why = _blocks_shape(result)
             if why:
                 return f"blocks not in contract shape: {why}"
+        if "routing" in result:
+            # ADR-036 contract shape. Checked here so a malformed routing
+            # record is red on ANY case that asks for escalation, not only on
+            # one that labels a tier outcome — the same rule `tables` follows.
+            why = _routing_shape(result)
+            if why:
+                return f"routing not in contract shape: {why}"
+        elif any(i["method"] in ESCALATION_METHODS for i in result["items"]):
+            # the honesty clause, and the one an implementation is most likely
+            # to break: an item may not claim a tier produced it on an envelope
+            # that carries no record of a tier having run.
+            return ("an item claims an escalation method but the envelope has "
+                    "no `routing` record")
         ds = result["doc_status"]
         if ds not in DOC_STATUSES:
             return f"doc_status {ds!r} not in contract enum"
@@ -326,6 +349,58 @@ def eval_check(result, chk, path=None):
             total = sum(i["end"] - i["start"] for i in extracted)
             if not extracted or total < NO_EMPTY_SUCCESS_FLOOR:
                 return "pipeline returned success with (near-)empty output"
+    elif t == "routing":
+        # ADR-036. Reads the doc-level record by name: whether the trigger
+        # fired, which tiers were attempted and with what outcome, what the run
+        # cost, and which items a tier resolved. `envelope_shape` already
+        # proves the record is internally consistent; this asserts the VALUES a
+        # particular filing must produce, which is the part a refactor can
+        # silently change.
+        if "routing" not in result:
+            return "no routing in result (was escalate set?)"
+        r = result["routing"]
+        if "fired" in chk and r["trigger"]["fired"] != chk["fired"]:
+            return (f"routing.trigger.fired {r['trigger']['fired']} != {chk['fired']}"
+                    f" (codes {r['trigger']['codes']})")
+        if "trigger_codes" in chk and sorted(r["trigger"]["codes"]) != sorted(chk["trigger_codes"]):
+            return f"trigger codes {r['trigger']['codes']} != {chk['trigger_codes']}"
+        if "trigger_items" in chk and sorted(r["trigger"]["items"]) != sorted(chk["trigger_items"]):
+            return f"trigger items {r['trigger']['items']} != {chk['trigger_items']}"
+        if "tiers" in chk and [x["tier"] for x in r["tiers"]] != chk["tiers"]:
+            return f"tiers attempted {[x['tier'] for x in r['tiers']]} != {chk['tiers']}"
+        if "outcomes" in chk and [x["outcome"] for x in r["tiers"]] != chk["outcomes"]:
+            return f"tier outcomes {[x['outcome'] for x in r['tiers']]} != {chk['outcomes']}"
+        if "resolved" in chk and sorted(r["resolved"]) != sorted(chk["resolved"]):
+            return f"routing.resolved {r['resolved']} != {chk['resolved']}"
+        if "usd" in chk and r["cost"]["usd"] != chk["usd"]:
+            return f"routing.cost.usd {r['cost']['usd']} != {chk['usd']}"
+        if "llm_calls" in chk and r["cost"]["llm_calls"] != chk["llm_calls"]:
+            return f"routing.cost.llm_calls {r['cost']['llm_calls']} != {chk['llm_calls']}"
+        if "error_contains" in chk:
+            blob = " ".join(x.get("error", "") for x in r["tiers"])
+            if chk["error_contains"] not in blob:
+                return f"no tier error contains {chk['error_contains']!r}; got {blob!r}"
+    elif t == "escalation_invariant":
+        # ADR-036 §f, asserted as the equality the ADR claims it is rather than
+        # left to `evals/snapshot.py` alone: run the same file with the flag on
+        # and off and compare the fields determinism governs, plus the envelope
+        # key list minus the one key the flag is allowed to add. Self-contained,
+        # like `offsets_invariant_under_exclusion` — it does not care which way
+        # the case itself ran. Only meaningful on a filing whose trigger stays
+        # quiet, which is why the case that runs it also asserts `fired: false`.
+        from src.sec10k.extract import extract_items
+        on = extract_items(path, escalate=True)
+        off = extract_items(path)
+        for k in DETERMINISM_FIELDS:
+            if on.get(k) != off.get(k):
+                return f"escalate=True changed {k} on a document that did not escalate"
+        if sorted(set(on) - {"routing"}) != sorted(off):
+            return (f"escalate=True changed the envelope key list: "
+                    f"{sorted(set(on) - {'routing'})} vs {sorted(off)}")
+        if on["cost"] != {"llm_calls": 0, "tokens": 0, "usd": 0.0}:
+            return f"a quiet trigger reported a cost: {on['cost']}"
+        if "routing" not in on or "routing" in off:
+            return "the routing key must appear with the flag and only with it"
     elif t == "deterministic":
         from src.sec10k.extract import extract_items
         r2 = extract_items(path)
@@ -668,6 +743,58 @@ BLOCK_KINDS = {"heading", "paragraph", "list_item", "table", "pre"}
 BLOCK_LABEL_KEYS = {"kind", "start", "end", "level", "ordered", "strong", "item"}
 
 
+# ADR-036 §g. The routing record's contract shape, asserted structurally so a
+# case that merely asks for escalation still catches a malformed one.
+ROUTING_OUTCOMES = {"resolved", "rejected", "unparseable", "unavailable"}
+COST_KEYS = {"llm_calls", "tokens", "usd"}
+
+
+def _routing_shape(result):
+    """None if `routing` is contract-shaped, else why not.
+
+    The two clauses that are about HONESTY rather than shape, and are the
+    reason this is a check and not a docstring:
+
+    * the record's `cost` must equal the sum of its tiers' costs, and the
+      envelope's own `cost` must equal the record's. A published price a
+      consumer cannot re-derive from the tiers that produced it is exactly the
+      undisclosed-cost shape D11 exists to close.
+    * `resolved` must name only items that actually carry an escalation
+      `method`. A record claiming a resolution the item list does not show is
+      the fabricated-output failure repo rule 4 forbids.
+    """
+    r = result["routing"]
+    if not isinstance(r, dict) or not {"trigger", "tiers", "resolved", "cost"} <= set(r):
+        return f"keys {sorted(r) if isinstance(r, dict) else type(r).__name__}"
+    t = r["trigger"]
+    if not isinstance(t, dict) or not {"fired", "codes", "items"} <= set(t):
+        return "trigger missing fired/codes/items"
+    if not isinstance(t["fired"], bool):
+        return f"trigger.fired {t['fired']!r} is not a bool"
+    if not t["fired"] and r["tiers"]:
+        return "a trigger that did not fire may not report attempted tiers"
+    total = {k: 0 for k in COST_KEYS}
+    for tier in r["tiers"]:
+        if not {"tier", "outcome", "cost"} <= set(tier):
+            return f"tier record missing tier/outcome/cost: {sorted(tier)}"
+        if tier["outcome"] not in ROUTING_OUTCOMES:
+            return f"tier outcome {tier['outcome']!r} not in {sorted(ROUTING_OUTCOMES)}"
+        if not COST_KEYS <= set(tier["cost"]):
+            return f"tier {tier['tier']} cost missing {sorted(COST_KEYS - set(tier['cost']))}"
+        for k in COST_KEYS:
+            total[k] = round(total[k] + tier["cost"][k], 6)
+    if {k: round(r["cost"][k], 6) for k in COST_KEYS} != total:
+        return (f"routing.cost {r['cost']} != {total} summed over its own tiers")
+    if {k: round(result["cost"][k], 6) for k in COST_KEYS} != total:
+        return (f"envelope cost {result['cost']} != routing total {total}")
+    by_tier = {i["item"] for i in result["items"]
+               if i["method"] in ESCALATION_METHODS}
+    if set(r["resolved"]) != by_tier:
+        return (f"routing.resolved {sorted(r['resolved'])} != the items whose "
+                f"method names a tier {sorted(by_tier)}")
+    return None
+
+
 def _blocks_shape(result):
     """None if `result['blocks']` is in ADR-032's contract shape, else why."""
     blocks = result["blocks"]
@@ -845,35 +972,70 @@ def table_fidelity(result, chk):
     return out
 
 
+def _no_credential():
+    """Remove `ANTHROPIC_API_KEY` from this process's environment, restoring it
+    on exit. Every sec10k case runs inside this.
+
+    Cost-discipline rule 4 — "the `fast` suite makes zero paid calls" — is
+    enforced HERE, structurally, rather than trusted: a case declaring
+    `escalate: true` would otherwise behave differently on a developer's
+    machine depending on whether they happened to have a key exported, and on
+    a machine that had one it would spend real money inside the pre-commit
+    gate. Clearing it makes every suite run take the refusal path, which is
+    also the path D11 most needs a case to pin while no credential exists.
+
+    A future paid case does not weaken this: it gets its own suite tag and its
+    own opt-in, and this stays the default for everything in `fast`/`invariant`.
+    """
+    import contextlib
+    import os
+
+    @contextlib.contextmanager
+    def _ctx():
+        saved = os.environ.pop("ANTHROPIC_API_KEY", None)
+        try:
+            yield
+        finally:
+            if saved is not None:
+                os.environ["ANTHROPIC_API_KEY"] = saved
+    return _ctx()
+
+
 def run_case(case):
     from src.sec10k.extract import extract_items
     path = str(ROOT / case["input"]["path"])
-    result = extract_items(
-        path, exclude_boilerplate=case["input"].get("exclude_boilerplate", False),
-        tables=case["input"].get("tables", False),
-        blocks=case["input"].get("blocks", False),
-        images=case["input"].get("images", False))
-    extracted = [i for i in result["items"] if i["status"] == "extracted"]
+    # the WHOLE case runs keyless, not just the first extraction: `deterministic`,
+    # `offsets_invariant_under_exclusion` and `escalation_invariant` each re-run
+    # the pipeline from inside the check loop, and a suite that spends money on
+    # the second run of a file has not made zero paid calls.
+    with _no_credential():
+        result = extract_items(
+            path, exclude_boilerplate=case["input"].get("exclude_boilerplate", False),
+            tables=case["input"].get("tables", False),
+            blocks=case["input"].get("blocks", False),
+            images=case["input"].get("images", False),
+            escalate=case["input"].get("escalate", False))
+        extracted = [i for i in result["items"] if i["status"] == "extracted"]
 
-    failures = []
-    # ADR-029 §c: every `table` check's cell/row counts, summed for the run;
-    # ADR-032 §c: every `blocks` check's block/bounds counts, the same way
-    cells, rows, blks, bnds = [0, 0], [0, 0], [0, 0], [0, 0]
-    for chk in case["expect"]["checks"]:
-        if chk["type"] == "table":
-            f = table_fidelity(result, chk)   # one comparison: the verdict AND the metric
-            reason = f["why"]
-            cells = [cells[0] + f["cells"][0], cells[1] + f["cells"][1]]
-            rows = [rows[0] + f["rows"][0], rows[1] + f["rows"][1]]
-        elif chk["type"] == "blocks":
-            f = structure_fidelity(result, chk)
-            reason = f["why"]
-            blks = [blks[0] + f["blocks"][0], blks[1] + f["blocks"][1]]
-            bnds = [bnds[0] + f["bounds"][0], bnds[1] + f["bounds"][1]]
-        else:
-            reason = eval_check(result, chk, path=path)
-        if reason:
-            failures.append({"check": chk, "why": reason})
+        failures = []
+        # ADR-029 §c: every `table` check's cell/row counts, summed for the run;
+        # ADR-032 §c: every `blocks` check's block/bounds counts, the same way
+        cells, rows, blks, bnds = [0, 0], [0, 0], [0, 0], [0, 0]
+        for chk in case["expect"]["checks"]:
+            if chk["type"] == "table":
+                f = table_fidelity(result, chk)   # one comparison: the verdict AND the metric
+                reason = f["why"]
+                cells = [cells[0] + f["cells"][0], cells[1] + f["cells"][1]]
+                rows = [rows[0] + f["rows"][0], rows[1] + f["rows"][1]]
+            elif chk["type"] == "blocks":
+                f = structure_fidelity(result, chk)
+                reason = f["why"]
+                blks = [blks[0] + f["blocks"][0], blks[1] + f["blocks"][1]]
+                bnds = [bnds[0] + f["bounds"][0], bnds[1] + f["bounds"][1]]
+            else:
+                reason = eval_check(result, chk, path=path)
+            if reason:
+                failures.append({"check": chk, "why": reason})
 
     items_summary = [{
         "item": i["item"], "status": i["status"],

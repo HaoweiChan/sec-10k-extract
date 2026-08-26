@@ -1,0 +1,13 @@
+{
+  "id": "escalation-seam-offline",
+  "task": "repo_hygiene",
+  "suites": ["invariant", "fast"],
+  "input": {"checks": ["escalation_seam"]},
+  "expect": {},
+  "triage": {
+    "class": "cost-regression",
+    "note": "The gate must stay offline and $0 even though the repo now contains an API client. Dynamic, not a text pin: a subprocess imports `src.sec10k.extract`, `src.sec10k.eval_adapter`, `src.sec10k.escalate` and `evals.run`, and reports `sys.modules` — any of urllib.request / urllib.error / http.client / socket / ssl / requests / httpx / anthropic / openai in that set is a failure that names itself. A static read of import statements could not see a transitive one, which is the whole reason this is measured rather than asserted. Two vacuity guards keep it from passing on a repo with no client at all: `src/sec10k/llm.py` must exist and must itself import urllib.request, and nothing under src/ or evals/ may import `llm` at module scope — `escalate.route` imports it inside the function, and hoisting that one line is exactly the edit that would break the seam while every other check stayed green.",
+    "note_negative_space": "This proves a gate run LOADS no network stack. It does not prove the program cannot reach the network — `route()` imports the client lazily on purpose, and calls it when a credential and a fired trigger are both present."
+  },
+  "provenance": "D11, created 2026-08-26. Red at origin/main (5a44758): src/sec10k/llm.py does not exist there, and the check refuses to pass vacuously on a repo with no client."
+}

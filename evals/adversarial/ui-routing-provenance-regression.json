@@ -1,0 +1,13 @@
+{
+  "id": "ui-routing-provenance-regression",
+  "task": "repo_hygiene",
+  "suites": ["invariant", "fast"],
+  "input": {"checks": ["routing_provenance"],
+            "file": "evals/fixtures/repo_hygiene/routing-strip-missing.html"},
+  "expect": {"min_failures": 7, "max_failures": 7},
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "The counterpart PR #21 R1/R2/R3 established: a check that asserts the real file is clean also passes vacuously once it regresses, so a known-bad fixture has to prove the miss is actually caught. Six mutations, seven failures, exact count — the checkbox carries two independent defects (`checked` and `disabled`) on one element — `min_failures` alone is a floor and would let a regressed check that ALSO over-fires report green (PR #21 round-2 R5). The shapes are listed in the fixture's own header comment; the two that matter most are the checked-and-disabled checkbox (a paid tier as the deployed default, on a control nobody can untick) and a `routingStrip` that is declared, is never called from the banner, and prints no cost — the demo's own failure shape, a number computed and not shown, moved one layer up."
+  },
+  "provenance": "D11, created 2026-08-26 alongside the check it falsifies, per hard rule 2."
+}

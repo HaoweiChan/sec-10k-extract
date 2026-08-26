@@ -1,0 +1,43 @@
+<!-- D11 regression fixture (ADR-036 §i). Six ways the routing display goes
+     silent while every OTHER hop stays correctly wired, so the check has to
+     distinguish rather than blanket-fail.
+
+       1. the escalate checkbox ships `checked`, so a paid tier is the
+          deployed default — the one shape that costs real money.
+       2. ...and `disabled` as well, the ADR-026 pair: the wire is intact and
+          the capability is unreachable. Both on one element deliberately;
+          they are independent failures of the same input.
+       3. `routingStrip` is declared and the banner never calls it, so the
+          doc-level record exists in the envelope and appears nowhere on
+          screen. This is the demo's own shape — a number computed and not
+          shown — one layer up.
+       4. the strip prints each tier's outcome but not its COST, which is the
+          undisclosed-price failure the whole milestone exists to close.
+       5. the item pane no longer says what the deterministic path had said,
+          so a model-moved span reads like any heading match.
+       6. the upload mode drops the flag from the query string, so one of the
+          three input modes can never escalate at all.
+
+     Caught by evals/adversarial/ui-routing-provenance-regression.json
+     (expect.min_failures/max_failures). -->
+<label class="opt"><input type="checkbox" id="escalate" checked disabled> escalate on trigger</label>
+<script>
+function escalateOn(){ const c = $("#escalate"); return !!(c && c.checked); }
+function routingStrip(r){
+  if(!r) return "";
+  const tiers = (r.tiers || []).map(t => `${esc(t.tier)} → <b>${esc(t.outcome)}</b>`).join("; ");
+  return ` <span class="src" id="routing">routing: ${tiers}</span>`;
+}
+$("#banner").innerHTML = `doc_status: ${esc(st)}` + coverageStrip(w);
+$("#pane").innerHTML = `
+    <dl class="ev">
+      <dt>heading matched</dt><dd>${it.heading_text ? esc(it.heading_text) : "—"}</dd>
+    </dl>`;
+$("#go-fx").onclick = () => call("/api/extract/fixture",
+  {method:"POST", headers:{"Content-Type":"application/json"},
+   body: JSON.stringify({fixture: $("#fx").value, escalate: escalateOn()})});
+$("#go-up").onclick = () => {
+  const f = $("#up").files[0];
+  call("/api/extract/upload?filename=" + encodeURIComponent(f.name), {method:"POST", body: f});
+};
+</script>

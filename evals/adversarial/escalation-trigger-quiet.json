@@ -1,0 +1,67 @@
+{
+  "id": "escalation-trigger-quiet",
+  "task": "sec10k",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "path": "evals/fixtures/cat-2023/filing.htm",
+    "escalate": true
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "envelope_shape"
+      },
+      {
+        "type": "routing",
+        "fired": false,
+        "trigger_codes": [],
+        "tiers": [],
+        "resolved": [],
+        "usd": 0.0,
+        "llm_calls": 0
+      },
+      {
+        "type": "escalation_invariant"
+      },
+      {
+        "type": "doc_status",
+        "value": "success"
+      },
+      {
+        "type": "item_field",
+        "item": "1",
+        "field": "method",
+        "value": "heading_strict"
+      },
+      {
+        "type": "item_field",
+        "item": "7",
+        "field": "method",
+        "value": "heading_strict"
+      },
+      {
+        "type": "item_field",
+        "item": "8",
+        "field": "method",
+        "value": "heading_strict"
+      },
+      {
+        "type": "warning_absent",
+        "code": "escalation_unavailable"
+      },
+      {
+        "type": "warning_absent",
+        "code": "escalation_unresolved"
+      }
+    ]
+  },
+  "triage": {
+    "class": "cost-regression",
+    "note": "The half of D11 the cost argument lives on, and the one a refactor is most likely to break silently. A modern full-taxonomy real filing extracts cleanly, so the D8 document-level signal stays quiet, so the router must return before it reaches a tier: no call, no dollar, and — asserted by `escalation_invariant`, which re-runs the same file with the flag off — an envelope identical in every field determinism governs, differing only by the `routing` key itself. `cat-2023` is deliberately the same fixture ADR-035 section e2 made the eval set's exact-`success` pin, so if the escalation path ever emits a warning on a clean filing this case reports it twice over. The three `item_field` pins carry the item-level half: with the trigger quiet, no item may claim an escalation `method`.",
+    "note_negative_space": "This case cannot show that a tier WORKS — nothing here ever calls one. It shows that a clean filing costs nothing, which is a different and much cheaper claim."
+  },
+  "provenance": "D11, created 2026-08-26 before src/sec10k/escalate.py existed, per hard rule 2. Red at origin/main (5a44758), measured rather than assumed — record in tasks/reviews/d11-red-first.txt. TWO failures, not the whole case, and the reason is worth stating because it is the shape a reviewer should be suspicious of: origin/main's sec10k adapter never passes `escalate` at all, so the extra input key is silently ignored and every check that does not name routing still passes over a perfectly good deterministic run. The two that go red are `routing` (unknown check type 'routing') and `escalation_invariant` (the same). The case is red-first on exactly the claims it adds, and on nothing else."
+}

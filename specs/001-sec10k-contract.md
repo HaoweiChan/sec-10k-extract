@@ -195,6 +195,27 @@ them all); the example once showed `lenient_match`, which nothing emits.
   background images are not recorded (ADR-033 §e). `envelope_shape` refuses
   any other shape.
 
+- **`routing` (optional, ADR-036)**: present *only* when the caller passes
+  `extract_items(path, escalate=True)`. The tiered slow path's record —
+  `{trigger: {fired, codes, items, message}, tiers: [...], resolved: [...],
+  cost: {llm_calls, tokens, usd}}`. `trigger.fired` is true exactly when a
+  warning in `warnings` carries a code in `escalate.TRIGGER_CODES`
+  (`low_item_coverage` today); `trigger.items` names the items D8 flagged as
+  stubs or pointers and is a hint to the tiers, not an escalation on its own
+  (ADR-035 §c). Each `tiers` entry is `{tier, model, items, outcome, cost,
+  ...}` with `outcome` ∈ `resolved` | `rejected` | `unparseable` |
+  `unavailable`; a tier that answered from the response cache carries
+  `cached: true` and a zero cost. `resolved` names exactly the items whose
+  `method` is an escalation method, and `routing.cost` is exactly the sum of
+  its own tiers' costs, which is exactly the envelope's top-level `cost` —
+  three statements `envelope_shape` re-derives rather than trusts, because a
+  published price a consumer cannot check is the failure D11 exists to close.
+  A trigger that did not fire may not report attempted tiers. This is the one
+  optional key that is **not** a pure annotation: a resolved tier moves the
+  affected items' `start`, `end`, `method` and `heading_text`, preserving the
+  deterministic answer under `evidence.deterministic`. With the trigger quiet
+  nothing moves — see ADR-036 §f for the measured blast radius.
+
 ## Envelope rules (v2, normative)
 
 - `doc_status` ∈ `success` | `success_with_warning` | `ambiguous` |
@@ -229,8 +250,18 @@ them all); the example once showed `lenient_match`, which nothing emits.
   `status_keyword` — no heading was found and the entry exists because INV-S4
   requires every expected item to appear with a status (the name predates the
   implementation and is kept for v2 additivity); `llm_fallback` — declared,
-  never emitted (ADR-020). `envelope_shape` refuses any value outside the
-  enum; `item_field` pins the value per item.
+  never emitted (ADR-020, and ADR-036 §j keeps it that way rather than reusing
+  the name for a triggered tier that means something else).
+  ADR-036 adds `llm_localize` and `llm_extract`: the item's span was produced
+  by escalation rung 1 or rung 2 and survived `escalate.verify`. Both are
+  emitted only on an `escalate=True` run, and only on an envelope that also
+  carries a `routing` record naming the same items in `resolved` —
+  `envelope_shape` refuses an item that claims a tier the envelope has no
+  record of. An item carrying either value has `heading_text: null` (its span
+  no longer opens with the heading the segmenter matched) and an
+  `evidence.deterministic` block holding the offsets, method, heading and
+  title similarity the $0 path had published. `envelope_shape` refuses any
+  value outside the enum; `item_field` pins the value per item.
 
 ## Envelope fields (v2, informative)
 

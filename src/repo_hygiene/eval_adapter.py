@@ -17,6 +17,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -848,9 +849,9 @@ WIRE_UI = [
     # S9 (ADR-032): the Markdown checkbox rides the same three wires; the
     # fixture/url pins moved with the body literal, deliberately
     ("the fixture mode puts the checkbox value on the wire",
-     'JSON.stringify({fixture: $("#fx").value, exclude_boilerplate: excludeBp(), markdown: renderMd()})'),
+     'JSON.stringify({fixture: $("#fx").value, exclude_boilerplate: excludeBp(), markdown: renderMd(), escalate: escalateOn()})'),
     ("the url mode puts the checkbox value on the wire",
-     'JSON.stringify({url: $("#url").value, exclude_boilerplate: excludeBp(), markdown: renderMd()})'),
+     'JSON.stringify({url: $("#url").value, exclude_boilerplate: excludeBp(), markdown: renderMd(), escalate: escalateOn()})'),
     ("the upload mode appends the checkbox value to its query string",
      '(excludeBp() ? "&exclude_boilerplate=1" : "")'),
     ("the pane SAYS it is hiding text — R5's defect was un-stripped text "
@@ -893,9 +894,13 @@ UNIQUE_UI = [
 
 WIRE_API = [
     # S9 (ADR-032) added the Markdown flag to the same call; the pin moved
-    # with it deliberately, and the wire was re-checked (see the ADR)
+    # with it deliberately, and the wire was re-checked (see the ADR). D11
+    # (ADR-036) added `escalate=escalate` the same way — same rule, same
+    # re-check: the flag reaches `extract_items` unmodified, and the pin now
+    # spans two source lines because the call does.
     ("_run forwards the flag into extract_items unmodified",
-     "extract_items(path, exclude_boilerplate=exclude_boilerplate, blocks=markdown)"),
+     "extract_items(path, exclude_boilerplate=exclude_boilerplate, "
+     "blocks=markdown, escalate=escalate)"),
 ]
 
 # no trailing `\)`: `@app.post("/api/extract/x", response_model=None)` is
@@ -2426,6 +2431,163 @@ def check_deep_link(case):
     return bad, {"deep_link_pins": len(inp.get("wire", []))}
 
 
+
+# ---------------------------------------------------------------- D11 (ADR-036)
+
+# Module names whose presence in `sys.modules` means a network stack was
+# loaded. `ssl` and `socket` are there because a client that reached for them
+# directly would satisfy a check that only knew about `urllib`.
+NET_MODULES = ("urllib.request", "urllib.error", "http.client", "socket", "ssl",
+               "requests", "httpx", "anthropic", "openai")
+# The gate's own entry points. Importing any of these must not pull a network
+# module in — that is the seam ADR-036 §h rules on.
+SEAM_IMPORTS = ("src.sec10k.extract", "src.sec10k.eval_adapter",
+                "src.sec10k.escalate", "evals.run")
+LLM_MODULE = "src/sec10k/llm.py"
+
+
+def check_escalation_seam(case):
+    """ADR-036 §h. The paid path must be UNREACHABLE from a gate run.
+
+    Not a text pin — a DYNAMIC one, because the property is about what an
+    import actually loads and a static read of `import` statements cannot see
+    a transitive one. A subprocess imports the gate's entry points and reports
+    `sys.modules`; any network module in that set fails the check and names
+    itself. `evals/bench.py` already self-checks the same property for its own
+    AST; this extends it to the modules the eval harness runs.
+
+    Two vacuity guards, because a check that passes on a repo with no client
+    at all would be worthless the day someone deletes the seam:
+
+    * `src/sec10k/llm.py` must exist and must itself import `urllib.request` —
+      the network code has to be real and has to live there;
+    * `llm` must not be imported at MODULE scope anywhere under `src/` or
+      `evals/`. `escalate.route` imports it inside the function, which is what
+      makes the first property hold; hoisting that import to the top of
+      `escalate.py` would break the seam while every other check stayed green.
+
+    What this does NOT prove: that no call is made at runtime. A module can be
+    imported lazily inside a function this check never calls, which is
+    precisely what `route()` does — deliberately. The property here is "a gate
+    run loads no network stack", not "this program cannot reach the network".
+    """
+    inp = case.get("input", {})
+    bad = []
+    mods = list(inp.get("imports", SEAM_IMPORTS))
+    probe = (
+        "import sys; sys.path.insert(0, %r)\n" % str(ROOT)
+        + "".join(f"import {m}\n" for m in mods)
+        + "import json; print(json.dumps(sorted(sys.modules)))"
+    )
+    got = subprocess.run([sys.executable, "-c", probe], cwd=str(ROOT),
+                         capture_output=True, text=True, timeout=120)
+    if got.returncode != 0:
+        return [f"importing {mods} failed: {got.stderr.strip().splitlines()[-1:]}"]
+    loaded = set(json.loads(got.stdout))
+    hit = sorted(set(NET_MODULES) & loaded)
+    if hit:
+        bad.append(f"importing {mods} loaded network modules {hit} — the gate "
+                   "must stay offline and $0 (ADR-036 §h)")
+
+    llm = ROOT / inp.get("llm_file", LLM_MODULE)
+    if not llm.exists():
+        bad.append(f"{llm.name} does not exist — this check would pass "
+                   "vacuously on a repo with no client at all")
+    elif "import urllib.request" not in _live(llm.read_text(), "py"):
+        bad.append(f"{llm.name} does not import urllib.request — the seam is "
+                   "only meaningful if the network code really lives there")
+
+    hoisted = []
+    for d in ("src", "evals"):
+        for f in sorted((ROOT / d).rglob("*.py")):
+            if f.name == "llm.py" or "__pycache__" in f.parts:
+                continue
+            for node in ast.walk(ast.parse(f.read_text())):
+                if not isinstance(node, (ast.Import, ast.ImportFrom)):
+                    continue
+                names = ([a.name for a in node.names] if isinstance(node, ast.Import)
+                         else [node.module or ""])
+                if not any(n.endswith("sec10k.llm") or n == "llm" for n in names):
+                    continue
+                if node.col_offset == 0:   # module scope
+                    hoisted.append(f"{f.relative_to(ROOT)}:{node.lineno}")
+    if hoisted:
+        bad.append(f"`llm` is imported at module scope in {hoisted} — that "
+                   "hoists the network stack onto the gate's import graph")
+    return bad, {"escalation_seam_modules_loaded": len(loaded)}
+
+
+# The routing display, pinned the way `confidence_honesty` pins the qualifier:
+# as TEXT that must be present and unique in one file. Read the long warning in
+# `check_confidence_honesty` — it applies here word for word. A green run says
+# the pinned expressions are in `index.html`; it does not say a browser renders
+# them, and no static read of one file could.
+ROUTING_UI = [
+    ("the doc-level routing strip is declared", "function routingStrip(r)"),
+    ("...and the banner calls it", "routingStrip(v.routing)"),
+    ("the strip distinguishes a quiet trigger from an absent record",
+     'if(!r) return "";'),
+    ("the strip prints the money, not just the outcome",
+     '`$${Number(c.usd || 0).toFixed(4)}'),
+    ("the strip names each tier's outcome", "<b>${esc(t.outcome)}</b>"),
+    ("the item pane shows what the deterministic path had said",
+     "it.evidence && it.evidence.deterministic"),
+    ("...naming the tier that replaced it", "<b>${esc(it.method)}</b>"),
+    ("the checkbox is read at request time, like every other flag",
+     'function escalateOn(){ const c = $("#escalate"); return !!(c && c.checked); }'),
+]
+
+
+def check_routing_provenance(case):
+    """D11 (ADR-036 §i). Routing is user-visible or it is not routing.
+
+    Both halves the ledger row names, in one check:
+
+    * the DOC-level record — trigger fired or not, each tier attempted with
+      its outcome and its cost — rendered in the banner strip;
+    * the PER-ITEM tier, which rides the existing `method` field the sidebar
+      and pane header already print as `via ...`, plus the pane's evidence row
+      naming what the $0 path had said before a tier replaced it.
+
+    Plus the property that makes the whole cost argument checkable by a
+    reader: the escalate checkbox must ship UNCHECKED and not `disabled` —
+    unchecked because a paid tier must never be the default, and not disabled
+    because a wire nobody can reach is not a shipped capability. That pair is
+    exactly what `ui-boilerplate-wire-values` had to add for ADR-026's flag
+    after a mutation passed with the box permanently off.
+    """
+    inp = case.get("input", {})
+    src = (ROOT / inp.get("file", UI_STYLESHEET)).read_text()
+    live = _live(src, "js")
+    bad = []
+    for label, expr in ROUTING_UI:
+        n = _squash(live).count(_squash(expr))
+        if n != 1:
+            bad.append(f"index.html: {label} — expected exactly one "
+                       f"`{expr}`, found {n}")
+    box = re.search(r'<input[^>]*id="escalate"[^>]*>', live)
+    if not box:
+        bad.append('index.html: no `id="escalate"` checkbox — the routing '
+                   "record is unreachable from the page")
+    else:
+        # bare boolean attributes, so `\b` on the tag text and NOT `_attrs`,
+        # which only sees name="value" pairs — the same detection
+        # `check_boilerplate_plumbing` uses for #exclude-bp, for the same reason
+        tag = box.group(0)
+        if re.search(r"\bchecked\b", tag):
+            bad.append("#escalate defaults to CHECKED — a paid tier must never "
+                       f"be the default: {tag}")
+        if re.search(r"\bdisabled\b", tag):
+            bad.append("#escalate is DISABLED — the wire is intact and the "
+                       f"capability is unreachable: {tag}")
+    for mode, expr in (("fixture", 'escalate: escalateOn()'),
+                       ("upload", '(escalateOn() ? "&escalate=1" : "")')):
+        if _squash(expr) not in _squash(live):
+            bad.append(f"index.html: the {mode} mode does not put the "
+                       f"checkbox on the wire — missing `{expr}`")
+    return bad
+
+
 CHECKS = {
     "adr_headers": lambda case: check_adr_headers(),
     "adr_index": lambda case: check_index(),
@@ -2457,6 +2619,8 @@ CHECKS = {
     "item_text_region": check_item_text_region,
     "mode_button_names": check_mode_button_names,
     "deep_link": check_deep_link,
+    "escalation_seam": check_escalation_seam,
+    "routing_provenance": check_routing_provenance,
 }
 
 
