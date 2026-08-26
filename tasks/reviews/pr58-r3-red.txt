@@ -1,0 +1,98 @@
+PR #58 round 3 — repro captured BEFORE any fix, and the mutation transcript
+proving each binding AFTER it (repo hard rule 2, plus the orchestrator's round-3
+condition: "a check whose red you did not watch is the thing that got us here").
+
+Tree under review: task/D11 at 1e019d2. Date: 2026-08-27.
+Findings and acceptance: tasks/reviews/pr58-r3.json — that file is the authority.
+
+Mutations run on scratch copies (`tar -c | tar -x`), never on the working tree.
+No network call is made; no held-out fixture is read or run.
+
+=============================================================== PART 1 — BEFORE
+
+--- R17 (HIGH): the strip's sentence is false for rung 1 -----------------------
+  axp-2008     len(text)=   351503 offset=   178087 shown=  60000 truncated=True
+               the strip says 'saw only the first 60,000 chars';
+               the model actually saw chars 178,087-238,087
+  bac-2006     len(text)=   705848 offset=   663941 shown=  41907 truncated=True
+               the strip says 'saw only the first 41,907 chars';
+               the model actually saw chars 663,941-705,848
+  18 of 43 dev documents produce a rung-1 entry with truncated=True and offset>0
+  the tier record publishes NO offset, so the envelope cannot disambiguate it either
+
+--- R18: the lock check is evadable -------------------------------------------
+  mutated 1e019d2: `!= "0"`, defaults `or 10 ** 9` / `or 10.0 ** 9`
+  with SEC10K_ESCALATION_ENABLED UNSET, arming evaluates to: True
+  check_escalation_locks -> []
+  [eval] suite 'invariant': 78/78 = 1.000  (+3 enumerated debt, unscored)
+  Lock 1's stated property — "a credential alone never arms paid work"
+  (ADR-036 §h2) — defeated, with the gate green and the check silent.
+
+--- R19: the cap and the truncation fields are unbound -------------------------
+  mutated 1e019d2: rung 2's slice reverted to `text, 0` (the cap is gone)
+  [eval] suite 'invariant': 78/78 = 1.000  (+3 enumerated debt, unscored)
+  [eval] suite 'fast': 141/141 = 1.000  (+3 enumerated debt, unscored)
+  python3 -m src.sec10k.escalate -> [escalate self-check] ok
+
+  mutated 1e019d2: input_chars/truncated deleted from the tier record
+  [eval] suite 'invariant': 78/78 = 1.000  (+3 enumerated debt, unscored)
+  python3 -m src.sec10k.escalate -> [escalate self-check] ok
+
+  The round-2 _demo did not bind either: it asserted
+  `len(big[:EXTRACT_WINDOW]) == EXTRACT_WINDOW` on a LOCAL string — true for
+  every value of the constant, and never reaching `route`.
+
+--- R20/R21/R23: the sweep that stopped short ---------------------------------
+  R20 prompts/023-d11-tiered-escalation.md:29:  road not taken — an estimated $3.4 per dev sweep versus $0.056 — because
+  R20 specs/decisions/ADR-036-tiered-escalation.md:25:**Because**: measured over all 43 dev filing fixtures, `low_item_cover
+  R21 specs/decisions/ADR-036-tiered-escalation.md:24:**Ruling**: four decisions. (1) The ladder is `deterministic → llm_l
+  R21 specs/decisions/ADR-036-tiered-escalation.md:67:rung 2   llm_extract          anthropic/claude-opus-5, the whole norma
+  R21 specs/decisions/INDEX.md:44:- ADR-036 — D11: the model tier ships as a TRIGGERED slow path behind `extract_items(pat
+  R23 634:**Neither lock touches a local run.** The eval suites, `python3 -m
+  R22 94:# same worst case the dev corpus already measured — an estimated $1.5638 at
+
+================================================================ PART 2 — AFTER
+
+Every mechanism this round touches, mutated on the REPAIRED tree. Both layers
+are reported per mutation, because they do not always agree and pretending they
+do is how the previous rounds' claims went wrong.
+
+  MUTATE   R18 arming: `== "1"` -> `!= "0"` (evaluates True with the var UNSET)
+    eval gate : 'invariant': 78/79 = 0.987  (+3 enumerated debt, unscored)   FAIL=['ui-escalation-locks']
+    ci _demo  : python3 -m src.sec10k.escalate -> ok
+    VERDICT   : RED
+  MUTATE   R18 ceilings: both `or <default>` values -> 10 ** 9 / 10.0 ** 9
+    eval gate : 'invariant': 78/79 = 0.987  (+3 enumerated debt, unscored)   FAIL=['ui-escalation-locks']
+    ci _demo  : python3 -m src.sec10k.escalate -> ok
+    VERDICT   : RED
+  MUTATE   R19 cap: rung 2's slice reverted to the whole document
+    eval gate : 'invariant': 79/79 = 1.000  (+3 enumerated debt, unscored)   FAIL=none
+    ci _demo  : python3 -m src.sec10k.escalate -> RED (AssertionError: ("rung 2's input must be CAPPED — this is the assertion whose ab)
+    VERDICT   : RED
+  MUTATE   R19 fields: input_chars/truncated deleted from the tier record
+    eval gate : 'invariant': 78/79 = 0.987  (+3 enumerated debt, unscored)   FAIL=['escalation-no-credential']
+    ci _demo  : python3 -m src.sec10k.escalate -> RED (KeyError: 'input_chars')
+    VERDICT   : RED
+  MUTATE   R17 record: `offset` deleted from the tier record
+    eval gate : 'invariant': 78/79 = 0.987  (+3 enumerated debt, unscored)   FAIL=['escalation-no-credential']
+    ci _demo  : python3 -m src.sec10k.escalate -> RED (KeyError: 'offset')
+    VERDICT   : RED
+  MUTATE   R17 strip: the truncation clause deleted from index.html
+    eval gate : 'invariant': 78/79 = 0.987  (+3 enumerated debt, unscored)   FAIL=['ui-routing-provenance']
+    ci _demo  : python3 -m src.sec10k.escalate -> ok
+    VERDICT   : RED
+  MUTATE   R17 strip: the clause reverted to the FALSE 'first N chars' wording
+    eval gate : 'invariant': 78/79 = 0.987  (+3 enumerated debt, unscored)   FAIL=['ui-routing-provenance']
+    ci _demo  : python3 -m src.sec10k.escalate -> ok
+    VERDICT   : RED
+  RESTORE all seven -> eval gate 'invariant': 79/79 = 1.000  (+3 enumerated debt, unscored), _demo ok
+
+  READ THE THIRD ROW HONESTLY. The cap reversion is caught by the CI unit-tests
+  job (`python3 -m src.sec10k.escalate`, wired by PR #58 R3) and NOT by the eval
+  suite, which stays 79/79. That is the mechanism the round-3 acceptance
+  sanctioned — "_demo drives `route` with a stubbed `call`" — and it is a real
+  gate because CI runs it, but "the gate goes red" would be an overstatement if
+  it were read as the eval suite. It is not. Stated here so nobody has to
+  re-derive it.
+
+  The other six are caught by the eval suite; four of those by BOTH layers.

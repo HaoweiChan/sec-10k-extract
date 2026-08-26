@@ -2540,7 +2540,14 @@ ROUTING_UI = [
     ("the strip prints the money, not just the outcome",
      '`$${Number(c.usd || 0).toFixed(4)}'),
     ("the strip names each tier's outcome", "<b>${esc(t.outcome)}</b>"),
-    ("the item pane shows what the deterministic path had said",
+    # PR #58 R17/R19. The strip's truncation clause was unpinned, so deleting
+    # it left the gate green — and while it existed it said "the first N chars"
+    # about a rung 1 window that starts at an arbitrary offset (18 of 43 dev
+    # documents). Both halves are pinned: the clause exists, and it renders the
+    # RANGE from the record's own `offset`, which is what makes it true.
+    ("the strip says what each rung actually saw when its input was clipped",
+     "t.truncated ? ` · saw chars ${Number(t.offset).toLocaleString()}"),
+    ("...and the item pane shows what the deterministic path had said",
      "it.evidence && it.evidence.deterministic"),
     ("...naming the tier that replaced it", "<b>${esc(it.method)}</b>"),
     ("the checkbox is read at request time, like every other flag",
@@ -2641,6 +2648,29 @@ def _env_get(node):
         node.args[0], ast.Constant) else None
 
 
+# The largest DEFAULT each ceiling may carry. Not the value the operator must
+# choose — that is theirs — but the bound on what an unset variable means.
+# Sized at ADR-036 §h2's published defaults (20 calls, $5.00) with headroom, so
+# raising a default is possible and unbounding it is not.
+DEFAULT_CEILINGS = {"SERVER_MAX_CALLS": 100, "SERVER_MAX_USD": 25.0}
+
+
+def _default_of(node):
+    """The literal in `os.environ.get(...) or <literal>`, or None.
+
+    The mirror of `_env_get`, which steps OVER this operand — which is exactly
+    how an unbounded default slipped past the name check (PR #58 R18).
+    """
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) \
+            and node.func.id in ("int", "float") and node.args:
+        node = node.args[0]
+    if not (isinstance(node, ast.BoolOp) and len(node.values) == 2):
+        return None
+    tail = node.values[1]
+    return tail.value if isinstance(tail, ast.Constant) and isinstance(
+        tail.value, (int, float)) and not isinstance(tail.value, bool) else None
+
+
 def check_escalation_locks(case):
     """ADR-036 §h2. The two locks on the PUBLIC deployment's money, bound by a
     runnable check instead of by prose.
@@ -2694,6 +2724,21 @@ def check_escalation_locks(case):
         bad.append(f"`ESCALATION_ENABLED` does not compare "
                    f"os.environ.get({arm_var!r}); left is "
                    f"{_env_get(armed.left)!r}")
+    else:
+        # PR #58 R18: the SHAPE was pinned and the SEMANTICS were not, so
+        # `!= "0"` passed while evaluating True with the variable UNSET —
+        # defeating Lock 1's whole property, "a credential alone never arms
+        # paid work". The operator and the comparand are the property.
+        want = inp.get("arming_value", "1")
+        if len(armed.ops) != 1 or not isinstance(armed.ops[0], ast.Eq):
+            bad.append(f"`ESCALATION_ENABLED` compares {arm_var} with "
+                       f"{[type(o).__name__ for o in armed.ops]}, not Eq — any "
+                       "other operator arms paid work when the variable is UNSET")
+        rhs = armed.comparators[0] if len(armed.comparators) == 1 else None
+        if not (isinstance(rhs, ast.Constant) and rhs.value == want):
+            bad.append(f"`ESCALATION_ENABLED` compares against "
+                       f"{getattr(rhs, 'value', '<non-constant>')!r}, not the "
+                       f"{want!r} ADR-036 §h2 names")
 
     knobs = {"SERVER_MAX_CALLS": inp.get("calls_var", "SEC10K_ESCALATION_MAX_CALLS"),
              "SERVER_MAX_USD": inp.get("usd_var", "SEC10K_ESCALATION_MAX_USD")}
@@ -2705,6 +2750,25 @@ def check_escalation_locks(case):
             bad.append(f"`{const}` is not read from os.environ[{envvar!r}] "
                        f"(got {_env_get(got)!r}) — a literal here is a ceiling "
                        "the operator cannot lower")
+        else:
+            # PR #58 R18: `_env_get` deliberately steps over the `or <default>`
+            # operand, so an unbounded DEFAULT passed the name check. A ceiling
+            # whose fallback is 10**9 is not a ceiling on a host where the
+            # variable is unset — which is every host that has not been told
+            # about it.
+            dflt = _default_of(got)
+            cap = inp.get("max_default", {}).get(const, DEFAULT_CEILINGS[const])
+            if dflt is None:
+                # says which of the two it is, because "no fallback" and
+                # "a fallback this check cannot evaluate, e.g. `10 ** 9`" are
+                # different defects and the message must not conflate them
+                bad.append(f"`{const}`'s `or <default>` fallback is absent or "
+                           "is not a plain numeric literal (a computed default "
+                           "like `10 ** 9` reads as a ceiling and is not one) — "
+                           "an unset variable must not mean 'no ceiling'")
+            elif not 0 < dflt <= cap:
+                bad.append(f"`{const}`'s default is {dflt}, outside (0, {cap}] — "
+                           "an unbounded default is an unbounded deployment")
 
     budgets = [n for n in ast.walk(tree)
                if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)

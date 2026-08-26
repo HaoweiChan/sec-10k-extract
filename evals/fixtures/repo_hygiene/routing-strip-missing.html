@@ -24,6 +24,13 @@
           the dishonesty this milestone exists to remove, wearing the costume
           of a working feature. Three pinned hops, three failures.
 
+       8. (PR #58 R17/R19) the strip has no truncation clause at all, so a
+          rung that was shown a 60,000-char window of a 351,503-char filing
+          reports its outcome as if it had read the whole thing. The clause
+          that used to sit here said "the first N chars" about a window
+          starting at offset 178,087 — a false sentence on screen, which is
+          why the pin requires the RANGE and not a length.
+
      Caught by evals/adversarial/ui-routing-provenance-regression.json
      (expect.min_failures/max_failures). -->
 <label class="opt"><input type="checkbox" id="escalate" checked disabled> escalate on trigger</label>

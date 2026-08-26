@@ -26,7 +26,10 @@ column look full.** Four decisions came out of holding that line.
   the document. So the router escalates on `low_item_coverage` (1 of 43, 0 of
   28 real) and uses the item-level code only to say WHICH items to ask about
   once something else has escalated. ADR-036 §d4 publishes the price of the
-  road not taken — an estimated $3.4 per dev sweep versus $0.056 — because
+  road not taken. (Both figures in this bullet were hand-typed and both were later
+  found wrong — $3.4 and $0.056 are withdrawn; the derived pair is **$4.5656
+  versus $0.0488**, from `tasks/reviews/d11_sweep_cost.py`. Round 3's entry
+  below is about exactly this.) The number is published because
   the number is the argument, and because D9's falsifier may yet reopen it.
 
 - **Re-derive, do not cite — and report the disagreement you find.** The row
@@ -242,3 +245,44 @@ full.
   rounded up, so no published figure moves and one call's price is bounded on
   arbitrary input; and §h2 states the effective ceiling as MAX_USD **plus one
   call**, because that is what it has always been.
+
+## Round 4 (PR #58 round-3 repair, 2026-08-27) — the pattern the breaker fired on
+
+The circuit breaker fired on a structural observation, not on any one defect:
+**each round's new safety mechanism was itself unbound.** R3 fixed
+"trust-boundary guards enforced by nothing". Round 2 found the R6 money locks
+enforced by nothing. Round 3 found R9's own check evadable and R12's cap
+enforced by nothing — both introduced *inside* the commit that fixed the
+previous level.
+
+- **Assumed:** writing a `_demo` assertion next to a constant binds the
+  constant.
+- **Eval said:** `assert len(big[:EXTRACT_WINDOW]) == EXTRACT_WINDOW` on a
+  local string is true for *every* value of the constant and never reaches
+  `route`. Reverting rung 2's slice left invariant 78/78, fast 141/141 and both
+  self-checks green — under a comment that read "a cap nothing slices by is a
+  comment".
+- **Corrected:** `_demo` drives `route` over an over-long document with a
+  stubbed transport and asserts what the tier record actually reports. The
+  general rule, which is the whole lesson of four rounds: **an assertion binds
+  the property only if mutating the property turns it red — so mutate it, watch
+  the red, restore, watch the green, and put the transcript in the artifact.**
+  A check whose red was never watched is indistinguishable from no check.
+
+- **Assumed:** pinning an AST *shape* pins the *semantics*.
+- **Eval said:** `!= "0"` is still an `ast.Compare` over the right env var, and
+  it evaluates True with the variable **unset** — which is the state every host
+  is in until someone sets it. The check returned `[]`.
+- **Corrected:** the operator and the comparand are the property, so both are
+  pinned, and a second fixture pins the *evasion* rather than the *removal*.
+  Shape-vs-semantics is the same gap as text-pin-vs-behaviour that
+  `check_confidence_honesty`'s docstring has warned about since D7; it recurs
+  because a shape check is so nearly right.
+
+- **Assumed:** a sweep over "the documents I edited" is a sweep.
+- **Eval said:** the stale figures survived in the ADR's own **Ruling header**,
+  its ladder **diagram**, **INDEX.md** — a line the previous repair had edited
+  — and this file. Those four are exactly where a diff-shaped sweep does not
+  look.
+- **Corrected:** swept them explicitly, and found two more counts that *this*
+  round had itself invalidated. Sweeping the diff is not sweeping the claim.

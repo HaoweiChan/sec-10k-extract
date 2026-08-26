@@ -21,9 +21,9 @@ envelope key, two new `method` values), `README.md` (the scope row is
 RE-AFFIRMED, not moved — §e). Narrative:
 `docs/evals/audits/2026-08-25-demo-intel-citi-postmortem.md` §7.
 
-**Ruling**: four decisions. (1) The ladder is `deterministic → llm_localize (small model, unattributed text only) → llm_extract (large model, whole document)`, entered **only** when `low_item_coverage` fires, opt-in behind `escalate=True`, and no rung's answer is used until `escalate.verify` re-derives its offsets against the deterministic output (bounds, `SPAN_FLOOR`, INV-S1 ordering, and a `SIM_FLOOR` heading match). (2) **Text-less / scanned filings stay OUT of scope** and the README row is re-affirmed, so **no vision rung is built** (§e). (3) The envelope publishes a `routing` record and two new `method` values, and the inspector renders both. (4) With no `OPENROUTER_API_KEY` the slow path **refuses loudly** — a `routing` outcome of `unavailable` plus an `escalation_unavailable` warning — and never degrades silently.
-**Because**: measured over all 43 dev filing fixtures, `low_item_coverage` fires on **1 of 43 (0.0233), and on 0 of 28 real EDGAR filings**, so the ladder's default cost is exactly $0.00 and the whole dev corpus escalates for an estimated $0.056; the item-level `item_span_near_empty` fires on 12 of 43 (9 of 28 real) and is deliberately NOT the trigger, because escalating on it would spend money on the A2 class ADR-034 §e2 declined and put the dev escalation rate at 27.9%.
-**Enforced by**: `evals/adversarial/escalation-trigger-quiet.json` and `evals/adversarial/escalation-no-credential.json` (fast + invariant), `evals/adversarial/ui-routing-provenance.json` + `evals/adversarial/ui-routing-provenance-regression.json` (its 10-failure mutation fixture `evals/fixtures/repo_hygiene/routing-strip-missing.html`), `evals/adversarial/escalation-seam-offline.json`, `src/sec10k/escalate.py::_demo`, `src/sec10k/llm.py::_demo`, `src/sec10k/web/view.py::_demo`, `evals/adversarial/escalation-verify-guards.json` (PR #58 R1/R2/R7 — the first case that reaches `verify` at all), `src/sec10k/eval_adapter.py::_routing_shape` + the `routing` / `escalation_invariant` / `verify_guards` check types, and `.github/workflows/ci.yml`'s unit-tests job, which runs both `_demo`s (PR #58 R3: before it did, every guard in this ADR was deletable with the gate 100% green). Red-first record with its sha: `tasks/reviews/d11-red-first.txt`. Measurement: `tasks/reviews/d11_trigger_scan.py` (§c's census) and `tasks/reviews/d11_sweep_cost.py` (§d's dollars, derived from that census and the committed price record rather than retyped — PR #58 R8), plus `evals/adversarial/ui-escalation-locks.json` + its regression fixture, which bind §h2's two money locks (PR #58 R9).
+**Ruling**: four decisions. (1) The ladder is `deterministic → llm_localize (small model, the largest unattributed region, capped at `LOCALIZE_WINDOW`) → llm_extract (large model, the document capped at `EXTRACT_WINDOW`)` — BOTH rungs' inputs are bounded, so one call's price is bounded on arbitrary input, entered **only** when `low_item_coverage` fires, opt-in behind `escalate=True`, and no rung's answer is used until `escalate.verify` re-derives its offsets against the deterministic output (bounds, `SPAN_FLOOR`, INV-S1 ordering, and a `SIM_FLOOR` heading match). (2) **Text-less / scanned filings stay OUT of scope** and the README row is re-affirmed, so **no vision rung is built** (§e). (3) The envelope publishes a `routing` record and two new `method` values, and the inspector renders both. (4) With no `OPENROUTER_API_KEY` the slow path **refuses loudly** — a `routing` outcome of `unavailable` plus an `escalation_unavailable` warning — and never degrades silently.
+**Because**: measured over all 43 dev filing fixtures, `low_item_coverage` fires on **1 of 43 (0.0233), and on 0 of 28 real EDGAR filings**, so the ladder's default cost is exactly $0.00 and the whole dev corpus escalates for an estimated $0.0488 (derived, `tasks/reviews/d11_sweep_cost.py`; the $0.056 this header carried until 2026-08-27 was the pre-OpenRouter figure and is withdrawn — PR #58 R20); the item-level `item_span_near_empty` fires on 12 of 43 (9 of 28 real) and is deliberately NOT the trigger, because escalating on it would spend money on the A2 class ADR-034 §e2 declined and put the dev escalation rate at 27.9%.
+**Enforced by**: `evals/adversarial/escalation-trigger-quiet.json` and `evals/adversarial/escalation-no-credential.json` (fast + invariant), `evals/adversarial/ui-routing-provenance.json` + `evals/adversarial/ui-routing-provenance-regression.json` (its 11-failure mutation fixture `evals/fixtures/repo_hygiene/routing-strip-missing.html`), `evals/adversarial/escalation-seam-offline.json`, `src/sec10k/escalate.py::_demo`, `src/sec10k/llm.py::_demo`, `src/sec10k/web/view.py::_demo`, `evals/adversarial/escalation-verify-guards.json` (PR #58 R1/R2/R7 — the first case that reaches `verify` at all), `src/sec10k/eval_adapter.py::_routing_shape` + the `routing` / `escalation_invariant` / `verify_guards` check types, and `.github/workflows/ci.yml`'s unit-tests job, which runs both `_demo`s (PR #58 R3: before it did, every guard in this ADR was deletable with the gate 100% green). Red-first record with its sha: `tasks/reviews/d11-red-first.txt`. Measurement: `tasks/reviews/d11_trigger_scan.py` (§c's census) and `tasks/reviews/d11_sweep_cost.py` (§d's dollars, derived from that census and the committed price record rather than retyped — PR #58 R8), plus `evals/adversarial/ui-escalation-locks.json` with its two mutation fixtures — `escalation-locks-removed.py` (the locks deleted, PR #58 R9) and `escalation-locks-evaded.py` (every name and shape intact and both locks defeated by three one-token edits, PR #58 R18) — which bind §h2's locks.
 
 ---
 
@@ -64,7 +64,8 @@ rung 1   llm_localize         openai/gpt-5-mini, input = the largest UNATTRIBUTE
    │                          region only, capped at 60,000 chars
    │     … verify() accepts the answer?      yes → STOP.
    ▼
-rung 2   llm_extract          anthropic/claude-opus-5, the whole normalized text
+rung 2   llm_extract          anthropic/claude-opus-5, normalized text capped
+                              at EXTRACT_WINDOW = 1,250,000 chars
          … verify() accepts?  no → the deterministic spans stand, and the
                                    envelope says the ladder resolved nothing.
 ```
@@ -478,7 +479,7 @@ this tree, then diffed key by key.
 ```
 origin/main   dev: 58 files  sha256=58364186aff9dad3f7443de4b5447ae3a7894e76fc01ad1592fd03a4b4479d0f
               heldout: 7 files  sha256=f80025699bc34f06af6ea0fb3457106593ec858c4d89d4144870e339b00e191a
-task/D11      dev: 60 files  sha256=b79ec9333dde12bb7516473f3984267c761a02f2d37250281530fa6d7745fe0e
+task/D11      dev: 61 files  sha256=d011ead7c65f7bf9bbe5fdd6f43feeab8c8c4ef29bc657457fc815ad89f2bb39
               heldout: 7 files  sha256=f80025699bc34f06af6ea0fb3457106593ec858c4d89d4144870e339b00e191a
 ```
 
@@ -486,16 +487,20 @@ task/D11      dev: 60 files  sha256=b79ec9333dde12bb7516473f3984267c761a02f2d372
 > earlier one (PR #58 R10).** The first published value was taken before the
 > round-1 repair edited two mutation fixtures, so a reader re-deriving it got a
 > different number — which defeats the entire point of a section whose claim is
-> "re-runnable". Re-taken after the last fixture change in this branch.
+> "re-runnable". Re-taken after the last fixture change in this branch, and
+> re-taken again in the round-3 repair, which added a third mutation fixture
+> (`escalation-locks-evaded.py`) and edited a fourth. Shipping a digest known
+> to be one commit stale is how R10 arose; doing it inside the commit that
+> closes R10's siblings would be the same mistake one level deeper.
 
 **The held-out sha is byte-identical.** So is every filing document in dev.
 The dev sha moves for two reasons, both of which are files rather than
 behaviour:
 
-* two new files, `evals/fixtures/repo_hygiene/routing-strip-missing.html` and
-  `escalation-locks-removed.py` — the mutation fixtures for the two new
-  `repo_hygiene` checks, which the snapshot harness sweeps because it sweeps
-  everything under `evals/fixtures`;
+* three new files, `evals/fixtures/repo_hygiene/routing-strip-missing.html`,
+  `escalation-locks-removed.py` and `escalation-locks-evaded.py` — the mutation
+  fixtures for the two new `repo_hygiene` checks, which the snapshot harness
+  sweeps because it sweeps everything under `evals/fixtures`;
 * three edited files, `repo_hygiene/boilerplate-checkbox-default-on.html`,
   `boilerplate-wire-values.html` and `boilerplate-wire-values.py` — the ADR-026
   wire mutation fixtures, whose *text* was edited so their correct hops carry
@@ -533,6 +538,16 @@ check `escalation_locks` with `evals/adversarial/ui-escalation-locks.json`, its
 regression case and the `escalation-locks-removed.py` fixture (§h2's locks bound
 by a runnable check, R9), and `escalate.EXTRACT_WINDOW` (rung 2's input capped,
 R12).
+
+Added in the PR #58 round-3 repair, all of it binding mechanisms that earlier
+rounds introduced UNBOUND — the pattern the circuit breaker fired on: the tier
+record's `offset` and the strip's true range (R17), `escalation-locks-evaded.py`
++ `ui-escalation-locks-evaded.json` (R18), the `_demo` block that drives `route`
+over an over-long document with a stubbed transport in place of a tautology on a
+local string (R19), the `offset`/`input_chars`/`truncated` requirement in
+`_routing_shape` (R17/R19), and an eighth shape in `routing-strip-missing.html`
+(R19). Every one of them was proved by mutation before it was claimed —
+transcripts in `tasks/reviews/pr58-r3-red.txt`.
 
 ### g2. Pins that moved because the wire moved
 
@@ -631,10 +646,16 @@ rendered above the banner. Three hops, three pinned expressions, and a
 box is offered unconditionally" — the dishonesty this row exists to remove,
 wearing the costume of a working feature.
 
-**Neither lock touches a local run.** The eval suites, `python3 -m
-src.sec10k.escalate` and a direct `extract_items(..., escalate=True)` all
-bypass `web.app` entirely; a developer who exports both variables gets the
-tier with the default per-document budget.
+**Neither of the two `web.app` locks touches a local run**, and the third
+touches every run. Corrected 2026-08-27 (PR #58 R23): this paragraph said
+"neither lock" under a heading that had just become three, and the third is not
+a `web.app` lock at all. Locks 1 and 2 live in `web.app`, so the eval suites,
+`python3 -m src.sec10k.escalate` and a direct `extract_items(..., escalate=True)`
+bypass them entirely and a developer who exports both variables gets the tier
+with the default per-document budget. **Lock 3, the input cap, is applied inside
+`escalate.route` and therefore applies to every one of those paths** — which is
+the point: a bound that only guarded the deployment would not bound a sweep, and
+`route` is the single place all callers pass through.
 
 **What is still not bounded**, said plainly: there is no authentication and no
 rate limit on the deployment, so an anonymous caller can still consume the

@@ -91,9 +91,11 @@ LOCALIZE_WINDOW = 60_000  # chars of unattributed text rung 1 is allowed to see
 # committed dev filing (jpm-2024, 1,213,284 chars) rounded up. So no document
 # in the corpus is truncated, every published figure in ADR-036 §d is
 # unchanged, and one call's price on ARBITRARY input is now bounded by the
-# same worst case the dev corpus already measured — an estimated $1.5638 at
-# rung 2's price. The effective deployment ceiling is MAX_USD plus that, and
-# ADR-036 §h2 states it that way rather than claiming MAX_USD alone.
+# same worst case the dev corpus already measured. That bound is a DERIVED
+# figure, not one restated here: `tasks/reviews/d11_sweep_cost.py` prints it
+# under "§h2 — the effective deployment ceiling", and ADR-036 §h2 quotes the
+# script. This comment used to carry its own hand-typed number, which was the
+# fifth such figure in this branch and was wrong (PR #58 R22).
 #
 # Truncation is never silent: the tier record publishes `input_chars` and
 # `truncated`, so a resolution over a clipped document says so.
@@ -335,9 +337,15 @@ def route(text, items, warnings, budget=None):
                   f"Offsets are relative to the start of the text below.\n\n"
                   f"<filing>\n{shown}\n</filing>")
         entry = {"tier": rung, "model": model, "items": list(codes),
-                 # what the rung was actually SHOWN, so a resolution over a
-                 # clipped document is visible rather than implied (R12)
-                 "input_chars": len(shown), "truncated": len(shown) < len(text),
+                 # WHAT THE RUNG WAS ACTUALLY SHOWN, as a range and not as a
+                 # length (PR #58 R17). rung 1's window starts at the largest
+                 # unattributed region, which is almost never offset 0 — on 18
+                 # of 43 dev documents it is not — so `input_chars` alone made
+                 # the inspector say "the first N chars" about a model that had
+                 # been shown chars 178,087-238,087 (axp-2008). The envelope
+                 # publishes the offset so the screen can state the truth.
+                 "offset": offset, "input_chars": len(shown),
+                 "truncated": len(shown) < len(text),
                  "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0}}
         try:
             got = call(model, SYSTEM, prompt, MAX_TOKENS, budget)
@@ -416,12 +424,53 @@ def _demo():
     assert loud["fired"] and loud["codes"] == ["low_item_coverage"]
     assert loud["items"] == ["1", "7"], loud
 
-    # --- PR #58 R12: both rungs' inputs are bounded, so one call's price is
-    #     bounded on arbitrary input. Asserted on the constant AND on the slice,
-    #     because a cap nothing slices by is a comment.
+    # --- PR #58 R12/R17/R19: both rungs' inputs are bounded, and the tier
+    #     record states WHAT WAS SEEN as a range. Bound by driving `route`
+    #     itself over an over-long document — the previous version of this
+    #     block asserted `len(big[:EXTRACT_WINDOW]) == EXTRACT_WINDOW` on a
+    #     local string, which is a tautology for any value of the constant and
+    #     never reached `route`; reverting the slice left the whole gate green
+    #     (PR #58 R19, transcript in tasks/reviews/pr58-r3-red.txt).
+    #
+    #     The transport is stubbed, NOT the result: the stub records the prompt
+    #     it was handed and returns unparseable text, so no fabricated model
+    #     answer ever enters the pipeline (repo rule 4) and both rungs run to
+    #     completion leaving one tier record each.
     assert EXTRACT_WINDOW >= 1_213_284, "the cap must not truncate any dev filing"
-    big = "x" * (EXTRACT_WINDOW + 5000)
-    assert len(big[:EXTRACT_WINDOW]) == EXTRACT_WINDOW
+    import src.sec10k.llm as _llm
+    seen = []
+
+    def _stub(model, system, user, max_tokens, budget, timeout=120):
+        seen.append(user)
+        return {"text": "not json", "usage": {"input_tokens": 0, "output_tokens": 0},
+                "usd": 0.0, "model": model, "cached": True}
+
+    long_items = [{"item": "1", "start": 0, "end": 40, "status": "extracted",
+                   "method": "heading_strict", "heading_text": "Business . . 12"}]
+    long_text = "Business . . 12\n" + "y" * (EXTRACT_WINDOW + 25_000)
+    real_call, _llm.call = _llm.call, _stub
+    try:
+        rec, _ = route(long_text, long_items,
+                       [{"code": "low_item_coverage", "item": None, "message": "3%"}])
+    finally:
+        _llm.call = real_call
+    by_tier = {t["tier"]: t for t in rec["tiers"]}
+    assert set(by_tier) == {"llm_localize", "llm_extract"}, rec["tiers"]
+
+    ex = by_tier["llm_extract"]
+    assert ex["input_chars"] == EXTRACT_WINDOW, (
+        "rung 2's input must be CAPPED — this is the assertion whose absence "
+        "let the cap be reverted with the gate 100% green", ex["input_chars"])
+    assert ex["truncated"] is True and ex["offset"] == 0, ex
+    assert len(seen[-1]) < len(long_text), "the prompt must not carry the whole document"
+
+    lo = by_tier["llm_localize"]
+    assert lo["input_chars"] == LOCALIZE_WINDOW and lo["truncated"] is True
+    # R17: rung 1's window does NOT start at 0, which is exactly why a bare
+    # `input_chars` made the inspector print a false sentence.
+    assert lo["offset"] == 40, ("rung 1's window starts at the largest "
+                                "unattributed region, not at 0", lo["offset"])
+    assert lo["offset"] + lo["input_chars"] <= len(long_text)
 
     # --- unattributed windows
     assert _windows("x" * 100, [{"start": 10, "end": 20}, {"start": 60, "end": 70}]) \

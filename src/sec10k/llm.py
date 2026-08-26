@@ -150,9 +150,13 @@ class Budget:
     def take(self):
         # ponytail: the dollar ceiling is checked against what has ALREADY been
         # spent, not against what this call is projected to cost, so one call
-        # can overshoot `max_usd` by its own price — measured worst case on the
-        # dev corpus is jpm-2024's rung 2 at an estimated $1.52 against a $1.00
-        # default (ADR-036 §d3). Upgrade path when it matters: estimate input
+        # can overshoot `max_usd` by its own price. That overshoot is BOUNDED
+        # by `escalate.EXTRACT_WINDOW` (PR #58 R12), and the bound is a derived
+        # figure printed by `tasks/reviews/d11_sweep_cost.py` under "§h2 — the
+        # effective deployment ceiling" rather than a number restated here —
+        # this comment used to carry its own, and hand-typed dollar figures in
+        # this branch have a perfect record of being wrong (PR #58 R22).
+        # Upgrade path when it matters: estimate input
         # tokens from len(user)/4 and refuse before the call. Not built here
         # because that estimate is the very thing the first live run exists to
         # replace, and a wrong pre-check refuses affordable work. Debt row.

@@ -956,7 +956,8 @@ function routingStrip(r){
   const tiers = (r.tiers || []).map(t => `${esc(t.tier)} (${esc(t.model || "—")}) →
     <b>${esc(t.outcome)}</b>${t.error ? ` — ${esc(t.error)}` : ""}${
       t.cached ? " · from cache" : ""}${
-      t.truncated ? ` · saw only the first ${Number(t.input_chars).toLocaleString()} chars` : ""}`
+      t.truncated ? ` · saw chars ${Number(t.offset).toLocaleString()}–${
+        Number(t.offset + t.input_chars).toLocaleString()}, not the whole document` : ""}`
     ).join("; ") || "none attempted";
   const done = (r.resolved || []).length
     ? `items ${esc((r.resolved || []).join(", "))} resolved by a model tier`

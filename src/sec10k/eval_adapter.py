@@ -231,19 +231,6 @@ def eval_check(result, chk, path=None):
             why = _blocks_shape(result)
             if why:
                 return f"blocks not in contract shape: {why}"
-        if "routing" in result:
-            # ADR-036 contract shape. Checked here so a malformed routing
-            # record is red on ANY case that asks for escalation, not only on
-            # one that labels a tier outcome — the same rule `tables` follows.
-            why = _routing_shape(result)
-            if why:
-                return f"routing not in contract shape: {why}"
-        elif any(i["method"] in ESCALATION_METHODS for i in result["items"]):
-            # the honesty clause, and the one an implementation is most likely
-            # to break: an item may not claim a tier produced it on an envelope
-            # that carries no record of a tier having run.
-            return ("an item claims an escalation method but the envelope has "
-                    "no `routing` record")
         ds = result["doc_status"]
         if ds not in DOC_STATUSES:
             return f"doc_status {ds!r} not in contract enum"
@@ -308,6 +295,24 @@ def eval_check(result, chk, path=None):
             if spanned and (i["start"] is None or i["end"] is None):
                 return (f"item {i['item']} is {i['status']!r} but has null "
                         "offsets — a span-carrying status must carry a span")
+        # ADR-036 contract shape. LAST in this branch, and deliberately so
+        # (CI failure on 9f43429): both this block and `_routing_shape` read
+        # `i["method"]` and `result["cost"][...]`, and running them before the
+        # loop above subscripted fields whose presence had not been validated
+        # yet — so an envelope MISSING `method` raised KeyError instead of
+        # being reported as the contract violation it is. `eval_check`'s whole
+        # job is judging malformed envelopes; crashing on one is not judging
+        # it. Order is the fix: validate shape, then cross-check honesty.
+        if "routing" in result:
+            why = _routing_shape(result)
+            if why:
+                return f"routing not in contract shape: {why}"
+        elif any(i["method"] in ESCALATION_METHODS for i in result["items"]):
+            # the honesty clause, and the one an implementation is most likely
+            # to break: an item may not claim a tier produced it on an envelope
+            # that carries no record of a tier having run.
+            return ("an item claims an escalation method but the envelope has "
+                    "no `routing` record")
     elif t == "known_items_only":
         bad = [i["item"] for i in result["items"] if i["item"] not in CANONICAL]
         bad += [i["item"] for i in result["items"] if i["status"] not in STATUSES]
@@ -830,8 +835,25 @@ def _routing_shape(result):
         return "a trigger that did not fire may not report attempted tiers"
     total = {k: 0 for k in COST_KEYS}
     for tier in r["tiers"]:
-        if not {"tier", "outcome", "cost"} <= set(tier):
-            return f"tier record missing tier/outcome/cost: {sorted(tier)}"
+        # PR #58 R17/R19: `offset` joins the required set, and the three are
+        # required TOGETHER because they are one fact — what this rung was
+        # shown. `input_chars` alone let the inspector print "the first N
+        # chars" about a window starting at offset 178,087, and deleting all
+        # three left the whole gate green. Required here so it binds every
+        # producer and every case that runs `envelope_shape`, not just the one
+        # that noticed.
+        need = {"tier", "outcome", "cost", "offset", "input_chars", "truncated"}
+        if not need <= set(tier):
+            return (f"tier record missing {sorted(need - set(tier))}: "
+                    f"{sorted(tier)}")
+        lo, n = tier["offset"], tier["input_chars"]
+        if not (isinstance(lo, int) and isinstance(n, int) and lo >= 0 and n >= 0
+                and lo + n <= len(result["normalized_text"])):
+            return (f"tier {tier['tier']} reports window [{lo}, {lo + n}) "
+                    f"outside normalized_text (0, {len(result['normalized_text'])})")
+        if tier["truncated"] != (n < len(result["normalized_text"])):
+            return (f"tier {tier['tier']} says truncated={tier['truncated']} "
+                    f"over {n} of {len(result['normalized_text'])} chars")
         if tier["outcome"] not in ROUTING_OUTCOMES:
             return f"tier outcome {tier['outcome']!r} not in {sorted(ROUTING_OUTCOMES)}"
         if not COST_KEYS <= set(tier["cost"]):
