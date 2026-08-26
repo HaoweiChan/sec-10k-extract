@@ -1,0 +1,87 @@
+{
+  "pr": 56,
+  "round": 1,
+  "responder": "implementer, same worktree, branch task/D9",
+  "red_evidence": "tasks/reviews/pr56-r1-red.txt \u2014 every finding's own `repro` run verbatim BEFORE any edit, with the published claim printed beside it. Captured at 2cd8141 with only that file untracked.",
+  "summary": {
+    "fixed": 7,
+    "rejected": 0,
+    "debt": 5,
+    "escalated_open": 1
+  },
+  "rulings_moved": "none \u2014 A1 subsumed, A2 declined, B subsumed all stand. R2 removed an overstatement in A1's headline; the coverage figure that carries the ruling (0.3%) was verified unaffected and is now stated as the load-bearing one.",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "accepted": "In full, and the reviewer understated it: the ADR contradicted its own \u00a7a table two sections earlier.",
+      "red": "pr56-r1-red.txt R1 block \u2014 items 10/11/12/13/14 on c-2025 all (missing, 0.4, start=None).",
+      "fix": "ADR-034 \u00a7c1 now states the causal claim it meant \u2014 'None of those filings loses a Part III item TO the multi-code string' \u2014 and states c-2025's five missing Part III items explicitly, with why they are missing (no body headings anywhere, the bare-code index of \u00a7b1) and why a fan-out over its cover sentence reaches none of them. Propagated verbatim-in-substance to evals/adversarial/axp-2008-combined-part-iii.json's triage note and the Combined-multi-item-heading Debt row in tasks/TODO.md, both of which named the correction and the finding id rather than quietly rewording.",
+      "covered_by": "The corrected sentence is now consistent with ADR-034 \u00a7a's own c-2025 row; a future edit that re-breaks it contradicts a table in the same document."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "accepted": "In full. One correction to the finding's own arithmetic, recorded because this repo counts that: the review says 5 status-keyword bodies (1B/4/6/9/9C) and misses item 16 ('None'), so the split is 13 internal page pointers / 6 status keywords / 4 external proxy pointers = 23, not 13/5/4. The class count of 13 is right and matches the scan.",
+      "red": "pr56-r1-red.txt R2 block \u2014 d9_class_scan.py prints 13; full 23-body bucketed adjudication; the (a) marker resolved at normalized offset 516118 to the 2026 Proxy Statement.",
+      "fix": "New ADR-034 \u00a7b3a adjudicates all 23 bodies hit by hit on the same rule \u00a7b3 applies to dev filings. The 4 proxy-(a) bodies are REJECTED out of Class A on \u00a7b3's own external-document rule (the verdict mrk-1995 5/7, gs-2002 10, ibm-1997 12, ge-1994 6 and xom-2021 15 already get); the 6 None/[Reserved] bodies are named NOT A FAILURE AT ALL \u2014 for Intel FY2025 'None' is the complete correct answer. Item 10 ('Page 52 (a)') is flagged as mixed and counted in the 13, with the note that counting it external gives 12 and moves no ruling. Corrected count propagated to \u00a7b2, the \u00a7b3 table, \u00a7b3's derived percentage (15.6% -> 8.8% of 147), the Ruling line, INDEX.md and both TODO.md rows.",
+      "covered_by": "The 0.3% coverage figure is now stated in the Ruling line, \u00a7b2, \u00a7b3a, the Debt row and the D9 status cell as the load-bearing figure, with the item count explicitly demoted to decoration \u2014 so a future drift in the item count cannot move the ruling."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "disposition": "fixed (ground) + ESCALATED, OPEN (the choice)",
+      "accepted": "In full, and it is worse than the finding states. Beyond the conjunctive-test inversion the reviewer names, \u00a7g's ground was FALSE ON ITS FACE for gs-2002: README:149-152 shows that burn resting on a documented decline ALONE, naming no new case. I built a distinguishing ground on a precedent I did not read \u2014 the exact species of error this repo's ADR-020 \u00a7h3 calls its recurring one.",
+      "red": "pr56-r1-red.txt R3 block \u2014 README:149-152, :193-195 and :318-321 printed against the \u00a7g text.",
+      "fix": "ADR-034 \u00a7g rewritten. The conjunctive-test ground is WITHDRAWN, not patched, and the withdrawal is stated before the question with both falsifications named. \u00a7g now quotes README:318-321 verbatim as a block quote \u2014 the D6 H4 sentence that names D9 and that the first draft never addressed \u2014 states plainly that this ADR is that declined fix and that under the rule as written both cases are burned, sets out option (a) apply the burn with replacements budgeted and option (b) amend the README rule and its D6 H4 sentence, and records that the choice is the owner's. Pending it both cases stay put, explicitly labelled the status quo and NOT a ruling that the rule does not apply. The TODO.md Debt row was rewritten from 'ruled that it did NOT' to 'ESCALATED TO THE OWNER, UNDECIDED', carrying both options.",
+      "NOT_decided": "Whether to burn the two D6 held-out cases or amend the README. Costs D11 its exam either way. Not the implementer's call and not the loop's.",
+      "covered_by": "Nothing gates it \u2014 that is the point of an escalation. The Debt row and \u00a7g both carry it, and the D9 status cell names it as the one open item."
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "disposition": "fixed in place + debt logged",
+      "accepted": "In full.",
+      "red": "pr56-r1-red.txt R4 block \u2014 scan prints 18 Class-B hit blocks.",
+      "fix": "17 -> 18 and sixteen -> seventeen in ADR-034 \u00a7c1, the Combined-heading Debt row and the axp-2008 triage note. A third stale copy the finding did not name was found by sweep and fixed: \u00a7c2's blast-radius sentence said '16 other fixtures whose cover sentences the same detector matches', which was both the stale denominator AND an overstatement (only 5 of the 18 hits are cover sentences); it now reads 17 others, 5 of them real filings with cover-sentence hits.",
+      "debt_row": "tasks/TODO.md \u2014 'Four LOW findings from PR #56 round 1, all CORRECTED IN PLACE in the same pass', clause (a)."
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "disposition": "fixed in place + debt logged",
+      "accepted": "In full. The interior-span-dominates catch is the sharpest thing in the review: a fixture carrying the multi-code string WITH missing items, which is the co-occurrence \u00a7c1 concluded exists only on axp-2008.",
+      "red": "pr56-r1-red.txt R5 block \u2014 grep -c returns 0 for all five named fixtures.",
+      "fix": "\u00a7b3 now says it adjudicates the 13 real-EDGAR hits and names the two synthetic hits (ibr-pointer-first, ibr-security-holders) as out of scope with their inherited verdicts. \u00a7c1 enumerates all 18 hits across five buckets with the arithmetic shown (1 body heading + 5 cover sentences + 5 numeric artifacts + 3 prose cross-references + 1 TOC line + 3 synthetic = 18), and names interior-span-dominates explicitly, including that it is synthetic so the real-filing ruling stands while the sweep sentence did not.",
+      "debt_row": "same row, clause (b)."
+    },
+    {
+      "id": "R6",
+      "severity": "LOW",
+      "disposition": "fixed in place + debt logged",
+      "accepted": "In full.",
+      "red": "pr56-r1-red.txt R6 block \u2014 invariant 68/68, fast 131/131 at HEAD against the published 67/67, 130/130.",
+      "fix": "Took the D6 row's own solution as the orchestrator directed rather than re-pinning numbers that go stale on the next merge: suite sizes DROPPED from ADR-034's Verification section and the D9 status cell, replaced by 'score 1.000, baseline untouched', with a note naming DONE.md's D6 entry and the R8 defect it cites.",
+      "debt_row": "same row, clause (c)."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "disposition": "fixed in place + debt logged",
+      "accepted": "In full.",
+      "red": "pr56-r1-red.txt R7 block \u2014 grep for sonnet near ADR-020's 2026-06-24 price paragraph returns 0.",
+      "fix": "\u00a7d re-worded. 'A 1M-context tier now exists at $2.00/MTok' is gone. It now says claude-sonnet-5 carries 1M context at $2.00/MTok ON THE SAME CACHED TABLE at the SAME 2026-06-24 date ADR-020 cites, and that ADR-020 \u00a7d's price paragraph simply enumerates only opus-5 and haiku-4-5 \u2014 i.e. this is a correction to ADR-020's READING of the table, not to the price basis. No arithmetic cell moved; the reviewer verified every one reproduces.",
+      "debt_row": "same row, clause (d)."
+    }
+  ],
+  "gate": "invariant and fast both score 1.000, baseline untouched. Suite sizes deliberately not quoted here either (R6). hooksPath is broken repo-wide (its own Debt row), so the hook's other two gates were run by hand: bench --self-check ok, bench --check-docs 68 checked / 0 unmatched.",
+  "byte_identity": "No file under src/ or evals/*.py touched in this round; evals/snapshot.py digests re-run and unchanged from the implement pass \u2014 dev d6f7b81e16e6c9767e01ec53f7e5125919f2d629604f97d4838ddbce228ff1a8 (57 files), held-out dd67647b16369ac309a43ad856c3358cc3da8bdd00f08e7b526ad81e38ccbd26 (7 files).",
+  "what_the_review_made_me_doubt": [
+    "R2 is the one that should worry a next-round reviewer most, and not for the arithmetic. I applied \u00a7b3's own external-document rejection rule to five dev filings and then did not apply it to the held-out filing the A1 ruling rests on. That is selective application of my own stated rule, in the direction that made my headline stronger. The ruling survives because it never rested on the item count \u2014 but I did not know that when I wrote the count, I discovered it while repairing.",
+    "R3's real lesson is the same one: I asserted what two precedents did without opening them. ADR-020 \u00a7h3 names 'reasoning about an executable contract in prose instead of running it' as this milestone's recurring error; this is its documentary twin, and it is now the second instance in this ADR.",
+    "R5's interior-span-dominates hit is the only finding that touches evidence rather than presentation. A synthetic fixture reproducing the axp-2008 co-occurrence does not weaken a real-filing prevalence claim, but it does mean the multi-code detector is not as specific as \u00a7c1's confident framing implied, and a next-round reviewer is entitled to push on whether 1-in-49 is the right way to state a class size at all."
+  ],
+  "gate_coverage_observed_working": "The ledger-line-refs coverage this PR added was exercised for real, not just claimed: it went RED twice during this repair round, both times because my own later edits to ADR-034 pushed the quoted ruling sentences past the check's +/-2 line window (349/367 -> 438/456 -> 442/460). It failed with the exact message 'does not contain the quoted ...' and only passed once the citations were re-derived. That is the rot the check exists to catch, caught on its author, within one round of shipping it."
+}

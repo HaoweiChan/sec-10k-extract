@@ -1,6 +1,15 @@
 # ADR-034 — D9: the internal-pointer class splits in two and neither half becomes a milestone; the combined-heading fan-out is subsumed by D11, narrowing ADR-020's stated preference
 
-Date: 2026-08-26. Status: accepted. Implements D9, the decision row
+Date: 2026-08-26. Status: accepted, **repaired 2026-08-26 under PR #56 review round 1**
+(3 MEDIUM, 4 LOW; `tasks/reviews/pr56-r1.json`, red evidence captured before every fix
+in `tasks/reviews/pr56-r1-red.txt`). What the repair changed: §b2/§b3/§b3a — A1's item
+count corrected from 23 to **13 of 23** and the coverage figure named as the
+load-bearing one (R2); §c1 — a false bolded claim about `c-2025` replaced with the
+causal claim it meant (R1), the hit denominator corrected 17→18 (R4) and every hit
+enumerated including the synthetics (R5); §g — the burn-rule ground **withdrawn** as
+falsified and the burn-or-amend choice **escalated to the owner, undecided** (R3);
+§d — the sonnet-5 row re-dated (R7); Verification — suite sizes dropped (R6). None of
+the three rulings moved. Implements D9, the decision row
 "promote internal-pointer resolution and combined-heading fan-out, or decline
 with evidence" (`tasks/TODO.md`). Rules on two Debt rows —
 "Internal pointer to a paginated section" (ADR-019 §e) and "Combined
@@ -13,7 +22,7 @@ $0 regex producing identical output, which §c below falsifies by running it.
 document decides, and every ruling it reaches is "do not build a milestone for
 this", so it is not a sanctioned freeze exception and does not need to be.
 
-**Ruling**: the ADR-019 §e class splits — **A1**, a whole document collapsing onto a cross-reference index (`intc-2025`, 23 of 23 items, 0.3% of the text in spans), is **subsumed by D11** and gets no milestone of its own; **A2**, a few pointer-bodied items inside an otherwise well-extracted filing (`cvx-2015`, `jpm-2024`, `bac-2006`, `ge-1994`, `spatz-2014` — 14 items, 5 real filings), is **DECLINED and stays Debt**, because two independent reads still disagree that it is a defect and no measured trigger reaches it. The `axp-2008` combined-heading fan-out is **subsumed by D11**, not promoted.
+**Ruling**: the ADR-019 §e class splits — **A1**, a whole document collapsing onto a cross-reference index (`intc-2025`, 0.3% of the text inside any span; 13 of 23 item bodies are internal page pointers, §b3a), is **subsumed by D11** and gets no milestone of its own; **A2**, a few pointer-bodied items inside an otherwise well-extracted filing (`cvx-2015`, `jpm-2024`, `bac-2006`, `ge-1994`, `spatz-2014` — 14 items, 5 real filings), is **DECLINED and stays Debt**, because two independent reads still disagree that it is a defect and no measured trigger reaches it. The `axp-2008` combined-heading fan-out is **subsumed by D11**, not promoted.
 **Because**: A1 is exactly the shape D11's own row already commits to passing, and the D8 trigger it needs fires on 0 of 42 dev fixtures; A2 has no trigger and an unsettled auditor disagreement, so promoting it would build a capability to fix something not agreed to be broken; and the fan-out's premise is false — heading-stripped, `segment.classify` returns `incorporated_by_reference` on the item-10 partition body, `axp-2008` item 9B's span runs straight through the Part III block, the class has exactly one member in 49 documents, and `axp-2008` is no longer the only real-filing recall gap now that `c-2025` reports 21 `missing` items the fan-out cannot touch.
 **Enforced by**: `tasks/TODO.md`'s two Debt rows, which cite this ADR's ruling lines and are verified against them by `evals/adversarial/ledger-line-refs.json` (`invariant` + `fast`); `evals/adversarial/cvx-2015-internal-pointer.json` and `evals/adversarial/axp-2008-combined-part-iii.json`, whose triage notes name this ruling as why they are permitted to stay red; `evals/adversarial/ledger-table-shape.json`, `evals/golden/adr-header-and-index.json` (`adr_headers`, `adr_index`). §h states, without softening it, what this ADR's figures are NOT gated by.
 
@@ -95,8 +104,10 @@ promoted a capability on the strength of a filing that does not exhibit it.
 ### b2) The class IS on the held-out set — on the filing the row does not name
 
 `intc-2025` is the internal-pointer class, at the highest severity either set
-contains. Every one of its 23 item bodies is a page reference into this same
-document:
+contains. **13 of its 23 item bodies** are a page reference into this same
+document — adjudicated item by item in §b3a below, on the same rule §b3 applies
+to the dev filings, because the first draft of this ADR said "all 23" and that
+was wrong (PR #56 R2):
 
 ```
 Item 1A. Risk Factors / Pages 37-51                          (35 chars)
@@ -106,9 +117,13 @@ Item 7. Management's Discussion and Analysis ... /
     Results of operations            Pages 18-29 ...        (226 chars)
 ```
 
-That is `cvx-2015`'s "presented on page FS-1" shape, for 23 items instead of 2.
-All 23 report `extracted` at 0.95. The recall at stake is the whole filing:
-1,727 chars in spans, 516,249 outside them.
+That is `cvx-2015`'s "presented on page FS-1" shape, for 13 items instead of 2.
+All 23 items report `extracted` at 0.95. **The figure that carries the A1
+ruling is not the item count — it is the coverage: 1,727 chars in spans of
+517,976, 516,249 outside them, 0.3%.** That figure is a property of the whole
+document and is unchanged by how any individual body is classified, which is
+why re-adjudicating 23 down to 13 leaves §e1 standing. The item count was
+never load-bearing and should not have been the headline.
 
 One compounding fact, established from the raw bytes rather than inferred: the
 23 headings the pipeline matched are **not body headings**. The literal
@@ -117,8 +132,9 @@ item-code-with-dot hits sit at offsets above 3,251,505 — the trailing
 cross-reference index. `intc-2025` has no body item headings at all. So
 `intc-2025` and `c-2025` share a root cause (the filing maps items to page
 ranges through an index instead of writing headings) and differ only in
-whether the index rows carry the literal `Item` prefix: Intel's do, so 23
-headings match onto index rows and the failure is silent at 0.95; Citi's do
+whether the index rows carry the literal `Item` prefix: Intel's do, so all 23
+headings match onto index rows — that count is headings matched, not Class-A
+bodies — and the failure is silent at 0.95; Citi's do
 not, so nothing matches and the failure is honest at 0.40. The postmortem's
 two faces of the same sensor problem, and the pointer bodies on Intel are the
 *symptom* of that, not the `cvx-2015` mechanism.
@@ -126,8 +142,14 @@ two faces of the same sensor problem, and the pointer bodies on Intel are the
 ### b3) Prevalence, adjudicated hit by hit
 
 The scan flags an `extracted` item whose span is under 700 chars and whose
-body matches an internal-page-reference pattern. It returns 15 fixtures. Each
-is adjudicated below; the rejections matter as much as the hits.
+body matches an internal-page-reference pattern. It returns **15 fixtures**.
+**This section adjudicates the 13 real-EDGAR hits.** The two remaining hits are
+synthetic and are named here as out of scope rather than left silent (PR #56
+R5): `ibr-pointer-first` items 6/8 and `ibr-security-holders` item 12 are
+mutations of `ge-1994` and `ibm-1997` and inherit those filings' verdicts
+exactly — item 6/12 rejected as external-document pointers, item 8 confirmed —
+so they add no filing and no item to any count below. The rejections among the
+real hits matter as much as the confirmations.
 
 **Class A confirmed — pointer target is inside this document, body is a stub:**
 
@@ -138,7 +160,7 @@ is adjudicated below; the rejections matter as much as the hits.
 | `bac-2006` | dev | real EDGAR | 3, 6, 7A | 229 / 202 / 175 |
 | `ge-1994` | dev | real EDGAR | 8 | 86 |
 | `spatz-2014` | dev | real EDGAR | 8 | 241 |
-| `intc-2025` | held-out | real EDGAR | all 23 | 20 to 226 |
+| `intc-2025` | held-out | real EDGAR | 1, 1A, 1C, 2, 3, 5, 7, 7A, 8, 9A, 9B, 10, 15 (13 of 23 — §b3a) | 33 to 226 |
 
 **Rejected — the body carries substantive standalone prose, so the pointer is
 an addition to a real answer, not the whole of it:** `ba-2003` item 5 (NYSE
@@ -151,7 +173,38 @@ territory and a different class:** `mrk-1995` items 5 and 7 and `ge-1994` item
 (the proxy statement), `xom-2021` item 15 (no page number at all).
 
 So the class is **14 items across 5 real dev filings** — 1.9% of 744 dev items
-— plus **23 items on one held-out filing**, 15.6% of 147 held-out items.
+— plus **13 items on one held-out filing**, 8.8% of 147 held-out items.
+
+### b3a) `intc-2025`, adjudicated on the same rule — 13 of 23, not 23
+
+The first draft asserted "all 23" and applied §b3's rejection rules to the dev
+filings but not to the held-out filing that carries the A1 ruling. Corrected
+here rather than quietly (PR #56 R2). Every one of the 23 bodies, bucketed:
+
+| bucket | n | items | verdict |
+|---|---|---|---|
+| **internal page pointer** | **13** | 1, 1A, 1C, 2, 3, 5, 7, 7A, 8, 9A, 9B, 10, 15 | **Class A confirmed** — `Pages 37-51`, `Pages 56-108`, `Page 109`: a location inside this same document |
+| status keyword | 6 | 1B, 4, 6, 9, 9C, 16 | **Not a failure at all.** The bodies read `None` or are empty under `[Reserved]`. For Intel FY2025 that is the complete and correct answer to those items; nothing is pointed at and nothing is missing |
+| external proxy pointer | 4 | 11, 12, 13, 14 | **Rejected out of Class A**, on §b3's own external-document rule. Each body is the marker `(a)`, resolved at normalized offset 516118 by "Incorporated by reference to the applicable section of the 2026 Proxy Statement" — ADR-004 IBR territory, the same verdict `mrk-1995` 5/7, `gs-2002` 10, `ibm-1997` 12, `ge-1994` 6 and `xom-2021` 15 already get above |
+
+13 + 6 + 4 = 23. Item 10 is a **mixed** body — `Page 52 (a)`, both an internal
+page reference and the external proxy marker — and is counted in the 13 on the
+internal reference, which is the reading the scan takes; a reader who counts it
+as external gets 12 and no ruling moves.
+
+**What the correction does and does not cost.** It removes an overstatement:
+`intc-2025` is not a filing where 23 items each hold the wrong text, it is one
+where 13 do, 4 are IBR-shaped and 6 are right. It does **not** touch §e1, which
+rests on coverage — 1,727 chars of 517,976, 0.3% — a whole-document figure
+independent of any per-item verdict, and on the D8 trigger's measured 0-of-42
+dev fire rate. The load-bearing number was always the coverage; the item count
+was decoration, and stating it wrong is exactly the defect this repo's review
+loop exists to catch.
+
+**The 4 proxy-`(a)` bodies are a live question this ADR does not answer**: they
+report `extracted` over pointer-only bodies naming an external document, which
+is the same shape as the `mrk-1995` items already logged as Debt in §g. That
+Debt row is widened to name them rather than a second row being opened.
 
 Two of those five filings were **never enumerated anywhere**: `bac-2006` items
 3, 6 and 7A, and `spatz-2014` item 8. The Debt row names `cvx-2015`, `ge-1994`
@@ -185,24 +238,53 @@ table as a gap, not a gradient — A1 sits at 0.3%, A2's worst at 23.1%.
 
 ### c1) Prevalence: one filing in 49
 
-The scan's multi-code detector returns hits on 17 fixtures. Adjudicated, **one
-is a body heading over item content**: `axp-2008` at normalized offset 328679,
-`ITEMS 10, 11, 12 and 13`, the heading ADR-020 enumerated. Every other hit is:
+The scan's multi-code detector returns hits on **18 fixtures** (PR #56 R4: the
+first draft said 17 and, downstream, "sixteen other"). Adjudicated, **one is a
+body heading over item content**: `axp-2008` at normalized offset 328679,
+`ITEMS 10, 11, 12 and 13`, the heading ADR-020 enumerated. The other seventeen,
+enumerated in full rather than swept (PR #56 R5):
 
 - **a cover-page Documents-Incorporated-by-Reference sentence** — `jpm-2024`,
   `wfc-2008`, `gs-2002`, `ba-2003` and `c-2025` all carry
   `Items 10, 11, 12, 13 and 14`-shaped proxy pointers on their cover or in a
-  footnote. **Every one of those filings reports zero `missing` Part III
-  items.** The string is boilerplate; the failure is not.
+  footnote. **None of those filings loses a Part III item _to the multi-code
+  string_** — which is the causal claim this section actually needs, and is not
+  what the first draft wrote. It wrote "every one of those filings reports zero
+  `missing` Part III items", and **that is false for `c-2025`, whose items 10,
+  11, 12, 13 and 14 are all `missing` at 0.40 with null offsets** (PR #56 R1;
+  the ADR contradicted its own §a table, which already reports 21 `missing`).
+  `c-2025` loses those five items to having no body headings anywhere — the
+  bare-code index of §b1 — and a fan-out over its cover sentence reaches none
+  of them, as the paragraph below spells out. On the other four the string is
+  boilerplate and no Part III item is missing.
 - **a numeric table artifact** — `Items 3,926 12,392 16` in `xom-2021`,
-  `items 917 965` in `msft-2013`, `Items 2025 2024` in `aapl-2025`. Digits from
-  adjacent columns, not item codes.
-- **a table-of-contents line** — `nvda-2024`, `heading-unnumbered`.
+  `items 917 965` in `msft-2013`, `Items 2025 2024` in `aapl-2025`,
+  `items. 14` in `cat-2023`, `items 119 80` in `ge-1994`. Digits from adjacent
+  columns, not item codes.
+- **a prose cross-reference inside an item body** — `intc-2002`
+  (`items 5 and 6`), `textron-2001` (`Items 5 and 7`), `wmt-2010`
+  (`Items 1, 2, 3, 5, 6, 7, 7A`). A sentence referring to sibling items, not a
+  heading introducing them; none of these filings has a missing item.
+- **a table-of-contents line** — `nvda-2024`.
+- **synthetic fixtures, out of scope for a real-filing ruling** —
+  `heading-unnumbered` (a TOC line in an `nvda-2024` mutation),
+  `ibr-pointer-first` (a `ge-1994` mutation, inherits its table artifact), and
+  `interior-span-dominates`. `interior-span-dominates`
+  is worth naming rather than hiding: it carries `Items 1, 2, 3, 5, 6, 7, 7A`
+  at offset 105383 **with items 1A/1B/2/3 missing** — the string-plus-missing
+  co-occurrence this section otherwise finds only on `axp-2008`. It is a
+  hand-built fixture for ADR-030's dominance rule, so it is not evidence about
+  real filers and the ruling stands; but "only `axp-2008`" is true of the real
+  corpus, not of the scan output, and the first draft did not make that
+  distinction.
+
+The five buckets account for every hit: 1 body heading + 5 cover sentences + 5
+numeric artifacts + 3 prose cross-references + 1 TOC line + 3 synthetic = 18.
 
 Recall at stake: **4 items, 1 real filing, 0.45% of 891** (ADR-020's 4 of 768 =
 0.52%, re-derived on the grown corpus; the ruling does not turn on the third
-decimal place). **Zero held-out items.** The class does not generalize: sixteen
-other fixtures carry the string and lose nothing to it.
+decimal place). **Zero held-out items.** The class does not generalize:
+seventeen other fixtures carry the string and none loses an item to it.
 
 `c-2025` deserves an explicit negative, because it is the one filing where a
 reader might expect the fan-out to help. Its only multi-code string is the
@@ -239,8 +321,12 @@ So the real cost of the deterministic fix is: choose a fan-out design; re-derive
 the debt case's asserted status set; truncate an adjacent item's span; decide
 what `heading_text` means for a shared heading, since the `verbatim` check
 requires a span to open with its own heading and items 11-13's do not; and
-carry that past 16 other fixtures whose cover sentences the same detector
-matches. That is a capability with a live blast radius, not a regex.
+carry that past the 17 other fixtures the same detector matches — five of them
+real filings whose cover sentences it hits, which are the ones a fan-out could
+actually damage. That is a capability with a live blast radius, not a regex.
+(The first draft wrote "16 other fixtures whose cover sentences the same
+detector matches", which was both the stale denominator of PR #56 R4 and an
+overstatement — only 5 of the hits are cover sentences.)
 
 ### c3) `axp-2008` is no longer the only real-filing recall gap
 
@@ -283,11 +369,18 @@ structurally, because no paid dependency exists.
 | `c-2025` | 1,163,303 | ~290,800 | ~$1.45 | ~$0.58 | does not fit 200K |
 | whole 49-fixture corpus, one uncached pass | 12,089,897 | ~3,022,500 | ~$15.11 | ~$6.04 | — |
 
-**One input to ADR-020 §d has changed and it is named here rather than
-inherited.** ADR-020 argued that cheaper tiers "do not simply divide the
-problem", because Haiku's 200K context cannot hold the largest filings, forcing
-either a 1M-context model or a chunking subsystem. A 1M-context tier now exists
-at $2.00/MTok (`claude-sonnet-5`), which holds every filing in this corpus.
+**One input to ADR-020 §d is corrected here rather than inherited — and the
+correction is to ADR-020's reading of the table, not to the table.** ADR-020
+argued that cheaper tiers "do not simply divide the problem", because Haiku's
+200K context cannot hold the largest filings, forcing either a 1M-context model
+or a chunking subsystem. That argument skipped the mid tier:
+**`claude-sonnet-5` carries 1M context at $2.00/MTok on the same cached table,
+at the same 2026-06-24 date ADR-020 §d cites** — ADR-020 §d's price paragraph
+simply enumerates only `claude-opus-5` and `claude-haiku-4-5` and does not
+mention it. The first draft of this section said the tier "now exists", which
+implied it post-dated ADR-020 and is not supported by anything (PR #56 R7).
+Nothing about the price basis changed; ADR-020 did not enumerate a row that was
+already there. It holds every filing in this corpus.
 That cuts the counterfactual by 2.5x. It does not reverse ADR-020's ruling —
 $6.04 per uncached corpus pass against a structural $0.00 is still an
 order-of-magnitude argument — and it is not evidence for a fallback. It is
@@ -398,21 +491,56 @@ foreign; the fan-out being cheap to write, which §c2 shows it is not.
 
 ## g) Consequences
 
-**Neither held-out case is burned, and the question is answered rather than
-skipped.** `evals/heldout/README.md`'s burn rule names "a declined fix
-documented with its outcome in hand" as influence, and the `gs-2002` precedent
-ADR-020 §g cites establishes that declining burns a case as surely as fixing
-does. This ADR is a documented decline that cites both outcomes, so the rule
-plainly points at it. It is ruled **not burned**, on this ground: the
-`gs-2002` and `axp-2008` burns both **authored a new adversarial case from the
-fixture and moved the fixture into the dev corpus**, so the declined capability
-could afterwards be developed against it. D9 authors no case from either
-filing, moves no fixture, and ships no code, threshold or fix — nothing in the
-tree can have trained on them, which is the property the burn rule protects.
-Burning them would also destroy the exam D11's own row and `c-2025`'s
-provenance both demand it sit for. **The reading is recorded for challenge, not
-settled** — it is logged as a Debt row so a reviewer can overturn it, and the
-burn fires the moment D8 or D11 uses either filing.
+**The held-out burn rule fires on this ADR, the choice of what to do about it
+is the owner's, and this document does NOT decide it.** The first draft ruled
+"not burned" and gave a ground that PR #56 R1's reviewer falsified. That ground
+is withdrawn here rather than patched, and the withdrawal is stated before the
+question, because the wrong reason is the more instructive half.
+
+**The withdrawn ground, and why it was wrong.** The first draft argued that the
+`gs-2002` and `axp-2008` burns *both* authored a new adversarial case from the
+fixture *and* moved the fixture into the dev corpus, so a decline that does
+neither is distinguishable. That is a conjunctive test the precedents
+explicitly disclaim, and it is false on its face for one of them:
+
+- `evals/heldout/README.md:193-195`, on the `axp-2008` burn, reads "The burn
+  rule names both of those as influence" — **both, each independently**, not a
+  required pair. The draft inverted trigger and remedy: authoring a case and
+  moving the fixture are consequences of a burn, not preconditions for one.
+- `evals/heldout/README.md:149-152`, the `gs-2002` precedent the draft leaned
+  on hardest, burned on "a documented decision to decline a fix" **alone** and
+  names no new case at all. So the sentence "the `gs-2002` and `axp-2008` burns
+  both authored a new adversarial case" was simply not true of `gs-2002`. I
+  built a distinguishing ground on a precedent I did not read.
+
+**The sentence the first draft never addressed**, and which names D9 by name —
+`evals/heldout/README.md:318-321`, the D6 H4 entry, verbatim:
+
+> Both cases stay **untouched** — D8/D9/D11 must not read
+> their labels while iterating, and the first fix, threshold or declined fix
+> taken with either outcome in hand burns that case under the rule above.
+
+**This ADR is that declined fix.** It read both outcomes (§a) and made them
+load-bearing: §e1 rests A1's subsumption on `intc-2025`'s outcome, and §c3
+rests ADR-020's narrowing on `c-2025`'s 21 `missing` items. Under the rule as
+written, both cases are burned.
+
+**What that costs, which is why the choice is escalated and not taken here.**
+Applying the burn means moving `evals/heldout/{c,intc}-2025-heldout.json` to
+`evals/adversarial/` and both fixtures to `evals/fixtures/`, and budgeting two
+replacement filings. That would delete the exam D11's own ledger row and
+`c-2025`'s provenance each demand it sit — "D11 must pass this filing WITHOUT
+ever having trained on it". The alternative is amending the README's rule and
+its D6 H4 sentence. Both are decisions about the eval set's integrity, they
+trade off against each other, and neither is a decision-row implementer's or a
+review loop's to make.
+
+**Ruling: the question is recorded, open, and owned by the human.** The two
+options are (a) apply the burn as the README states it, with replacements
+budgeted, or (b) amend the README rule and its D6 H4 sentence in the same
+commit that relies on these outcomes. Pending that call, both cases stay where
+they are — which is the status quo, not a ruling that the rule does not apply.
+It is logged as a Debt row carrying both options and this section's number.
 
 **Two Debt rows are updated, and neither is closed.** The internal-pointer row
 gains the A1/A2 split, the two filings it never named, and a pointer to this
@@ -434,10 +562,13 @@ that existed at their SHA and remain valid for it.
    named filings.
 2. Whether this ADR trips the held-out burn rule (§g above) is ruled NO on the
    no-case-authored, no-code ground. Recorded for challenge.
-3. `mrk-1995` items 5 and 7 report `extracted` over bodies that are pure
-   external-document pointers to the Annual Report. Whether that should be
-   `incorporated_by_reference` is an ADR-004 question this ADR rejected out of
-   Class A and did not answer.
+3. `mrk-1995` items 5 and 7 **and `intc-2025` items 11, 12, 13 and 14** report
+   `extracted` over bodies that are pure external-document pointers — the
+   Annual Report in the first case, the 2026 Proxy Statement in the second
+   (bodies read `(a)`, resolved at normalized offset 516118). Whether those
+   should be `incorporated_by_reference` is an ADR-004 question this ADR
+   rejected out of Class A (§b3, §b3a) and did not answer. Widened to name the
+   `intc-2025` four under PR #56 R2 rather than opening a second row.
 4. `core.hooksPath` is set repo-wide to a **deleted** worktree's `.githooks`, so
    `.githooks/pre-commit` — the eval gate CLAUDE.md rule 5 names as the
    enforcement layer — cannot fire for any commit in any worktree. Found while
@@ -490,9 +621,12 @@ is the state this ruling ratifies rather than changes.
 
 ## Verification
 
-- `python3 -m evals.run --suite invariant` — 67/67, 1.000.
-- `python3 -m evals.run --suite fast` — 130/130, 1.000, `.eval-baseline.json`
-  untouched.
+- `python3 -m evals.run --suite invariant` — **score 1.000, baseline untouched.**
+- `python3 -m evals.run --suite fast` — **score 1.000, baseline untouched.**
+  Suite sizes are deliberately NOT quoted here: they move with every merge, and
+  the first draft published "67/67, 130/130" which was already stale at its own
+  merge SHA (PR #56 R6). `tasks/DONE.md`'s D6 entry names quoting them as the
+  R8 defect and declines to; this ADR now does the same.
 - `python3 -m evals.run --suite fast --dir evals/heldout` — 5/7 = 0.714,
   `c-2025` and `intc-2025` red as D6 recorded. Re-derived, not quoted (§a).
   Report committed at `evals/report/20260826-141545-fast.json`; its own
