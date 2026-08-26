@@ -1,6 +1,7 @@
 # ADR-031 — D4: a marked, empty heading is resolved by a footnote that names the item and an external document
 
-Date: 2026-08-23. Status: accepted. Implements D4 — the promoted Debt row
+Date: 2026-08-23. Status: accepted. Amended by: ADR-035 (§i's per-item
+near-empty validator built, noted in place 2026-08-26). Implements D4 — the promoted Debt row
 "Cross-item footnote IBR" (`tasks/TODO.md`), enumerated since 2026-08-17 as
 `evals/adversarial/ba-2003-asterisk-ibr.json` in the unscored `debt` suite.
 Sanctioned exception to the T8 feature freeze (`tasks/TODO.md`, **Freeze
@@ -362,7 +363,13 @@ unmatched.
   cannot be trivial. `no_empty_success` is document-total only, and nothing
   in the battery reads a single span's emptiness; ba-2003 items 11/13 are
   caught by THIS rule's resolution, not by a validator. Carried as a Debt row
-  (`Origin: PR #42 R2/R3/R4`).
+  (`Origin: PR #42 R2/R3/R4`). *(Built 2026-08-26 as D8's sanctioned
+  post-freeze exception: [ADR-035](ADR-035-item-level-escalation.md),
+  `item_span_near_empty` at `SPAN_FLOOR = 1500`, restricted to items 1/7/8 —
+  the only three codes with a measured empty band, exactly the "canonical
+  content cannot be trivial" qualifier this row names. It does NOT cover
+  ba-2003 items 11/13, whose canonical content CAN be a proxy pointer; those
+  stay resolved by this ADR's rule.)*
 - **Held-out** — no threshold or pattern was tuned on it; §b3 is a read-only
   report showing it carries neither half of the convention.
 - **That the rule generalises beyond the one filing it is fitted to** — it is

@@ -219,8 +219,11 @@ per ADR-003), and part-region consistency is defeated by JPM's 25 running
 `Part I` page headers. What ships: TOC manifest cross-check, unattributed
 content (>17%), last-item domination (>50%), boundary hygiene, relative
 numeric density, and gated keyword fingerprints — plus, since ADR-013,
-mostly-missing escalation (>25% of expected items), and since ADR-030
-(2026-08-23), non-last domination (>55%). Dual-method boundary
+mostly-missing escalation (>25% of expected items), since ADR-030
+(2026-08-23), non-last domination (>55%), and since ADR-035 (D8,
+2026-08-26), a per-item span floor on items 1/7/8 (<1,500 chars, the
+item-level half ADR-019 named) and document coverage (<13% of the text
+inside any item span). Dual-method boundary
 agreement is deferred — it needs TOC anchor offsets preserved through
 normalization, which discards tags by design.
 
@@ -228,10 +231,10 @@ Signals are chosen for independence — shape, content, structure, agreement —
 not volume (word count + paragraph count + char count is one signal three
 times). Policy per taxonomy F7: every validator is itself a false-positive
 source (financials, shells, smaller reporting companies all violate "typical"
-priors), so validators emit warnings and move confidence; only the four codes
+priors), so validators emit warnings and move confidence; only the five codes
 in `validate.AMBIGUOUS_CODES` — TOC-manifest mismatch, last-item domination,
-mostly-missing (ADR-013) and non-last domination (ADR-030) — may push
-`doc_status` to `ambiguous`, and none hard-fails a run alone (the gap and
+mostly-missing (ADR-013), non-last domination (ADR-030) and low item coverage
+(ADR-035) — may push `doc_status` to `ambiguous`, and none hard-fails a run alone (the gap and
 dual-method checks an earlier draft of this sentence named were never built:
 ADR-008, ADR-019 §d). Failure modes: priors wrong for
 atypical filers. Trace: each validator with pass/fail and measured values.

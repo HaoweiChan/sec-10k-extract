@@ -152,6 +152,16 @@ def eval_check(result, chk, path=None):
         got = entry.get(chk["field"])
         if got != chk["value"]:
             return f"item {chk['item']} {chk['field']} {got!r} != {chk['value']!r}"
+    elif t == "meta_field":
+        # PR #57 R1. `item_field`'s counterpart for `meta`. The contract makes
+        # three `meta` keys normative on the non-refusal path (`taxonomy_era`,
+        # `toc_manifest`, ADR-035's `coverage`) and `envelope_shape` could only
+        # test them for PRESENCE — so a build publishing a hard-coded
+        # `coverage: 1.0` on every document passed the whole gate. Asserts any
+        # scalar `meta` field by name.
+        got = result.get("meta", {}).get(chk["field"])
+        if got != chk["value"]:
+            return f"meta.{chk['field']} {got!r} != {chk['value']!r}"
     elif t == "confidence":
         # the contract promises confidence is honest and that the eval set
         # punishes overconfident wrongness. Until this check type existed no
@@ -219,9 +229,26 @@ def eval_check(result, chk, path=None):
         if not refusal:
             # set only once the filing is accepted (SD-6): a refused document
             # has no era and no manifest to report
-            meta_keys |= {"taxonomy_era", "toc_manifest"}
+            # ADR-035 §d adds `coverage` on the same terms: a document the
+            # pipeline refused has no items, so no coverage to report
+            meta_keys |= {"taxonomy_era", "toc_manifest", "coverage"}
         if not meta_keys <= set(result["meta"]):
             return f"meta missing {sorted(meta_keys - set(result['meta']))}"
+        if not refusal:
+            # PR #57 R1, the root-cause half. `meta.coverage` is PUBLISHED by
+            # extract.py and THRESHOLDED by validate.py from two separate calls
+            # to the same function, so nothing made the published number agree
+            # with the judged one — the band pins stayed green with the field
+            # hard-coded. This restates the contract's own definition (ADR-035
+            # §d: span-carrying chars over normalized chars, 4 dp) against the
+            # items the SAME envelope publishes, so it binds every case that
+            # runs `envelope_shape`, not just the two that pin a literal.
+            cov = round(sum(i["end"] - i["start"] for i in result["items"]
+                            if i.get("start") is not None)
+                        / max(len(result["normalized_text"]), 1), 4)
+            if result["meta"]["coverage"] != cov:
+                return (f"meta.coverage {result['meta']['coverage']!r} != {cov!r} "
+                        "recomputed from the items this envelope publishes")
         if not isinstance(result["trace"], list) or "total_ms" not in result["timings"] \
                 or not {"llm_calls", "tokens", "usd"} <= set(result["cost"]):
             return "trace/timings/cost not in contract shape"
@@ -233,7 +260,8 @@ def eval_check(result, chk, path=None):
             if not {"code", "item", "message"} <= set(w):
                 return f"warning not in contract shape: {w}"
         item_keys = {"item", "part", "title", "heading_text", "start", "end",
-                     "status", "confidence", "method", "evidence"}
+                     "status", "confidence", "method", "evidence",
+                     "review_required"}  # ADR-035 §e
         for i in result["items"]:
             if not item_keys <= set(i):
                 return f"item {i.get('item')} missing {sorted(item_keys - set(i))}"

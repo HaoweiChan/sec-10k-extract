@@ -1,0 +1,57 @@
+D8 / ADR-035 — THRESHOLD MUTATION PINS (post-change tree)
+=========================================================
+
+Each block mutates ONE constant in src/sec10k/validate.py and re-runs the
+committed cases that pin that constant's band edge. A threshold whose green
+range is wider than its measured band is unpinned; these are the runs that
+show it is not (ADR-030 §f's precedent, ADR-027 §c's rule). The source is
+restored after every block.
+
+Note on the harness: the two COVERAGE_MIN edits are the same byte length as
+the original, and CPython invalidates a .pyc on (int(mtime), size) — written
+inside the same wall-clock second they left a stale .pyc and the mutation
+silently did not run, reporting PASS. The harness drops
+src/sec10k/__pycache__ between blocks. Recorded because a mutation test that
+does not mutate is indistinguishable, in its output, from a threshold that is
+genuinely unpinned.
+
+### 'SPAN_FLOOR = 1500' -> 'SPAN_FLOOR = 900'   (below ko-1997 item 8 (930))
+[FAIL] ko-1997-shallow  (evals/golden/ko-1997-shallow.json)  doc_status=success_with_warning
+    - {"type": "warning_present", "code": "item_span_near_empty", "item": "8"}
+        -> expected warning 'item_span_near_empty', got ['unattributed_content']
+
+### 'SPAN_FLOOR = 1500' -> 'SPAN_FLOOR = 2100'   (above tgt-2002 item 1 (2,094))
+[PASS] cat-2023-shallow  (evals/golden/cat-2023-shallow.json)  doc_status=success
+
+[FAIL] tgt-2002-shallow  (evals/golden/tgt-2002-shallow.json)  doc_status=success_with_warning
+    - {"type": "warning_absent", "code": "item_span_near_empty", "item": "1"}
+        -> unexpected warning 'item_span_near_empty': item 1's span is 2,094 chars, under the 2,100-char floor for this item — a pointer or a stub, not the item's own content
+
+### 'COVERAGE_MIN = 0.13' -> 'COVERAGE_MIN = 0.02'   (below xref-index-collapse (0.0303))
+[FAIL] xref-index-collapse  (evals/adversarial/xref-index-collapse.json)  doc_status=success_with_warning
+    - {"type": "warning_present", "code": "low_item_coverage"}
+        -> expected warning 'low_item_coverage', got ['item_span_near_empty', 'unattributed_content']
+    - {"type": "doc_status", "value": "ambiguous"}
+        -> doc_status 'success_with_warning' != 'ambiguous'
+    - {"type": "confidence", "max": 0.75}
+        -> item 1 confidence 0.8 > 0.75
+
+### 'COVERAGE_MIN = 0.13' -> 'COVERAGE_MIN = 0.24'   (above ge-1994 (0.2306))
+[PASS] cvx-2015-pointer-flagged  (evals/adversarial/cvx-2015-pointer-flagged.json)  doc_status=success_with_warning
+
+[FAIL] ge-1994-oldformat  (evals/adversarial/ge-1994-oldformat.json)  doc_status=ambiguous
+    - {"type": "warning_absent", "code": "low_item_coverage"}
+        -> unexpected warning 'low_item_coverage': only 23.1% of the document lies inside an item span (83,654 of 362,717 chars) — the spans did not resolve to the filing's content
+    - {"type": "confidence", "item": "7", "value": 0.85}
+        -> item 7 confidence 0.75 != 0.85
+    - {"type": "confidence", "item": "10", "value": 0.95}
+        -> item 10 confidence 0.75 != 0.95
+
+### '                   "low_item_coverage"}' -> '                   }'   (low_item_coverage no longer escalates)
+[FAIL] xref-index-collapse  (evals/adversarial/xref-index-collapse.json)  doc_status=success_with_warning
+    - {"type": "doc_status", "value": "ambiguous"}
+        -> doc_status 'success_with_warning' != 'ambiguous'
+    - {"type": "confidence", "max": 0.75}
+        -> item 1 confidence 0.8 > 0.75
+
+[restored] 33657 bytes

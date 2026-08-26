@@ -16,6 +16,7 @@ unchanged; field rationale lives in `docs/product/task2-problem-definition.md`.
     "format_era": "ixbrl",
     "taxonomy_era": "modern",
     "toc_manifest": ["1", "1A", "..."],
+    "coverage": 0.9484,
     "document_selected": "...",
     "input_sha256": "...",
     "extractor_version": "..."
@@ -34,14 +35,16 @@ unchanged; field rationale lives in `docs/product/task2-problem-definition.md`.
       "status": "extracted",
       "confidence": 0.95,
       "method": "heading_strict",
+      "review_required": false,
       "evidence": {}
     }
   ]
 }
 ```
 
-The example is the non-refusal shape. `meta.taxonomy_era` and
-`meta.toc_manifest` are present **on the non-refusal path only**
+The example is the non-refusal shape. `meta.taxonomy_era`,
+`meta.toc_manifest` and `meta.coverage` (ADR-035) are present **on the
+non-refusal path only**
 (`success` / `success_with_warning` / `ambiguous`): a document the pipeline
 refused (`unsupported` / `failed`) has no era and no manifest to report
 (ADR-027 §f; the `envelope_shape` check type encodes exactly this). The
@@ -75,6 +78,28 @@ them all); the example once showed `lenient_match`, which nothing emits.
 - For `status: missing` / `omitted`: `start`/`end` are null — there is no span.
 - All statuses require `confidence` (how sure are we it's actually
   absent/incorporated, not missed).
+- All statuses require **`review_required`** (bool, ADR-035 §e): true exactly
+  when some warning in `warnings` carries this item's code, excluding
+  `expected_item_missing` (which only restates `status: missing`). It is the
+  same set of hits that moves `confidence` by `WARN_PENALTY`, so the two can
+  never disagree, and it exists because `status` alone cannot say it: a
+  validator-flagged item stays `extracted` — the filing really did answer it
+  that way — and a consumer reading `status` and the text must not be told
+  the span is clean when a layer-8 check fired on it. It is **item-level**:
+  a document-level warning (`item: null`) does not set it, because
+  `doc_status` already carries that, and an `ambiguous` document separately
+  caps every item at 0.75 (ADR-027 §a).
+- **`meta.coverage`** (float in [0,1], ADR-035 §d): the fraction of
+  `normalized_text` that lies inside SOME item's span — every span-carrying
+  status, `extracted` and `incorporated_by_reference` alike, summed (INV-S1
+  makes the spans disjoint, so the sum is exact) and rounded to 4 dp. It is
+  **not** `1 - unattributed_content`: that figure counts only the preamble
+  and the tail and understates true non-coverage by up to 9.7 points on the
+  7 `EXEC_OFFICERS_RE` fixtures (ADR-019 §d). Below `COVERAGE_MIN` it
+  escalates (`low_item_coverage`, in `AMBIGUOUS_CODES`); above it, it is
+  still published, because a document that places 37% of its text in items
+  must be able to say so at the API level without a consumer parsing a
+  warning message for the number.
 - `confidence` ∈ [0,1] and must be honest: downstream consumers will threshold
   on it. Cases pin the scale's constants via the `confidence` check type
   (ADR-010). The scale is now *measured*, not merely asserted: metric 8 v2
@@ -184,8 +209,12 @@ them all); the example once showed `lenient_match`, which nothing emits.
   `expected_items_mostly_missing` (ADR-008, ADR-013) and `item_dominates`
   (ADR-030 — a non-last span above `ITEM_MAX`; produced end to end on
   `evals/adversarial/interior-span-dominates.json`, per ADR-016's rule that a
-  listed code is one a path produces). Every other warning code is
-  non-escalating.
+  listed code is one a path produces) and `low_item_coverage` (ADR-035 —
+  `meta.coverage` below `COVERAGE_MIN`; produced end to end on
+  `evals/adversarial/xref-index-collapse.json`). Every other warning code is
+  non-escalating — including `item_span_near_empty` (ADR-035 §c), which
+  carries an item code, moves that item's `confidence` and sets its
+  `review_required`, and says nothing about the document.
 - `unsupported`/`failed` mean the pipeline **refused** — it must never emit a
   best-effort `items` parse of a document it could not identify as a 10-K.
 - `warnings` is present (possibly empty); `doc_status: success` requires it to

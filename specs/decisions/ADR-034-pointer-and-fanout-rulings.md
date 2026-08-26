@@ -35,6 +35,13 @@ $0 regex producing identical output, which §c below falsifies by running it.
 document decides, and every ruling it reaches is "do not build a milestone for
 this", so it is not a sanctioned freeze exception and does not need to be.
 
+**Cross-referenced 2026-08-26 at the PR #57 (D8) merge**: §f's third
+falsifier row — "the D8 trigger, once built, fires on any of the five A2
+filings" — is **TRIPPED**, 4 fires against a threshold of one. §d1's own
+figures reproduce exactly; what moved is that D8 shipped a WIDER trigger
+(items 1/7/8, not item 1) than §d1 measured. No ruling here is changed —
+§e2 reason 2 carries the measurement and the re-read is escalated as Debt.
+
 **Ruling**: the ADR-019 §e class splits — **A1**, a whole document collapsing onto a cross-reference index (`intc-2025`, 0.3% of the text inside any span; 13 of 23 item bodies are internal page pointers, §b3a), is **subsumed by D11** and gets no milestone of its own; **A2**, a few pointer-bodied items inside an otherwise well-extracted filing (`cvx-2015`, `jpm-2024`, `bac-2006`, `ge-1994`, `spatz-2014` — 14 items, 5 real filings), is **DECLINED and stays Debt**, because two independent reads still disagree that it is a defect and no measured trigger reaches it. The `axp-2008` combined-heading fan-out is **subsumed by D11**, not promoted.
 **Because**: A1 is exactly the shape D11's own row already commits to passing, and the D8 trigger it needs fires on 0 of 42 dev fixtures; A2 has no trigger and an unsettled auditor disagreement, so promoting it would build a capability to fix something not agreed to be broken; and the fan-out's premise is false — heading-stripped, `segment.classify` returns `incorporated_by_reference` on the item-10 partition body, `axp-2008` item 9B's span runs straight through the Part III block, the class has exactly one member in 49 documents, and `axp-2008` is no longer the only real-filing recall gap now that `c-2025` reports 21 `missing` items the fan-out cannot touch.
 **Enforced by**: `tasks/TODO.md`'s two Debt rows, which cite this ADR's ruling lines and are verified against them by `evals/adversarial/ledger-line-refs.json` (`invariant` + `fast`); `evals/adversarial/cvx-2015-internal-pointer.json` and `evals/adversarial/axp-2008-combined-part-iii.json`, whose triage notes name this ruling as why they are permitted to stay red; `evals/adversarial/ledger-table-shape.json`, `evals/golden/adr-header-and-index.json` (`adr_headers`, `adr_index`). §h states, without softening it, what this ADR's figures are NOT gated by.
@@ -499,6 +506,27 @@ Stays in the Debt table. Two reasons, both evidential, neither a preference:
    false. Declining it is the honest verdict; "subsumed" would have been the
    comfortable one.
 
+   **CROSS-REFERENCE, added 2026-08-26 at the PR #57 (D8) merge — this reason
+   is FALSIFIED by D8's shipped trigger, and §f row 3 is the instrument that
+   says so.** §d1 measured the trigger *as the D8 row specified it* — item 1's
+   span under 2,000 chars — and that measurement REPRODUCES exactly on the
+   merged tree: item 1 is full-length on all five, and the only dev filing it
+   reaches is `xref-index-collapse`, the synthetic D8 itself adds. What D8
+   actually SHIPPED ([ADR-035](ADR-035-item-level-escalation.md) §c) is
+   `item_span_near_empty` — `SPAN_FLOOR` 1,500 chars over items **1, 7 and
+   8**, not item 1 alone — and re-running §d1's table against it, as §f row 3
+   directs, gives **4 fires of 5, against a stated threshold of one**:
+   `cvx-2015` (items 7, 8), `jpm-2024` (items 7, 8), `ge-1994` (item 8),
+   `spatz-2014` (item 8); only `bac-2006` is silent. `low_item_coverage`
+   fires on none of the five (coverages 0.9285, 0.2718, 0.2306, 0.9931,
+   0.6632, all at or above `COVERAGE_MIN` 0.13). **No figure in §d1 is wrong
+   and no ruling is changed here** — the gap is that reason 2 generalised a
+   measurement of item 1 to "the D8 trigger", and the trigger that shipped is
+   wider. Reason 1 (the unadjudicated `cvx-2015` item-6 disagreement) is
+   untouched and still stands on its own. Re-reading the A2 ruling is D9's
+   call, not D8's, and is escalated as a Debt row in `tasks/TODO.md`
+   (`Origin: PR #57 merge cross-check`) rather than settled here.
+
 ### e3) B — combined Part III heading fan-out: SUBSUMED BY D11
 
 Not promoted. `axp-2008` escalates today on a warning it already emits; one
@@ -526,6 +554,7 @@ rather than re-argue it.
 | **A1 subsumed** | D11's ADR declines the model tier, or D8's ADR adopts no item-level span floor. Either leaves A1 without an owner and it must be re-ruled standalone | the D8 and D11 ADRs when written | either one |
 | **A2 declined** | the `cvx-2015` item-6 disagreement is adjudicated as WRONG by both reads; or the plain-text stratum gets the independent cross-check ADR-019 §c/§g still says it lacks, and finds the shape where the pointer target is demonstrably unreachable | an extraction-auditor pass over `cvx-2015` items 6, 7, 8 and the `bac-2006` / `spatz-2014` instances this ADR adds | **one** instance both reads agree is wrong |
 | **A2 declined** | the D8 trigger, once built, fires on any of the five A2 filings — then A2 *is* reachable by D11 and "declined" becomes "subsumed" | re-run §d1's table against D8's shipped trigger | **one** fire |
+| **A2 declined** — ↑ **TRIPPED 2026-08-26** at the PR #57 (D8) merge: the shipped `item_span_near_empty` fires on 4 of the 5 (`cvx-2015`, `jpm-2024`, `ge-1994`, `spatz-2014`), threshold was one. §e2 reason 2 carries the measurement; the ruling is left standing for D9 to re-read | — | — |
 | **B subsumed** | a second real EDGAR filing whose **body** heading names several item codes and loses items to it — the class stops being a single instance | `tasks/reviews/d9_class_scan.py`'s multi-code hits, adjudicated by hand as §c1 does | **one** filing |
 | **B subsumed** | D11's ADR declines to escalate on `expected_item_missing`, leaving `axp-2008` with no owner; the fan-out then returns as the only route and must be costed again against §c2's real scope | the D11 ADR when written | that decision |
 

@@ -1,0 +1,34 @@
+{
+  "pr": 57,
+  "round": 3,
+  "task": "D8",
+  "head": "e04d46c",
+  "base_reviewed": "32973cb..e04d46c (repair diff + standing findings)",
+  "result": "REQUEST_CHANGES",
+  "standing": {
+    "R1": "CLOSED at round 2 — not re-raised.",
+    "R2": "debt, confirmed logged (Origin: PR #57 R2).",
+    "R3": "debt, confirmed logged (Origin: PR #57 R3).",
+    "R4": "Repair judged INCOMPLETE — the withdrawal itself is correct, but its stated justification for deferring is false; see R5."
+  },
+  "findings": [
+    {
+      "id": "R5",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The debt row's and the resolution artifact's load-bearing justification for deferring to D11 — \"there is no output carrying the thresholded number to assert against\" / \"That leaves one real fix: make validate() read the published figure ... a signature change to the layer-8 entry point with ~10 _demo call sites behind it\" — is false: a two-line assertion on scaffolding that already exists at src/sec10k/validate.py:538 goes red under the exact round-2 mutant, is run by CI, and has zero blast radius.",
+      "evidence": "tasks/TODO.md:81 (\"Every fixture that DOES diverge is one where the warning never fires, so there is no output carrying the thresholded number to assert against. That leaves one real fix ... a pipeline change whose blast radius must be re-measured and re-cited\") and tasks/reviews/pr57-r2-resolution.json:15 (\"The only (a) that binds is the second one acceptance names\"). Falsifying state: src/sec10k/validate.py:537 already constructs `ibr_only = [{**s_items[0], \"status\": \"incorporated_by_reference\"}]` over the 10,018-char `stub`. Measured: unmutated, `validate(stub, ibr_only, {\"1\": {}}, [])` emits `low_item_coverage` with message \"only 0.2% ... (17 of 10,018 chars)\"; under the round-2 mutant (`cov = coverage(text, [i for i in items if i[\"status\"] == \"extracted\"])` at validate.py:318) the same call emits \"only 0.0% ... (0 of 10,018 chars)\". That IS an output carrying a diverged thresholded number, inside `_demo`, which .github/workflows/ci.yml:30 runs (`python3 -m src.sec10k.validate`) — the same file's comment at :35 states the repo's own rule that a self-check a job runs is a check, not a claim. No signature change, no new fixture, no _demo call-site churn, blast radius unmoved. The scope statement is therefore not \"measured, not assumed\" as the row asserts, and R4's acceptance (b) required these two documents to \"state only what is true\".",
+      "repro": "cp src/sec10k/validate.py /tmp/v.py && sed -i '' 's/        cov = coverage(text, items)/        cov = coverage(text, [i for i in items if i[\"status\"] == \"extracted\"])/' src/sec10k/validate.py && python3 - <<'EOF'\np='src/sec10k/validate.py'; s=open(p).read()\na='    assert coverage(stub, ibr_only) == coverage(stub, s_items)\\n'\nopen(p,'w').write(s.replace(a, a+'    _m=[x for x in validate(stub, ibr_only, {\"1\": {}}, []) if x[\"code\"]==\"low_item_coverage\"]\\n    assert \"0.2%\" in _m[0][\"message\"], _m\\n'))\nEOF\npython3 -m src.sec10k.validate   # AssertionError -> RED under the mutant\ncp /tmp/v.py src/sec10k/validate.py && python3 -m src.sec10k.validate   # ok -> GREEN unmutated",
+      "acceptance": "Either (i) add that pin — two lines beside src/sec10k/validate.py:537 — record the red run the way tasks/reviews/pr57-r1-red.txt does, and delete the debt row (the thresholded figure is then bound); or (ii) keep the deferral but correct tasks/TODO.md:81 and tasks/reviews/pr57-r2-resolution.json's `why_not_branch_a` to state the true cost: a CI-gated `_demo` pin over the existing `ibr_only` construction closes this mutant with zero blast radius, and give the actual reason it is still deferred rather than asserting no cheap binding exists. In either case tasks/reviews/pr57-r1-resolution.json must not be left citing a superseded cost claim."
+    },
+    {
+      "id": "R6",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "\"`low_item_coverage` fires on exactly ONE committed document, `xref-index-collapse`\" is contradicted by ADR-035 §j's own table in the same PR — three committed fixtures fire it (dev 1/39 plus held-out intc-2025 and c-2025) — though the conclusion drawn from it survives, because all three carry zero IBR spans.",
+      "evidence": "tasks/TODO.md:81 and tasks/reviews/pr57-r2-resolution.json:15 both say \"exactly ONE committed document\"; specs/decisions/ADR-035-item-level-escalation.md:504 says \"`low_item_coverage` fires | 1 / 39 = 0.026 (the synthetic) | 2 / 7 = 0.286 (intc-2025, c-2025)\", and evals/heldout/fixtures/intc-2025 and .../c-2025 are committed files. Measured: xref-index-collapse pub 0.0303 / mutant 0.0303 / 0 IBR spans; intc-2025 0.0033 / 0.0033 / 0 IBR; c-2025 0.0 / 0.0 / 0 spans at all — so the byte-identical-message argument holds for all three and the falsification of branch (a) is not undermined; only the count is wrong.",
+      "repro": "python3 -c \"import sys,glob,os;sys.path.insert(0,'.');from src.sec10k.extract import extract_items;[print(os.path.basename(os.path.dirname(p)),[w['code'] for w in extract_items(p)['warnings'] if w['code']=='low_item_coverage'],sum(1 for i in extract_items(p)['items'] if i['status']=='incorporated_by_reference')) for p in sorted(glob.glob('evals/fixtures/*/filing.*'))+sorted(glob.glob('evals/heldout/fixtures/*/filing.*'))]\"",
+      "acceptance": "Both sentences say \"one dev fixture (and held-out intc-2025 / c-2025, both also zero-IBR, so the argument is unchanged)\", matching ADR-035 §j:504."
+    }
+  ]
+}

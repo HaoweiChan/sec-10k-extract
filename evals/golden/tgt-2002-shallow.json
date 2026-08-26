@@ -7,6 +7,7 @@
   },
   "expect": {
     "checks": [
+      {"type": "warning_absent", "code": "item_span_near_empty", "item": "1"},
       {"type": "no_empty_success"},
       {"type": "no_overlap_ordered"},
       {"type": "verbatim"},

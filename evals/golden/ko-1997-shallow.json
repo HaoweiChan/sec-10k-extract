@@ -10,6 +10,7 @@
   "expect": {
     "checks": [
       {"type": "warning_absent", "code": "keyword_fingerprint", "item": "8"},
+      {"type": "warning_present", "code": "item_span_near_empty", "item": "8"},
       {
         "type": "no_empty_success"
       },

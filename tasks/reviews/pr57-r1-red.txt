@@ -1,0 +1,107 @@
+D8 / PR #57 R1 — RED-FIRST RECORD for the `meta.coverage` value pins
+====================================================================
+
+git sha of the tree these runs were taken at:
+    ec2d0a50f59f54c95457157e8374f04310c11e21   (task/D8, the PR #57 head the
+    reviewer read)
+Run date: 2026-08-26T07:23:55Z
+
+The defect R1 names is that NOTHING asserted the published value of
+`meta.coverage`. There is no way to watch a case fail against the shipped
+code — the shipped code is right — so the red run is against the REVIEWER'S
+OWN MUTANT, applied verbatim from the finding's `repro`:
+
+    sed -i '' 's/    meta\["coverage"\] = round(coverage(text, items), 4)/\
+                 meta["coverage"] = 1.0/' src/sec10k/extract.py
+    rm -rf src/sec10k/__pycache__
+
+===============================================================================
+1. THE FINDING, REPRODUCED — mutant applied, NOTHING else changed
+===============================================================================
+    $ python3 -m evals.run --suite invariant --no-report
+    [eval] suite 'invariant': 69/69 = 1.000  (+3 enumerated debt, unscored)
+    $ python3 -m evals.run --suite fast --no-report
+    [eval] suite 'fast': 132/132 = 1.000  (+3 enumerated debt, unscored)
+    [eval] table fidelity: cells 1.0000 (427/427), rows 1.0000 (34/34)
+    [eval] structure fidelity: blocks 1.0000 (61/61), bounds 1.0000 (61/61)
+
+Every gate green while every document publishes `coverage: 1.0`. R1 confirmed.
+
+===============================================================================
+2. THE PINS, ADDED AGAINST THE STILL-MUTATED TREE — red for the right reason
+===============================================================================
+[FAIL] xref-index-collapse  (evals/adversarial/xref-index-collapse.json)
+    - {"type": "envelope_shape"}
+        -> meta.coverage 1.0 != 0.0303 recomputed from the items this envelope publishes
+    - {"type": "meta_field", "field": "coverage", "value": 0.0303}
+        -> meta.coverage 1.0 != 0.0303
+
+[FAIL] cat-2023-shallow  (evals/golden/cat-2023-shallow.json)
+    - {"type": "envelope_shape"}
+        -> meta.coverage 1.0 != 0.982 recomputed from the items this envelope publishes
+    - {"type": "meta_field", "field": "coverage", "value": 0.982}
+        -> meta.coverage 1.0 != 0.982
+
+Both ends of the published range, by literal value: 0.0303 (the stub-collapse
+synthetic, the low end) and 0.982 (cat-2023, the high end).
+
+===============================================================================
+3. FULL SUITES, mutant still applied, pins present
+===============================================================================
+[eval] INVARIANT VIOLATION: invariants are absolute, 100% required
+[FAIL] blocks-offsets-invariant (adversarial, 0.28s)
+[FAIL] blocks-wrapped-invariant (adversarial, 0.81s)
+[FAIL] images-offsets-invariant (adversarial, 0.78s)
+[FAIL] interior-span-dominates (adversarial, 0.08s)
+[FAIL] items-stripped-escalation (adversarial, 0.09s)
+[FAIL] tables-offsets-invariant (adversarial, 1.98s)
+[FAIL] xref-index-collapse (adversarial, 0.01s)
+[eval] suite 'invariant': 62/69 = 0.899  (+3 enumerated debt, unscored)
+
+[eval] REGRESSION: 0.818 < baseline 1.000
+[FAIL] aapl-2025-blocks (golden, 0.12s)
+[FAIL] aapl-2025-table (golden, 0.1s)
+[FAIL] bac-2006-images (golden, 0.57s)
+[FAIL] cat-2023-shallow (golden, 0.27s)
+[FAIL] ge-1994-blocks (golden, 0.02s)
+[FAIL] jpm-2024-images (golden, 0.63s)
+[FAIL] msft-2013-blocks (golden, 0.3s)
+[FAIL] msft-2013-table (golden, 0.28s)
+[FAIL] nvda-2024-shallow (golden, 0.1s)
+[FAIL] sandston-2021-shallow (golden, 0.04s)
+[FAIL] tgt-2002-table-th (golden, 0.02s)
+[FAIL] xom-2021-blocks (golden, 0.35s)
+[FAIL] xom-2021-images (golden, 0.27s)
+[FAIL] blocks-offsets-invariant (adversarial, 0.28s)
+[FAIL] blocks-omit-chrome (adversarial, 0.88s)
+[FAIL] blocks-wrapped-invariant (adversarial, 0.83s)
+[FAIL] images-in-table-cell (adversarial, 0.33s)
+[FAIL] images-offsets-invariant (adversarial, 0.79s)
+[FAIL] interior-span-dominates (adversarial, 0.08s)
+[FAIL] items-stripped-escalation (adversarial, 0.09s)
+[FAIL] tables-cell-div (adversarial, 0.09s)
+[FAIL] tables-layout-bullet (adversarial, 0.28s)
+[FAIL] tables-offsets-invariant (adversarial, 2.02s)
+[FAIL] xref-index-collapse (adversarial, 0.01s)
+[eval] suite 'fast': 108/132 = 0.818  (+3 enumerated debt, unscored)
+[eval] table fidelity: cells 1.0000 (427/427), rows 1.0000 (34/34)
+[eval] structure fidelity: blocks 1.0000 (61/61), bounds 1.0000 (61/61)
+
+The `envelope_shape` half is the root-cause binding R1's second-order point
+asks for: it restates the contract's own definition of `coverage` against the
+items the SAME envelope publishes, so the mutant is red on 24 cases, not on
+the two that pin a literal. `extract.py` publishing and `validate.py`
+thresholding from two calls to one function can no longer drift, because the
+judge recomputes from the output rather than from either of them.
+
+===============================================================================
+4. MUTANT REVERTED (git checkout -- src/sec10k/extract.py) — all green
+===============================================================================
+    $ python3 -m evals.run --suite invariant --no-report
+    [eval] suite 'invariant': 69/69 = 1.000  (+3 enumerated debt, unscored)
+    $ python3 -m evals.run --suite fast --no-report
+    [eval] suite 'fast': 132/132 = 1.000  (+3 enumerated debt, unscored)
+    [eval] table fidelity: cells 1.0000 (427/427), rows 1.0000 (34/34)
+    [eval] structure fidelity: blocks 1.0000 (61/61), bounds 1.0000 (61/61)
+    $ python3 src/sec10k/test_eval_adapter.py
+    [eval_adapter self-check] 21/21 passed   (was 20/20; test_meta_field is new)

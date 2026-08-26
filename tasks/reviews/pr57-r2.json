@@ -1,0 +1,24 @@
+{
+  "pr": 57,
+  "round": 2,
+  "task": "D8",
+  "head": "32973cb",
+  "base_reviewed": "ec2d0a5..32973cb (repair diff + standing findings)",
+  "result": "REQUEST_CHANGES",
+  "standing": {
+    "R1": "CLOSED — the publication is now bound to the contract definition; reviewer did not re-raise it.",
+    "R2": "debt, confirmed logged (Origin: PR #57 R2) — not re-raised.",
+    "R3": "debt, confirmed logged (Origin: PR #57 R3) — not re-raised. Implementer's written disagreement with the routing is the human's to settle, not a finding."
+  },
+  "findings": [
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-035 §f1's replacement text (and the resolution artifact) claims the two `coverage()` call sites are now pinned by their AGREEMENT, but nothing binds `validate.py`'s thresholded figure to the `meta.coverage` the envelope publishes — the new `envelope_shape` recomputation only binds `extract.py`'s published value, so the two callers can still silently diverge exactly as R1 described.",
+      "evidence": "specs/decisions/ADR-035-item-level-escalation.md:386-390 (\"The two `coverage()` call sites are kept — one function, two callers — and it is their AGREEMENT that is now pinned, which is stronger than collapsing them into one producer would have been\") and tasks/reviews/pr57-r1-resolution.json:14. The new check at src/sec10k/eval_adapter.py:237-251 recomputes the contract definition from `result[\"items\"]` / `result[\"normalized_text\"]` and compares it to `result[\"meta\"][\"coverage\"]` — i.e. it judges the *publisher* (src/sec10k/extract.py:225) only. `src/sec10k/validate.py:318` (`cov = coverage(text, items)`) is read by no check. Mutating that one line to `cov = coverage(text, [i for i in items if i[\"status\"] == \"extracted\"])` leaves invariant 69/69 = 1.000 and fast 132/132 = 1.000, all fidelity metrics 1.0000, while 24 of the 39 span-bearing dev fixtures then threshold a number different from the one they publish (tgt-2002 published 0.5610 / thresholded 0.5033, wfc-2008 0.6668 / 0.6254, textron-2001 0.6686 / 0.6268, ko-1997 0.7340 / 0.6931, ibm-1997 0.4692 / 0.4306, ge-1994 0.2306 / 0.2272). The `low_item_coverage` message itself quotes the thresholded figure (validate.py:319-323), so under that divergence a filing can be warned with a percentage that contradicts its own `meta.coverage` and no committed case notices. The band pins only pin whether the warning fires, not which number fired it. This is the same defect class R1 raised against §f1's previous sentence — a compensating claim in a committed ADR that binds nothing.",
+      "repro": "sed -i '' 's/        cov = coverage(text, items)/        cov = coverage(text, [i for i in items if i[\"status\"] == \"extracted\"])/' src/sec10k/validate.py && python3 -m evals.run --suite invariant --no-report && python3 -m evals.run --suite fast --no-report && git checkout -- src/sec10k/validate.py   # both 100%",
+      "acceptance": "Either (a) one committed case goes red under the mutant above — e.g. a check that the `low_item_coverage` message's percentage equals `meta.coverage`, or `validate()` made to read the published figure instead of recomputing it — with the red run recorded the way tasks/reviews/pr57-r1-red.txt records the mutant; or (b) ADR-035 §f1 and tasks/reviews/pr57-r1-resolution.json corrected to state only what is true — that the *publication* is bound to the contract definition, and that the second call site's agreement is unpinned — with that gap logged as a row in tasks/TODO.md's `## Open debt, carried deliberately` table."
+    }
+  ]
+}

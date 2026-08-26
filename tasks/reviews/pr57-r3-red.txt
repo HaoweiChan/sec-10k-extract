@@ -1,0 +1,74 @@
+PR #57 R5 — red-first record for the `low_item_coverage` thresholded-figure pin
+================================================================================
+sha at which this was taken : a8cedcb00a1e809a9cd161c44be9a9eff49a5777
+                              (branch task/D8, head before the R5/R6 repair)
+date                        : 2026-08-26
+route                       : R5 acceptance (i) — add the pin, delete the debt row
+
+What is being pinned
+--------------------
+`coverage()` is called twice: `extract.py` publishes one result at
+`meta.coverage`, `validate.py:318` thresholds another against COVERAGE_MIN.
+PR #57 R1 bound the PUBLISHED figure (envelope_shape recomputation + two
+meta_field literals). Nothing read the second call site — that was the gap R4
+withdrew a false claim about and logged as debt, and R5 falsified the cost
+estimate in that debt row: the pin costs two lines beside the `ibr_only`
+construction that already exists in `_demo`, on a self-check CI runs
+(.github/workflows/ci.yml:30).
+
+The mutant (the round-2 reviewer's, applied verbatim)
+-----------------------------------------------------
+src/sec10k/validate.py:318
+-        cov = coverage(text, items)
++        cov = coverage(text, [i for i in items if i["status"] == "extracted"])
+
+STEP 1 — mutant applied, pin NOT yet added: the mutant is invisible
+------------------------------------------------------------------
+$ sed -n '318p' src/sec10k/validate.py
+        cov = coverage(text, [i for i in items if i["status"] == "extracted"])
+$ python3 -m src.sec10k.validate
+[validate self-check] ok
+exit=0
+
+(This is the finding reproduced. The same mutant was already shown green on
+invariant 69/69 and fast 132/132 in tasks/reviews/pr57-r2-resolution.json;
+it is green on the module self-check too, so the pin is genuinely new
+coverage and not a restatement of something already asserted.)
+
+STEP 2 — pin added, tree STILL mutated: RED, for the right reason
+-----------------------------------------------------------------
+The two lines added beside src/sec10k/validate.py:537's existing `ibr_only`:
+
+    ibr_w = [x for x in validate(stub, ibr_only, {"1": {}}, [])
+             if x["code"] == "low_item_coverage"]
+    assert "0.2%" in ibr_w[0]["message"], ibr_w
+
+$ python3 -m src.sec10k.validate
+Traceback (most recent call last):
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File ".../src/sec10k/validate.py", line 581, in <module>
+    _demo()
+    ~~~~~^^
+  File ".../src/sec10k/validate.py", line 544, in _demo
+    assert "0.2%" in ibr_w[0]["message"], ibr_w
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: [{'code': 'low_item_coverage', 'item': None, 'message': "only 0.0% of the document lies inside an item span (0 of 10,018 chars) — the spans did not resolve to the filing's content"}]
+exit=1
+
+0.2% -> 0.0% on the 10,018-char `stub`, exactly as the R5 finding measured.
+The IBR-only span is the whole point: the mutant differs from the shipped code
+ONLY by dropping non-`extracted` spans, so a document whose single span is
+`incorporated_by_reference` is the smallest input that separates them.
+
+STEP 3 — mutant reverted, pin kept: GREEN
+-----------------------------------------
+$ sed -n '318p' src/sec10k/validate.py
+        cov = coverage(text, items)
+$ python3 -m src.sec10k.validate
+[validate self-check] ok
+exit=0
+
+Blast radius: none. No signature changed, no pipeline code changed, no fixture
+added. The diff is two lines inside `_demo`. ADR-035 §f's digests are untouched
+by it.

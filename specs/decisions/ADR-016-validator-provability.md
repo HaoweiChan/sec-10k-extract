@@ -1,6 +1,7 @@
 # ADR-016 — Every warning code and every check, dispositioned
 
-Date: 2026-08-17. Status: accepted. Discharges the open item ADR-010's
+Date: 2026-08-17. Status: accepted. Amended by: ADR-030, ADR-035 (the code
+table gains rows, in place). Discharges the open item ADR-010's
 consequences section left in `tasks/TODO.md` row G1: *"four of the six layer-8
 validators still have no case proving they fire, and four adapter checks are
 structurally incapable of going red. 25/25 green means less than it appears,
@@ -28,7 +29,7 @@ Disposition is one of three, and every code gets one:
 
 ## The eight layer-8 codes and the four upstream warnings
 
-*(Nine layer-8 codes since 2026-08-23: ADR-030 added `item_dominates`, the row below `last_item_dominates`.)*
+*(Nine layer-8 codes since 2026-08-23: ADR-030 added `item_dominates`, the row below `last_item_dominates`. Eleven since 2026-08-26: ADR-035 (D8) added `item_span_near_empty` and `low_item_coverage`. `grep -c 'warn("' src/sec10k/validate.py` reads 10 — the eleventh, `expected_item_missing`, is emitted upstream in `extract.py`.)*
 
 | code | disposition | where |
 |---|---|---|
@@ -37,6 +38,8 @@ Disposition is one of three, and every code gets one:
 | `unattributed_content` | fixture | `ibm-1997-shallow` |
 | `last_item_dominates` | fixture | `jpm-2024-structure` |
 | `item_dominates` | fixture | `interior-span-dominates` — **added 2026-08-23, ADR-030** (non-last span above `ITEM_MAX`; escalating) |
+| `item_span_near_empty` | fixture | `xref-index-collapse` (stub), `cvx-2015-pointer-flagged` / `nvda-2024-shallow` / `ge-1994-oldformat` (pointer, three eras), `ko-1997-shallow` (band low edge), `tgt-2002-shallow` / `cat-2023-shallow` (`warning_absent`) — **added 2026-08-26, ADR-035** (item 1/7/8 span under `SPAN_FLOOR`; item-targeted, NOT escalating) |
+| `low_item_coverage` | fixture | `xref-index-collapse`, `ge-1994-oldformat` (`warning_absent`, band high edge) — **added 2026-08-26, ADR-035** (`meta.coverage` under `COVERAGE_MIN`; escalating) |
 | `boundary_hygiene` | **unit** | `validate._demo`, added by this ADR — see §2 |
 | `numeric_density_inversion` | **fixture** | `spans-transposed`, new — see §3 |
 | `keyword_fingerprint` | **fixture** | `spans-transposed`, new — see §3 |

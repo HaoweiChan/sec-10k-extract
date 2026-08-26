@@ -1,0 +1,51 @@
+{
+ "pr": 57,
+ "round": 2,
+ "task": "D8",
+ "reviewed_head": "32973cb",
+ "resolutions": [
+  {
+   "id": "R4",
+   "severity": "MEDIUM",
+   "route": "repair",
+   "disposition": "fixed",
+   "branch_taken": "(b) — correct both documents to the literal truth and log the gap as debt",
+   "finding_accepted": true,
+   "reproduced": "Reviewer's mutant applied verbatim at 32973cb (`cov = coverage(text, [i for i in items if i[\"status\"] == \"extracted\"])` in src/sec10k/validate.py:318): invariant 69/69 = 1.000, fast 132/132 = 1.000, table cells 427/427 rows 34/34, structure blocks 61/61 bounds 61/61 — all green. 24 of the 39 span-bearing dev fixtures then threshold a figure different from the one they publish; the count and the six named figures (tgt-2002 0.5610/0.5033, wfc-2008 0.6668/0.6254, textron-2001 0.6686/0.6268, ko-1997 0.7340/0.6931, ibm-1997 0.4692/0.4306, ge-1994 0.2306/0.2272) were re-derived here and match the finding exactly. Mutant reverted; src/sec10k/validate.py byte-identical to 32973cb.",
+   "why_not_branch_a": "[SUPERSEDED under PR #57 R5 — see `corrections`. The original text was: 'Acceptance (a)'s own cheaper route was evaluated concretely and FALSIFIED, not declined on preference. It offered \"a check that the `low_item_coverage` message's percentage equals `meta.coverage`\". `low_item_coverage` fires on exactly one committed document, `xref-index-collapse`, and that document carries ZERO incorporated_by_reference spans — so the mutant (which differs only by excluding IBR spans) computes an identical figure there. Measured under the mutant: meta.coverage 0.0303 and the message \"only 3.0% of the document lies inside an item span (1,003 of 33,061 chars)\" — byte-identical to the unmutated run. Such a check would stay GREEN under the very mutant it exists to catch, so it does not satisfy its own acceptance. Every fixture that DOES diverge is one where the warning never fires, so no output carries the thresholded number to assert against. The only (a) that binds is the second one acceptance names — making validate() read the published figure — which is a signature change to the layer-8 entry point with ~10 _demo call sites behind it: a pipeline change requiring a re-measured, re-cited blast radius, which the round-2 brief pre-ruled as more than the finding warrants.' Two of its statements were wrong. (1) The COUNT: `low_item_coverage` fires on one dev fixture (`xref-index-collapse`) and on held-out `intc-2025` and `c-2025` — three committed documents, not one. All three carry zero IBR spans, so the byte-identical-message argument and the falsification of (a)'s FIXTURE-based route are unchanged; only the count was wrong (PR #57 R6, matching ADR-035 §j:504). (2) The COST: 'no output carries the thresholded number to assert against' was false. `validate._demo` already constructs an IBR-only span at `src/sec10k/validate.py:537`, and the `low_item_coverage` message it produces IS such an output — 0.2% unmutated, 0.0% under the mutant. The binding therefore cost two lines on a CI-run self-check with zero blast radius, not a signature change to the layer-8 entry point. That pin is now in the tree; see `tasks/reviews/pr57-r3-resolution.json` and `tasks/reviews/pr57-r3-red.txt`.]",
+   "what_changed": [
+    "specs/decisions/ADR-035-item-level-escalation.md §f1: the 'pinned by their AGREEMENT' sentence is WITHDRAWN, not replaced. The bullet now states that `meta.coverage`'s PUBLISHED figure is bound (envelope_shape recomputation + two meta_field literals) and that the figure validate() thresholds on is bound by nothing, naming the debt row. The correction note now records BOTH rounds' false sentences and says plainly that the claim is withdrawn rather than restated a third time.",
+    "tasks/reviews/pr57-r1-resolution.json: resolutions[0].note and resolutions[0].what_changed[1] corrected in place, each quoting its own original text so nothing is silently rewritten; a top-level `corrections` entry records what was falsified, by whom, and how.",
+    "tasks/TODO.md: new row in `## Open debt, carried deliberately` (Origin: PR #57 R4) carrying the finding's evidence verbatim plus the measured reason acceptance (a)'s cheap route fails and what the real fix costs. [DELETED under PR #57 R5 — the gap it carried is now closed by a pin in `validate._demo`, so the row was removed rather than rewritten.]"
+   ],
+   "case_added": null,
+   "watched_red_at_sha": null,
+   "red_first_note": "NONE, and deliberately. Branch (b) adds no check, so there is nothing to watch red — manufacturing a red run here would be the third compensating artifact in this PR. The only runs performed were falsification runs against the reviewer's mutant, reported above and in the debt row.",
+   "debt_row": "tasks/TODO.md :: Open debt, carried deliberately :: '`validate.py`'s thresholded coverage figure is bound to nothing' (Origin: PR #57 R4) — DELETED under PR #57 R5; there is no such row in the tree any more.",
+   "when_to_take_the_real_fix": "[SUPERSEDED under PR #57 R5 — the original said: 'D11. It adds the document-level routing record and already re-measures the validator battery's blast radius, so passing the published coverage into validate() rides that change instead of paying for its own re-measurement.' The deferral is moot: the thresholded figure was bound in PR #57 itself, by two lines in `validate._demo`. Collapsing the two `coverage()` call sites onto one producer is still not done and is still not needed — each call site is now pinned to a literal, so a divergence between them is red.]"
+  }
+ ],
+ "gate_after": {
+  "invariant": "69/69 = 1.000 (+3 enumerated debt, unscored)",
+  "fast": "132/132 = 1.000 (+3 enumerated debt, unscored)",
+  "table_fidelity": "cells 1.0000 (427/427), rows 1.0000 (34/34)",
+  "structure_fidelity": "blocks 1.0000 (61/61), bounds 1.0000 (61/61)",
+  "unit": "eval_adapter 21/21; validate, segment, normalize, snapshot, metrics, bench, web.view all ok",
+  "baseline": ".eval-baseline.json untouched; no --update-baseline, no --no-verify"
+ },
+ "blast_radius_moved": false,
+ "blast_radius_note": "No code changed at all this round — the diff is three documents (one ADR section, one prior resolution artifact, one ledger row) plus the review artifact. src/ and evals/ are byte-identical to 32973cb, so ADR-035 §f's digests (dev b39eae8b -> 58364186, heldout dd67647b -> f8002569) still stand and are not re-cited.",
+ "corrections": [
+  {
+   "under": "PR #57 R5 and R6",
+   "date": "2026-08-26",
+   "fields": [
+    "resolutions[0].why_not_branch_a",
+    "resolutions[0].what_changed[2]",
+    "resolutions[0].debt_row",
+    "resolutions[0].when_to_take_the_real_fix"
+   ],
+   "why": "R5 (MEDIUM): this artifact's load-bearing reason for deferring — 'no output carries the thresholded number to assert against', hence 'one real fix ... a signature change to the layer-8 entry point' — was falsified by the round-3 reviewer. `validate._demo`'s existing IBR-only span already yields such an output; the pin is two lines, CI-run, zero blast radius. Taken (acceptance (i)), the debt row deleted. R6 (LOW): 'exactly one committed document' is three (dev `xref-index-collapse` plus held-out `intc-2025` and `c-2025`), all zero-IBR, so the argument it supported is unchanged and only the count was wrong. Corrected in place, each original quoted, for the same reason the R4 corrections were: a committed resolution artifact is read as verified-correct."
+  }
+ ]
+}

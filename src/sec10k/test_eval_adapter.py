@@ -402,11 +402,13 @@ def _envelope(**over):
     env = {"normalized_text": "Item 1. Business\nx", "doc_status": "success",
            "warnings": [],
            "meta": {"extractor_version": "t", "input_sha256": "s", "format_era": "html",
-                    "document_selected": "d", "taxonomy_era": "modern", "toc_manifest": []},
+                    "document_selected": "d", "taxonomy_era": "modern", "toc_manifest": [],
+                    "coverage": 1.0},  # ADR-035 §d
            "trace": [], "timings": {"total_ms": 1}, "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0},
            "items": [{"item": "1", "part": "I", "title": "Business", "heading_text": "Item 1. Business",
                       "start": 0, "end": 18, "status": "extracted", "confidence": 0.95,
-                      "method": "heading_strict", "evidence": {}}]}
+                      "method": "heading_strict", "evidence": {},
+                      "review_required": False}]}  # ADR-035 §e
     env.update(over)
     return env
 
@@ -421,7 +423,8 @@ def test_envelope_shape():
         assert eval_check(e, chk) is not None, k
     assert eval_check(_envelope(extra_key=1), chk) is not None
     # item-level mandatory fields and the normative method enum (SD-1)
-    for k in ("heading_text", "evidence", "method", "confidence", "part", "title"):
+    for k in ("heading_text", "evidence", "method", "confidence", "part", "title",
+              "review_required"):
         e = _envelope(); del e["items"][0][k]
         assert eval_check(e, chk) is not None, k
     e = _envelope(); e["items"][0]["method"] = "llm_magic"
@@ -447,6 +450,37 @@ def test_envelope_shape():
     assert eval_check(e, chk) is not None
     # the optional ADR-026 key is the ONE undeclared-by-default key allowed
     assert eval_check(_envelope(boilerplate=[]), chk) is None
+    # PR #57 R1: `meta.coverage` must AGREE with the items the same envelope
+    # publishes, not merely be present. The mutant the finding used —
+    # a hard-coded coverage over unchanged items — must be red here, and a
+    # refusal envelope (which carries no coverage at all) must not be.
+    e = _envelope(); e["meta"]["coverage"] = 1.0   # text 18 chars, span 0-18
+    assert eval_check(e, chk) is None
+    e = _envelope(); e["meta"]["coverage"] = 0.5
+    assert "meta.coverage" in eval_check(e, chk)
+    e = _envelope(); e["items"][0]["end"] = 9      # same field, wrong now
+    assert "meta.coverage" in eval_check(e, chk)
+    e = _envelope(doc_status="unsupported", items=[])
+    del e["meta"]["taxonomy_era"]; del e["meta"]["toc_manifest"]; del e["meta"]["coverage"]
+    assert eval_check(e, chk) is None
+    e = _envelope(); del e["meta"]["coverage"]
+    assert "coverage" in eval_check(e, chk)
+
+
+def test_meta_field():
+    """PR #57 R1. `item_field`'s counterpart: a normative `meta` key asserted
+    BY VALUE. Without it `envelope_shape` could only test membership, and a
+    build publishing `coverage: 1.0` on every document passed the whole gate."""
+    e = _envelope()
+    assert eval_check(e, {"type": "meta_field", "field": "coverage", "value": 1.0}) is None
+    reason = eval_check(e, {"type": "meta_field", "field": "coverage", "value": 0.0303})
+    assert reason == "meta.coverage 1.0 != 0.0303", reason
+    assert eval_check(e, {"type": "meta_field", "field": "taxonomy_era",
+                          "value": "modern"}) is None
+    # an absent key reads None and fails rather than passing vacuously
+    e2 = _envelope(); del e2["meta"]["coverage"]
+    assert eval_check(e2, {"type": "meta_field", "field": "coverage",
+                           "value": 1.0}) is not None
 
 
 def test_boilerplate_checks():
@@ -532,7 +566,8 @@ def test_table_checks():
            "rows": [[[0, 1], [2, 3]], [[4, 5, 2], [6, 7]]]}
     r = {"normalized_text": text, "doc_status": "success", "warnings": [], "items": [],
          "meta": {"extractor_version": "x", "input_sha256": "x", "format_era": "html",
-                  "document_selected": "x", "taxonomy_era": "modern", "toc_manifest": []},
+                  "document_selected": "x", "taxonomy_era": "modern", "toc_manifest": [],
+                  "coverage": 0.0},
          "trace": [], "timings": {"total_ms": 0}, "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0},
          "tables": [tab]}
     good = {"type": "table", "anchor": "a b", "header": 1,
@@ -597,10 +632,11 @@ def test_image_checks():
             {"offset": 18, "src": "sig.jpg", "alt": "A's sig", "width": 1, "height": 1}]
     item = {"item": "1", "part": "I", "title": "Business", "heading_text": "Item 1",
             "start": 7, "end": 19, "status": "extracted", "confidence": 0.9,
-            "method": "heading_strict", "evidence": {}}
+            "method": "heading_strict", "evidence": {}, "review_required": False}
     r = {"normalized_text": text, "doc_status": "success", "warnings": [], "items": [item],
          "meta": {"extractor_version": "x", "input_sha256": "x", "format_era": "html",
-                  "document_selected": "x", "taxonomy_era": "modern", "toc_manifest": []},
+                  "document_selected": "x", "taxonomy_era": "modern", "toc_manifest": [],
+                  "coverage": 0.5},
          "trace": [], "timings": {"total_ms": 0}, "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0},
          "images": imgs}
     good = {"type": "image", "src": "chart.jpg", "alt": None, "width": 500, "height": 210,
@@ -686,6 +722,7 @@ TESTS = [
     test_checks_that_had_never_gone_red,
     test_confidence,
     test_envelope_shape,
+    test_meta_field,
     test_doc_status,
     test_norm_checks,
     test_warning_absent,
