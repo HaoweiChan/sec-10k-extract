@@ -1,0 +1,85 @@
+{
+  "pr": 58,
+  "round": 1,
+  "result": "REQUEST_CHANGES",
+  "counts": {
+    "HIGH": 1,
+    "MEDIUM": 5,
+    "LOW": 1
+  },
+  "reviewer": "groundwork:pr-reviewer, fresh context, falsification-only",
+  "verified_and_held": [
+    "Trigger census re-derived from scratch (reviewer's own sweep, not the author's script): 43 documents, low_item_coverage 1/43, item_span_near_empty 12/43 with 17 item hits; synthetic set 15 -> 0/28 and 9/28 real. All of ADR-036 \u00a7c1 reproduces.",
+    "tgt-2002 item 1 read in full (2,094 chars): ~530 chars of IBR pointers then genuine Competition and Available Information sections \u2014 a hybrid, not a pointer. RECALL 17/17 = 1.000 IS CORRECT; publishing 17/18 as the alternative is honest, not hedging.",
+    "Byte-identity confirmed beyond the harness: snapshot.py reproduces \u00a7f's digests exactly; a full-envelope diff over all 43 filings found 43 differences, ALL of them meta.extractor_version \u2014 nothing else moved, seen or unseen.",
+    "Network seam broken into, not re-read: with a key exported and the base URL pointed at a local logging listener, --suite fast and --suite all ran green with ZERO requests received.",
+    "Red-first record reproduces byte-for-byte on a fresh `git archive origin/main` tree for all four cases it claims \u2014 genuine, not reconstructed.",
+    "ADR \u00a7e1's structural claim verified: extract.py:202-207 returns the failed envelope before expected_items, before validate, and 77 lines before the escalate block at :279. The router is genuinely unreachable for text-less input, and \u00a7e is candid that the constraint is independently sufficient."
+  ],
+  "orchestrator_note": "R6 is time-sensitive: the owner is about to set an OpenRouter credential on the Zeabur deployment. Escalation must be disarmed server-side before that key exists. Also folded into this repair round, on owner instruction: the entire client swaps from the Anthropic Messages API to OpenRouter.",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "escalate.verify/apply will publish non-null start/end on an item whose status is `missing` or `omitted`, violating the output contract, and nothing in the gate can see it.",
+      "evidence": "escalate.py:147 `flagged = {i['item'] for i in items}` admits every item including non-span-bearing ones; escalate.py:200-225 `apply()` writes start/end/method but leaves `status` alone (ADR-036 \u00a7j). specs/001-sec10k-contract.md:78: 'For status: missing / omitted: start/end are null \u2014 there is no span.' `envelope_shape` never asserts that rule, so the malformed envelope is green. The same envelope's `meta.coverage` is recomputed at extract.py:333 over `i.get('start') is not None`, so a resolved `missing` item silently inflates the very coverage number the D8 trigger and the whole D11 cost argument rest on. This is the shape of the named exam document: `c-2025` is 21 `missing` + 2 `omitted`.",
+      "repro": "see pr58-r1 repro block \u2014 verify() accepts a proposal for a `missing` item (title_similarity 0.955, rejections []), apply() then writes start=11552 end=16945 method=llm_localize with status still 'missing'",
+      "acceptance": "`verify` rejects any proposed code whose item is not in eval_adapter.SPAN_STATUSES (or `apply` also moves status, with an ADR ruling for that), AND `envelope_shape` gains the missing/omitted null-span assertion so the rule is enforced rather than documented, AND an adversarial case covers a proposal naming a `missing` item, watched red first."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The 'all-or-nothing' safety property ADR-036 \u00a7b and verify()'s docstring both publish is false: verify partially applies a proposal in which some spans failed a check.",
+      "evidence": "ADR-036:96 '**All-or-nothing.** Either every proposed span survives or none is used.' and escalate.py:120 same claim. The loop at escalate.py:149-176 `continue`s past each failing entry, accumulating survivors in `merged`, and returns `merged` whenever non-empty (:178-179). Only INV-S1 failures at :185 discard the whole proposal. `_demo` never covers it: every mixed proposal it constructs happens to trip INV-S1 as a side effect, so the property has never been watched.",
+      "repro": "verify(text, items, {'8':[b,b+len(b8)], '1':[0,40]}) -> ({'8': {...}}, ['item 1: 40 chars < SPAN_FLOOR 1500 ...']) \u2014 item 8 applied anyway",
+      "acceptance": "Either verify returns ({}, why) whenever `why` is non-empty for any non-null proposed span, or ADR-036 \u00a7b:96 and escalate.py:120 are rewritten to say what the code does; either way an adversarial case pins the chosen semantics with a mixed proposal, watched red first."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-036 names escalate.py::_demo and llm.py::_demo as 'Enforced by' artifacts, but neither the pre-commit hook nor CI runs them \u2014 the entire trust boundary and money ceiling can be deleted with the gate 100% green.",
+      "evidence": "ADR-036:19 lists both under **Enforced by**. ci.yml runs the other module self-checks but no `src.sec10k.escalate` and no `src.sec10k.llm`; .githooks/pre-commit runs only evals.run --suite fast + two bench checks. No eval case reaches verify()/apply(): `escalation-trigger-quiet` returns at route()'s quiet branch (:243), `escalation-no-credential` breaks at the EscalationUnavailable handler (:271). ci.yml:31-36 already carries this repo's own ruling (PR #25 R1): 'A self-check no job runs is a claim, not enforcement.'",
+      "repro": "Replace the SIM_FLOOR / SPAN_FLOOR / INV-S1 guards with `if False:` and both Budget guards likewise -> invariant 75/75 and fast 138/138 stay GREEN; only `python3 -m src.sec10k.escalate` catches it.",
+      "acceptance": "`python3 -m src.sec10k.escalate` and `python3 -m src.sec10k.llm` are added to the unit-tests job in .github/workflows/ci.yml (where ADR-026/029/032/033's self-checks were wired), and re-running the mutation turns that job red."
+    },
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-036 \u00a7d4's headline '$3.4 per dev sweep, roughly 60x' is not re-derivable from the ADR's own cost model, and its document list contradicts the ADR's own census two sections earlier.",
+      "evidence": "ADR-036:276-280 says routing on item_span_near_empty 'would escalate 12 of 43 dev documents, including jpm-2024 and bac-2006, for an estimated $3.4 per dev sweep \u2014 roughly 60x'. But \u00a7c3 states 'only bac-2006 is silent', and the independent census confirms bac-2006 is NOT among the 12. Re-deriving with the ADR's own model reproduces every \u00a7d1 figure to the published digit, then gives a 12-document sweep of $4.7032 = ~85x, not $3.4/60x. No subset reaches $3.4. The ADR itself says of this figure 'That number is the argument.'",
+      "repro": "12-doc sweep recomputed from ADR \u00a7d1's own model -> $4.7032, ratio 84.6x vs the published 3.4/60x",
+      "acceptance": "\u00a7d4 publishes a figure that reproduces from the \u00a7d1 model and the \u00a7c1 census, with arithmetic shown as \u00a7d1 does, and drops bac-2006 from the escalating set \u2014 or names the different assumption that produces $3.4."
+    },
+    {
+      "id": "R5",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The reason ADR-036 gives for keeping A2 declined attributes to D9 a ruling D9 did not make over five of the nine filings involved, and describes items 7/8 as 'disagreed' when ADR-034 says they were never adjudicated.",
+      "evidence": "ADR-036:145 'The nine real filings item_span_near_empty hits are the A2 class ... which D9 declined', echoed at escalate.py:44-48. ADR-034 \u00a7d1 enumerates A2 as exactly five filings (cvx-2015, jpm-2024, bac-2006, ge-1994, spatz-2014). Only four of the nine are members; xom-2021, ko-1997, nvda-2024, reac-2015, sandston-2021 were never in D9's scope. Separately \u00a7c3's replacement reason rests on ADR-034 \u00a7e2 reason 1, whose text reads: 'the extraction-auditor's blind sample adjudicated cvx-2015 item 6 ... CORRECT. Items 7 and 8 were never independently adjudicated.' The flag reaches items 1/7/8, never item 6.",
+      "repro": "sed -n '143,150p' ADR-036; grep -n 'never independently adjudicated' ADR-034",
+      "acceptance": "\u00a7c1 reason 3, \u00a7c3 and the escalate.py comment either narrow the claim to the four filings actually in ADR-034's A2 set (naming the other five as an unruled population), or state plainly that items 7/8 are unadjudicated rather than disagreed. The ruling can stand; its cited evidence must match ADR-034's text."
+    },
+    {
+      "id": "R6",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "`Budget` is a per-document ceiling, not the 'per-run' ceiling its docstring claims, and the paid path is reachable unauthenticated on the deployed inspector \u2014 so nothing bounds aggregate spend.",
+      "evidence": "llm.py:85-86 'A per-run ceiling on paid work'. But escalate.py:247 constructs a fresh Budget inside every route() call and no caller passes one: extract.py:129 defaults budget=None, app.py:139 calls extract_items(..., escalate=escalate) with no budget. So the ceiling is 2 calls / $1.00 PER DOCUMENT; a 43-fixture escalate=True sweep has a ceiling of 43x that. ADR-036 \u00a7d3 discloses only the one-call overshoot, reading as if $1.00 were the run ceiling. Compounding: escalate is wired to all three public endpoints (app.py:178 fixture, :206 ?escalate=1 upload, :239 url), README.md:8 advertises a live deployment, and app.py has no auth, no rate limit, no aggregate budget (only MAX_BYTES 25MB at :37). If a credential is ever set on that host, an anonymous caller can drive unbounded ~$1.5 opus-class calls by uploading collapsed filings. No ADR section, README line or debt row mentions this.",
+      "repro": "grep -n 'per-run ceiling' src/sec10k/llm.py; grep -n 'budget = budget if budget is not None' src/sec10k/escalate.py; grep -nE 'Depends|Authorization|rate.?limit' src/sec10k/web/app.py -> no matches",
+      "acceptance": "Either a run/process-level budget is threaded through extract_items (one Budget per sweep, one per server process for the web layer), or llm.Budget's docstring and ADR-036 \u00a7d3 are corrected to say 'per document' and a debt row records the deployment exposure \u2014 plus an explicit statement of whether the deployed inspector may ever hold a credential."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "verify()'s docstring check 1 claims a stricter guard than the code implements \u2014 it accepts any item of the document, not only ones the trigger flagged.",
+      "evidence": "escalate.py:113-115 claims 'one the trigger actually flagged'. Implementation at :147 is `flagged = {i['item'] for i in items}` \u2014 the whole item list, no reference to trigger()['items'] or the `codes` the rung was asked about (:248). ADR-036 \u00a7b1 states the weaker property correctly, so this is the code comment, not the ADR. It is also the mechanism R1 rides on.",
+      "repro": "sed -n '110,120p;147p' src/sec10k/escalate.py",
+      "acceptance": "Either verify takes the flagged/asked set and enforces it, or the docstring's second clause is deleted so it matches ADR-036 \u00a7b1."
+    }
+  ]
+}
