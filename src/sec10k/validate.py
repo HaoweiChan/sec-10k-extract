@@ -536,6 +536,12 @@ def _demo():
     # an IBR pointer span counts as placed — it is attributed text (ADR-011)
     ibr_only = [{**s_items[0], "status": "incorporated_by_reference"}]
     assert coverage(stub, ibr_only) == coverage(stub, s_items)
+    # ...and the figure THIS function thresholds on is that same one. The line
+    # above pins coverage(); this pins the call site at §d above, which is the
+    # only place the thresholded number ever surfaces (PR #57 R5).
+    ibr_w = [x for x in validate(stub, ibr_only, {"1": {}}, [])
+             if x["code"] == "low_item_coverage"]
+    assert "0.2%" in ibr_w[0]["message"], ibr_w
 
     # confidence: warnings on an item pull it down, others leave it alone
     it = {"item": "8", "status": "extracted", "evidence": {"title_similarity": 1.0}}

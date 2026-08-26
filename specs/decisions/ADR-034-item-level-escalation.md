@@ -20,7 +20,7 @@ fields). Narrative: `docs/evals/audits/2026-08-25-demo-intel-citi-postmortem.md`
 
 **Ruling**: three changes, one mechanism. (1) A new layer-8 validator, `item_span_near_empty`, fires when an `extracted` span for item **1, 7 or 8** is shorter than `SPAN_FLOOR = 1500` chars; it carries the item code, so the existing `WARN_PENALTY` takes that item from 0.95 to 0.80, and it does **not** escalate `doc_status`. (2) A second new validator, `low_item_coverage`, fires when `meta.coverage` — a newly published envelope field, the fraction of `normalized_text` inside any item span — is below `COVERAGE_MIN = 0.13`; it **does** escalate, joining `AMBIGUOUS_CODES`. (3) Every item gains a required boolean `review_required`, true exactly when a warning carries that item's code. The iXBRL numeric cross-check (scope (c)) is **declined, with its measurement** (§g).
 **Because**: `score()` awards 0.95 on heading-title similarity alone and only four codes could ever pull it down, none of which can see a stub or a pointer (postmortem §1) — so the 2026-08-24 demo showed `conf 0.95` over an Intel 10-K whose every item was a cross-reference-index row and a Citigroup 10-K of pointer sentences, and the eval set's own `no_empty_success` cleared the Intel shape by three characters. Measured over the dev corpus, item 1/7/8 spans split cleanly: all 14 under 2,094 chars are pointers or stubs and every span at or above it is substantive, an empty band (930, 2094) whose midpoint is 1,512; and document coverage splits at (0.0303, 0.2306), midpoint 0.13, with an empty false-positive set on every real filing.
-**Enforced by**: `evals/adversarial/xref-index-collapse.json` (stub, fast + invariant; red at `820cf0c`), `evals/adversarial/cvx-2015-pointer-flagged.json` (pointer, fast + invariant; red at `820cf0c`), `evals/golden/nvda-2024-shallow.json` (a real filing's pointer; red at `820cf0c`), the four band pins `evals/golden/ko-1997-shallow.json` / `evals/golden/tgt-2002-shallow.json` / `evals/adversarial/ge-1994-oldformat.json` / `evals/golden/cat-2023-shallow.json`, `src/sec10k/validate.py::_demo` (the layer echo), `src/sec10k/eval_adapter.py::envelope_shape` (both new contract fields, and the recomputation that binds `meta.coverage` to the published items) + its new `meta_field` check type with the two literal pins (`xref-index-collapse` 0.0303, `cat-2023-shallow` 0.982), `src/sec10k/test_eval_adapter.py::test_meta_field` — all four added under PR #57 R1, red-first record `tasks/reviews/pr57-r1-red.txt`, `evals/fixtures/xref-index-collapse/` + `evals/fixtures/README.md` row + `evals/bench.py::SYNTHETIC`. Red-first record with its sha: `tasks/reviews/d8-red-first.txt`.
+**Enforced by**: `evals/adversarial/xref-index-collapse.json` (stub, fast + invariant; red at `820cf0c`), `evals/adversarial/cvx-2015-pointer-flagged.json` (pointer, fast + invariant; red at `820cf0c`), `evals/golden/nvda-2024-shallow.json` (a real filing's pointer; red at `820cf0c`), the four band pins `evals/golden/ko-1997-shallow.json` / `evals/golden/tgt-2002-shallow.json` / `evals/adversarial/ge-1994-oldformat.json` / `evals/golden/cat-2023-shallow.json`, `src/sec10k/validate.py::_demo` (the layer echo, plus the PR #57 R5 pin on the figure `validate()` thresholds — red-first record `tasks/reviews/pr57-r3-red.txt`), `src/sec10k/eval_adapter.py::envelope_shape` (both new contract fields, and the recomputation that binds `meta.coverage` to the published items) + its new `meta_field` check type with the two literal pins (`xref-index-collapse` 0.0303, `cat-2023-shallow` 0.982), `src/sec10k/test_eval_adapter.py::test_meta_field` — all four added under PR #57 R1, red-first record `tasks/reviews/pr57-r1-red.txt`, `evals/fixtures/xref-index-collapse/` + `evals/fixtures/README.md` row + `evals/bench.py::SYNTHETIC`. Red-first record with its sha: `tasks/reviews/d8-red-first.txt`.
 
 ---
 
@@ -374,13 +374,22 @@ the harness. What binds them instead:
   the key and recomputes the contract's own definition of it from the items
   the same envelope publishes, refusing any envelope whose published figure
   disagrees; two `meta_field` checks pin the literal at both ends of the range
-  (`xref-index-collapse` 0.0303, `cat-2023-shallow` 0.982). **Nothing binds
-  the figure `validate()` thresholds on.** `coverage()` is called twice —
-  `extract.py` publishes one result, `validate.py` thresholds another — and no
-  committed case reads the second. That gap is open, measured, and carried as
-  debt (`tasks/TODO.md`, Origin: PR #57 R4).
+  (`xref-index-collapse` 0.0303, `cat-2023-shallow` 0.982).
+- The figure `validate()` **thresholds** on is a second, separate call to
+  `coverage()` (`validate.py:318`) — `extract.py` publishes one result,
+  `validate.py` thresholds another — and it is pinned separately, by
+  `validate._demo`: an IBR-only span over the 10,018-char `stub` must produce
+  a `low_item_coverage` message reading `0.2%`. That input is the smallest one
+  that separates the two calls, and CI runs the self-check that asserts it
+  (`.github/workflows/ci.yml:30`). Mutating `validate.py:318` to count
+  `extracted` spans only — the mutant that was green on invariant 69/69 and
+  fast 132/132 — turns that message into `0.0%` and the self-check red
+  (`tasks/reviews/pr57-r3-red.txt`). Neither call site is pinned to the
+  OTHER's value; each is pinned to a literal, which is what makes a
+  divergence between them visible.
 
-*(Corrected twice, 2026-08-26, and the second correction is the one to read.*
+*(Corrected three times, 2026-08-26. The bullets above are current; the three
+notes below are the history of what this paragraph got wrong.*
 
 *Under **PR #57 R1**: this paragraph first claimed `meta.coverage`'s value was
 "bounded from both sides by the two `low_item_coverage` band pins". That was
@@ -400,7 +409,19 @@ different number from the one they publish. That is the SAME defect class the
 sentence it replaced had. The claim is withdrawn rather than replaced a third
 time: what is pinned is the publication, the second call site's agreement is
 not pinned, and the gap is a debt row. See that row for why the cheap fix the
-finding suggests does not work and what the real one costs.)*
+finding suggests does not work and what the real one costs.*
+
+*Under **PR #57 R5**: the withdrawal above was right, but the debt row it
+pointed at justified the deferral with a cost claim that was itself false —
+"there is no output carrying the thresholded number to assert against", and
+therefore "one real fix: make `validate()` read the published figure … a
+signature change to the layer-8 entry point with ~10 `_demo` call sites behind
+it". The round-3 reviewer falsified it: `validate._demo` already builds an
+IBR-only span (`validate.py:537`), and the `low_item_coverage` message it
+produces IS an output carrying the thresholded figure — two lines, no
+signature change, no fixture, zero blast radius. The pin was added, the debt
+row is DELETED, and the second bullet above now describes what binds rather
+than a gap. Red-first record: `tasks/reviews/pr57-r3-red.txt`.)*
 
 ### f2. Held-out — read-only, reported, not acted on
 
