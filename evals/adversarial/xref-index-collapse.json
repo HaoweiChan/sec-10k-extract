@@ -12,6 +12,7 @@
       {"type": "expected_set_complete", "items": ["1","2","3","4","5","6","7","7A","8","9","10","11","12","13","14","15"]},
       {"type": "only_items", "items": ["1","2","3","4","5","6","7","7A","8","9","10","11","12","13","14","15"]},
 
+      {"type": "meta_field", "field": "coverage", "value": 0.0303},
       {"type": "warning_present", "code": "low_item_coverage"},
       {"type": "warning_present", "code": "item_span_near_empty", "item": "1"},
       {"type": "warning_present", "code": "item_span_near_empty", "item": "7"},

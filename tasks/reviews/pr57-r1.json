@@ -1,0 +1,44 @@
+{
+  "pr": 57,
+  "round": 1,
+  "task": "D8",
+  "head": "ec2d0a5",
+  "result": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The published value of `meta.coverage` — the deliverable of D8 scope (a) — is asserted by nothing in the repo: a build that emits a hard-coded, wrong coverage on every document passes the full gate and every CI self-check.",
+      "evidence": "src/sec10k/extract.py:225 (`meta[\"coverage\"] = round(coverage(text, items), 4)`) is the only producer of the field. src/sec10k/eval_adapter.py:224 adds `coverage` to `meta_keys` as a *membership* test only, so `envelope_shape` checks presence, never value; no check type asserts a `meta` field by value (`item_field` has no `meta` counterpart), and `evals/snapshot.py`'s `FIELDS` cannot see it (ADR-034 §f1 admits this). ADR-034 §f1's claimed compensation — \"bounded from both sides by the two `low_item_coverage` band pins\" — does not bind this line: `validate()` at src/sec10k/validate.py:317 recomputes `coverage(text, items)` itself, so the band pins (`xref-index-collapse`, `ge-1994-oldformat`) stay green no matter what `meta[\"coverage\"]` publishes. Mutant verified: replacing line 225 with `meta[\"coverage\"] = 1.0` yields invariant 69/69 = 1.000, fast 132/132 = 1.000, and OK on all 11 CI unit self-checks (`test_eval_adapter`, `normalize`, `segment`, `validate`, `boilerplate`, `tables`, `markdown`, `web.view`, `metrics --self-check`, `snapshot.py --self-check`) plus `bench --check-docs` — i.e. every gate this repo has reports a document that places 3% of its text in items as `coverage: 1.0`.",
+      "repro": "git worktree add /tmp/mut ec2d0a5 && sed -i '' 's/    meta\\[\"coverage\"\\] = round(coverage(text, items), 4)/    meta[\"coverage\"] = 1.0/' /tmp/mut/src/sec10k/extract.py && rm -rf /tmp/mut/src/sec10k/__pycache__ && (cd /tmp/mut && python3 -m evals.run --suite invariant --no-report && python3 -m evals.run --suite fast --no-report)   # both 100%",
+      "acceptance": "At least one committed case pins `meta.coverage` BY VALUE at both ends of the published range (e.g. `xref-index-collapse` 0.0303 and a high-coverage filing such as `cat-2023`/`aapl-2025`), via a new `meta_field` check type or an equivalent value assertion in `envelope_shape`; the mutation above then turns that case red, and the red output is recorded the way `tasks/reviews/d8-threshold-mutations.txt` records the two threshold mutations."
+    },
+    {
+      "id": "R2",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The new required item field `review_required` never reaches the repo's only shipped API consumer — the inspector's `/api/extract` payload drops it — and no ADR line or ledger row records that as deliberate.",
+      "evidence": "src/sec10k/web/view.py:83-93 builds each item by explicit whitelist (`item, part, title, status, confidence, method, heading_text, start, end, chars, text, truncated, evidence`); `review_required` is absent, so `build_view` silently omits the field specs/001-sec10k-contract.md:81 now marks required on every status. `meta` is passed through whole (view.py:99) so `meta.coverage` does survive — the omission is item-level only. The demo failure D8 exists to fix was read off this exact surface (postmortem §8 gap 2). The item's `evidence.warnings` does survive and D7 renders it, so the UI is not silent, which is why this is LOW rather than a contract break.",
+      "repro": "python3 -c \"import json,sys; sys.path.insert(0,'.');from src.sec10k.extract import extract_items; from src.sec10k.web.view import build_view; v=build_view(extract_items('evals/fixtures/cvx-2015/filing.htm')); print('review_required' in v['items'][0])\"  # -> False",
+      "acceptance": "Either `review_required` is added to the view payload item dict (and pinned by a UI/view case or `web.view`'s self-check), or a Debt row with `Origin: D8` states why the view layer deliberately projects it away and where it will land (D11's routing display)."
+    },
+    {
+      "id": "R3",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The same commit corrected \"only four may escalate\" in README, `docs/architecture/overview.md` (twice) and ADR-008, but left the identical false claim in the function it edited.",
+      "evidence": "src/sec10k/extract.py:236 still reads \"Only the four validators named in AMBIGUOUS_CODES may reach `ambiguous`\", four lines above the loop this diff added at :251, while src/sec10k/validate.py:112 now defines `AMBIGUOUS_CODES` with five members (`len(AMBIGUOUS_CODES)` -> 5, the count ADR-034 §j cites as the check). validate.py's own module docstring was updated to \"the five named in AMBIGUOUS_CODES\"; this one was not.",
+      "repro": "sed -n '236p' src/sec10k/extract.py; python3 -c \"import sys;sys.path.insert(0,'.');from src.sec10k.validate import AMBIGUOUS_CODES;print(len(AMBIGUOUS_CODES))\"  # comment says four, expression says 5",
+      "acceptance": "The comment reads five (or names the count by expression), matching README/overview/ADR-008/validate.py's docstring, which this PR already corrected."
+    }
+  ],
+  "reviewer_verified": [
+    "Synthetic fixture xref-index-collapse is byte-exactly tgt-2002 minus the 16 named labels (119 bytes); re-insertion reproduces the source.",
+    "Both blast-radius digest pairs reproduce exactly (dev b39eae8b -> 58364186, heldout dd67647b -> f8002569); 46/58 dev files identical, 11 warning+confidence moves, exactly one dev doc_status change (nvda-2024).",
+    "Red-first record at 820cf0c reproduces line-for-line (invariant 66/69, fast 127/132), all 5 cases red for the property under test.",
+    "Both threshold bands are genuinely empty over the whole corpus (item-1/7/8 spans jump 930 -> 2,094; real dev coverage bottoms at 0.2306); no held-out value lies inside either band — no evidence of held-out tuning.",
+    "iXBRL census (8 of 39 span-bearing dev documents), the 1/7/8 medians, iter_fixtures -> 43 and bench --check-docs (68 decimals, 0 unmatched) all verify.",
+    "Gate reproduces: invariant 69/69, fast 132/132, .eval-baseline.json untouched."
+  ]
+}

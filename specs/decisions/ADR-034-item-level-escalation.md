@@ -20,7 +20,7 @@ fields). Narrative: `docs/evals/audits/2026-08-25-demo-intel-citi-postmortem.md`
 
 **Ruling**: three changes, one mechanism. (1) A new layer-8 validator, `item_span_near_empty`, fires when an `extracted` span for item **1, 7 or 8** is shorter than `SPAN_FLOOR = 1500` chars; it carries the item code, so the existing `WARN_PENALTY` takes that item from 0.95 to 0.80, and it does **not** escalate `doc_status`. (2) A second new validator, `low_item_coverage`, fires when `meta.coverage` — a newly published envelope field, the fraction of `normalized_text` inside any item span — is below `COVERAGE_MIN = 0.13`; it **does** escalate, joining `AMBIGUOUS_CODES`. (3) Every item gains a required boolean `review_required`, true exactly when a warning carries that item's code. The iXBRL numeric cross-check (scope (c)) is **declined, with its measurement** (§g).
 **Because**: `score()` awards 0.95 on heading-title similarity alone and only four codes could ever pull it down, none of which can see a stub or a pointer (postmortem §1) — so the 2026-08-24 demo showed `conf 0.95` over an Intel 10-K whose every item was a cross-reference-index row and a Citigroup 10-K of pointer sentences, and the eval set's own `no_empty_success` cleared the Intel shape by three characters. Measured over the dev corpus, item 1/7/8 spans split cleanly: all 14 under 2,094 chars are pointers or stubs and every span at or above it is substantive, an empty band (930, 2094) whose midpoint is 1,512; and document coverage splits at (0.0303, 0.2306), midpoint 0.13, with an empty false-positive set on every real filing.
-**Enforced by**: `evals/adversarial/xref-index-collapse.json` (stub, fast + invariant; red at `820cf0c`), `evals/adversarial/cvx-2015-pointer-flagged.json` (pointer, fast + invariant; red at `820cf0c`), `evals/golden/nvda-2024-shallow.json` (a real filing's pointer; red at `820cf0c`), the four band pins `evals/golden/ko-1997-shallow.json` / `evals/golden/tgt-2002-shallow.json` / `evals/adversarial/ge-1994-oldformat.json` / `evals/golden/cat-2023-shallow.json`, `src/sec10k/validate.py::_demo` (the layer echo), `src/sec10k/eval_adapter.py::envelope_shape` (the two new contract fields), `evals/fixtures/xref-index-collapse/` + `evals/fixtures/README.md` row + `evals/bench.py::SYNTHETIC`. Red-first record with its sha: `tasks/reviews/d8-red-first.txt`.
+**Enforced by**: `evals/adversarial/xref-index-collapse.json` (stub, fast + invariant; red at `820cf0c`), `evals/adversarial/cvx-2015-pointer-flagged.json` (pointer, fast + invariant; red at `820cf0c`), `evals/golden/nvda-2024-shallow.json` (a real filing's pointer; red at `820cf0c`), the four band pins `evals/golden/ko-1997-shallow.json` / `evals/golden/tgt-2002-shallow.json` / `evals/adversarial/ge-1994-oldformat.json` / `evals/golden/cat-2023-shallow.json`, `src/sec10k/validate.py::_demo` (the layer echo), `src/sec10k/eval_adapter.py::envelope_shape` (both new contract fields, and the recomputation that binds `meta.coverage` to the published items) + its new `meta_field` check type with the two literal pins (`xref-index-collapse` 0.0303, `cat-2023-shallow` 0.982), `src/sec10k/test_eval_adapter.py::test_meta_field` — all four added under PR #57 R1, red-first record `tasks/reviews/pr57-r1-red.txt`, `evals/fixtures/xref-index-collapse/` + `evals/fixtures/README.md` row + `evals/bench.py::SYNTHETIC`. Red-first record with its sha: `tasks/reviews/d8-red-first.txt`.
 
 ---
 
@@ -364,12 +364,30 @@ No `doc_status` moves on any real dev filing but `nvda-2024`. No
 **Two fields the snapshot cannot see**, stated rather than left implicit:
 `evals/snapshot.py`'s `FIELDS` tuple is fixed and reads neither
 `item.review_required` nor `meta.coverage`, so their arrival is invisible to
-the harness. They are enforced instead by `envelope_shape`, which now requires
-both and runs on 20+ committed cases, and `review_required` is additionally
-asserted BY VALUE — true and false — by seven `item_field` checks across three
-cases (`xref-index-collapse`, `cvx-2015-pointer-flagged`,
-`nvda-2024-shallow`). `meta.coverage`'s value is not asserted directly; it is
-bounded from both sides by the two `low_item_coverage` band pins.
+the harness. What binds them instead:
+
+- `review_required` — `envelope_shape` requires the key on every item, and
+  seven `item_field` checks across three cases (`xref-index-collapse`,
+  `cvx-2015-pointer-flagged`, `nvda-2024-shallow`) assert it BY VALUE, true
+  and false.
+- `meta.coverage` — `envelope_shape` requires the key AND recomputes the
+  contract's own definition of it from the items the same envelope publishes,
+  refusing any envelope whose published figure disagrees; two `meta_field`
+  checks pin the literal at both ends of the range (`xref-index-collapse`
+  0.0303, `cat-2023-shallow` 0.982).
+
+*(Corrected 2026-08-26 under PR #57 R1. This paragraph first claimed
+`meta.coverage`'s value was "bounded from both sides by the two
+`low_item_coverage` band pins". **That was false**, and the reviewer proved
+it: `validate()` calls `coverage()` itself, so the band pins judge a number
+`extract.py` never published, and a tree with `meta["coverage"] = 1.0`
+hard-coded passed invariant 69/69, fast 132/132 and every unit self-check. The
+`meta_field` check type and the `envelope_shape` recomputation above are the
+repair; the mutant is now red on 24 cases. Red-first record with its sha:
+`tasks/reviews/pr57-r1-red.txt`. The two `coverage()` call sites are kept —
+one function, two callers — and it is their AGREEMENT that is now pinned,
+which is stronger than collapsing them into one producer would have been: a
+single producer could still publish a figure no case ever reads.)*
 
 ### f2. Held-out — read-only, reported, not acted on
 
@@ -556,7 +574,7 @@ cells 427/427, rows 34/34; structure fidelity blocks 61/61, bounds 61/61.
 `.eval-baseline.json` untouched (`{"fast": 1.0}`, matches). No
 `--update-baseline`, no `--no-verify`. Module self-checks green:
 `src.sec10k.validate` (with nine new assertions), `src.sec10k.eval_adapter`
-20/20, `evals/snapshot.py`, `evals/metrics.py`, `evals/bench.py`. Held-out
+21/21, `evals/snapshot.py`, `evals/metrics.py`, `evals/bench.py`. Held-out
 suite **not run** — no threshold was tuned on it; §b4 and §f2 are read-only
 measurements taken with `evals/snapshot.py` and the same span instrument as
 the dev corpus.

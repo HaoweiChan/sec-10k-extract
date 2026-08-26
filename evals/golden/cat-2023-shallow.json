@@ -9,6 +9,8 @@
       {"type": "no_overlap_ordered"},
       {"type": "verbatim"},
       {"type": "doc_status", "value": "success"},
+      {"type": "envelope_shape"},
+      {"type": "meta_field", "field": "coverage", "value": 0.982},
       {"type": "warning_absent", "code": "item_span_near_empty", "item": "1"},
       {"type": "warning_absent", "code": "item_span_near_empty", "item": "7"},
       {"type": "warning_absent", "code": "item_span_near_empty", "item": "8"},
