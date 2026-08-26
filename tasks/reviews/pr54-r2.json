@@ -1,0 +1,36 @@
+{
+  "pr": 54,
+  "task": "D12",
+  "round": 2,
+  "date": "2026-08-26",
+  "result": "REQUEST_CHANGES",
+  "scope": "repair diff d81268e..e633b99 plus the standing round-1 findings; no fresh full-diff sweep",
+  "gate": "invariant 60/60 = 1.000; fast 123/123 = 1.000 (baseline fast 1.0)",
+  "standing_findings_adjudicated": {
+    "R1": "substantively resolved — the three named round-1 mutations (hit[1], [:100] truncation, shadow-rebind) are genuinely RED now; residual reachability carried forward as R4",
+    "R2": "substantively resolved — the README line is correct for every item and reverting it alone is RED; the overclaimed 'executed' half carried forward as R5",
+    "R3": "debt row confirmed present in tasks/TODO.md with Origin: PR #54 R3 and evidence carried verbatim; routing not re-litigated"
+  },
+  "findings": [
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "route": "repair",
+      "route_reason": "Routed to repair despite LOW severity under the scope rule's dishonest-committed-artifact condition: four committed artifacts state 'binds norm exactly once', which is demonstrably false, and the residual leaves the exact R1 defect reachable — the endpoint serving the raw filing with the case green. Same overclaim class this PR already spent a repair round on. Orchestrator independently reproduced the mutant: 0 failures. Reviewer severity recorded unchanged.",
+      "claim": "NORM_BINDERS is a line-anchored regex, so a rebind of `norm` on the same physical line (or via tuple-unpack) is not counted, and /api/normalized/{token} can still be made to serve the raw filing with ui-offset-reproduction-contract green — the guard is weaker than the 'binds norm exactly once' claim made for it in four committed artifacts.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:1688 `NORM_BIND_RE = re.compile(r\"^\\s*norm\\s*=[^=]\", re.M)` only matches a binding that starts a line. With src/sec10k/web/app.py:293 rewritten as `norm = hit[2]; norm = hit[1]` the WIRE_NORMALIZED pin for `norm = hit[2]` still counts 1 (squash makes the text `norm=hit[2];norm=hit[1]`), NORM_BIND_RE counts 1 binding, and the check returns 0 failures while the endpoint serves the raw filing under a matching X-Normalized-SHA256 header. Same result for `norm = hit[2]` followed by `norm, _unused = hit[1], 0`. Both are valid Python. Claim locations: eval_adapter.py:1680-1683, the docstring at ~1715, tasks/reviews/pr54-r1-resolution.json R1 what_changed, and the ui-offset-reproduction-contract.json triage note.",
+      "repro": "Rewrite app.py:293 as `norm = hit[2]; norm = hit[1]`, then run check_offset_reproduction_contract on the case -> 0 failures. Independently reproduced by the orchestrator on 2026-08-26; worktree reverted clean.",
+      "acceptance": "Either the guard counts every rebind (drop the ^ anchor / count \\bnorm\\s*=[^=] occurrences in the window, or parse the function with ast and count Name(id='norm', ctx=Store) targets) so both mutations above go red, or the constant's comment, the docstring, the triage note and the resolution artifact stop saying 'exactly once' and say what is actually enforced: no rebind that starts its own line. R1's three named mutations are genuinely red either way — this is the residual, not a regression."
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "route": "repair",
+      "route_reason": "Same condition as R4 — four committed artifacts claim the R2 protection is 'executed, not just a spelling check', and the executed comparison is logically implied by the line above it, so it has zero falsification power. A reader takes the claim as verified-correct. Reviewer severity recorded unchanged.",
+      "claim": "The R2 'and executed against a genuinely truncated item' claim overstates what the new live comparison does: `slice_[:len(it[\"text\"])] != it[\"text\"]` is logically implied by the pre-existing `slice_[:DISPLAY_MAX] != it[\"text\"]` line immediately above it, so it can never produce a failure the case did not already have, and the truncated-item vacuity guard therefore guards a check with zero falsification power.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:1786-1790 (new) versus :1778-1782 (pre-existing). build_view sets it['text'] = slice_[:DISPLAY_MAX], so len(it['text']) == min(len(slice_), DISPLAY_MAX) and the two comparisons are the same expression for every item, truncated or not. The new line also hard-codes the prefix form rather than reading it from SNIPPET_ASSERT, so the entire R2 protection is the text pin at :1755. Demonstrated: revert README.md:132 to the bare == AND revert SNIPPET_ASSERT to the bare == together — the case returns 0 failures with the wrong snippet published and 3 truncated items in the fixtures. Claim locations: eval_adapter.py:1633-1639, ui-offset-reproduction-contract.json provenance, pr54-r1-resolution.json R2 what_changed, prompts/021-*.md last bullet.",
+      "repro": "Revert the README step-4 line to the bare == and edit SNIPPET_ASSERT to match, then run check_offset_reproduction_contract -> 0 failures with the wrong snippet published.",
+      "acceptance": "Either the live loop evaluates the README line itself so co-editing the constant and the README back to == goes red, or the four artifacts drop the 'executed / not just a spelling check' framing and state that R2 is protected by a text pin alone. R2's substantive fix — the README line is correct for every item and reverting it alone is red — is verified and stands."
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "pr": 54,
+  "task": "D12",
+  "round": 1,
+  "date": "2026-08-26",
+  "result": "REQUEST_CHANGES",
+  "gate": "invariant 60/60 = 1.000; fast 123/123 = 1.000 (baseline fast 1.0)",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "route_reason": "Undercuts acceptance criterion 1 (the red-first case must pin recipe-slice equals served item text) and makes a committed artifact dishonest: the case triage note and the eval_adapter comment both claim the endpoint payload is pinned, which the mutation disproves.",
+      "claim": "The one behavior D12 actually adds — the endpoint serving the NORMALIZED bytes rather than the raw filing — is pinned only by a text-grep on a local variable name, so a one-character mutation makes /api/normalized/{token} serve the raw filing while ui-offset-reproduction-contract stays green.",
+      "evidence": "src/sec10k/web/app.py:291 binds `norm = hit[2]`; WIRE_NORMALIZED (src/repo_hygiene/eval_adapter.py:1637-1652) pins the Response(...) and X-Normalized-SHA256 expressions but never pins where `norm` comes from. Changing app.py:291 to `norm = hit[1]` (the raw filing bytes) leaves both pinned expressions intact: the endpoint then serves raw HTML with a matching sha header, and step 3 of the published recipe fails for every consumer on every run. The same hole covers `_run`: truncating `norm = result.get('normalized_text') or ''` (app.py:145) to [:100] also stays green.",
+      "repro": "sed -i '' 's/    norm = hit\\[2\\]/    norm = hit[1]/' src/sec10k/web/app.py && python3 -m evals.run --suite invariant  ->  [PASS] ui-offset-reproduction-contract, 60/60 = 1.000",
+      "acceptance": "Either add `norm = hit[2]` (and `norm = result.get('normalized_text') or ''`) to the WIRE_NORMALIZED allow-list so the mutations above go red, or make the case walk the endpoint for real; watch the hit[1] mutation fail first, then pass after revert. If neither is taken, the case triage note and the eval_adapter comment must stop claiming the endpoint payload is pinned, and the TODO debt row must say the served-bytes half is unpinned, not just the FastAPI binding."
+    },
+    {
+      "id": "R2",
+      "severity": "LOW",
+      "route": "repair",
+      "route_reason": "Routed to repair despite LOW severity by orchestrator judgment: the broken line is inside the README recipe section this PR exists to publish, it is the deliverable rather than an adjacent nit, and the fix is one line in a file already open for R1. Reviewer severity recorded unchanged.",
+      "claim": "The README worked snippet uses an equality assert that is false for any item longer than 40,000 characters, so a consumer who changes the item or the fixture gets an AssertionError from the documented recipe.",
+      "evidence": "README.md:134 — `assert text[item['start']:item['end']] == item['text']`. build_view sets `text = raw[:DISPLAY_MAX]` with DISPLAY_MAX = 40_000 (src/sec10k/web/view.py:22,92). It holds for the printed example only because aapl-2025 item 1 is 16,053 chars; item 1A of the same fixture is 68,162 chars and the identical line fails. The prose parenthetical at README.md:136 warns about this but the code above it does not do what the prose says.",
+      "repro": "python3 -c \"from src.sec10k.extract import extract_items; from src.sec10k.web.view import build_view; v=build_view(extract_items('evals/fixtures/aapl-2025/filing.htm')); i=[x for x in v['items'] if x['item']=='1A'][0]; print(i['chars'], len(i['text']), i['truncated'])\"  ->  68162 40000 True",
+      "acceptance": "The snippet compares prefixes (e.g. assert text[item['start']:item['end']][:len(item['text'])] == item['text']) so it is true for every item, or it explicitly slices to DISPLAY_MAX; the eval RECIPE lines need no change since they already state the correct rule."
+    },
+    {
+      "id": "R3",
+      "severity": "LOW",
+      "route": "debt",
+      "route_reason": "Pre-existing line-ref drift in an unrelated open-debt row that this diff merely shifted further; out of D12 scope. Logged as debt with Origin: PR #54 R3.",
+      "claim": "The diff shifts app.py line numbers that a committed tasks/TODO.md debt row cites, leaving the citations further out of date than they already were.",
+      "evidence": "tasks/TODO.md:113 cites SOURCE_CACHE at src/sec10k/web/app.py:50, the ponytail: marker at app.py:47, and the honest-miss path at app.py:211-214. On origin/main those were 49 / 46 / ~207; after this diff they are 54 / 48 / 244-248. No check catches it — the gate is green with all three refs wrong.",
+      "repro": "git grep -n 'SOURCE_CACHE:' src/sec10k/web/app.py  ->  line 54, versus app.py:50 in tasks/TODO.md:113",
+      "acceptance": "The debt row line refs match the post-D12 file (or are replaced with symbol refs like app.py::api_source), consistent with the pending ADR-019 line-ref cleanup."
+    }
+  ],
+  "verified_clean": [
+    "Red-first claim: re-ran check_offset_reproduction_contract against a scratch origin/main worktree with only the new adapter + case copied in — exactly 17 failures, matching the triage note.",
+    "Hand-walk numbers in tasks/TODO.md:84 (aapl-2025 = 23 items, 209,227 UTF-8 bytes) both reproduce.",
+    "norm_sha256 equals sha256 of the exact bytes _cache_source stores on every path including the empty/refusal envelope.",
+    "No surrogate-encode raise path (html.unescape maps surrogate charrefs to U+FFFD; extract decodes utf-8/cp1252-replace only).",
+    "extract_items and evals/snapshot.py inputs untouched by the diff, so acceptance criterion 3 holds by construction.",
+    "The recipe-in-a-# -comment mutation does go red (_squash leaves the #)."
+  ]
+}
