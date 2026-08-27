@@ -196,7 +196,7 @@ Population: documents carrying at least one item that passes prongs 1 and 2
 | 0.9545 | intc-2002 | 5 | ADR-034 §b3 rejection (holders count) — must not |
 | 0.9849 | ba-2003 | 5 | ADR-034 §b3 rejection — must not |
 
-**Band (0.2718, 0.9285), midpoint 0.6002 → `PTR_COVERAGE_MIN = 0.60`**, two
+**Band (0.2718, 0.9285), midpoint 0.6001 → `PTR_COVERAGE_MIN = 0.60`**, two
 significant figures. Margins: **2.21×** above the fire edge and **1.55×**
 below the no-fire edge. The band is wide because the corpus is bimodal on
 exactly the property ADR-038 R3 turns on: filings whose internal pointers
@@ -240,7 +240,10 @@ fire would break.
 - **No locatable position**: `nvda-2024` item 8 never matches
   `INTERNAL_PTR_RE`; `evals/golden/nvda-2024-shallow.json`'s existing
   `item_span_near_empty`-era pins (confidence 0.80, `review_required` true
-  from THAT code alone) hold unchanged, and the census prints the non-match.
+  from THAT code alone) hold unchanged. The census's candidate table lists
+  every extracted body that matches `INTERNAL_PTR_RE`, so the non-match is
+  evidenced by `nvda-2024`'s absence from `d16-census.txt`, not by a
+  printed row.
 
 ### c5. The fire census — the whole of it
 

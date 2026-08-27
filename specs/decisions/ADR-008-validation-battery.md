@@ -1,7 +1,7 @@
 # ADR-008 — T5: the validator battery that survived measurement
 
 Date: 2026-08-16. Status: accepted. Amended by: ADR-013, ADR-018, ADR-027,
-ADR-030, ADR-035 (the last four in place — each amended figure carries its marker).
+ADR-030, ADR-035, ADR-039 (the last five in place — each amended figure carries its marker).
 Implements layers 8-9 (`src/sec10k/validate.py`).
 
 **Ruling**: ship six label-free validators with measured thresholds (TOC manifest, unattributed content, last-item domination, boundary hygiene, relative numeric density, keyword fingerprints) — seven since ADR-013 added `expected_items_mostly_missing` (amended 2026-08-22, ADR-027 §g; `grep -c 'warn("' src/sec10k/validate.py` → 7), eight since ADR-030 added `item_dominates` (amended 2026-08-23; the same grep → 8), ten since ADR-035 (D8) added `item_span_near_empty` and `low_item_coverage` (amended 2026-08-26; the same grep → 10), eleven since ADR-039 (D16) added `internal_pointer_unreached` (amended 2026-08-28; the same grep → 11); reject the other four proposed ("Item 8 longest", "1A ≫ 1B", "spans end at sentence punctuation", part-region consistency) as false-positive generators.

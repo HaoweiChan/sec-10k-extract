@@ -1,7 +1,7 @@
 # ADR-016 — Every warning code and every check, dispositioned
 
-Date: 2026-08-17. Status: accepted. Amended by: ADR-030, ADR-035 (the code
-table gains rows, in place). Discharges the open item ADR-010's
+Date: 2026-08-17. Status: accepted. Amended by: ADR-030, ADR-035, ADR-039
+(the code table gains rows, in place). Discharges the open item ADR-010's
 consequences section left in `tasks/TODO.md` row G1: *"four of the six layer-8
 validators still have no case proving they fire, and four adapter checks are
 structurally incapable of going red. 25/25 green means less than it appears,
