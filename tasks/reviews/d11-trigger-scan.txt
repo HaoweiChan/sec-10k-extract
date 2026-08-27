@@ -1,4 +1,4 @@
-# D11 trigger scan — 43 dev documents, SPAN_FLOOR=1500, COVERAGE_MIN=0.13
+# D11 trigger scan — 44 dev documents, SPAN_FLOOR=1500, COVERAGE_MIN=0.13
 
 fixture                                chars     cov doc_status             lowcov  near_empty
 aapl-2025                             207482  0.9484 success                        —
@@ -19,6 +19,7 @@ ibm-1997                               46932  0.4692 success_with_warning       
 ibr-pointer-first                     362718  0.2306 success_with_warning           8
 ibr-security-holders                   46936  0.4692 success_with_warning           —
 intc-2002                             309085  0.9545 success                        —
+intc-2025                             517976  0.0033 ambiguous                FIRE  1,7,8
 interior-span-dominates               108893  0.8421 ambiguous                      —
 items-stripped                         67444  0.9250 ambiguous                      —
 jnj-2016                              378885  0.9174 success                        —
@@ -62,6 +63,15 @@ xref-index-collapse                    33061  0.0303 ambiguous                FI
 [ibr-pointer-first · item 8 · 86 chars]
   Item 8. Financial Statements and Supplementary Data See index under item 14.
 
+[intc-2025 · item 1 · 147 chars]
+  Item 1. Business: General development of business Pages 3-5, 18 Description of business Pages 3-24, 33, 52, 72-75 Available information Page 2
+
+[intc-2025 · item 7 · 226 chars]
+  Item 7. Management's Discussion and Analysis of Financial Condition and Results of Operations: Liquidity and capital resources Pages 29-32 Results of operations Pages 18-29 Critical accounting estimates Pages 34-36, 65-72
+
+[intc-2025 · item 8 · 66 chars]
+  Item 8. Financial Statements and Supplementary Data Pages 56-108
+
 [jpm-2024 · item 7 · 398 chars]
   Item 7. Management’s Discussion and Analysis of Financial Condition and Results of Operations. Management’s discussion and analysis of financial condition and results of operations, entitled “Management’s discussion and analysis,” appears on pages 52–167. Such information should be read in conjunction with the Consolidated Financial Statements and Notes thereto, which appear on pages 172–321.
 
@@ -98,24 +108,25 @@ xref-index-collapse                    33061  0.0303 ambiguous                FI
 [xref-index-collapse · item 8 · 53 chars]
   Item 8. Financial Statements and Supplementary Data.
 
-17 item-level hits total
+20 item-level hits total
 
 ## escalation rates over the dev corpus
-  filing documents                             43  (28 real EDGAR, 15 self-created)
-  non-refusal (items published)                39
-  low_item_coverage fires   all                1/43 = 0.0233  -> ['xref-index-collapse']
-                            real filings only  0/28 = 0.0000
-                            non-refusal only   1/39 = 0.0256
-  item_span_near_empty      all                12/43 = 0.2791
-                            real filings only  9/28 = 0.3214
-  either code               all                12/43 = 0.2791
-  item-level hits                              17
+  filing documents                             44  (29 real EDGAR, 15 self-created)
+  non-refusal (items published)                40
+  low_item_coverage fires   all                2/44 = 0.0455  -> ['intc-2025', 'xref-index-collapse']
+                            real filings only  1/29 = 0.0345
+                            non-refusal only   2/40 = 0.0500
+  item_span_near_empty      all                13/44 = 0.2955
+                            real filings only  10/29 = 0.3448
+  either code               all                13/44 = 0.2955
+  item-level hits                              20
 
-  fixtures with item_span_near_empty: cvx-2015(7,8), fy2021-item9c(8), ge-1994(8), ibr-pointer-first(8), jpm-2024(7,8), ko-1997(8), nvda-2024(8), reac-2015(8), sandston-2021(8), spatz-2014(8), xom-2021(7,8), xref-index-collapse(1,7,8)
+  fixtures with item_span_near_empty: cvx-2015(7,8), fy2021-item9c(8), ge-1994(8), ibr-pointer-first(8), intc-2025(1,7,8), jpm-2024(7,8), ko-1997(8), nvda-2024(8), reac-2015(8), sandston-2021(8), spatz-2014(8), xom-2021(7,8), xref-index-collapse(1,7,8)
 
   refused before any item exists               4  -> [('aapl-2026-10q', 'unsupported'), ('amended-cover-2021', 'unsupported'), ('ksb-2007', 'unsupported'), ('truncated-download', 'failed')]
 
 ## near-miss band 1 — doc coverage in [COVERAGE_MIN, 0.35): would a small nudge have caught a collapse?
+  0.0033  intc-2025                FIRED
   0.0303  xref-index-collapse      FIRED
   0.2306  ge-1994                  not flagged
   0.2306  ibr-pointer-first        not flagged

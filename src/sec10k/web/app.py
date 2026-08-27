@@ -29,6 +29,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 
 from src.sec10k.extract import extract_items
 from src.sec10k.web import capabilities as capabilities_mod
+from src.sec10k.web import gate
 from src.sec10k.web.build_id import git_sha
 from src.sec10k.web.fixtures import (FIXTURES, ROOT, deployed_fixtures,
                                      fixture_file)
@@ -69,18 +70,37 @@ ALLOWED_SUFFIX = (".htm", ".html", ".txt")
 # it. Lock 3 (ADR-036 §h2, `EXTRACT_WINDOW`) lives in `escalate.route` and is
 # untouched too.
 #
-# WHAT THIS EXPOSES, said plainly and not softened: with no auth and no rate
-# limit, any anonymous caller can now trigger paid work by UPLOADING a
-# document whose items collapse. The process budget is the bound; the real
-# remaining brake is the credit limit on the OpenRouter key itself.
+# LOCK 4, THE DOOR — and it is why the paragraph that used to sit here is
+# gone rather than edited (PR #61 R10, owner decision "close it at the door").
+# That paragraph said any anonymous caller could trigger paid work by UPLOADING
+# a collapsing document, and that an upload was the only route. Both halves
+# were wrong. PR #61 R1 had already found that two committed fixtures made the
+# dropdown a one-click paid button and `?fixture=<name>&run=1` a paid PAGE
+# LOAD; R10 then found that excluding those fixtures still did not close the
+# money path, because `POST /api/extract/url` extracts ANY
+# `https://www.sec.gov/Archives/…` URL — and `intc-2025` is a real Intel EDGAR
+# filing whose own Archives URL bills. Excluding fixtures could never fix that:
+# extracting arbitrary EDGAR URLs is the feature, and every collapsing filing
+# on EDGAR is one.
 #
-# "Uploading" is exact, and it was not exact until PR #61 R1. Two committed
-# fixtures fire the trigger, so until that round the dropdown was a one-click
-# paid button and `?fixture=<name>&run=1` was a paid PAGE LOAD — no click and
-# no upload — while this comment and three other places said an upload was
-# needed. `fixtures.DEPLOY_EXCLUDED` closes both, in the LISTING and in
-# request-time RESOLUTION, so the sentence above is now true rather than
-# merely lucky.
+# So the paid path is now closed at the door instead. `web.gate.paid_path_open`
+# is consulted ONCE, in `_run`, which is the single point all three input modes
+# converge on and the only caller of `extract_items` in this file — so fixture,
+# upload and URL are covered by construction rather than by three guards that
+# can drift (R13 is that failure: a per-line guard a second endpoint walked
+# around). Escalation runs only for a request carrying a valid
+# `X-Escalation-Token`; with no `SEC10K_ESCALATION_TOKEN` on the host it runs
+# for NOBODY. Unset means closed, never open.
+#
+# Extraction itself is untouched and stays open, free and unauthenticated —
+# that is the product, and an evaluator with no secret still gets every item,
+# every span and every pane. What they do not get is a bill, and the envelope
+# says which of the two happened (`escalation.reason`, on screen in the routing
+# strip) instead of going quiet about it.
+#
+# The fixture exclusion below stays as the second layer: with the door shut it
+# is no longer what makes the spend bounded, but a paid button in a public
+# dropdown is worth not shipping even when it is locked.
 #
 # Neither web lock touches a local run: `python3 -m src.sec10k.escalate`, the
 # eval suites and a direct `extract_items(..., escalate=True)` call all bypass
@@ -195,7 +215,8 @@ def _cache_source(raw: bytes, suffix: str, normalized: str) -> str:
 
 
 def _run(path: str, source: dict, raw: bytes = None,
-         exclude_boilerplate: bool = False, markdown: bool = False):
+         exclude_boilerplate: bool = False, markdown: bool = False,
+         request: Request = None):
     """Extract and shape for the UI. Never leaks a traceback to the browser.
 
     `raw` is the original bytes already in hand for upload/URL; the fixture
@@ -210,25 +231,38 @@ def _run(path: str, source: dict, raw: bytes = None,
     ADR-032's, the same way: `blocks=True` adds the `blocks` (+ `tables`)
     annotation and build_view renders the pane from it (S9).
 
-    Escalation is NOT a flag here any more (owner, 2026-08-27). Every request
-    escalates unless the operator disarmed the deployment, it still does
-    nothing at all unless the D8 trigger fires, and with no
+    Escalation is NOT a request flag any more (owner, 2026-08-27) and it is
+    not automatic either (owner, PR #61 R10). It is one decision taken HERE,
+    for all three input modes, by `gate.paid_path_open`: the deployment must be
+    armed, a secret must be configured, and this request must carry it. It then
+    still does nothing unless the D8 trigger fires, and with no
     `OPENROUTER_API_KEY` on the server it produces a routing record whose tier
-    outcome is `unavailable`, never a fabricated item. The routing strip
-    reports what actually happened, which is the only honesty this page owed
-    the viewer once the control went away.
+    outcome is `unavailable`, never a fabricated item.
+
+    `request` defaults to None on purpose. A future endpoint that forgets to
+    pass it gets the FREE path, not a free-for-all — the fail-safe direction,
+    and the reason the choke point is structural rather than a convention every
+    call site has to remember.
     """
-    # ADR-036 §h2. Escalation is on unless the operator disarmed this
-    # deployment, and it always carries the PROCESS-wide budget — the one
-    # ceiling left now that nobody has to tick anything to spend money.
+    # ADR-036 §h2 + TD-158. The ONE place the paid path can be entered, and the
+    # only `extract_items` call in this file. The process-wide budget rides
+    # along whenever it does open — it is the ceiling BEHIND the door, not
+    # instead of it.
+    escalate, why = gate.paid_path_open(
+        request.headers.get(gate.HEADER) if request is not None else None,
+        ESCALATION_ENABLED)
     try:
         result = extract_items(path, exclude_boilerplate=exclude_boilerplate,
-                               blocks=markdown, escalate=ESCALATION_ENABLED,
-                               budget=server_budget() if ESCALATION_ENABLED else None)
+                               blocks=markdown, escalate=escalate,
+                               budget=server_budget() if escalate else None)
     except Exception as e:                       # refuse loudly, hard rule 4
         return _err(500, "extractor_exception", f"{type(e).__name__}: {e}",
                     source=source)
     view = build_view(result)
+    # Said, not implied. `routing: null` alone cannot distinguish "the paid
+    # tier was never offered to you" from "it ran and stayed quiet", and a
+    # viewer who is told nothing assumes the second.
+    view["escalation"] = {"ran": escalate, "reason": why}
     body = raw
     if body is None:
         try:
@@ -252,15 +286,31 @@ def api_meta():
     return {"git_sha": git_sha(ROOT), "fixtures": deployed_fixtures(),
             "max_bytes": MAX_BYTES, "allowed_suffix": list(ALLOWED_SUFFIX),
             # ADR-036 §h2 — the deployment's behaviour stays inspectable
-            # without a control on the page. Now almost always true: it reads
-            # false only where the operator set SEC10K_ESCALATION_ENABLED=0.
-            # Arming only; the budget's remaining balance is deliberately not
-            # published, because it is a fact about other people's requests.
-            "escalation_enabled": ESCALATION_ENABLED}
+            # without a control on the page. TWO facts, because since PR #61
+            # R10 one no longer implies the other:
+            #
+            # `escalation_enabled` is the operator's off-switch only. It reads
+            # false where SEC10K_ESCALATION_ENABLED is set to any member of
+            # DISARM_VALUES — `0`, `false`, `no`, `off`, compared after
+            # `.strip().lower()`, so `FALSE`, `Off` and `"0 "` all disarm.
+            # PR #61 R17: this comment used to describe a single-literal `0`,
+            # which stopped being true in R3 and would have sent an operator
+            # looking for a switch that had already widened.
+            #
+            # `escalation_token_required` is the DOOR (TD-158). True whenever
+            # a secret is configured — which is to say, whenever any request
+            # can reach the paid tier at all. Note the polarity: false does not
+            # mean "open to all", it means "closed to all", because an
+            # unconfigured secret disables escalation rather than waiving it.
+            #
+            # Neither publishes the secret, and neither publishes the budget's
+            # remaining balance — that is a fact about other people's requests.
+            "escalation_enabled": ESCALATION_ENABLED,
+            "escalation_token_required": bool(gate.configured_token())}
 
 
 @app.post("/api/extract/fixture")
-def extract_fixture(body: dict):
+def extract_fixture(body: dict, request: Request):
     name = (body or {}).get("fixture", "")
     try:
         f = _fixture_file(name)
@@ -268,7 +318,7 @@ def extract_fixture(body: dict):
         return _err(404, "bad_input", str(e))
     return _run(str(f), {"mode": "fixture", "name": name, "file": f.name},
                 exclude_boilerplate=bool((body or {}).get("exclude_boilerplate")),
-                markdown=bool((body or {}).get("markdown")))
+                markdown=bool((body or {}).get("markdown")), request=request)
 
 
 @app.post("/api/extract/upload")
@@ -295,11 +345,12 @@ async def extract_upload(request: Request):
                     # is the filing itself, so the flag has nowhere else to ride
                     exclude_boilerplate=request.query_params.get(
                         "exclude_boilerplate") == "1",
-                    markdown=request.query_params.get("markdown") == "1")
+                    markdown=request.query_params.get("markdown") == "1",
+                    request=request)
 
 
 @app.post("/api/extract/url")
-def extract_url(body: dict):
+def extract_url(body: dict, request: Request):
     url = ((body or {}).get("url") or "").strip()
     if not url.startswith("https://www.sec.gov/Archives/"):
         return _err(400, "bad_input",
@@ -327,7 +378,7 @@ def extract_url(body: dict):
         return _run(str(p), {"mode": "url", "name": url, "bytes": len(raw),
                              "sha256": hashlib.sha256(raw).hexdigest()[:16]}, raw=raw,
                     exclude_boilerplate=bool((body or {}).get("exclude_boilerplate")),
-                    markdown=bool((body or {}).get("markdown")))
+                    markdown=bool((body or {}).get("markdown")), request=request)
 
 
 @app.get("/api/source/{token}")

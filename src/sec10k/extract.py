@@ -5,7 +5,7 @@ boundaries, status, label-free validation, confidence, assembly. Layer 10 — th
 model-based slow path ADR-020 ruled NOT JUSTIFIED in 2026-08-19 — now exists as
 a TRIGGERED tier behind `escalate=True` (ADR-036, which supersedes ADR-020).
 It is off by default, it runs only when the D8 document-level signal fires, and
-on a dev corpus where that signal fires on 0 of 28 real filings the default
+on a dev corpus where that signal fires on 1 of 29 real filings the default
 cost stays exactly $0.
 `success` is deliberately hard to earn — it requires the validator battery to
 find nothing at all.

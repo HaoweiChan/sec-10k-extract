@@ -12,8 +12,8 @@
     "file": "evals/fixtures/repo_hygiene/escalation-locks-removed.py"
   },
   "expect": {
-    "min_failures": 5,
-    "max_failures": 5
+    "min_failures": 6,
+    "max_failures": 6
   },
   "triage": {
     "class": "cost-regression",

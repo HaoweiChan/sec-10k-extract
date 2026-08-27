@@ -12,8 +12,8 @@
     "file": "evals/fixtures/repo_hygiene/escalation-locks-evaded.py"
   },
   "expect": {
-    "min_failures": 7,
-    "max_failures": 7
+    "min_failures": 9,
+    "max_failures": 9
   },
   "triage": {
     "class": "cost-regression",

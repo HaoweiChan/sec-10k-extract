@@ -715,10 +715,11 @@ syncStacked();
 function excludeBp(){ const c = $("#exclude-bp"); return !!(c && c.checked); }
 // S9. Same rule: the pane renders from the response's own `markdown` flag.
 function renderMd(){ const c = $("#render-md"); return !!(c && c.checked); }
-// D11 / owner 2026-08-27: there is no escalate control any more. The server
-// escalates every request unless the operator disarmed the deployment, so
-// nothing here decides whether to; `routingStrip` below reports what the
-// response says actually happened, which is the whole of the page's job now.
+// D11 / owner 2026-08-27: there is no escalate control any more. The SERVER
+// decides — since PR #61 R10 on whether the request carried a valid
+// `X-Escalation-Token` (TD-158), and before that on its own off-switch — so
+// nothing here decides whether to; `escalationStrip` and `routingStrip` below
+// report what the response says actually happened, which is the page's job now.
 
 // S9: the smallest honest renderer for exactly the Markdown subset
 // src/sec10k/markdown.py emits — ATX headings, paragraphs (a whole-paragraph
@@ -914,12 +915,12 @@ function coverageStrip(warns){
 // re-derived, so the screen and the envelope cannot disagree.
 // The absent case and the quiet case are DIFFERENT and are printed
 // differently: `routing: null` — build_view always emits the key (view.py),
-// so it is null and not absent — means the deployment was disarmed
-// (SEC10K_ESCALATION_ENABLED is one of DISARM_VALUES) and escalation was
-// never asked for at all; a
-// routing record with `fired:false` means it WAS asked for — which it now is
-// on every request — and the deterministic answer needed no help, which is
-// the $0 claim, on screen.
+// so it is null and not absent — means escalation was never asked for at all;
+// a routing record with `fired:false` means it WAS asked for and the
+// deterministic answer needed no help, which is the $0 claim, on screen.
+// PR #61 R10 / TD-158: `routing: null` is now the COMMON case, because the
+// paid tier is behind a token, so it can no longer be left to say nothing —
+// `escalationStrip` below prints the server's own reason next to it.
 function routingStrip(r){
   if(!r) return "";
   const c = r.cost || {};
@@ -942,6 +943,19 @@ function routingStrip(r){
     ${esc(money)}</span>`;
 }
 
+// TD-158 / PR #61 R10. The paid tier is behind `X-Escalation-Token`, so for
+// almost every viewer it does not run — and "does not run" must be SAID, not
+// left as an absent strip. `v.escalation.reason` is the server's own sentence,
+// printed verbatim: the page does not re-derive why, because a second
+// explanation here is a second thing that can disagree with the envelope.
+// The `ran: true` case prints nothing of its own — `routingStrip` above then
+// has a record to show, and two strips saying the same thing is noise.
+function escalationStrip(e){
+  if(!e || e.ran) return "";
+  return ` <span class="src" id="escalation">model tier: <b>did not run</b>
+    — ${esc(e.reason || "")}</span>`;
+}
+
 function render(v){
   VIEW = v; SEL = null;
   const st = v.doc_status || "failed";
@@ -953,6 +967,7 @@ function render(v){
     (n ? ` <span class="src">— ${esc(n)}</span>` : "") +
     (src ? ` <span class="src">${esc(src)}</span>` : "") +
     coverageStrip(w) +
+    escalationStrip(v.escalation) +
     routingStrip(v.routing);
 
   $("#warnings").innerHTML = w.length

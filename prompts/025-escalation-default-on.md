@@ -65,6 +65,11 @@ place with a dated owner note.
   D11 ledger row, in `README.md` and in `app.py`'s own header comment, and it
   is a P1 debt row (`TD-158`) rather than a caveat. The owner accepted it
   knowingly; the record says so in those words.
+  **SUPERSEDED 2026-08-28 — see the round-2 section below. The disclosure was
+  wrong twice and is now moot: the paid path is closed at the door, so no
+  anonymous caller can reach a billed call by any route. This bullet is kept
+  as written because the round-2 section is about how confidently it was
+  wrong.**
 
 ## The review round that followed, and the one thing it changed my mind about
 
@@ -110,3 +115,54 @@ reviewer's first move was to open the dropdown.
 The two budget ceilings and `EXTRACT_WINDOW`. The owner removed the toggle, not
 the spend ceilings — and with nobody having to tick anything, those ceilings
 went from one brake among three to the only one inside the process.
+
+## Round 2, and the correction that falsified my correction
+
+Round 1's HIGH taught me to look at the product. Round 2's HIGH (R10) taught me
+that I had looked at exactly one part of it. I closed the dropdown and wrote
+"an upload is now the only route" in four places — and `POST /api/extract/url`
+takes any `https://www.sec.gov/Archives/…` URL and calls the same `_run`.
+`intc-2025` is a real Intel EDGAR filing. Its own Archives URL still billed.
+
+The part worth keeping is *why fixture exclusion was never going to be the
+fix*, and I could have derived it without a reviewer: the service extracts
+arbitrary EDGAR URLs by design, so the set of collapsing documents it will
+accept is the set of collapsing documents on EDGAR, not the set of collapsing
+documents in `evals/fixtures/`. I fixed the two instances I could enumerate and
+called the class closed. Twice, now, my fix has been scoped to the evidence I
+was shown rather than to the mechanism the evidence was an instance of.
+
+The owner's decision was to close it at the door. `web/gate.py` is 126 lines of
+stdlib and the design constraint that shaped it is the one I would not have
+chosen unprompted: **safe when unset**. A secret-based brake has an obvious
+failure mode — the operator forgets the variable — and the only acceptable
+direction for that failure is "nobody can spend", never "everybody can". So an
+absent secret, and a secret under `MIN_TOKEN_CHARS`, are refused in the same
+words a wrong token gets. The free path is untouched: extraction is the
+product, and an evaluator with no secret still gets every item and every span.
+
+Two things I got right by accident and would now do on purpose. `_run` was
+already the single point all three modes converge on, so the door is one call
+and not three guards — R13, in the same round, is the counter-example: a guard
+pinned as one literal line in one function, which a second endpoint walks
+around with the gate green. And `gate.py` imports no fastapi, which started as
+habit and turned out to be the whole point: `escalation_door` can IMPORT it and
+run the decision table, instead of reading a shape out of `app.py` with `ast`.
+
+That last point is round 2's real lesson, and it is bigger than this feature.
+Six of the eight findings were the same defect: **a property stated in prose
+and pinned by shape or text, so a green edit defeats it.** `.strip().lower()`
+asserted nowhere. A memo pinned as an object and not as its counters. A guard
+counted as one line. A census restated in four files from one stale run. A
+dollar figure a summary attributed to a section that had superseded it. Every
+one of those pins was written carefully, by me, in a round that was *about*
+binding properties. The fix is not more care. It is that a check which RUNS the
+thing cannot be satisfied by a shape that looks right — so where the code can
+be made importable, it should be, and the pin should execute it.
+
+The rejection I re-argued rather than restated: TD-160 refused to derive
+`DEPLOY_EXCLUDED` from the trigger because it costs a full sweep at process
+start. True — of a derivation in the web layer, which is the only one I
+considered. At eval time it is 4.6s against a 44s suite. The reviewer asked me
+to either take it or re-argue it against the option actually available, and
+once the option was named there was nothing left to argue.
