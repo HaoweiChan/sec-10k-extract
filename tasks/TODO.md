@@ -86,6 +86,26 @@ Reviewer evidence: Cross-repo integration evidence: the demo's agent-side failur
 Acceptance: Red-first `repo_hygiene` UI cases at main; browser walk in `tasks/reviews/`; after deploy, browser-agent re-probes and declares its matrix row (its M41 records this repo's git sha from `/api/meta`)
 Status: merged — PR #55 merged 2026-08-26; UI cases + browser walk GREEN. Stays in the working set under ADR-009 because the post-deploy **M41 re-probe is UNRUN**: the browser agent must re-probe the deployed inspector and declare its matrix row with this repo's git sha read from `/api/meta`. Nothing else outstanding
 
+### D13 — Adjudicate the internal-pointer disagreement: is a page-pointer body a defect? [status: in-progress]
+Priority: P1
+Origin: TD-12's decline in ADR-034 §e2 rests on it; `evals/adversarial/cvx-2015-internal-pointer.json`
+Spec: ADR-034 (D9) DECLINED the A2 internal-pointer class on two evidential reasons. The second — "the D8 trigger is measured silent on all five A2 filings, so D11 will not reach it either" — is now moot in an unhelpful way: D11 shipped and its held-out exam resolved nothing anywhere (ADR-036). The FIRST reason still stands and blocks every route through TD-12: `cvx-2015` item 6 is a **standing, unresolved disagreement with the extraction-auditor**, recorded not resolved since ADR-019 §e, and ADR-034 §e2 argues that a milestone "would fix what two independent reads disagree is broken". This row settles that question and nothing else. It is a DECISION row, not a capability: no extractor behaviour changes, so the T8 freeze guard is not engaged. Scope is the whole class as ADR-034 §b3 enumerates it, including the instances that row admits it UNDERSTATES — `cvx-2015` items 2/6/7/7A/8, `ge-1994` item 8, `jpm-2024` items 1C/7/7A/8, `bac-2006` items 3/6/7A, `spatz-2014` item 8 — plus `mrk-1995` items 5/7, which TD-150 says report `extracted` over pure EXTERNAL pointers that the class rule already rejects, so the ruling must say which side of the line each falls on
+Reviewer evidence: Settles a recorded standing disagreement with measurement rather than preference, and unblocks or closes TD-12 and TD-14 on evidence
+Acceptance: A ruling recorded as an ADR that supersedes or amends ADR-034 §e2 and ADR-019 §e, adjudicating EACH enumerated item as `defect` / `correct` / `out-of-class` with its span text quoted and the reasoning stated; the extraction-auditor re-run BLIND on a sample and its verdict compared to the ruling, with any residual disagreement recorded as disagreement rather than resolved by fiat; every Debt row the ruling touches (TD-12, TD-14, TD-149, TD-150) updated to match; `extract_items` byte-identical against `origin/main` via `evals/snapshot.py`, since no behaviour may change; gate green
+Out of scope: Building internal-pointer resolution. If the ruling is `defect`, TD-12 becomes a capability milestone with its own ADR and its own freeze exception — a separate task, not this one
+
+## Debt
+
+Each block is a decision not to build something, not a forgotten task. Every
+one of them is visible in a committed eval case or an ADR section, never only
+here. Ids are minted `TD-1, TD-2, …` in the pre-conversion table's own row
+order — a fresh namespace, since this repo already uses `D<N>` for milestone
+tasks (see [ADR-037](../specs/decisions/ADR-037-ledger-block-format.md)). Ten
+rows that the pre-conversion table had already struck through and marked
+PROMOTED to a numbered milestone (D1–D5) are not repeated here — each is
+archived in `tasks/DONE.md` under its milestone id, and the struck row is
+still readable in git history at `e54573f`.
+
 ### TD-1 — D9's A2 ruling rests on a reason its own falsifier now trips [status: todo]
 Priority: P2
 Origin: `specs/decisions/ADR-034-pointer-and-fanout-rulings.md` §e2 (dated cross-reference note) and §f row 3 (marked TRIPPED); the measurement re-runs from `src/sec10k/validate.py`'s `item_span_near_empty` over `evals/fixtures/`
