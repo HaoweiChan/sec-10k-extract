@@ -1,0 +1,27 @@
+{
+  "pr": 62,
+  "round": 1,
+  "result": "APPROVED",
+  "scope": "full PR diff origin/main..HEAD (843116a promotion + 1dd2911 implementation)",
+  "counts": {"HIGH": 0, "MEDIUM": 0, "LOW": 1},
+  "verified": [
+    "Both containers at src/sec10k/web/static/index.html:1085-1086 carry tabindex=\"0\" alongside role=\"region\"; the base ui-item-text-region case now pins tabindex and the extended check enforces it",
+    "Red-first proof reproduces: run_case for ui-item-text-region-focusable against the pre-fix index.html (exported from origin/main to a scratch copy) fails with exactly the two messages quoted in the case's triage note, and passes on the committed file; the quoted invariant red 80/82 matches the committed history.jsonl line at ts 20260828-013126, and the 80->81->82 / 144->145 progression is a coherent red-first arc",
+    "Keyboard walk artifact is internally consistent with the script's assertions (region matched by ARIA name exactly once, live-DOM tabindex \"0\", Tab lands on the region, scrollTop strictly increases 0->40->624 per key, both modes); the two PNGs show genuinely different renders, both scrolled mid-text",
+    "Display layer only: index.html is the sole src/sec10k change; the eval_adapter.py + fixture edits are the WIRE_UI pin move (ui-boilerplate-wire-values still expects exactly 8 failures and passes)",
+    "TODO.md diff is exactly the D14 queue block + the TD-145 todo->promoted edit; no other blocks touched, no new TD ids minted",
+    ".eval-baseline.json untouched; gate re-run by the reviewer: invariant 82/82 = 1.000, fast 145/145 = 1.000"
+  ],
+  "orchestrator_note": "APPROVED with 1 LOW at round 1. R1's own acceptance offers a docstring qualification as the passing state; it was applied in a bounded correction pass on the D13 precedent (two-line docstring edit in d14_keyboard_walk.py, no artifact or verdict touched), no round-2 review ran, and the human is told so here and in the PR body. No debt row minted: the TD id sequence is held by the concurrent PR #61, so anything debt-shaped is routed to the orchestrator in the PR body instead.",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "LOW",
+      "route": "corrected-in-place",
+      "claim": "The walk exercises the truncated 40,000-char display text, not the 68,162-char state its own docstring and the R7 evidence cite, so the artifact's scroll proof is over a smaller box than the narrative implies (the artifact itself is honest: text_chars 40000 is recorded and the non-vacuity guard `scrollable: true` held).",
+      "evidence": "tasks/reviews/d14_keyboard_walk.py:14-15 cites '68,162 characters'; tasks/reviews/d14-keyboard-walk.json:10 records text_chars 40000 (display_text truncation).",
+      "repro": "python3 tasks/reviews/d14_keyboard_walk.py against a running server; compare text_chars in the emitted JSON to the docstring's cited count.",
+      "acceptance": "Docstring notes the pane renders the truncated first 40,000 characters (still overflowing, so the scroll assertion is non-vacuous), or the artifact claim is left as-is with the citation qualified."
+    }
+  ]
+}
