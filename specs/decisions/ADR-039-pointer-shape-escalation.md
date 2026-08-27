@@ -244,7 +244,11 @@ fire would break.
 
 ### c5. The fire census — the whole of it
 
-Over all 62 dev + 6 held-out documents, `internal_pointer_unreached` fires on
+Over all 50 census documents (44 dev fixtures + 6 held-out, every filing
+`evals.oracle.iter_fixtures` yields; the snapshot's 62-dev-file count in §e
+additionally sweeps `repo_hygiene/`'s 18 committed UI regression stubs,
+which are not filings and carry no items — §e shows none of them moves
+either), `internal_pointer_unreached` fires on
 **exactly three items in one filing: `cvx-2015` items 2, 6 and 7A** — the
 three ADR-038 rules `defect`, no more, no fewer, dev and held-out. The
 committed census prints every candidate and its excluding prong; there is no
@@ -356,10 +360,11 @@ scored red was watched BEFORE the validator existed: invariant 81/82, fast
 ## Verification
 
 - `python3 -m evals.run --suite invariant` — 82/82 = 1.000 (+4 enumerated
-  debt, unscored).
-- `python3 -m evals.run --suite fast` — 145/145 = 1.000, `.eval-baseline.json`
-  untouched (`{"fast": 1.0}`, matches). No `--update-baseline`, no
-  `--no-verify`.
+  debt, unscored) at the D16 commit; 83/83 = 1.000 on the tree with
+  origin/main (D14) merged in.
+- `python3 -m evals.run --suite fast` — 145/145 = 1.000 at the D16 commit;
+  146/146 = 1.000 merged. `.eval-baseline.json` untouched (`{"fast": 1.0}`,
+  matches). No `--update-baseline`, no `--no-verify`.
 - `python3 -m src.sec10k.validate` — self-check ok, including the four new
   ADR-039 assertions (fire; external no-fire; high-coverage no-fire;
   already-warned no-fire, no double penalty).
