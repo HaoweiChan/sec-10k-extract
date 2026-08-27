@@ -20,6 +20,7 @@ import secrets
 import tempfile
 import urllib.error
 import urllib.request
+import os
 from collections import OrderedDict
 from pathlib import Path
 
@@ -36,6 +37,49 @@ STATIC = Path(__file__).resolve().parent / "static"
 EDGAR_UA = "Haowei Chan hwchan42@gmail.com"   # SEC fair-access: declare a contact
 MAX_BYTES = 25 * 1024 * 1024                  # provisional cap, both upload and URL
 ALLOWED_SUFFIX = (".htm", ".html", ".txt")
+
+# ---------------------------------------------------------------- ADR-036 §h2
+# The deployed inspector is PUBLIC and UNAUTHENTICATED, and all three extract
+# endpoints accept an `escalate` flag. PR #58 R6: with a credential present on
+# the host, an anonymous caller could upload collapsed filings and drive
+# unbounded opus-class calls; nothing bounded aggregate spend, because
+# `escalate.route` builds a fresh per-document `Budget` and no caller passed
+# one. Two independent locks, because the owner is about to put a real key on
+# this host:
+#
+# 1. ARMING. A credential ALONE never arms paid work. Escalation is refused
+#    server-side unless `SEC10K_ESCALATION_ENABLED=1` is ALSO set. Deliberately
+#    a second variable and not a truthiness check on the key: the key arrives
+#    for its own reasons, and "a key exists" must not mean "spend it".
+# 2. A PROCESS-WIDE CEILING. One `Budget` for the life of the server process,
+#    shared by every request, so the bound is on the DEPLOYMENT and not on each
+#    document. When it is spent the tier refuses like any other
+#    `EscalationUnavailable` and says so in the routing record. It does not
+#    reset on its own; restarting the process is the deliberate act that
+#    refills it.
+#
+# Neither lock touches a local run: `python3 -m src.sec10k.escalate`, the eval
+# suites and a direct `extract_items(..., escalate=True)` call all bypass this
+# module entirely, and a developer who exports both variables gets the tier.
+ESCALATION_ENABLED = os.environ.get("SEC10K_ESCALATION_ENABLED") == "1"
+SERVER_MAX_CALLS = int(os.environ.get("SEC10K_ESCALATION_MAX_CALLS") or 20)
+SERVER_MAX_USD = float(os.environ.get("SEC10K_ESCALATION_MAX_USD") or 5.00)
+_SERVER_BUDGET = None
+
+
+def server_budget():
+    """The one process-wide Budget, created on first use.
+
+    Lazily, so importing this module does not import `llm` — and therefore
+    does not import `urllib` on any path `repo_hygiene`'s `escalation_seam`
+    walks. `app.py` is not on the gate's import graph, but keeping the seam
+    uniform costs three lines and removes a footgun.
+    """
+    global _SERVER_BUDGET
+    if _SERVER_BUDGET is None:
+        from src.sec10k.llm import Budget
+        _SERVER_BUDGET = Budget(max_calls=SERVER_MAX_CALLS, max_usd=SERVER_MAX_USD)
+    return _SERVER_BUDGET
 
 app = FastAPI(title="sec10k-extract inspector")
 
@@ -114,7 +158,8 @@ def _cache_source(raw: bytes, suffix: str, normalized: str) -> str:
 
 
 def _run(path: str, source: dict, raw: bytes = None,
-         exclude_boilerplate: bool = False, markdown: bool = False):
+         exclude_boilerplate: bool = False, markdown: bool = False,
+         escalate: bool = False):
     """Extract and shape for the UI. Never leaks a traceback to the browser.
 
     `raw` is the original bytes already in hand for upload/URL; the fixture
@@ -127,14 +172,33 @@ def _run(path: str, source: dict, raw: bytes = None,
     It changes nothing in the envelope except adding the `boilerplate` spans;
     build_view is what turns those into a stripped PANE (S8). `markdown` is
     ADR-032's, the same way: `blocks=True` adds the `blocks` (+ `tables`)
-    annotation and build_view renders the pane from it (S9).
+    annotation and build_view renders the pane from it (S9). `escalate` is
+    ADR-036's, and is the ONE flag here that can spend money — it is off unless
+    the viewer ticks the box, it does nothing at all unless the D8 trigger
+    fires, and with no `OPENROUTER_API_KEY` on the server it produces a routing
+    record whose tier outcome is `unavailable`, never a fabricated item. It is
+    honoured only on a deployment ARMED with `SEC10K_ESCALATION_ENABLED=1`
+    (ADR-036 §h2) and always carries the process-wide budget.
     """
+    # ADR-036 §h2. `escalate` is honoured only when this deployment is armed,
+    # and then it always carries the PROCESS-wide budget. The refusal is never
+    # silent: `escalation_disarmed` rides back on the response so the page can
+    # say the box did nothing, which is the whole point of the milestone.
+    armed = escalate and ESCALATION_ENABLED
     try:
-        result = extract_items(path, exclude_boilerplate=exclude_boilerplate, blocks=markdown)
+        result = extract_items(path, exclude_boilerplate=exclude_boilerplate,
+                               blocks=markdown, escalate=armed,
+                               budget=server_budget() if armed else None)
     except Exception as e:                       # refuse loudly, hard rule 4
         return _err(500, "extractor_exception", f"{type(e).__name__}: {e}",
                     source=source)
     view = build_view(result)
+    if escalate and not ESCALATION_ENABLED:
+        view["escalation_disarmed"] = (
+            "This deployment is not armed for paid escalation: "
+            "SEC10K_ESCALATION_ENABLED is not set, so the request ran the "
+            "deterministic pipeline only and no routing record was produced. "
+            "The box was not silently ignored — this is it saying so.")
     body = raw
     if body is None:
         try:
@@ -156,7 +220,12 @@ def index():
 @app.get("/api/meta")
 def api_meta():
     return {"git_sha": git_sha(ROOT), "fixtures": list_fixtures(),
-            "max_bytes": MAX_BYTES, "allowed_suffix": list(ALLOWED_SUFFIX)}
+            "max_bytes": MAX_BYTES, "allowed_suffix": list(ALLOWED_SUFFIX),
+            # ADR-036 §h2 — so the page can disable the escalate box and SAY
+            # why, instead of offering a control the server will ignore.
+            # Reports arming only; the budget's remaining balance is deliberately
+            # not published, because it is a fact about other people's requests.
+            "escalation_enabled": ESCALATION_ENABLED}
 
 
 @app.post("/api/extract/fixture")
@@ -168,7 +237,8 @@ def extract_fixture(body: dict):
         return _err(404, "bad_input", str(e))
     return _run(str(f), {"mode": "fixture", "name": name, "file": f.name},
                 exclude_boilerplate=bool((body or {}).get("exclude_boilerplate")),
-                markdown=bool((body or {}).get("markdown")))
+                markdown=bool((body or {}).get("markdown")),
+                escalate=bool((body or {}).get("escalate")))
 
 
 @app.post("/api/extract/upload")
@@ -195,7 +265,8 @@ async def extract_upload(request: Request):
                     # is the filing itself, so the flag has nowhere else to ride
                     exclude_boilerplate=request.query_params.get(
                         "exclude_boilerplate") == "1",
-                    markdown=request.query_params.get("markdown") == "1")
+                    markdown=request.query_params.get("markdown") == "1",
+                    escalate=request.query_params.get("escalate") == "1")
 
 
 @app.post("/api/extract/url")
@@ -227,7 +298,8 @@ def extract_url(body: dict):
         return _run(str(p), {"mode": "url", "name": url, "bytes": len(raw),
                              "sha256": hashlib.sha256(raw).hexdigest()[:16]}, raw=raw,
                     exclude_boilerplate=bool((body or {}).get("exclude_boilerplate")),
-                    markdown=bool((body or {}).get("markdown")))
+                    markdown=bool((body or {}).get("markdown")),
+                    escalate=bool((body or {}).get("escalate")))
 
 
 @app.get("/api/source/{token}")

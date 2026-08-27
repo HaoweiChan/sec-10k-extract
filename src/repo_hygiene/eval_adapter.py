@@ -13,10 +13,12 @@ case-declared, because WHICH text sits on WHICH ground is the reviewable part.
 """
 import ast
 import hashlib
+import importlib.util
 import json
 import os
 import re
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -848,9 +850,9 @@ WIRE_UI = [
     # S9 (ADR-032): the Markdown checkbox rides the same three wires; the
     # fixture/url pins moved with the body literal, deliberately
     ("the fixture mode puts the checkbox value on the wire",
-     'JSON.stringify({fixture: $("#fx").value, exclude_boilerplate: excludeBp(), markdown: renderMd()})'),
+     'JSON.stringify({fixture: $("#fx").value, exclude_boilerplate: excludeBp(), markdown: renderMd(), escalate: escalateOn()})'),
     ("the url mode puts the checkbox value on the wire",
-     'JSON.stringify({url: $("#url").value, exclude_boilerplate: excludeBp(), markdown: renderMd()})'),
+     'JSON.stringify({url: $("#url").value, exclude_boilerplate: excludeBp(), markdown: renderMd(), escalate: escalateOn()})'),
     ("the upload mode appends the checkbox value to its query string",
      '(excludeBp() ? "&exclude_boilerplate=1" : "")'),
     ("the pane SAYS it is hiding text — R5's defect was un-stripped text "
@@ -892,10 +894,24 @@ UNIQUE_UI = [
 ]
 
 WIRE_API = [
-    # S9 (ADR-032) added the Markdown flag to the same call; the pin moved
-    # with it deliberately, and the wire was re-checked (see the ADR)
-    ("_run forwards the flag into extract_items unmodified",
-     "extract_items(path, exclude_boilerplate=exclude_boilerplate, blocks=markdown)"),
+    # S9 (ADR-032) added the Markdown flag to the same call; the pin moved with
+    # it deliberately, and the wire was re-checked (see the ADR). D11 (ADR-036)
+    # added the escalate flag the same way.
+    #
+    # PR #58 R6 changes what this pin ASSERTS, not just how it is spelled, and
+    # that is worth reading twice. The boilerplate and Markdown flags reach
+    # `extract_items` unmodified. The escalate flag deliberately does NOT: it
+    # is ANDed with the deployment's arming switch first, so a public,
+    # unauthenticated host cannot be made to spend money by a request alone.
+    # Both halves are pinned — the gate expression and the call — because
+    # either one going missing re-opens the exposure, and because a pin that
+    # said "unmodified" here would now be pinning a lie.
+    ("_run gates escalation on the deployment's arming switch",
+     "armed = escalate and ESCALATION_ENABLED"),
+    ("_run forwards the two display flags unmodified, and the GATED escalate "
+     "flag with the process-wide budget",
+     "extract_items(path, exclude_boilerplate=exclude_boilerplate, "
+     "blocks=markdown, escalate=armed, budget=server_budget() if armed else None)"),
 ]
 
 # no trailing `\)`: `@app.post("/api/extract/x", response_model=None)` is
@@ -2426,6 +2442,430 @@ def check_deep_link(case):
     return bad, {"deep_link_pins": len(inp.get("wire", []))}
 
 
+
+# ---------------------------------------------------------------- D11 (ADR-036)
+
+# Module names whose presence in `sys.modules` means a network stack was
+# loaded. `ssl` and `socket` are there because a client that reached for them
+# directly would satisfy a check that only knew about `urllib`.
+NET_MODULES = ("urllib.request", "urllib.error", "http.client", "socket", "ssl",
+               "requests", "httpx", "anthropic", "openai")
+# The gate's own entry points. Importing any of these must not pull a network
+# module in — that is the seam ADR-036 §h rules on.
+SEAM_IMPORTS = ("src.sec10k.extract", "src.sec10k.eval_adapter",
+                "src.sec10k.escalate", "evals.run")
+LLM_MODULE = "src/sec10k/llm.py"
+
+
+def check_escalation_seam(case):
+    """ADR-036 §h. The paid path must be UNREACHABLE from a gate run.
+
+    Not a text pin — a DYNAMIC one, because the property is about what an
+    import actually loads and a static read of `import` statements cannot see
+    a transitive one. A subprocess imports the gate's entry points and reports
+    `sys.modules`; any network module in that set fails the check and names
+    itself. `evals/bench.py` already self-checks the same property for its own
+    AST; this extends it to the modules the eval harness runs.
+
+    Two vacuity guards, because a check that passes on a repo with no client
+    at all would be worthless the day someone deletes the seam:
+
+    * `src/sec10k/llm.py` must exist and must itself import `urllib.request` —
+      the network code has to be real and has to live there;
+    * `llm` must not be imported at MODULE scope anywhere under `src/` or
+      `evals/`. `escalate.route` imports it inside the function, which is what
+      makes the first property hold; hoisting that import to the top of
+      `escalate.py` would break the seam while every other check stayed green.
+
+    What this does NOT prove: that no call is made at runtime. A module can be
+    imported lazily inside a function this check never calls, which is
+    precisely what `route()` does — deliberately. The property here is "a gate
+    run loads no network stack", not "this program cannot reach the network".
+    """
+    inp = case.get("input", {})
+    bad = []
+    mods = list(inp.get("imports", SEAM_IMPORTS))
+    probe = (
+        "import sys; sys.path.insert(0, %r)\n" % str(ROOT)
+        + "".join(f"import {m}\n" for m in mods)
+        + "import json; print(json.dumps(sorted(sys.modules)))"
+    )
+    got = subprocess.run([sys.executable, "-c", probe], cwd=str(ROOT),
+                         capture_output=True, text=True, timeout=120)
+    if got.returncode != 0:
+        return [f"importing {mods} failed: {got.stderr.strip().splitlines()[-1:]}"]
+    loaded = set(json.loads(got.stdout))
+    hit = sorted(set(NET_MODULES) & loaded)
+    if hit:
+        bad.append(f"importing {mods} loaded network modules {hit} — the gate "
+                   "must stay offline and $0 (ADR-036 §h)")
+
+    llm = ROOT / inp.get("llm_file", LLM_MODULE)
+    if not llm.exists():
+        bad.append(f"{llm.name} does not exist — this check would pass "
+                   "vacuously on a repo with no client at all")
+    elif "import urllib.request" not in _live(llm.read_text(), "py"):
+        bad.append(f"{llm.name} does not import urllib.request — the seam is "
+                   "only meaningful if the network code really lives there")
+
+    hoisted = []
+    for d in ("src", "evals"):
+        for f in sorted((ROOT / d).rglob("*.py")):
+            if f.name == "llm.py" or "__pycache__" in f.parts:
+                continue
+            for node in ast.walk(ast.parse(f.read_text())):
+                if not isinstance(node, (ast.Import, ast.ImportFrom)):
+                    continue
+                names = ([a.name for a in node.names] if isinstance(node, ast.Import)
+                         else [node.module or ""])
+                if not any(n.endswith("sec10k.llm") or n == "llm" for n in names):
+                    continue
+                if node.col_offset == 0:   # module scope
+                    hoisted.append(f"{f.relative_to(ROOT)}:{node.lineno}")
+    if hoisted:
+        bad.append(f"`llm` is imported at module scope in {hoisted} — that "
+                   "hoists the network stack onto the gate's import graph")
+    return bad, {"escalation_seam_modules_loaded": len(loaded)}
+
+
+# The routing display, pinned the way `confidence_honesty` pins the qualifier:
+# as TEXT that must be present and unique in one file. Read the long warning in
+# `check_confidence_honesty` — it applies here word for word. A green run says
+# the pinned expressions are in `index.html`; it does not say a browser renders
+# them, and no static read of one file could.
+ROUTING_UI = [
+    ("the doc-level routing strip is declared", "function routingStrip(r)"),
+    ("...and the banner calls it", "routingStrip(v.routing)"),
+    ("the strip distinguishes a quiet trigger from an absent record",
+     'if(!r) return "";'),
+    ("the strip prints the money, not just the outcome",
+     '`$${Number(c.usd || 0).toFixed(4)}'),
+    ("the strip names each tier's outcome", "<b>${esc(t.outcome)}</b>"),
+    # PR #58 R17/R19. The strip's truncation clause was unpinned, so deleting
+    # it left the gate green — and while it existed it said "the first N chars"
+    # about a rung 1 window that starts at an arbitrary offset (18 of 43 dev
+    # documents). Both halves are pinned: the clause exists, and it renders the
+    # RANGE from the record's own `offset`, which is what makes it true.
+    ("the strip says what each rung actually saw when its input was clipped",
+     "t.truncated ? ` · saw chars ${Number(t.offset).toLocaleString()}"),
+    ("...and the item pane shows what the deterministic path had said",
+     "it.evidence && it.evidence.deterministic"),
+    ("...naming the tier that replaced it", "<b>${esc(it.method)}</b>"),
+    ("the checkbox is read at request time, like every other flag",
+     'function escalateOn(){ const c = $("#escalate"); return !!(c && c.checked); }'),
+    # PR #58 R6. The owner is putting a real credential on a public,
+    # unauthenticated deployment, so the page must not offer a control the
+    # server will ignore. Three pinned expressions, one per hop: the page asks
+    # the server whether it is armed, the helper DISABLES the box rather than
+    # leaving it tickable-and-discarded, and the response's own refusal is
+    # rendered. Silently ignoring the box is the dishonesty this milestone
+    # exists to remove, so "it just does nothing" is not an acceptable state.
+    ("the page asks the server whether escalation is armed",
+     "setEscalationArmed(m.escalation_enabled !== false)"),
+    ("...and an unarmed server DISABLES the box rather than ignoring it",
+     "c.disabled = !armed;"),
+    ("...and the response's own refusal is shown",
+     "dis.hidden = !v.escalation_disarmed;"),
+]
+
+
+def check_routing_provenance(case):
+    """D11 (ADR-036 §i). Routing is user-visible or it is not routing.
+
+    Both halves the ledger row names, in one check:
+
+    * the DOC-level record — trigger fired or not, each tier attempted with
+      its outcome and its cost — rendered in the banner strip;
+    * the PER-ITEM tier, which rides the existing `method` field the sidebar
+      and pane header already print as `via ...`, plus the pane's evidence row
+      naming what the $0 path had said before a tier replaced it.
+
+    Plus the property that makes the whole cost argument checkable by a
+    reader: the escalate checkbox must ship UNCHECKED and not `disabled` —
+    unchecked because a paid tier must never be the default, and not disabled
+    because a wire nobody can reach is not a shipped capability. That pair is
+    exactly what `ui-boilerplate-wire-values` had to add for ADR-026's flag
+    after a mutation passed with the box permanently off.
+    """
+    inp = case.get("input", {})
+    src = (ROOT / inp.get("file", UI_STYLESHEET)).read_text()
+    live = _live(src, "js")
+    bad = []
+    for label, expr in ROUTING_UI:
+        n = _squash(live).count(_squash(expr))
+        if n != 1:
+            bad.append(f"index.html: {label} — expected exactly one "
+                       f"`{expr}`, found {n}")
+    box = re.search(r'<input[^>]*id="escalate"[^>]*>', live)
+    if not box:
+        bad.append('index.html: no `id="escalate"` checkbox — the routing '
+                   "record is unreachable from the page")
+    else:
+        # bare boolean attributes, so `\b` on the tag text and NOT `_attrs`,
+        # which only sees name="value" pairs — the same detection
+        # `check_boilerplate_plumbing` uses for #exclude-bp, for the same reason
+        tag = box.group(0)
+        if re.search(r"\bchecked\b", tag):
+            bad.append("#escalate defaults to CHECKED — a paid tier must never "
+                       f"be the default: {tag}")
+        if re.search(r"\bdisabled\b", tag):
+            bad.append("#escalate is DISABLED — the wire is intact and the "
+                       f"capability is unreachable: {tag}")
+    for mode, expr in (("fixture", 'escalate: escalateOn()'),
+                       ("upload", '(escalateOn() ? "&escalate=1" : "")')):
+        if _squash(expr) not in _squash(live):
+            bad.append(f"index.html: the {mode} mode does not put the "
+                       f"checkbox on the wire — missing `{expr}`")
+    return bad
+
+
+
+def _assign(tree, name):
+    """The value node of the last module-level `name = ...`, or None."""
+    got = None
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(
+                isinstance(t, ast.Name) and t.id == name for t in node.targets):
+            got = node.value
+    return got
+
+
+def _env_get(node):
+    """`os.environ.get("X" ...)` -> "X", else None. Accepts a surrounding
+    `int(...)` / `float(...)` coercion, which is how the two numeric knobs
+    are written."""
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) \
+            and node.func.id in ("int", "float") and node.args:
+        node = node.args[0]
+    if isinstance(node, ast.BoolOp):          # `os.environ.get(...) or default`
+        node = node.values[0]
+    if not isinstance(node, ast.Call):
+        return None
+    f = node.func
+    if not (isinstance(f, ast.Attribute) and f.attr == "get"
+            and isinstance(f.value, ast.Attribute) and f.value.attr == "environ"):
+        return None
+    return node.args[0].value if node.args and isinstance(
+        node.args[0], ast.Constant) else None
+
+
+# The largest DEFAULT each ceiling may carry. Not the value the operator must
+# choose — that is theirs — but the bound on what an unset variable means.
+# Sized at ADR-036 §h2's published defaults (20 calls, $5.00) with headroom, so
+# raising a default is possible and unbounding it is not.
+DEFAULT_CEILINGS = {"SERVER_MAX_CALLS": 100, "SERVER_MAX_USD": 25.0}
+
+
+def _default_of(node):
+    """The literal in `os.environ.get(...) or <literal>`, or None.
+
+    The mirror of `_env_get`, which steps OVER this operand — which is exactly
+    how an unbounded default slipped past the name check (PR #58 R18).
+    """
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) \
+            and node.func.id in ("int", "float") and node.args:
+        node = node.args[0]
+    if not (isinstance(node, ast.BoolOp) and len(node.values) == 2):
+        return None
+    tail = node.values[1]
+    return tail.value if isinstance(tail, ast.Constant) and isinstance(
+        tail.value, (int, float)) and not isinstance(tail.value, bool) else None
+
+
+def check_escalation_locks(case):
+    """ADR-036 §h2. The two locks on the PUBLIC deployment's money, bound by a
+    runnable check instead of by prose.
+
+    PR #58 R9, and it is PR #58 R3 reappearing on the code that guards the
+    credential: the locks WORK — the reviewer exercised them — but nothing in
+    the gate stopped them being removed. Setting `ESCALATION_ENABLED = True`
+    and building the process `Budget` with an effectively infinite ceiling left
+    invariant 76/76, fast 139/139 and BOTH module self-checks green
+    (`tasks/reviews/pr58-r2-red.txt`). `app.py` imports fastapi so it cannot
+    carry a CI self-check the dependency-free unit job would run, and the only
+    checks over it were two `WIRE_API` source-text pins that read neither
+    the constant's definition nor the budget's construction.
+
+    So this reads the SHAPE, with `ast`, not the text:
+
+    1. `ESCALATION_ENABLED` is a comparison of `os.environ.get(<arming var>)`
+       against a constant — never a bare `True`, and never a truthiness check
+       on the credential. A key arriving must not mean "spend it".
+    2. `SEC10K_ESCALATION_MAX_CALLS` and `SEC10K_ESCALATION_MAX_USD` are each
+       read from the environment into their own module constant.
+    3. the process `Budget(...)` is constructed from those two NAMES, not from
+       literals — which is the mutation that made the ceiling infinite.
+    4. `_run` passes that budget into `extract_items`, so the ceiling is
+       actually reached (`WIRE_API` pins the call's text; this pins that the
+       budget argument is the process one and not a fresh instance).
+
+    What it does NOT prove: that fastapi binds the routes, that the deployment
+    sets either variable, or that the ceiling is the right size. It proves the
+    two locks are still WIRED, which is exactly the property that silently
+    disappeared under mutation.
+    """
+    inp = case.get("input", {})
+    src = (ROOT / inp.get("file", API_FILE)).read_text()
+    bad = []
+    try:
+        tree = ast.parse(src)
+    except SyntaxError as e:
+        return [f"{inp.get('file', API_FILE)} does not parse: {e}"]
+
+    arm_var = inp.get("arming_var", "SEC10K_ESCALATION_ENABLED")
+    armed = _assign(tree, "ESCALATION_ENABLED")
+    if armed is None:
+        bad.append("no module-level `ESCALATION_ENABLED = ...` — the arming "
+                   "lock is gone entirely")
+    elif not isinstance(armed, ast.Compare):
+        bad.append(f"`ESCALATION_ENABLED` is {ast.dump(armed)[:60]}, not a "
+                   f"comparison against {arm_var} — a constant here arms paid "
+                   "work on a public, unauthenticated deployment")
+    elif _env_get(armed.left) != arm_var:
+        bad.append(f"`ESCALATION_ENABLED` does not compare "
+                   f"os.environ.get({arm_var!r}); left is "
+                   f"{_env_get(armed.left)!r}")
+    else:
+        # PR #58 R18: the SHAPE was pinned and the SEMANTICS were not, so
+        # `!= "0"` passed while evaluating True with the variable UNSET —
+        # defeating Lock 1's whole property, "a credential alone never arms
+        # paid work". The operator and the comparand are the property.
+        want = inp.get("arming_value", "1")
+        if len(armed.ops) != 1 or not isinstance(armed.ops[0], ast.Eq):
+            bad.append(f"`ESCALATION_ENABLED` compares {arm_var} with "
+                       f"{[type(o).__name__ for o in armed.ops]}, not Eq — any "
+                       "other operator arms paid work when the variable is UNSET")
+        rhs = armed.comparators[0] if len(armed.comparators) == 1 else None
+        if not (isinstance(rhs, ast.Constant) and rhs.value == want):
+            bad.append(f"`ESCALATION_ENABLED` compares against "
+                       f"{getattr(rhs, 'value', '<non-constant>')!r}, not the "
+                       f"{want!r} ADR-036 §h2 names")
+
+    knobs = {"SERVER_MAX_CALLS": inp.get("calls_var", "SEC10K_ESCALATION_MAX_CALLS"),
+             "SERVER_MAX_USD": inp.get("usd_var", "SEC10K_ESCALATION_MAX_USD")}
+    for const, envvar in knobs.items():
+        got = _assign(tree, const)
+        if got is None:
+            bad.append(f"no module-level `{const} = ...`")
+        elif _env_get(got) != envvar:
+            bad.append(f"`{const}` is not read from os.environ[{envvar!r}] "
+                       f"(got {_env_get(got)!r}) — a literal here is a ceiling "
+                       "the operator cannot lower")
+        else:
+            # PR #58 R18: `_env_get` deliberately steps over the `or <default>`
+            # operand, so an unbounded DEFAULT passed the name check. A ceiling
+            # whose fallback is 10**9 is not a ceiling on a host where the
+            # variable is unset — which is every host that has not been told
+            # about it.
+            dflt = _default_of(got)
+            cap = inp.get("max_default", {}).get(const, DEFAULT_CEILINGS[const])
+            if dflt is None:
+                # says which of the two it is, because "no fallback" and
+                # "a fallback this check cannot evaluate, e.g. `10 ** 9`" are
+                # different defects and the message must not conflate them
+                bad.append(f"`{const}`'s `or <default>` fallback is absent or "
+                           "is not a plain numeric literal (a computed default "
+                           "like `10 ** 9` reads as a ceiling and is not one) — "
+                           "an unset variable must not mean 'no ceiling'")
+            elif not 0 < dflt <= cap:
+                bad.append(f"`{const}`'s default is {dflt}, outside (0, {cap}] — "
+                           "an unbounded default is an unbounded deployment")
+
+    budgets = [n for n in ast.walk(tree)
+               if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+               and n.func.id == "Budget"]
+    if len(budgets) != 1:
+        bad.append(f"expected exactly one `Budget(...)` construction in "
+                   f"{API_FILE}, found {len(budgets)} — a second one is a "
+                   "second ceiling, which is no ceiling")
+    for b in budgets:
+        kw = {k.arg: k.value for k in b.keywords}
+        if sorted(kw) != ["max_calls", "max_usd"]:
+            bad.append(f"`Budget(...)` keywords {sorted(kw)} != "
+                       "['max_calls', 'max_usd'] — a positional or missing "
+                       "ceiling falls back to llm.Budget's per-document default")
+        for arg, want in (("max_calls", "SERVER_MAX_CALLS"),
+                          ("max_usd", "SERVER_MAX_USD")):
+            v = kw.get(arg)
+            if not (isinstance(v, ast.Name) and v.id == want):
+                bad.append(f"`Budget({arg}=...)` is not the constant {want} — "
+                           "a literal here is the mutation that made the "
+                           "process ceiling infinite (PR #58 R9)")
+    if budgets and not any(
+            isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+            and n.func.id == "server_budget"
+            for n in ast.walk(tree)):
+        bad.append("nothing calls `server_budget()` — the process budget is "
+                   "constructed and never passed, so nothing is bounded")
+    return bad
+
+
+
+TOKEN_RATIO_FILE = "tasks/reviews/2026-08-27-token-ratio.json"
+SWEEP_SCRIPT = "tasks/reviews/d11_sweep_cost.py"
+
+
+def check_token_proxy_bound(case):
+    """The published chars-per-token proxy must not sit ABOVE the measured
+    minimum for any model, because every cost figure in ADR-036 is derived
+    through it.
+
+    Why this exists, and why the direction matters. More chars per token means
+    FEWER tokens for the same text, so a proxy above the measured ratio
+    UNDERSTATES the token count and therefore understates the price. That is
+    the failure the two held-out exam runs exposed: a retyped `4` for both
+    rungs, against a measured 2.74 for `anthropic/claude-opus-5` — so §h2
+    published a worst-case single call of $1.5675 while a real call on a
+    LARGER input had already cost $2.12163.
+
+    The check binds the SWEEP SCRIPT's own published value (not a copy of it)
+    against the committed measurement record, so a hand-edited artifact or a
+    reintroduced constant both go red. It also refuses to pass vacuously: every
+    rung's model must carry at least one sample.
+
+    What it does NOT establish: that the bound is right for any other corpus.
+    Two samples per model, both SEC filings in HTML-derived normalized text.
+    The record says so in its own `honesty` field.
+    """
+    inp = case.get("input", {})
+    bad = []
+    rec = json.loads((ROOT / inp.get("ratio_file", TOKEN_RATIO_FILE)).read_text())
+    spec = importlib.util.spec_from_file_location(
+        "_sweep", ROOT / inp.get("script", SWEEP_SCRIPT))
+    mod = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(mod)
+    except Exception as e:
+        return [f"{SWEEP_SCRIPT} does not import: {type(e).__name__}: {e}"]
+
+    observed = {}
+    for smp in rec.get("samples", []):
+        observed.setdefault(smp["model"], []).append(smp["chars_per_token"])
+    if not observed:
+        return [f"{TOKEN_RATIO_FILE} carries no samples — the bound would be vacuous"]
+
+    from src.sec10k.escalate import RUNGS
+    for _rung, model, _think in RUNGS:
+        if model not in observed:
+            bad.append(f"no measured chars-per-token sample for {model} — a rung "
+                       "whose price nothing measured is a guessed price")
+            continue
+        try:
+            published = mod.chars_per_token(model)
+        except Exception as e:
+            bad.append(f"{SWEEP_SCRIPT} cannot publish a ratio for {model} "
+                       f"({type(e).__name__}: {e})")
+            continue
+        low = min(observed[model])
+        if published > low:
+            bad.append(
+                f"{model}: published chars/token {published} > measured minimum "
+                f"{low} — a proxy above the measured ratio UNDERSTATES tokens and "
+                f"therefore understates every cost figure derived from it "
+                f"(samples: {sorted(observed[model])})")
+    return bad, {"token_proxy_samples": {m: len(v) for m, v in observed.items()}}
+
+
 CHECKS = {
     "adr_headers": lambda case: check_adr_headers(),
     "adr_index": lambda case: check_index(),
@@ -2457,6 +2897,10 @@ CHECKS = {
     "item_text_region": check_item_text_region,
     "mode_button_names": check_mode_button_names,
     "deep_link": check_deep_link,
+    "escalation_seam": check_escalation_seam,
+    "routing_provenance": check_routing_provenance,
+    "escalation_locks": check_escalation_locks,
+    "token_proxy_bound": check_token_proxy_bound,
 }
 
 

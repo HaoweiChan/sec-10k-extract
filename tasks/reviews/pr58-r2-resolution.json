@@ -1,0 +1,94 @@
+{
+  "pr": 58,
+  "round": 2,
+  "responding_to": "tasks/reviews/pr58-r2.json",
+  "result": "REPAIRED",
+  "red_first_record": "tasks/reviews/pr58-r2-red.txt",
+  "gate": {
+    "invariant": "78/78 = 1.000",
+    "fast": "141/141 = 1.000",
+    "before_this_round": "invariant 76/76, fast 139/139",
+    "baseline": "unchanged (1.000)"
+  },
+  "byte_identity": "evals/snapshot.py re-run on the commit this PR ships (R10): held-out sha256 f80025699b... IDENTICAL to origin/main; 0 of 43 filing documents changed. dev 60 files b79ec933... — two new mutation-fixture files and three re-spelled ones, none of them a filing.",
+  "findings": [
+    {
+      "id": "R8",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "accepted": true,
+      "root_cause": "Not the cost model — the reviewer is right that it reproduces every §d1 figure. The per-document CHARACTER COUNTS were hand-typed into the ADR and five of the twelve were wrong: ko-1997 46,932 vs 97,206; nvda-2024 207,482 vs 341,155; reac-2015 24,096 vs 79,649 (3.3x, which is exactly the per-document figure flagged); sandston-2021 102,453 vs 102,434; spatz-2014 36,063 vs 65,197. That is why the figure was wrong twice in a row.",
+      "fix": "tasks/reviews/d11_sweep_cost.py — derives §d1, §d2, §d4 and §h2's ceiling from the SAME census d11_trigger_scan.py produces and the committed price record, and asserts bac-2006 is absent from the wide set. Output committed at tasks/reviews/d11-sweep-cost.txt and pasted into the ADR verbatim. It reproduces the reviewer's $4.5656 / 93.6x and reac-2015 $0.1087 exactly. §l's A2 falsifier row now cites $4.5656/93.6x instead of the withdrawn $3.4.",
+      "note": "93.6x is larger than either wrong figure, so both corrections strengthened the ruling. §d4 now records that it was wrong twice and why, rather than quietly carrying a third number."
+    },
+    {
+      "id": "R9",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "accepted": true,
+      "fix": "New repo_hygiene check `escalation_locks`, AST-based rather than text-based: `ESCALATION_ENABLED` must be a Compare over os.environ.get(SEC10K_ESCALATION_ENABLED) and never a constant; both ceilings must be read from their own env vars; the one Budget(...) must be built from those two NAMES not literals; and something must call server_budget(). Bound by evals/adversarial/ui-escalation-locks.json plus a 5-failure regression fixture.",
+      "proved_both_ways": "BEFORE: the reviewer's two mutations on 45d2a9b left invariant 76/76, fast 139/139 and both _demos green. AFTER: the same two mutations on the repaired tree give invariant 77/78 with ui-escalation-locks FAILED, while the real app.py returns [] and the mutation fixture returns exactly 5 — so the check is neither vacuous nor blanket-failing. Full output in pr58-r2-red.txt."
+    },
+    {
+      "id": "R10",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "accepted": true,
+      "fix": "§f's task/D11 dev digest re-run on the shipped commit after the last fixture change: 60 files, b79ec933.... The 'edited files' bullet now names the two new mutation fixtures and the three re-spelled ones. A note records WHY it was stale, since a section whose whole claim is 're-runnable' failing to re-run is the defect, not the digit."
+    },
+    {
+      "id": "R11",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "accepted": true,
+      "fix": "§j's effort bullet rewritten as 'no reasoning-effort knob is sent at all', citing _body's three keys and _demo's shape assertion; §h3's cache-key expression corrected to sha256(PROMPT_VERSION, model, system, user, max_tokens), matching _cache_key. The sweep found the SAME stale expression in evals/cache/README.md, which no finding named — fixed there too."
+    },
+    {
+      "id": "R12",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "accepted": true,
+      "chose": "capped rung 2's input (the preferred option), AND stated the effective ceiling",
+      "fix": "escalate.EXTRACT_WINDOW = 1,250,000 chars — the largest committed dev filing (jpm-2024, 1,213,284) rounded up, so NO dev document is truncated and no published §d figure moves, while one rung-2 call is bounded at an estimated $1.5675 on arbitrary input. §h2 now states the effective deployment ceiling as MAX_USD + $1.5675 = $6.5675 at the default, printed by d11_sweep_cost.py so the two cannot drift, and the TODO debt row's worst case is restated in terms of the cap rather than jpm-2024. Truncation is not silent: each tier record publishes input_chars and truncated, the contract documents both, and the inspector's routing strip renders 'saw only the first N chars'.",
+      "residual": "A document whose real content sits past 1.25M chars cannot be resolved by rung 2 at all. Stated in §h2 and carried in the debt row with the upgrade path (cap on projected cost once the first live run supplies real token counts, which closes §d3's overshoot in the same move)."
+    },
+    {
+      "id": "R13",
+      "severity": "LOW",
+      "disposition": "fixed",
+      "accepted": true,
+      "fix": "'7-failure mutation fixture' -> 10; 'two sec10k check types' -> three; 'check 5' -> 'check 6' in both ADR-036 §k and tasks/TODO.md, matching §b's numbering and verify's docstring."
+    },
+    {
+      "id": "R14",
+      "severity": "LOW",
+      "disposition": "fixed",
+      "accepted": true,
+      "fix": "tasks/TODO.md:83 and evals/cache/README.md:12 both name OPENROUTER_API_KEY. grep over src/, specs/, docs/, evals/, tasks/, README.md and .github now returns only llm.py's _demo guard (which forbids the string) and the historical prompts/ record."
+    },
+    {
+      "id": "R15",
+      "severity": "LOW",
+      "disposition": "fixed",
+      "accepted": true,
+      "fix": "_body's docstring says three keys."
+    },
+    {
+      "id": "R16",
+      "severity": "LOW",
+      "disposition": "fixed",
+      "accepted": true,
+      "chose": "say what the hash actually pins, rather than commit 1.5 MB",
+      "fix": "The artifact gains catalogue.what_the_sha_pins: 'A FETCH RECEIPT, not a reproducible check' — the hashed 417-model response is not committed and OpenRouter's catalogue mutates, so a reader cannot re-fetch and reproduce the digest; it records which fetch the two records were pruned from. pruned_because points at it, and ADR-036's echo of the claim is reworded the same way, listing what a reader CAN check (the two prices, that price() reads them from the file, that an absent slug raises)."
+    }
+  ],
+  "sweep_caught_beyond_the_findings": [
+    "evals/cache/README.md published the OLD cache-key tuple including `effort` — the same R11 defect in a third document that no finding named. Fixed, plus a note that PROMPT_VERSION is d11.2-openrouter so nothing cached under the previous transport can be served.",
+    "ADR-036's header and §h2 heading both said 'two locks'; R12 makes it three. Updated in both places, plus INDEX.md and the deployment debt row.",
+    "escalate.py's module docstring still described rung 2 as seeing 'the whole document' after the cap landed, and its 'three things this module does NOT do' list did not mention the new bound. Both corrected — a docstring that contradicts the constant beneath it is exactly the R11 shape.",
+    "§g1's 'what changed' list did not carry any round-2 artifact. Added.",
+    "specs/001-sec10k-contract.md's tier-record shape did not carry input_chars/truncated, so the contract would not have described the fields the envelope now publishes.",
+    "The inspector's routing strip did not render truncation, so §h2's 'truncation is never silent' would have been true of the envelope and false of the screen."
+  ],
+  "still_unrun": "No live API call has ever been made — OPENROUTER_API_KEY is unset and no request was sent to the real endpoint this round (the one network path exercised was pointed at http://127.0.0.1:9). The held-out exam is UNRUN; intc-2025 and c-2025 were neither read nor run. Every dollar figure is an ESTIMATE. escalate.verify has still never met a real model answer, and rung 1's slug remains a judgement."
+}

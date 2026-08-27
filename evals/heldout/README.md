@@ -122,7 +122,7 @@ first run, so it cannot be retrofitted afterwards.
 | `mrk-1995/filing.txt` | sec.gov/Archives/edgar/data/64978/0000950130-96-000896.txt | 0000950130-96-000896 | 1996-03-20 | 1995-12-31 | pre-2001 txt, **pharmaceutical** (the sector jnj-2016 took with it when H1 burned it); form 10-K405; earliest filing in either set that predates Item 7A, so the 14-code taxonomy is exercised by a real document; **no table of contents at all** | 322,618 |
 | ~~`axp-2008/filing.htm`~~ | sec.gov/Archives/edgar/data/4962/000119312509041008/d10k.htm | 0001193125-09-041008 | 2009-02-27 | 2008-12-31 | **BURNED AND MOVED 2026-08-19 (T12, ADR-020)** — now `evals/fixtures/axp-2008/filing.htm`, case now `evals/adversarial/axp-2008-combined-heading-burned.json`. legacy HTML, **crisis-era financial**. It DOES have a table of contents — raw bytes carry `<A NAME="toc"></A>TABLE OF CONTENTS` at offset 13689, and the contents page lists Part III's four items individually — but the pipeline's `toc_manifest` comes back **empty** on it, because those entries are bare `10.` / `11.` / `12.` / `13.` with no `Item` prefix and so generate no heading candidates. *(Corrected 2026-08-19, repair round 2: this row and the original case provenance both claimed 'no table of contents', and the stratum rationale — a filing that gives the TOC machinery nothing to work with — was built on it. The machinery does come back empty; the stated reason was wrong.)* The original row here also read "the strings 'Item 10' through 'Item 13' occur **zero** times: Part III is addressed without its item headings" — the first clause is true of the SINGULAR forms and the second does not follow from it. There is one combined heading, at raw offset 1225493: `<B>ITEMS&nbsp;10,&nbsp;11,&nbsp;12&nbsp;and&nbsp;13.</B>` plus the four-item title. See the burn note below. Replaced `wfc-2008`, moved to the dev set before its first run | 1,296,375 |
 | `spg-2019/filing.htm` | sec.gov/Archives/edgar/data/1063761/000155837020001135/spg-20191231x10k.htm | 0001558370-20-001135 | 2020-02-21 | 2019-12-31 | iXBRL, **REIT** — Item 2 Properties runs ~101K chars of mall-by-mall tables, an order of magnitude past any other Item 2; the FY2017–FY2020 window; the first filing in either set with a **present and substantive Item 16**; 9.8 MB — third-largest committed filing anywhere in the repo since D6 added `c-2025` (16.15 MB); `jpm-2024` (12.85 MB, dev set) is second. It was second-largest when this row was written; the clause was corrected under PR #52 R3 | 9,812,403 |
-| `intc-2025/filing.htm` | sec.gov/Archives/edgar/data/50863/000005086326000011/intc-20251227.htm | 0000050863-26-000011 | 2026-01-23 | 2025-12-27 | iXBRL, **post-2019 Intel reorg layout** — narrative organized by Intel's own section names and mapped to SEC item codes ONLY by a trailing `Form 10-K Cross-Reference Index`. All 23 item codes occur **exactly once each**, all of them index rows in the last 0.63% of the document; there is no body item heading anywhere. Added by **D6** as one of the two 2026-08-24 demo-failing filings; the maximal form of the ADR-015 stub-collapse trap, a layout class no fixture covers (`intc-2002` is pre-reorg) | 3,320,720 |
+| ~~`intc-2025/filing.htm`~~ | sec.gov/Archives/edgar/data/50863/000005086326000011/intc-20251227.htm | 0000050863-26-000011 | 2026-01-23 | 2025-12-27 | **BURNED AND MOVED 2026-08-27 (D11, PR #58)** — now `evals/fixtures/intc-2025/filing.htm`, case now `evals/adversarial/intc-2025-collapse-burned.json` (`debt` suite, still red). See the burn note below. iXBRL, **post-2019 Intel reorg layout** — narrative organized by Intel's own section names and mapped to SEC item codes ONLY by a trailing `Form 10-K Cross-Reference Index`. All 23 item codes occur **exactly once each**, all of them index rows in the last 0.63% of the document; there is no body item heading anywhere. Added by **D6** as one of the two 2026-08-24 demo-failing filings; the maximal form of the ADR-015 stub-collapse trap, a layout class no fixture covers (`intc-2002` is pre-reorg) | 3,320,720 |
 | `c-2025/filing.htm` | sec.gov/Archives/edgar/data/831001/000083100126000011/c-20251231.htm | 0000831001-26-000011 | 2026-02-20 | 2025-12-31 | iXBRL, **money-center bank** — the postmortem's #1 known-difficult class, and Citigroup appeared in no set anywhere. Contains **zero** `Item <digit>` strings naming a 10-K item: the whole form mapping is a `FORM 10-K CROSS-REFERENCE INDEX` of BARE codes (`1.`, `1A.`, …), the `axp-2008` shape applied to every item rather than four. Added by **D6** as the second demo-failing filing. 16.1 MB, the largest file in either set | 16,150,764 |
 
 Re-fetch pattern, same as `evals/fixtures/README.md`:
@@ -190,8 +190,83 @@ retired or were burned: pharmaceutical and the January 52/53-week year end
 (`jnj-2016`, burned at H1 — pharma is restored here by `mrk-1995`), the
 Sarbanes-Oxley interim numbering (`gs-2002`, burned 2026-08-17), beverage and
 the first Item 7A cohort (`ko-1997`), petroleum and the FY2021 9C cohort
-(`xom-2021`), and the crisis-era two-sentence pointer (`wfc-2008`, moved before
-its first run — the stratum itself stays here on `axp-2008`).
+(`xom-2021`), the crisis-era two-sentence pointer (`wfc-2008`, moved before
+its first run — the stratum itself stays here on `axp-2008`), and — 2026-08-27 —
+the **post-2019 reorg / cross-reference-index layout and the modern
+semiconductor sector** (`intc-2025`, burned by the first billed live run).
+
+Coverage that is now LOST rather than moved, stated separately because the
+distinction matters: **nothing about the reorg layout is still held out.**
+`c-2025` carries a cross-reference index too, but a different one — bare codes
+in a money-center bank's filing, not Intel's named-section mapping — so it does
+not restore this stratum, it is its own. The dev side keeps the DOCUMENT and so
+keeps the ability to test against that shape; what is gone is the ability to
+measure generalization to it, which is the only thing a held-out case was ever
+for. Of the two filings D11's ledger row named as its exam, one remains.
+
+**Burn, 2026-08-27 — `intc-2025`. From a real run, and a billed one.** The first
+held-out run this repo has ever paid for. D11's escalation ladder was exercised
+live against `intc-2025` with `escalate=True` on 2026-08-27, and it cost
+**$0.899858 over 2 calls** — rung 1 `openai/gpt-5-mini` $0.004498 (12,099 tok),
+rung 2 `anthropic/claude-opus-5` $0.895360 (170,880 tok). It resolved **nothing**:
+`routing.resolved` came back empty.
+
+*What the run showed.* The deterministic half was exactly right: `meta.coverage`
+0.0033, `doc_status` `ambiguous`, items 1/7/8 flagged, D8's trigger fired as
+designed. Rung 1 also behaved correctly — it returned valid JSON
+`{"1": null, "7": null, "8": null}`, honestly reporting that it could not locate
+those items inside its 60,000-char window, and the router treated that as "no
+locatable span". The failure was the **client**: rung 2 returned
+`completion_tokens: 2048` — exactly the `max_tokens` being sent — with **empty
+content**, and that empty string reached `json.loads` as an unexplained
+`JSONDecodeError`. OpenRouter documents the cause: for Anthropic models
+`max_tokens` must be strictly higher than the reasoning budget, or the whole
+allowance is spent thinking and nothing is left to answer with.
+
+*So `escalate.verify` has still never met a real model answer.* The exam tested
+the transport and found it broken before the trust boundary was ever reached.
+That is the honest summary of what $0.899858 bought.
+
+*Why this burns, and why the burn is taken rather than argued around.* Fixing
+the client is shipping code in response to a held-out outcome — a new
+`max_tokens`/`reasoning` split, a recorded `finish_reason`, a new named
+`empty_completion` outcome, and a new case
+(`evals/adversarial/escalation-empty-completion.json`) built from this run's own
+cached response. That is influence four times over under the rule above, and
+the 2026-08-26 amendment does not reach it: the amendment exempts a *ruling*
+that ships nothing, and this shipped. **Owner ruling, 2026-08-27: the burn is
+taken and there is no second amendment.** Reproducing the same bug on a dev
+fixture first was considered and rejected as laundering the evidence without
+laundering the knowledge. Triaged under `failure-triage` before any fix
+(`input-variant`; the reasoning is in the moved case's `triage` block), then
+moved in the same milestone per the `gs-2002` and `axp-2008` precedents — and
+like `gs-2002`, the EXISTING case was relocated rather than a new one authored:
+`evals/heldout/intc-2025-heldout.json` → `evals/adversarial/intc-2025-collapse-burned.json`
+(`debt` suite, still red, unscored), fixture → `evals/fixtures/intc-2025/`.
+
+*What this costs the exam, stated plainly.* **`c-2025` stays here, unread and
+unrun** — it was not touched by this run and must not be. **D11's surviving
+exam is therefore one filing.** That is the honest position, and it is thin:
+one document cannot estimate generalization, and D11's ledger row asks the slow
+path to pass filings it never trained against.
+
+*One more thing the burn removed.* `evals/adversarial/heldout-provenance-claims.json`
+pinned 8 byte-level provenance claims against this fixture; that check scans
+`evals/heldout/` only, so those 8 pins are enforced nowhere now. The floor entry
+was removed rather than left to fail closed, and the removal is recorded in that
+case's own provenance. Replacement obligation (this README budgets 2 spare
+filings per milestone) is logged as a debt row in `tasks/TODO.md`; no
+replacement was fetched here.
+
+*And what it gave back.* Moving the fixture to the dev side changes the dev
+census, which ADR-036 §c1 publishes: `low_item_coverage` now fires on **2 of 44**
+dev documents and — for the first time — on a **real EDGAR filing** (1 of 29)
+rather than only on the synthetic `xref-index-collapse`. The round-1 admission
+that "the dev positive set has size one and is synthetic" is no longer true. The
+same move roughly halves the cost argument for the narrow trigger: ADR-036 §d4's
+wide-vs-narrow ratio falls from 93.6× to **7.1×**, because the narrow trigger now
+escalates a 517,976-char real filing. Both figures are re-derived by
+`tasks/reviews/d11_sweep_cost.py`.
 
 ## Run history
 

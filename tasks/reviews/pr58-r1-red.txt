@@ -1,0 +1,88 @@
+PR #58 round 1 — repro output captured BEFORE any fix (repo hard rule 2).
+Tree: task/D11 at 88b4488 (the commit under review). Date: 2026-08-27.
+Findings and acceptance: tasks/reviews/pr58-r1.json — that file is the authority.
+
+R3's mutation is run on a scratch copy (`git archive HEAD | tar -x`), never on
+the working tree. Nothing below makes a network call; no held-out fixture is
+read or run.
+
+================================================================ R1 (HIGH) + R7
+verify()/apply() publish a non-null span on a `missing` item, and the malformed
+envelope inflates meta.coverage — the number the D8 trigger thresholds on.
+R1/R7  verify() on a `missing` item -> accepted ['8']  rejections=[]
+R1     apply() publishes: status='missing' start=52 end=4064 method='llm_localize'
+R1     contract 001:78 says missing/omitted start/end are null — violated
+R1     meta.coverage 0.6142, was 0.0030 — a resolved `missing` item inflates the number the D8 trigger thresholds on
+R2     mixed proposal -> accepted ['8']  rejections=['item 1: 40 chars < SPAN_FLOOR 1500 — a stub resolved to another stub is not a resolution']
+R2     ADR-036 §b and escalate.py's docstring both say 'all-or-nothing'; 1 of 2 spans applied while a sibling was rejected
+
+================================================================ R3 (MEDIUM)
+Every trust-boundary guard in verify() and both Budget guards replaced with
+`if False:` on a scratch copy of 88b4488. Both gate suites stay 100% green;
+only the two self-checks that NO job runs catch it.
+  [mutated: SPAN_FLOOR, SIM_FLOOR, INV-S1, Budget.max_calls, Budget.max_usd -> if False:]
+  [eval] suite 'invariant': 75/75 = 1.000  (+3 enumerated debt, unscored)
+  [eval] suite 'fast': 138/138 = 1.000  (+3 enumerated debt, unscored)
+  python3 -m src.sec10k.escalate  -> AssertionError (SPAN_FLOOR guard gone)
+  python3 -m src.sec10k.llm       -> EscalationUnavailable (zero-budget guard gone)
+  ci.yml unit-tests job runs NEITHER, so the gate is blind to all five.
+
+================================================================ R4 (MEDIUM)
+§d4's "$3.4 per dev sweep, roughly 60x" re-derived from the ADR's own §d1 model
+(4 chars/token, 250 system tokens, 150 output tokens, rung 1 capped at 60,000
+chars), over the 12 documents §c1's census actually names:
+  12-document sweep = $4.3492   ratio = 78.2x
+  published in §d4  = $3.4         ratio = ~60x        -> does not re-derive
+  (the reviewer's independent recomputation gives $4.7032 / ~85x; the two
+   differ on document char counts, and neither lands anywhere near $3.4)
+  §d4's prose names bac-2006 as escalating; §c3 and the census both say it is
+  SILENT, and it is absent from the 12 above.
+
+================================================================ R5 (MEDIUM)
+ADR-034's own text on the adjudication, vs what ADR-036 and escalate.py claim:
+  ADR-034:    adjudicated `cvx-2015` item 6 — a member of this exact sub-class, `Selected
+  ADR-034:    Financial Data`, a pointer to page FS-60 — **CORRECT**. Items 7 and 8 were
+  ADR-034:    never independently adjudicated. Promoting a capability milestone to fix a
+  ADR-034:    shape that two independent reads disagree is broken inverts the order: the
+  ADR-036: 3. **It would spend money on a class ADR-034 §e2 DECLINED.** The nine real
+  ADR-036:    filings `item_span_near_empty` hits are the A2 class — a few pointer-bodied
+  ADR-036:    items inside an otherwise well-extracted filing — which D9 declined
+  escalate.py: # router inherits that ruling rather than re-deciding it: escalating on
+  escalate.py: # `item_span_near_empty` would send 9 real dev filings (cvx-2015, jpm-2024,
+  escalate.py: # ge-1994, xom-2021, ko-1997, nvda-2024, reac-2015, sandston-2021, spatz-2014)
+  escalate.py: # to a paid tier to resolve the A2 class that ADR-034 §e2 DECLINED as
+  escalate.py: # not-agreed-to-be-broken, and would put the dev escalation rate at 28%
+  ADR-034 §d1's A2 set is FIVE filings (cvx-2015, jpm-2024, bac-2006, ge-1994,
+  spatz-2014). Only FOUR of the nine named above are members; xom-2021, ko-1997,
+  nvda-2024, reac-2015 and sandston-2021 were never in D9's scope.
+
+================================================================ R6 (MEDIUM)
+  llm.py:86:    """A per-run ceiling on paid work, enforced BEFORE the call (cost-discipline
+  escalate.py:247:    budget = budget if budget is not None else Budget()
+  -> a fresh Budget per route() call, and no caller passes one: the ceiling is
+     2 calls / $1.00 PER DOCUMENT, so a 43-fixture sweep's ceiling is 43x that.
+  app.py auth/rate-limit matches: 0
+  app.py:139:                               blocks=markdown, escalate=escalate)
+  app.py:178:                escalate=bool((body or {}).get("escalate")))
+  app.py:206:                    escalate=request.query_params.get("escalate") == "1")
+  app.py:239:                    escalate=bool((body or {}).get("escalate")))
+  -> escalate is reachable on all three public endpoints of an unauthenticated
+     deployment; with a credential set, an anonymous caller drives paid calls.
+
+============================================ the new case, watched red at 88b4488
+`evals/adversarial/escalation-verify-guards.json` run against a `git archive
+88b4488` tree with ONLY the new `verify_guards` check type injected into that
+tree's adapter (and its `asked=` kwarg stripped, since that kwarg is part of
+the fix). So the case fails on the pre-fix verify(), not on "unknown check type".
+  escalation-verify-guards at 88b4488: FAILED
+  - R1: a `missing` item may not be resolved: rejected, but for the wrong reason — no rejection contains 'carries no span': ["item 6: span opens 'ITEM 1. BUSINESS', title similarity 0.256 < SIM_FLOOR 0.37"]
+
+  Read that rejection carefully rather than as a win: at 88b4488 the proposal
+  IS rejected, but by the title-similarity check, because item 1's heading does
+  not read like item 6's title. The status guard did not exist and nothing
+  mentions it — which is what makes the case red — but on this fixture the
+  hole was accidentally covered by a neighbouring check. The SHARP version,
+  where similarity passes and only the status guard rejects, is the R1 block of
+  `escalate._demo` (and the R1 repro at the top of this file, coverage
+  0.0030 -> 0.6142). PR #58 R3 wires that self-check into CI, so from this
+  commit on both the sharp and the fixture-level demonstrations are enforced.

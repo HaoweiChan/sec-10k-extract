@@ -1,0 +1,114 @@
+{
+  "pr": 58,
+  "round": 3,
+  "responding_to": "tasks/reviews/pr58-r3.json",
+  "result": "REPAIRED (amended after the branch was found CI-red; see ci_failure)",
+  "bounded_to": "R17-R23 only. No ruling touched, no closed finding re-verified, no prose improved in passing.",
+  "transcript": "tasks/reviews/pr58-r3-red.txt — part 1 the pre-fix repro, part 2 the seven-mutation matrix.",
+  "gate": {
+    "invariant": "79/79 = 1.000",
+    "fast": "142/142 = 1.000",
+    "before_this_round": "invariant 78/78, fast 141/141",
+    "baseline": "unchanged (1.000)"
+  },
+  "structural_answer": "The breaker fired on 'each round's new safety mechanism is itself unbound'. This round adds no checker-per-mechanism. It binds the two mechanisms round 2 left unbound, and every binding was mutated before it was claimed — seven mutations, seven RED, restore GREEN, transcript in part 2. The one result that does not read as cleanly as the others is stated rather than smoothed: reverting rung 2's cap turns the CI unit-tests job red and leaves the eval suite at 79/79.",
+  "findings": [
+    {
+      "id": "R17",
+      "severity": "HIGH",
+      "disposition": "fixed",
+      "accepted": true,
+      "fix": "The tier record carries `offset`, and the strip renders the true range — 'saw chars 178,087–238,087, not the whole document' instead of 'the first 60,000 chars'. `specs/001` documents `offset` beside `input_chars`/`truncated` and states the three are one fact: a RANGE into normalized_text. `_routing_shape` requires all three together and additionally checks the range lies inside the document and that `truncated` agrees with the arithmetic — so it binds every producer, not just the one that noticed.",
+      "why_a_length_was_not_enough": "rung 1's window starts at the largest unattributed region. On 18 of 43 dev documents that is not 0; on axp-2008 it is 178,087 and on bac-2006 663,941. A length alone cannot express what was read, so the screen stated a falsehood the envelope could not even contradict.",
+      "mutations": [
+        "`offset` deleted from the tier record -> escalation-no-credential FAILED (78/79) AND _demo RED (KeyError: 'offset')",
+        "strip clause deleted -> ui-routing-provenance FAILED (78/79)",
+        "strip reverted to the FALSE 'first N chars' wording -> ui-routing-provenance FAILED (78/79)"
+      ]
+    },
+    {
+      "id": "R18",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "accepted": true,
+      "fix": "`check_escalation_locks` now pins the arming SEMANTICS: exactly one `Eq` operator against the literal ADR-036 §h2 names, not any Compare over the right name. And a new `_default_of` — the mirror of `_env_get`, which deliberately steps OVER the `or` operand and is exactly how an unbounded default slipped through — requires each ceiling's fallback to be a plain numeric literal inside (0, cap]. `DEFAULT_CEILINGS` sizes those caps at the published defaults with headroom, so raising a default stays possible and unbounding it does not.",
+      "new_fixture": "evals/fixtures/repo_hygiene/escalation-locks-evaded.py + ui-escalation-locks-evaded.json (4 failures, exact). Its sibling pins the locks being REMOVED; this one pins them being EVADED with every name, shape and wire intact — the harder and likelier shape.",
+      "mutations": [
+        "`== \"1\"` -> `!= \"0\"` -> ui-escalation-locks FAILED (78/79)",
+        "both defaults -> `10 ** 9` / `10.0 ** 9` -> ui-escalation-locks FAILED (78/79)"
+      ]
+    },
+    {
+      "id": "R19",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "accepted": true,
+      "fix": "The tautology is deleted. `_demo` now drives `route` itself over a document longer than EXTRACT_WINDOW and asserts what the tier record actually reports: rung 2's `input_chars == EXTRACT_WINDOW`, `truncated is True`, `offset == 0`, that the prompt is shorter than the document, and — the R17 half — that rung 1's `offset` is NOT 0. Plus an eighth shape in routing-strip-missing.html (count 10 -> 11) for the strip clause.",
+      "transport_not_result": "The stub records the prompt it was handed and returns unparseable text, so no fabricated model answer enters the pipeline (repo rule 4) and both rungs leave one tier record each. It observes what the router SENDS; it never supplies an extraction.",
+      "mutations": [
+        "cap reverted to `text, 0` -> _demo RED (AssertionError: rung 2's input must be CAPPED); eval suite stays 79/79 — stated plainly in the transcript, since CI is the layer that catches this one",
+        "input_chars/truncated deleted -> escalation-no-credential FAILED (78/79) AND _demo RED (KeyError: 'input_chars')"
+      ]
+    },
+    {
+      "id": "R20",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "accepted": true,
+      "fix": "ADR-036's Ruling header now publishes the derived $0.0488 and records that the $0.056 it carried until 2026-08-27 was the pre-OpenRouter figure and is withdrawn. prompts/023's stale pair ($3.4 / $0.056) is marked withdrawn in place with the derived pair ($4.5656 / $0.0488) beside it. A grep for 0.056 across ADR-036, INDEX.md, prompts/, tasks/TODO.md, docs/ and README.md now returns only explicitly-labelled withdrawn figures."
+    },
+    {
+      "id": "R21",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "accepted": true,
+      "fix": "§a's binding Ruling clause, §b's ladder diagram and INDEX.md:44 all state rung 2's input as capped at EXTRACT_WINDOW. The INDEX line no longer asserts 'both rungs capped' and 'whole document' in one sentence. No line of the decision record now describes rung 2 as unbounded."
+    },
+    {
+      "id": "R22",
+      "severity": "LOW",
+      "disposition": "fixed",
+      "accepted": true,
+      "fix": "escalate.py's EXTRACT_WINDOW comment cites `tasks/reviews/d11_sweep_cost.py` instead of restating a number. The SWEEP found the same defect one file over — llm.py's Budget.take comment carried a hand-typed $1.52 describing the PRE-cap worst case — and that now cites the script too. Same finding, adjacent line; flagged here rather than left because leaving a known-stale figure in the ceiling comment is the exact shape R22 names."
+    },
+    {
+      "id": "R23",
+      "severity": "LOW",
+      "disposition": "fixed",
+      "accepted": true,
+      "fix": "§h2's closing paragraph now scopes itself: locks 1 and 2 live in web.app and a local run bypasses them; lock 3, the input cap, is applied inside escalate.route and therefore applies to every caller — which is the point, since a bound that only guarded the deployment would not bound a sweep. The deployment debt row in tasks/TODO.md is corrected the same way."
+    }
+  ],
+  "widened_sweep_caught": [
+    "ADR-036's Enforced-by header called routing-strip-missing.html a '10-failure mutation fixture' — a count THIS round moved to 11. Left alone it would have shipped a stale count created by this very commit.",
+    "The same header said ui-escalation-locks 'binds §h2's two money locks' — three since round 2, and it now names both mutation fixtures rather than one.",
+    "§g1's 'what changed' list carried nothing from round 3; it now names all five bindings and says they exist because earlier rounds introduced them unbound.",
+    "prompts/023 carried BOTH withdrawn figures in one bullet ($3.4 and $0.056) — the header/diagram/index/prompts set the orchestrator named is exactly where the previous sweeps stopped."
+  ],
+  "rejected": [],
+  "still_unrun": "No live API call has ever been made — OPENROUTER_API_KEY is unset and no request left the machine this round. The held-out exam is UNRUN; intc-2025 and c-2025 were neither read nor run. Every dollar figure is an ESTIMATE. escalate.verify has still never met a real model answer, and rung 1's slug remains a judgement.",
+  "ci_failure": {
+    "state": "the branch was RED on CI at 9f43429; unit-tests failed while invariant-eval and fast-eval passed",
+    "how_it_escaped_my_verification": "I checked every self-check with `python3 -m <mod> 2>&1 | tail -1` and read the output. `$?` after a pipe is the EXIT STATUS OF `tail`, which is always 0, so a module that raised printed its traceback into the middle of the piped output and still reported as '[PASS] test_confidence' on the last line. The verification could not fail — which is the same defect class this PR spent four rounds fixing, committed by the person fixing it. Every self-check in this repair is confirmed by EXIT CODE, unpiped.",
+    "symptom": "KeyError: 'method' at eval_adapter.py:241 in eval_check, via test_envelope_shape",
+    "root_cause_chosen": "the guard belongs in eval_check — specifically, in its ORDERING",
+    "why_that_one": "`specs/001` does require `method` on every item, so the synthetic envelope is a contract violation. But that is precisely what `test_envelope_shape` exists to construct: its deletion loop hands `envelope_shape` an envelope missing each required item field in turn and asserts the checker REPORTS it. `eval_check`'s job is judging malformed envelopes; crashing on one is not judging it, and 'fixing' the fixture by adding `method` back would have deleted the only check that `envelope_shape` catches a missing `method` — papering over a contract violation the checker should be catching, which is the failure mode the finding names.",
+    "fix": "One block move, not a tolerance patch. The `routing` cross-check block introduced in round 1 sat among the optional-key shape checks, ABOVE the per-item key/enum loop and above the trace/timings/cost shape check — so it read `i['method']` and `result['cost'][...]` before either had been validated. It now runs LAST in the branch: validate shape, then cross-check honesty. No `.get()` was added and no violation is newly tolerated — a missing `method` is still rejected, now with the contract message `item 1 missing ['method']` instead of a traceback.",
+    "sibling_audit": {
+      "method": "AST sweep of every string subscript in the escalation code this PR added (_routing_shape, escalate.trigger/_windows/verify/apply), each checked against whether a guard precedes it, then confirmed by running the mutation.",
+      "found_and_fixed_by_the_same_move": [
+        "_routing_shape's `by_tier = {i['item'] ... if i['method'] in ESCALATION_METHODS}` — same unvalidated `method` read; now after the item loop.",
+        "_routing_shape's `result['cost'][k]` — read before the trace/timings/cost shape check that validates those keys. Verified: an envelope with routing and an empty `cost` now returns 'trace/timings/cost not in contract shape' instead of KeyError."
+      ],
+      "audited_and_safe": [
+        "escalate.trigger — `w['code']`/`w['message']` iterate `hits`, already filtered by `w.get('code') in TRIGGER_CODES`; `w['item']` is gated by `and w.get('item')` in the same comprehension.",
+        "escalate.verify / apply — the risky reads already use `.get()` (`i.get('start')`, `it.get('evidence')`); the rest run on items `extract.py` constructed one call earlier, not on caller-supplied envelopes.",
+        "_routing_shape's `r[...]`, `t[...]`, `tier[...]` — each preceded by its own `<required set> <= set(...)` membership guard."
+      ],
+      "found_and_deliberately_not_fixed": [
+        "`eval_check`'s opening `by_code = {i['item']: i for i in result.get('items', [])}` (eval_adapter.py:70) crashes for EVERY check type on an item missing `item`. Same class, but pre-existing dispatcher code — not escalation code, not added by this PR — and `test_envelope_shape`'s deletion loop does not cover the `item` key. Carried as a debt row in tasks/TODO.md rather than widened into a CI-red fix being amended into an already-reviewed commit."
+      ]
+    },
+    "verification": "every self-check and both suites confirmed by unpiped exit code; see gate_after_ci_fix"
+  }
+}

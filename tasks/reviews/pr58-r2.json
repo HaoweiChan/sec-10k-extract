@@ -1,0 +1,114 @@
+{
+  "pr": 58,
+  "round": 2,
+  "result": "REQUEST_CHANGES",
+  "scope": "repair diff 45d2a9b^..45d2a9b plus standing round-1 findings",
+  "counts": {
+    "HIGH": 0,
+    "MEDIUM": 5,
+    "LOW": 4
+  },
+  "round1_verified_closed": [
+    "R1",
+    "R2",
+    "R3",
+    "R5",
+    "R6 (lock behaviour)",
+    "R7"
+  ],
+  "round1_still_open": [
+    "R4 via R8 \u2014 the replacement figure is wrong a second time"
+  ],
+  "verified": [
+    "R1 genuinely closed and its fixture case DOES cover it: mutating only `if it['status'] not in SPAN_STATUSES:` to `if False:` takes invariant to 75/76 with escalation-verify-guards FAILED. The implementer's volunteered caveat about xom-2021 is accurate but the case still binds.",
+    "R6 lock behaviour exercised live against an unroutable base URL: three armed requests through _run share one process Budget \u2014 request 1 spends the single call, requests 2 and 3 return 'budget spent: 1 of 1 calls used'. It does not reset per document.",
+    "requirements.txt, pyproject.toml, .eval-baseline.json identical to origin/main",
+    "fast suite 139/139 with a key exported and OPENROUTER_BASE_URL pointed at a local listener that received ZERO connections",
+    "held-out digest byte-identical; 0 of 43 filing documents changed",
+    "pricing genuinely derived: price('openai/gpt-5-mini') == (0.25, 2.0) and price('anthropic/claude-opus-5') == (5.0, 25.0) read straight from the committed file; an absent slug raises 'refusing to invent a price'; no hardcoded price table remains in llm.py"
+  ],
+  "orchestrator_note": "Round 2 of 3 before the breaker. R9 is R3's failure mode reintroduced on the credential-facing code \u2014 the locks work but nothing stops them being removed. R12 is a real deployment bound: rung 2 sends the whole document uncapped, so a 25 MB upload makes the effective ceiling ~2x the configured one.",
+  "findings": [
+    {
+      "id": "R8",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "R4 is not closed: \u00a7d4's replacement figure ($4.2252 / 86.7x) still does not re-derive from \u00a7d1's own cost model and the \u00a7c1 census, and the per-document number it quotes for reac-2015 is wrong by 3x and is not the smallest of the twelve.",
+      "evidence": "ADR-036:373 publishes '$4.2252 per dev sweep ... 86.7x'; :379 'the smallest is reac-2015 at $0.0370'. Applying \u00a7d4's OWN stated model over exactly the twelve documents it names, with char counts from d11_trigger_scan.py, gives a sweep of $4.5656 = 93.6x. The same model reproduces every \u00a7d1 figure to the published digit ($0.0488 / $0.1373 / $0.8914 / $1.5257) and every per-document figure \u00a7d4 itself quotes, so the model is not in dispute \u2014 only the total. reac-2015 prices at $0.1087, not $0.0370; the smallest of the twelve is xref-index-collapse at $0.0488. No committed script re-derives \u00a7d4. Separately ADR-036:723's falsifier table still cites '\u00a7d4's $3.4/sweep' \u2014 the figure \u00a7d4 itself now declares wrong.",
+      "repro": "apply \u00a7d4's stated formula to the twelve named documents -> 4.5656, ratio 93.6 (xref ladder 0.04875375)",
+      "acceptance": "\u00a7d4's sweep total, its ratio, and every per-document figure it quotes re-derive from \u00a7d1's model and the census \u2014 ideally from a committed script the way \u00a7c1 has d11_trigger_scan.py \u2014 and \u00a7l's A2 row cites the corrected figure instead of $3.4."
+    },
+    {
+      "id": "R9",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The two money locks added for R6 are invisible to the gate and to both CI self-checks: replacing the arming constant with True and the process budget with an effectively infinite one leaves invariant 76/76, fast 139/139 and both _demos green \u2014 the exact R3 failure mode, reintroduced on the credential-facing code.",
+      "evidence": "web/app.py:80 ESCALATION_ENABLED = os.environ.get('SEC10K_ESCALATION_ENABLED') == '1' and ~:93 _SERVER_BUDGET = Budget(...). The only checks over this code are two source-text pins in repo_hygiene WIRE_API, and both survive a mutation of the constant's definition and the budget's construction because neither pin reads them. app.py imports fastapi so it has no CI self-check, and ci.yml's new lines only run src.sec10k.escalate and src.sec10k.llm. Result: with a real key on the public host, one edit no gate can see re-arms unbounded paid work.",
+      "repro": "In a copy: ESCALATION_ENABLED = True and Budget(max_calls=10**9, max_usd=10.0**9) -> invariant 76/76, fast 139/139, both _demos ok",
+      "acceptance": "A runnable check binds both locks \u2014 e.g. a repo_hygiene check asserting the arming expression is an equality against the env var (not a constant) and that the process Budget is built from the two env-var constants, or a fastapi-free _run-level self-check \u2014 and re-running the two mutations turns the gate or a CI job red."
+    },
+    {
+      "id": "R10",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-036 \u00a7f's published task/D11 dev digest is stale by one commit: the repair edited two fixture files under evals/fixtures/repo_hygiene/, so the number a reader re-derives does not match the number the ADR publishes.",
+      "evidence": "ADR-036:459 publishes dev sha256=c6678a8b...; re-running the committed instrument on HEAD (45d2a9b) gives c352be1a...; c6678a8b is 88b4488's value. Cause: the repair changed boilerplate-wire-values.py (norm_chars 2293 -> 2475) and routing-strip-missing.html. Substantive claims still hold \u2014 heldout byte-identical f80025699b... on both trees, origin/main's dev digest 58364186... reproduces, 0 of 43 filing documents differ \u2014 but \u00a7f's whole point is that the number is re-runnable.",
+      "repro": "python3 evals/snapshot.py . /tmp/snap-head.json -> dev sha256=c352be1a...",
+      "acceptance": "\u00a7f's task/D11 dev sha is re-run on the commit the PR actually ships and matches snapshot.py on that tree; the 'edited files' bullet names the files this commit edits."
+    },
+    {
+      "id": "R11",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-036 still publishes the dropped reasoning-effort knob as a live ruling and as part of the cache key, contradicting \u00a7h1's claim in the same document that it is 'gone and its plumbing with it'.",
+      "evidence": "ADR-036:673 keeps an `effort: \"low\"` \u00a7j ruling about a request field llm._body (llm.py:207-209) does not send \u2014 the body is exactly {model, max_tokens, messages}. ADR-036:611 states the cache key is sha256(PROMPT_VERSION, model, system, user, max_tokens, effort) but _cache_key (llm.py:171-174) hashes without effort. Both contradict ADR-036:526-530. ADR-036 is the binding decision record for the only module that spends money.",
+      "repro": "sed -n '611p;673p' ADR-036; python3 -c \"from src.sec10k.llm import _body; print(sorted(_body('m','s','u',7)))\" -> ['max_tokens','messages','model']",
+      "acceptance": "\u00a7j's effort bullet is deleted or rewritten as 'dropped with the provider swap', and \u00a7h3's cache-key expression matches _cache_key's actual tuple."
+    },
+    {
+      "id": "R12",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "\u00a7h2 presents SEC10K_ESCALATION_MAX_USD (default $5.00) as the deployment's spend bound without carrying \u00a7d3's overshoot disclosure, and on an attacker-chosen 25 MB upload that overshoot is roughly the ceiling again, so the true bound is ~$10, not $5.",
+      "evidence": "llm.py:150-160 Budget.take refuses only when spent >= max_usd, i.e. after the fact; the ponytail comment quantifies the overshoot with the DEV worst case (jpm-2024 $1.52 vs $1.00). On the deployment the document is attacker-supplied and capped only by MAX_BYTES = 25MB (app.py:38); escalate.route sends the WHOLE document to rung 2 (shown, offset = text, 0 \u2014 escalate.py:302) with no input cap. A ~4M-char upload is ~1M input tokens at $5.00/MTok = one ~$5.00 call taken at spent=$4.99. \u00a7h2 names $5.00, says 'the locks bound spend', and never restates \u00a7d3; the TODO debt row still quotes the $1.52 dev worst case, which does not bound this input.",
+      "repro": "grep -n 'spent >= self.max_usd' src/sec10k/llm.py; sed -n '300,303p' src/sec10k/escalate.py; \u00a7h2 grep -c overshoot -> 0",
+      "acceptance": "Either rung 2's input is capped (as rung 1's is by LOCALIZE_WINDOW) so a single call's price is bounded on arbitrary uploads, or \u00a7h2 states the effective deployment ceiling as MAX_USD plus one call's own price and the debt row's worst case is restated for a 25 MB upload."
+    },
+    {
+      "id": "R13",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "Several ADR-036 cross-references were not updated with the counts and numbering the repair moved.",
+      "evidence": "ADR-036:26 still calls routing-strip-missing.html 'its 7-failure mutation fixture'; the repair moved it to 10. ADR-036:495 says 'two sec10k check types' then lists three (routing, escalation_invariant, verify_guards). \u00a7b renumbers so SIM_FLOOR is check 6 (:101-104) while \u00a7k:698 and tasks/TODO.md:83 both still say 'check 5'.",
+      "repro": "grep -n '7-failure\\|two .sec10k. check types\\|check 5' ADR-036 tasks/TODO.md",
+      "acceptance": "The counts/references agree with the artifacts they name, and \u00a7b's numbering matches verify's docstring so 'check N' means one thing."
+    },
+    {
+      "id": "R14",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "Two live documents still name ANTHROPIC_API_KEY as the credential this repo reads, after the swap made OPENROUTER_API_KEY the only one.",
+      "evidence": "tasks/TODO.md:83 (a file this repair edited) and evals/cache/README.md:12 \u2014 the README documenting evals/cache/llm/, the directory llm.call writes. Code is clean: the only src/ occurrence is llm.py:288, the _demo assertion forbidding the string.",
+      "repro": "grep -rn 'ANTHROPIC_API_KEY' tasks/TODO.md evals/cache/README.md",
+      "acceptance": "Both lines name OPENROUTER_API_KEY; grep returns only llm.py's _demo guard and the historical prompts/ record."
+    },
+    {
+      "id": "R15",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "llm._body's docstring says the request body has 'exactly four keys'; it has three, and the ADR and _demo both say three.",
+      "evidence": "llm.py:205 against llm.py:207-209 returning {model, max_tokens, messages} and llm.py:299's assert; ADR-036:517 and :530 both say three.",
+      "repro": "sed -n '198,210p' src/sec10k/llm.py",
+      "acceptance": "The docstring says three."
+    },
+    {
+      "id": "R16",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The pricing artifact's claim that the pruning is 'checkable' overstates what a reader can verify: the sha256 is of a 417-model response that is not committed and that the live endpoint will not reproduce byte-for-byte.",
+      "evidence": "tasks/reviews/2026-08-27-openrouter-models.json catalogue.sha256_of_full_response with pruned_because '... pins the full response the pruning came from', echoed at ADR-036:296-297. Only two records are committed; the hashed input is absent and OpenRouter's catalogue mutates. Everything downstream IS sound and was verified: price() reads the file, an absent slug raises 'refusing to invent a price', no hardcoded table remains.",
+      "repro": "python3 -c \"import json;d=json.load(open('tasks/reviews/2026-08-27-openrouter-models.json'));print(d['catalogue'], list(d['models']))\"",
+      "acceptance": "The wording says what the hash actually pins (a fetch receipt, not a reproducible check), or the full response is committed alongside."
+    }
+  ]
+}

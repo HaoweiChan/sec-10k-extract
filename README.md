@@ -147,6 +147,18 @@ serves, and that the raw-bytes slice is not.
 
 Full rationale in `specs/decisions/` (18 ADRs). The ones that shaped the system:
 
+- **Deterministic first, and a model tier only on a measured trigger**
+  (ADR-000/003, settled in ADR-020, **superseded 2026-08-26 by ADR-036, D11**).
+  No model is in the DEFAULT extraction path, and cost on that path is
+  structurally $0 — not "cheap", zero. ADR-036 adds an opt-in slow path
+  (`extract_items(path, escalate=True)`, via OpenRouter) that is entered only when D8's
+  document-level `low_item_coverage` fires — measured on **0 of 28 real dev
+  filings**, so the default stays free — and whose answers are discarded unless
+  a deterministic re-check accepts their offsets. With no API credential it
+  refuses loudly rather than degrading, and as of this commit no live call has
+  ever been made: the held-out exam is UNRUN (ADR-036 §k). The paragraph below
+  is the 2026-08-19 ruling it supersedes, kept because its reasoning about
+  *precision* failures is unchanged and still governs.
 - **Deterministic first, LLM ruled out** (ADR-000/003, settled in ADR-020). No
   model is in the extraction path. Cost is therefore structurally $0 — not
   "cheap", zero. The fallback stage was gated on residual-failure data; that

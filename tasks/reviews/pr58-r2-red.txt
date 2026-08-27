@@ -1,0 +1,86 @@
+PR #58 round 2 — repro captured BEFORE any fix (repo hard rule 2).
+Tree: task/D11 at 45d2a9b (the commit under review). Date: 2026-08-27.
+Findings and acceptance: tasks/reviews/pr58-r2.json — that file is the authority.
+
+Mutations are run on scratch copies (`git archive HEAD | tar -x`), never on the
+working tree. No network call is made and no held-out fixture is read or run.
+
+=============================================================== R9 (MEDIUM)
+The two ADR-036 §h2 money locks are invisible to the gate. The reviewer's own
+two mutations, applied to 45d2a9b:
+    ESCALATION_ENABLED = True
+    _SERVER_BUDGET = Budget(max_calls=10**9, max_usd=10.0**9)
+  [eval] suite 'invariant': 76/76 = 1.000  (+3 enumerated debt, unscored)
+  [eval] suite 'fast': 139/139 = 1.000  (+3 enumerated debt, unscored)
+  python3 -m src.sec10k.escalate -> [escalate self-check] ok
+  python3 -m src.sec10k.llm      -> [llm self-check] ok
+  Both suites and both CI self-checks green with a public, unauthenticated
+  deployment re-armed and its ceiling infinite. This is PR #58 R3's failure
+  mode on the code that guards the credential.
+
+  AFTER the fix, the SAME two mutations on the repaired tree:
+  [FAIL] ui-escalation-locks (adversarial, 0.0s)
+  [eval] suite 'invariant': 77/78 = 0.987  (+3 enumerated debt, unscored)
+  ...and the real app.py stays green, so the check is not blanket-failing:
+    check_escalation_locks(real app.py) -> []
+    check_escalation_locks(mutation fixture) -> 5 failures
+
+=============================================================== R8 (MEDIUM)
+§d4's replacement figure is wrong a second time. The reviewer's $4.5656 / 93.6x
+is correct and the COST MODEL is not in dispute — it reproduces every §d1
+figure. The root cause is that the per-document char counts were HAND-TYPED
+into the ADR. Census vs what round 1 typed:
+  cvx-2015               census    417517   hand-typed    417517
+  fy2021-item9c          census    102529   hand-typed    102529
+  ge-1994                census    362717   hand-typed    362717
+  ibr-pointer-first      census    362718   hand-typed    362718
+  jpm-2024               census   1213284   hand-typed   1213284
+  ko-1997                census     97206   hand-typed     46932   <-- WRONG
+  nvda-2024              census    341155   hand-typed    207482   <-- WRONG
+  reac-2015              census     79649   hand-typed     24096   <-- WRONG
+  sandston-2021          census    102434   hand-typed    102453   <-- WRONG
+  spatz-2014             census     65197   hand-typed     36063   <-- WRONG
+  xom-2021               census    388848   hand-typed    388848
+  xref-index-collapse    census     33061   hand-typed     33061
+  5 of 12 char counts were wrong; reac-2015 by 3.3x, which is exactly the
+  per-document figure the reviewer flagged ($0.0370 published vs $0.1087 real).
+  Fixed by deriving the figures instead of retyping them:
+  tasks/reviews/d11_sweep_cost.py -> tasks/reviews/d11-sweep-cost.txt, which
+  reproduces the reviewer's $4.5656 / 93.6x and reac-2015 $0.1087 exactly.
+
+=============================================================== R10 (MEDIUM)
+§f's published task/D11 dev digest is a commit stale.
+  ADR-036 publishes: 
+  snapshot.py on 45d2a9b:
+    [snapshot] dev: 60 files  sha256=b79ec9333dde12bb7516473f3984267c761a02f2d37250281530fa6d7745fe0e
+    [snapshot] heldout: 7 files  sha256=f80025699bc34f06af6ea0fb3457106593ec858c4d89d4144870e339b00e191a
+
+=============================================================== R11 (MEDIUM)
+The ADR still publishes the dropped reasoning-effort knob as a live ruling and
+as part of the cache key, contradicting its own §h1.
+  ADR-036:526:**Dropped rather than mapped.** The Anthropic client sent a reasoning-effort
+  ADR-036:611:`sha256(PROMPT_VERSION, model, system, user, max_tokens, effort)` under
+  ADR-036:673:* **`effort: "low"` on both rungs.** The question is locate-by-offset, not
+  llm._body returns keys: ['max_tokens', 'messages', 'model']
+  llm._cache_key hashes : ['blob = json.dumps([PROMPT_VERSION, model, system, user, max_tokens],']
+
+=============================================================== R12 (MEDIUM)
+Rung 2 sent the WHOLE document; on the deployment the document is
+attacker-supplied and capped only by MAX_BYTES.
+  escalate.py:302:            shown, offset = text, 0
+  llm.py:162:        if self.spent >= self.max_usd:
+  app.py:38:MAX_BYTES = 25 * 1024 * 1024                  # provisional cap, both upload and URL
+  occurrences of "overshoot" in §h2: 0
+  a 25 MB upload normalizing to ~4M chars = ~1,000,250 input tokens
+  at $5.00/MTok = one $5.00 call, takeable at spent=$4.99, so the
+  effective ceiling was ~2x the configured $5.00 and unbounded in principle.
+
+=========================================================== R13-R16 (LOW)
+  R13 ADR-036:26:**Enforced by**: `evals/adversarial/escalation-trigger-quiet.json` and `evals/adversarial/escalation-no-credential.js
+  R13 ADR-036:493:`routing_provenance`), two `sec10k` check types (`routing`,
+  R13 specs/decisions/ADR-036-tiered-escalation.md:698:how often a real answer passes it. **`SIM_FLOOR` on check 5 m
+  R13 tasks/TODO.md:83:| **No live call has ever been made, so `escalate.verify` has never met a real answer** (adde
+  R14 tasks/TODO.md:83:| **No live call has ever been made, so `escalate.verify` has never met a real answer** (adde
+  R14 evals/cache/README.md:12:because no call has ever been made: `ANTHROPIC_API_KEY` is unset in the
+  R15 llm.py:205:    something else, and this body has exactly four keys.
+  R16 306:  "pruned_because": "the full response is 417 models and ~1.5 MB; only the two rungs this repo calls are kept, with 

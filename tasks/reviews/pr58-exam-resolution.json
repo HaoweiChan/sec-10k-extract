@@ -1,0 +1,66 @@
+{
+  "pr": 58,
+  "event": "held-out exam run + burn + client fix",
+  "date": "2026-08-27",
+  "red_first_record": "tasks/reviews/pr58-exam-red.txt",
+  "exam": {
+    "filing": "intc-2025",
+    "flags": "escalate=True",
+    "billed": true,
+    "cost_usd": 0.899858,
+    "calls": 2,
+    "resolved": [],
+    "rung1": "openai/gpt-5-mini $0.004498, 12,099 tok — CORRECT: valid JSON {\"1\": null, \"7\": null, \"8\": null}, honestly reporting it could not locate those items in its 60,000-char window",
+    "rung2": "anthropic/claude-opus-5 $0.895360, 170,880 tok — THE BUG: output_tokens 2048 == max_tokens sent, content empty, reached json.loads as an unexplained JSONDecodeError",
+    "deterministic_half": "correct — coverage 0.0033, doc_status ambiguous, items 1/7/8 flagged, D8 trigger fired as designed",
+    "what_it_did_NOT_test": "escalate.verify. The exam tested the transport and found it broken before the trust boundary was reached."
+  },
+  "triage": {
+    "class": "input-variant",
+    "why_not_flake": "reproduces deterministically from the cached response for $0",
+    "why_not_eval_bug": "no eval reached this path at all; the machinery was not at fault",
+    "why_input_variant": "an empty completion from a reasoning model whose allowance was consumed before any content was emitted is a legitimate response shape the client did not handle, exactly as an unhandled filing layout is a legitimate document shape",
+    "minimal_repro": "the cached payload, not the filing — so the ADVERSARIAL case for the defect is escalation-empty-completion.json and intc-2025 carries the document"
+  },
+  "burn": {
+    "ruling": "owner, 2026-08-27: the burn is taken rather than argued around; no second amendment to the rule; reproducing the bug on a dev fixture would launder the evidence but not the knowledge",
+    "case": "evals/heldout/intc-2025-heldout.json -> evals/adversarial/intc-2025-collapse-burned.json (debt suite, still red)",
+    "fixture": "evals/heldout/fixtures/intc-2025/ -> evals/fixtures/intc-2025/",
+    "precedent": "gs-2002 (2026-08-17) and axp-2008 (2026-08-19); like gs-2002 the EXISTING case was relocated, not a new one authored",
+    "surviving_exam": "c-2025 alone — NOT run, NOT read, still in evals/heldout/",
+    "coverage_lost": "the post-2019 reorg / cross-reference-index layout and the modern semiconductor sector. c-2025 has a cross-reference index too but a different one (bare codes, money-center bank), so it does not restore the stratum.",
+    "collateral": "heldout-provenance-claims' 8 byte-level pins against that fixture are enforced nowhere now; the floor entry was removed with the reason recorded",
+    "replacement": "NOT fetched — debt row in tasks/TODO.md"
+  },
+  "root_cause": {
+    "established_how": "OpenRouter's own documentation, fetched and read before choosing between the three candidate causes — not inferred from the symptom",
+    "finding": "OpenRouter documents a `reasoning` request parameter (effort OR max_tokens, mutually exclusive) and states that for Anthropic models max_tokens must be strictly higher than the reasoning budget so tokens remain for the final response. We sent max_tokens 2048 and no reasoning budget to a reasoning model.",
+    "corrects": "ADR-036 §h1 claimed OpenRouter's chat-completions surface has no reasoning equivalent. It has one. Not sending it is what cost $0.90.",
+    "the_other_two_candidates": {
+      "reading the wrong key": "a `reasoning` field does exist on the message, but reading it would not have helped — reasoning is the thinking, not the answer, and the answer was genuinely never emitted",
+      "finish_reason detects it": "TRUE and now used — `length` is the documented normalized value for a reached token limit, so this is detectable rather than inferred"
+    }
+  },
+  "fix": [
+    "explicit per-rung split: MAX_TOKENS (answer, 2048) + REASONING_TOKENS (4096) with reasoning:{max_tokens} sent, so max_tokens is strictly higher than the thinking budget",
+    "openai/gpt-5-mini deliberately UNCHANGED — it worked, and altering a rung on untestable provider behaviour is the unverified change this PR has been burned by repeatedly",
+    "client records finish_reason and max_tokens in the cached record (extracted into _normalize so _demo can assert it without a socket)",
+    "empty completion is its own routing outcome `empty_completion`, carrying the numbers and recorded WITH its cost — billed and produced nothing must still report as billed"
+  ],
+  "new_case": {
+    "id": "escalation-empty-completion",
+    "pins": "replays the exam's exact cached payload through route at $0 and asserts: both tiers record `empty_completion`; the reason names finish_reason='length', output_tokens=2048 and max_tokens=6144; routing.cost.usd is the full $1.79072 of two billed calls; resolved is empty; anthropic/claude-opus-5 is called with max_tokens >= 6144 and reasoning_tokens 4096 while openai/gpt-5-mini is sent none",
+    "red_first": "against the pre-fix client both tiers recorded `unparseable` with a bare JSONDecodeError naming neither the empty content nor the exhausted allowance"
+  },
+  "mutations": "4 mutations, 4 RED, restore GREEN — transcript in pr58-exam-red.txt. The finish_reason recording was UNBOUND on the first attempt (the case's stub replaces llm.call entirely, and the assertion matched literal prose); bound in llm._demo instead and re-proved.",
+  "figures_that_moved": {
+    "reason": "the burn put a 517,976-char REAL collapsed filing on the dev side, and the exam showed output must be priced at the rung's ceiling because reasoning is billed as output",
+    "low_item_coverage": "1/43 (0/28 real) -> 2/44 (1 of 29 REAL EDGAR filings)",
+    "positive_set": "was size one and synthetic; now size two with one real — the round-1 admission no longer holds, and this is the exam's one gift",
+    "chosen_sweep": "$0.0488 -> $1.0126",
+    "wide_vs_narrow_ratio": "93.6x -> 7.1x — AGAINST the ruling: §d4's cost argument is now an order of magnitude weaker, and §c1's other two reasons carry it instead. Said in the ADR.",
+    "deployment_ceiling": "MAX_USD + $1.5675 -> MAX_USD + $1.7173"
+  },
+  "c_2025_rerun_cost": "~$1.7253 estimated (rung 1 ~$0.0079 + rung 2 ~$1.7173). Its 16,150,764 raw bytes normalize to roughly 2.5M chars by intc-2025's measured 0.1560 ratio, which EXCEEDS EXTRACT_WINDOW — so rung 2 would see only the first 1,250,000 chars and pay the cap price. Derived from the committed file SIZE (already published in the README inventory) and a ratio measured on the burned fixture; c-2025 was not extracted, read or run.",
+  "no_live_calls_made": "this round made none — the payload was replayed from evals/cache/llm/ at $0"
+}

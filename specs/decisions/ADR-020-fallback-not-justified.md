@@ -1,5 +1,16 @@
 # ADR-020 — T12: the LLM fallback stage is not justified, and what would change that
 
+**SUPERSEDED 2026-08-26 by [ADR-036](ADR-036-tiered-escalation.md) (D11).** The
+headline ruling below — "no LLM fallback ships" — no longer holds: a model tier
+now ships behind D8's `low_item_coverage`, opt-in and off by default. What
+survives, and is kept rather than reversed, is this document's *principle*: the
+deterministic pipeline is the default and the only path on a clean filing, a
+paid tier is triggered and never unconditional, and a run in which nothing
+escalated still costs $0.00 — measured, not asserted, at 0 of 28 real dev
+filings. ADR-036 §a re-checks both of the reasons below and records which
+still hold. Read the text that follows as the record of what was true on the
+2026-08-19 corpus, not as current policy.
+
 Date: 2026-08-19. Status: accepted, **§b and §c row 7 NARROWED 2026-08-26 by
 [ADR-034](ADR-034-pointer-and-fanout-rulings.md) (D9)** — see the dated notes
 in each. The ruling below (no unconditional LLM fallback ships; the escalation

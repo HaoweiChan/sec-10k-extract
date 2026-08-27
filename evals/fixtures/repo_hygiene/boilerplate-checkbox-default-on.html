@@ -30,7 +30,7 @@ $("#go-fx").onclick = () => call("/api/extract/fixture",
    body: JSON.stringify({fixture: $("#fx").value, exclude_boilerplate: true})});
 $("#go-url").onclick = () => call("/api/extract/url",
   {method:"POST", headers:{"Content-Type":"application/json"},
-   body: JSON.stringify({url: $("#url").value, exclude_boilerplate: excludeBp(), markdown: renderMd()})});
+   body: JSON.stringify({url: $("#url").value, exclude_boilerplate: excludeBp(), markdown: renderMd(), escalate: escalateOn()})});
 $("#go-up").onclick = () => {
   const f = $("#up").files[0];
   call("/api/extract/upload?filename=" + encodeURIComponent(f.name) +

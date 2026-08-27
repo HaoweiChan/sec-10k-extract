@@ -1,0 +1,38 @@
+# ADR-036 §d, derived. Prices from tasks/reviews/2026-08-27-openrouter-models.json;
+# char counts from the §c1 census; model = chars/proxy + 250 in, output at each rung's own ceiling (an UPPER BOUND).
+#   llm_localize  openai/gpt-5-mini          $0.25/$2.0 per MTok, input capped at 60,000 chars, output ceiling 2,048 tok
+#   llm_extract   anthropic/claude-opus-5    $5.0/$25.0 per MTok, input capped at 1,250,000 chars, output ceiling 6,144 tok (incl. 4,096 reasoning)
+
+## §d1 — per document
+document                               chars    rung 1    rung 2    ladder
+xref-index-collapse                    33061    0.0061    0.2161    0.2222
+median span-bearing dev filing        108893    0.0077    0.3565    0.3642
+bac-2006 (2nd largest)                705848    0.0077    1.4620    1.4697
+jpm-2024 (largest)                   1213284    0.0077    2.4017    2.4094
+  (rung 1 input tokens on the median filing: 14,535; rung 2: 40,580)
+
+## §d2 — the CHOSEN trigger (low_item_coverage), whole dev sweep
+  intc-2025                     517976 chars  $1.1218
+  xref-index-collapse            33061 chars  $0.2222
+  2 of 44 documents escalate   TOTAL $1.3440
+
+## §d4 — the WIDE trigger (+ item_span_near_empty), whole dev sweep
+  jpm-2024                     1213284 chars  $2.4094
+  intc-2025                     517976 chars  $1.1218
+  cvx-2015                      417517 chars  $0.9358
+  xom-2021                      388848 chars  $0.8827
+  ibr-pointer-first             362718 chars  $0.8343
+  ge-1994                       362717 chars  $0.8343
+  nvda-2024                     341155 chars  $0.7943
+  fy2021-item9c                 102529 chars  $0.3524
+  sandston-2021                 102434 chars  $0.3523
+  ko-1997                        97206 chars  $0.3426
+  reac-2015                      79649 chars  $0.3101
+  spatz-2014                     65197 chars  $0.2833
+  xref-index-collapse            33061 chars  $0.2222
+  13 of 44 documents escalate   TOTAL $9.6754   ratio 7.2x
+
+## §h2 — the effective deployment ceiling
+  one rung-2 call is capped at 1,250,000 chars = $2.4697
+  Budget refuses only once spent >= max_usd, so the effective ceiling
+  is MAX_USD + $2.4697 (default $5.00 -> $7.4697).

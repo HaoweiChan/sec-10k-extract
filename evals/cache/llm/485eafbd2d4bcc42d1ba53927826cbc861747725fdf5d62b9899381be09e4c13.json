@@ -1,0 +1,11 @@
+{
+ "finish_reason": "stop",
+ "max_tokens": 6144,
+ "model": "anthropic/claude-opus-5",
+ "text": "{\"7A\": null}",
+ "usage": {
+  "input_tokens": 424281,
+  "output_tokens": 9
+ },
+ "usd": 2.12163
+}

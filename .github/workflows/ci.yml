@@ -41,6 +41,17 @@ jobs:
       - run: python3 -m src.sec10k.markdown
       # the view layer imports no fastapi, precisely so it can run here
       - run: python3 -m src.sec10k.web.view
+      # ADR-036 names both of these "Enforced by", and PR #58 R3 measured what
+      # that was worth while they were absent here: replacing the SPAN_FLOOR,
+      # SIM_FLOOR and INV-S1 guards in `escalate.verify` AND both `Budget`
+      # ceilings with `if False:` left invariant 75/75 and fast 138/138 fully
+      # green — every trust boundary and the entire money ceiling deletable
+      # with the gate silent (tasks/reviews/pr58-r1-red.txt). Same ruling as
+      # PR #25 R1 six lines up: a self-check no job runs is a claim, not
+      # enforcement. `escalate` imports `llm` only inside route(), and neither
+      # self-check makes a call, so this job stays stdlib-only and $0.
+      - run: python3 -m src.sec10k.escalate
+      - run: python3 -m src.sec10k.llm
       - run: python3 -m evals.metrics --self-check
       # ADR-033 §d: the snapshot comparison that proves an opt-in annotation
       # moved nothing is only re-runnable if the script itself is checked

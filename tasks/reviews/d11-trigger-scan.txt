@@ -1,0 +1,132 @@
+# D11 trigger scan — 43 dev documents, SPAN_FLOOR=1500, COVERAGE_MIN=0.13
+
+fixture                                chars     cov doc_status             lowcov  near_empty
+aapl-2025                             207482  0.9484 success                        —
+aapl-2026-10q                          83193       — unsupported                    —
+amended-cover-2021                    102453       — unsupported                    —
+axp-2008                              351503  0.8077 success_with_warning           —
+ba-2003                               414197  0.9849 success                        —
+bac-2006                              705848  0.9285 success                        —
+caps-cover-2016                        67592  0.9240 success                        —
+cat-2023                              430719  0.9820 success                        —
+comma-cover-2016                       67591  0.9240 success                        —
+cvx-2015                              417517  0.2718 success_with_warning           7,8
+fy2021-item9c                         102529  0.7354 success_with_warning           8
+ge-1994                               362717  0.2306 success_with_warning           8
+gs-2002                               155200  0.9197 success                        —
+heading-unnumbered                    341147  0.9613 ambiguous                      —
+ibm-1997                               46932  0.4692 success_with_warning           —
+ibr-pointer-first                     362718  0.2306 success_with_warning           8
+ibr-security-holders                   46936  0.4692 success_with_warning           —
+intc-2002                             309085  0.9545 success                        —
+interior-span-dominates               108893  0.8421 ambiguous                      —
+items-stripped                         67444  0.9250 ambiguous                      —
+jnj-2016                              378885  0.9174 success                        —
+jpm-2024                             1213284  0.9931 ambiguous                      7,8
+ko-1997                                97206  0.7340 success_with_warning           8
+ksb-2007                              117767       — unsupported                    —
+malformed-html                         67578  0.9240 ambiguous                      —
+msft-2013                             312472  0.9548 success                        —
+nike-2006                             258541  0.9415 success                        —
+nvda-2024                             341155  0.9613 success_with_warning           8
+premier-pacific-2016                   67592  0.9240 success                        —
+reac-2015                              79649  0.6331 success_with_warning           8
+sandston-2021                         102434  0.7352 success_with_warning           8
+sgrp-2019                              84322  0.9148 success                        —
+spaced-letter-heading                  84323  0.9148 success                        —
+spans-transposed                       84322  0.9148 success_with_warning           —
+spatz-2014                             65197  0.6632 success_with_warning           8
+textron-2001                           69398  0.6686 success_with_warning           —
+tgt-2002                               33196  0.5610 success_with_warning           —
+toc-titled                             67549  0.9246 success                        —
+truncated-download                         0       — failed                         —
+wfc-2008                               86047  0.6668 success_with_warning           —
+wmt-2010                              108927  0.8422 success                        —
+xom-2021                              388848  0.9799 ambiguous                      7,8
+xref-index-collapse                    33061  0.0303 ambiguous                FIRE  1,7,8
+
+## every item_span_near_empty hit, span in full — adjudicate here
+
+[cvx-2015 · item 7 · 280 chars]
+  Item 7. Management’s Discussion and Analysis of Financial Condition and Results of Operations The index to Management’s Discussion and Analysis of Financial Condition and Results of Operations, Consolidated Financial Statements and Supplementary Data is presented on page FS-1.
+
+[cvx-2015 · item 8 · 189 chars]
+  Item 8. Financial Statements and Supplementary Data The index to Management’s Discussion and Analysis, Consolidated Financial Statements and Supplementary Data is presented on page FS-1.
+
+[fy2021-item9c · item 8 · 263 chars]
+  Item 8. Financial Statements and Supplementary Data. The financial statements filed herewith are set forth in the Index to Financial Statements (on page F-1) of the separate financial section which follows this report, and are incorporated herein by reference.
+
+[ge-1994 · item 8 · 86 chars]
+  Item 8. Financial Statements and Supplementary Data See index under item 14.
+
+[ibr-pointer-first · item 8 · 86 chars]
+  Item 8. Financial Statements and Supplementary Data See index under item 14.
+
+[jpm-2024 · item 7 · 398 chars]
+  Item 7. Management’s Discussion and Analysis of Financial Condition and Results of Operations. Management’s discussion and analysis of financial condition and results of operations, entitled “Management’s discussion and analysis,” appears on pages 52–167. Such information should be read in conjunction with the Consolidated Financial Statements and Notes thereto, which appear on pages 172–321.
+
+[jpm-2024 · item 8 · 372 chars]
+  Item 8. Financial Statements and Supplementary Data. The Consolidated Financial Statements, together with the Notes thereto and the report thereon dated February 14, 2025, of PricewaterhouseCoopers LLP, the Firm’s independent registered public accounting firm (PCAOB ID 238), appear on pages 169–321. The “Glossary of Terms and Acronyms’’ is included on pages 327–333.
+
+[ko-1997 · item 8 · 930 chars]
+  ITEM 8. FINANCIAL STATEMENTS AND SUPPLEMENTARY DATA The following consolidated financial statements of the Registrant and its subsidiaries, included in the Company's Annual Report to Share Owners for the year ended December 31, 1997, are incorporated herein by reference: Consolidated Balance Sheets -- December 31, 1997 and 1996. Consolidated Statements of Income -- Years ended December 31, 1997, 1996 and 1995. Consolidated Statements of Cash Flows -- Years ended December 31, 1997, 1996 and 1995. Consolidated Statements of Share-Owners' Equity -- Years ended December 31, 1997, 1996 and 1995. Notes to Consolidated Financial Statements. Report of Independent Auditors. "Quarterly Data (Unaudited)" on page 63 of the Company's Annual Report to Share Owners for the year ended December 31, 1997, is incorporated herein by reference.
+
+[nvda-2024 · item 8 · 209 chars]
+  Item 8. Financial Statements and Supplementary Data The information required by this Item is set forth in our Consolidated Financial Statements and Notes thereto included in this Annual Report on Form 10-K.
+
+[reac-2015 · item 8 · 125 chars]
+  Item 8 - Financial Statements and Supplementary Data The required financial statements begin on page F-1 of this document.
+
+[sandston-2021 · item 8 · 263 chars]
+  Item 8. Financial Statements and Supplementary Data. The financial statements filed herewith are set forth in the Index to Financial Statements (on page F-1) of the separate financial section which follows this report, and are incorporated herein by reference.
+
+[spatz-2014 · item 8 · 241 chars]
+  Item 8. Financial Statements and Supplementing Data The financial statements of the Company and the related report of the Company's independent registered public accounting firm thereon are included in this report on pages 15 through 22.
+
+[xom-2021 · item 7 · 267 chars]
+  ITEM 7. MANAGEMENT'S DISCUSSION AND ANALYSIS OF FINANCIAL CONDITION AND RESULTS OF OPERATIONS Reference is made to the section entitled “Management’s Discussion and Analysis of Financial Condition and Results of Operations” in the Financial Section of this report.
+
+[xom-2021 · item 8 · 737 chars]
+  ITEM 8. FINANCIAL STATEMENTS AND SUPPLEMENTARY DATA Reference is made to the following in the Financial Section of this report: •Consolidated financial statements, together with the report thereon of PricewaterhouseCoopers LLP (PCAOB ID 238) dated February 23, 2022, beginning with the section entitled “Report of Independent Registered Public Accounting Firm” and continuing through “Note 19: Income and Other Taxes”; •“Supplemental Information on Oil and Gas Exploration and Production Activities” (unaudited); and •“Frequently Used Terms” (unaudited). Financial Statement Schedules have been omitted because they are not applicable or the required information is shown in the consolidated financial statements or notes thereto.
+
+[xref-index-collapse · item 1 · 18 chars]
+  Item 1. Business.
+
+[xref-index-collapse · item 7 · 95 chars]
+  Item 7. Management's Discussion and Analysis of Financial Condition and Results of Operations.
+
+[xref-index-collapse · item 8 · 53 chars]
+  Item 8. Financial Statements and Supplementary Data.
+
+17 item-level hits total
+
+## escalation rates over the dev corpus
+  filing documents                             43  (28 real EDGAR, 15 self-created)
+  non-refusal (items published)                39
+  low_item_coverage fires   all                1/43 = 0.0233  -> ['xref-index-collapse']
+                            real filings only  0/28 = 0.0000
+                            non-refusal only   1/39 = 0.0256
+  item_span_near_empty      all                12/43 = 0.2791
+                            real filings only  9/28 = 0.3214
+  either code               all                12/43 = 0.2791
+  item-level hits                              17
+
+  fixtures with item_span_near_empty: cvx-2015(7,8), fy2021-item9c(8), ge-1994(8), ibr-pointer-first(8), jpm-2024(7,8), ko-1997(8), nvda-2024(8), reac-2015(8), sandston-2021(8), spatz-2014(8), xom-2021(7,8), xref-index-collapse(1,7,8)
+
+  refused before any item exists               4  -> [('aapl-2026-10q', 'unsupported'), ('amended-cover-2021', 'unsupported'), ('ksb-2007', 'unsupported'), ('truncated-download', 'failed')]
+
+## near-miss band 1 — doc coverage in [COVERAGE_MIN, 0.35): would a small nudge have caught a collapse?
+  0.0303  xref-index-collapse      FIRED
+  0.2306  ge-1994                  not flagged
+  0.2306  ibr-pointer-first        not flagged
+  0.2718  cvx-2015                 not flagged
+
+## near-miss band 2 — item 1/7/8 spans in [SPAN_FLOOR, 4000), the shortest spans the floor let through
+    2094  tgt-2002                 item 1
+    2955  spatz-2014               item 1
+    3164  fy2021-item9c            item 1
+    3164  sandston-2021            item 1
+    3763  sgrp-2019                item 7
+    3763  spaced-letter-heading    item 7
+    3763  spans-transposed         item 7
+  (7 spans; each must be adjudicated substantive for recall to be 1.000)

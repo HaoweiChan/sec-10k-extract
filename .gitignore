@@ -13,3 +13,9 @@ graphify-out/cache/
 graphify-out/.graphify_python
 graphify-out/.graphify_root
 graphify-out/.graphify_labels.json
+
+# ADR-036 (D11) reads ANTHROPIC_API_KEY from the environment ONLY — there is no
+# .env reader in this repo and none should be added without an ADR. This line is
+# here so that a key someone parks in a .env while testing cannot be committed.
+.env
+.env.*

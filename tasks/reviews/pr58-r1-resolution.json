@@ -1,0 +1,95 @@
+{
+  "pr": 58,
+  "round": 1,
+  "responding_to": "tasks/reviews/pr58-r1.json",
+  "result": "REPAIRED",
+  "red_first_record": "tasks/reviews/pr58-r1-red.txt",
+  "gate": {
+    "invariant": "76/76 = 1.000",
+    "fast": "139/139 = 1.000",
+    "baseline": "unchanged (1.000)",
+    "before_this_round": "invariant 75/75, fast 138/138"
+  },
+  "byte_identity": "evals/snapshot.py vs origin/main 5a44758 re-run after the repair: held-out sha256 f80025699b... IDENTICAL; 0 of 43 filing documents changed. The dev digest differs only on the four repo_hygiene mutation-fixture FILES this branch adds or re-spells.",
+  "owner_instructions": [
+    {
+      "id": "A",
+      "instruction": "swap the provider to OpenRouter",
+      "status": "done",
+      "what_changed": "src/sec10k/llm.py rewritten, not renamed: OPENROUTER_API_KEY, Authorization: Bearer, POST /chat/completions, OpenAI-shaped body (messages system+user, three keys), choices[0].message.content, usage.prompt_tokens/completion_tokens. The Anthropic reasoning-effort knob is DROPPED and its plumbing deleted — llm._demo asserts the body SHAPE so a comment cannot satisfy the pin. Two OpenRouter-specific failure modes handled that the previous client did not have: a provider error inside a 200 body, and finish_reason=content_filter. PROMPT_VERSION -> d11.2-openrouter so no cached response from the old transport can serve a new-transport request. Still stdlib urllib + json; requirements.txt unchanged.",
+      "model_slugs": "Fetched GET https://openrouter.ai/api/v1/models unauthenticated on 2026-08-27 (417 models). Rung 1 llm_localize = openai/gpt-5-mini ($0.25/$2.00 per MTok, 400k ctx). Rung 2 llm_extract = anthropic/claude-opus-5 ($5.00/$25.00, 1M ctx) — deliberately the SAME model the pre-swap ADR costed, so every §d figure moves for exactly one reason: rung 1 got 4x cheaper on input.",
+      "pricing_source": "tasks/reviews/2026-08-27-openrouter-models.json — the two model records verbatim plus the sha256 of the full response, so the pruning is checkable. The hand-maintained PRICES table is GONE: llm.price()/usd() read that file and RAISE on a slug it does not carry (asserted in _demo, and observed raising during the swap when escalate.RUNGS still named the old ids)."
+    },
+    {
+      "id": "B",
+      "instruction": "R6 gets the stronger fix, not the disclosure fix",
+      "status": "done",
+      "what_changed": "Two independent locks in src/sec10k/web/app.py. (1) ARMING: a credential ALONE never arms paid work — the server refuses to escalate unless SEC10K_ESCALATION_ENABLED=1 is also set; deliberately a second variable, not a truthiness check on the key. (2) PROCESS-WIDE BUDGET: one llm.Budget for the life of the server process (SEC10K_ESCALATION_MAX_CALLS default 20, SEC10K_ESCALATION_MAX_USD default $5.00), passed to every extract_items call, so the ceiling bounds the DEPLOYMENT and not each document. Not silent: /api/meta publishes escalation_enabled, the page disables the checkbox and says why, and a request that asked anyway comes back with an escalation_disarmed message. llm.Budget's docstring no longer claims 'per-run' — it states exactly what one instance bounds and who must pass one to get a per-sweep ceiling.",
+      "verified": "With a key exported and the arming var unset: escalation_enabled=false, no routing record, cost all zeros, escalation_disarmed message present. Armed with a 1-call ceiling: request 1 attempts a tier, requests 2 and 3 return outcome=unavailable / 'budget spent: 1 of 1 calls used' — the ceiling is shared across requests, not reset per document. Local runs are unaffected: the eval suites, escalate._demo and a direct extract_items call all bypass web.app.",
+      "not_fixed": "The deployment still has no authentication and no rate limit, so an anonymous caller can consume the process budget and deny the capability to others. Spend is bounded; availability is not. Stated in ADR-036 §h2's closing paragraph and carried as a new debt row rather than left implicit."
+    }
+  ],
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "HIGH",
+      "disposition": "fixed",
+      "accepted": true,
+      "all_three_parts": true,
+      "fix": "(a) escalate.verify rejects any proposed code whose item status is not in SPAN_STATUSES ('extracted', 'incorporated_by_reference'), with the reason naming the coverage consequence; (b) envelope_shape now asserts the contract's null-span rule in BOTH directions — a missing/omitted item may not carry offsets and a span-carrying status may not have null ones — so the guard binds every producer, not just the one that broke it, and specs/001-sec10k-contract.md records that the rule is enforced from 2026-08-27; (c) evals/adversarial/escalation-verify-guards.json covers it, watched red at 88b4488.",
+      "red_first": "Reviewer's repro reproduced exactly: verify accepted a proposal for a `missing` item with rejections=[], apply wrote start=52 end=4064 method=llm_localize with status still 'missing', and meta.coverage moved 0.0030 -> 0.6142 on one item. Full output in pr58-r1-red.txt.",
+      "honest_caveat": "The new eval case is red at 88b4488 for the right reason — no rejection mentions the status — but on xom-2021 the pre-fix hole was ACCIDENTALLY covered by the title-similarity check, because item 1's heading does not read like item 6's title. The sharp demonstration, where similarity passes and only the status guard rejects, is escalate._demo's R1 block, which R3 wires into CI in this same commit. Both the case's provenance and the red record say this in full rather than presenting the fixture-level red as stronger than it is."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "accepted": true,
+      "chose": "made the code match the claim, not the claim match the code",
+      "fix": "verify now returns ({}, why) whenever any NON-NULL proposed span failed any check. A null answer is explicitly not a failure — 'I could not locate item 8' is the honest answer the prompt asks for and must not discard a valid sibling. ADR-036 §b carries a marked correction saying the paragraph was FALSE as first published and why the claim was kept: the ordering check is a property of the item list as a whole.",
+      "red_first": "A mixed proposal that does NOT trip INV-S1 as a side effect — item 8's real body plus a 40-char stub for item 1 — was partially applied: accepted ['8'] with the sibling rejected. That side-effect trap is exactly why _demo had never watched this property, and the new _demo block and eval case both avoid it."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "accepted": true,
+      "fix": "python3 -m src.sec10k.escalate and python3 -m src.sec10k.llm added to the unit-tests job in .github/workflows/ci.yml, beside the ADR-026/029/032/033 self-checks, with the PR #25 R1 ruling quoted in the comment.",
+      "red_first": "Reviewer's mutation reproduced on a scratch copy of 88b4488: SPAN_FLOOR, SIM_FLOOR, INV-S1 and both Budget guards replaced with `if False:` left invariant 75/75 and fast 138/138 fully green.",
+      "verified_after": "Re-running the mutation on the repaired tree — now including the NEW status guard, five guards in total — turns the eval gate red as well (invariant 75/76, escalation-verify-guards FAILED) AND both CI self-checks red. Before the repair neither caught it; after it, both do."
+    },
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "accepted": true,
+      "fix": "§d4 recomputed on OpenRouter pricing with the working shown at §d1's level of detail, bac-2006 dropped from the escalating set, and the wrong figure recorded as wrong rather than quietly replaced. New figures: the wide trigger escalates 12 of 43 dev documents for an estimated $4.2252 per sweep against the chosen trigger's $0.0488 = 86.7x. Every other §d figure is recomputed on the same source: the chosen trigger's whole-corpus sweep is $0.0488 (down from $0.056), the median filing's ladder $0.1373, jpm-2024's $1.5257.",
+      "note": "The reviewer's $4.7032 and an independent pre-swap recomputation of $4.3492 differ on document char counts; neither is near $3.4, which is the finding. The corrected ratio is LARGER than the one first published, so the correction strengthens the ruling — which is why it had to be checked rather than trusted."
+    },
+    {
+      "id": "R5",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "accepted": true,
+      "fix": "ADR-036 §c1 reason 3, §c3 and the escalate.py:44-48 comment all narrowed: of the nine real filings item_span_near_empty hits, exactly FOUR (cvx-2015, jpm-2024, ge-1994, spatz-2014) are in ADR-034 §d1's A2 set; A2's fifth member bac-2006 does not fire; the other five (xom-2021, ko-1997, nvda-2024, reac-2015, sandston-2021) are named as an UNRULED population, not a declined one. And items 7/8 are now described as UNADJUDICATED, quoting ADR-034 §e2's own words — the blind sample adjudicated cvx-2015 item 6, and the flag reaches 1/7/8 and never 6.",
+      "note": "The ruling is unchanged and its reason is now weaker than what was first published — the second time this ADR has had to weaken this particular reason, which §c3 says out loud."
+    },
+    {
+      "id": "R6",
+      "severity": "MEDIUM",
+      "disposition": "fixed",
+      "accepted": true,
+      "see": "owner_instructions[B]"
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "disposition": "fixed",
+      "accepted": true,
+      "route_was": "debt",
+      "fix": "Fixed rather than logged, because R1's repair rides the same mechanism and the reviewer's own acceptance offered the stronger option. verify now takes an `asked` set and refuses a code the tier was never given; route passes set(codes). The docstring's check 1 is true as written for the first time, and the eval case pins it."
+    }
+  ],
+  "pins_that_moved": "Four, all listed in ADR-036 §g2's category and each re-checked by hand rather than re-spelled blind: WIRE_API split into TWO pinned expressions because the escalate flag deliberately no longer reaches extract_items unmodified (it is ANDed with the arming switch first, and a pin saying 'unmodified' would have been pinning a lie); ui-deep-link's boot() pin, whose PROPERTY — fixtures fetched, deepLink() called after them inside the same try — is unchanged; and the two boilerplate mutation-fixture counts, 9 -> 10 for the deliberately-broken _run and 7 -> 10 for routing-strip-missing.html, which gained a 7th mutation shape (a box offered unconditionally, i.e. silently ignored).",
+  "still_unrun": "No live API call has ever been made — OPENROUTER_API_KEY is not set. The held-out exam is UNRUN and intc-2025 / c-2025 were neither read nor run in this round. Every dollar figure remains an ESTIMATE from a 4-chars-per-token proxy over prices that are now sourced but still unbilled. escalate.verify has still never met a real model answer, and rung 1's slug choice is a judgement (new debt row)."
+}

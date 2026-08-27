@@ -20,7 +20,11 @@ Built so far: all four files — layers 1–9 and 11. Layer 10 (fallback) was
 deferred by design until residual-failure data existed; that data was measured
 (ADR-019) and the decision taken — **ruled out, T12,
 [ADR-020](../../specs/decisions/ADR-020-fallback-not-justified.md)**. It is not
-pending. See §10 below for the reasoning.
+pending. See §10 below for the reasoning. **Amended 2026-08-26 (D11,
+[ADR-036](../../specs/decisions/ADR-036-tiered-escalation.md)):** layer 10 now
+EXISTS as a triggered, opt-in tier in `escalate.py` + `llm.py`. It is off by
+default, unreachable unless D8's `low_item_coverage` fires, and no live call
+has been made — §10's own text below is amended in place.
 
 ## Pipeline layers
 
@@ -242,7 +246,19 @@ Eval: feeds `doc_status`/warning cases.
 
 **9. Confidence scoring** — see below.
 
-**10. Fallback — RULED OUT (T12, [ADR-020](../../specs/decisions/ADR-020-fallback-not-justified.md)).**
+**10. Fallback — RULED OUT (T12, [ADR-020](../../specs/decisions/ADR-020-fallback-not-justified.md)),
+then RE-OPENED AND SHIPPED AS A TRIGGERED TIER (D11, 2026-08-26,
+[ADR-036](../../specs/decisions/ADR-036-tiered-escalation.md)).** What ships is
+narrower than the candidate described below and is entered only on a measured
+signal: `deterministic → llm_localize (openai/gpt-5-mini, the unattributed
+text only) → llm_extract (anthropic/claude-opus-5, the document up to
+1,250,000 chars)`, via OpenRouter (ADR-036 §h1); both rungs' inputs are
+capped so one call's price is bounded on arbitrary input (§h2), behind
+`extract_items(path, escalate=True)`, entered only when `low_item_coverage`
+fires (0 of 28 real dev filings), with every returned offset re-derived by
+`escalate.verify` before use. Cache-by-content-hash, prompt-version keying and
+the budget cap below all survive into it. **No live call has been made and the
+held-out exam is UNRUN.** The 2026-08-19 reasoning follows unedited.
 The candidate was an LLM returning **verbatim anchor quotes** re-located to
 offsets (preserving INV-S2 by construction — invented quotes fail relocation
 and become explicit failures), cached by content-hash + prompt-version,
@@ -267,6 +283,12 @@ items contract-reachable.) The measured fallback-addressable surface across both
 eval sets is **4 of 768 items (0.52%)**. Cost stays structurally $0.00 and ADR-003's
 stdlib-only pipeline is untouched. `method: llm_fallback` stays in the contract
 enum, unemitted. ADR-020 §e names the measurements that would reopen this.
+**(2026-08-26: they did. `llm_fallback` is still unemitted — ADR-036 §j keeps
+the name reserved rather than reusing it — and the two new values
+`llm_localize` / `llm_extract` are what a resolved tier publishes instead. The
+default path is still stdlib-only and still $0.00; `requirements.txt` is
+unchanged and the eval gate loads no network module, which `escalation_seam`
+measures rather than asserts.)**
 
 **11. Assembly** — derive `doc_status`, attach trace/timings/meta, emit the
 contract-v2 envelope.

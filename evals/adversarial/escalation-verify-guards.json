@@ -1,0 +1,118 @@
+{
+  "id": "escalation-verify-guards",
+  "task": "sec10k",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "path": "evals/fixtures/xom-2021/filing.htm"
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "envelope_shape"
+      },
+      {
+        "type": "item_present",
+        "item": "6",
+        "status": "missing"
+      },
+      {
+        "type": "verify_guards",
+        "cases": [
+          {
+            "name": "positive control — item 1's own span verifies",
+            "proposal": {
+              "1": {
+                "like_item": "1"
+              }
+            },
+            "expect": "accept",
+            "accepts": [
+              "1"
+            ]
+          },
+          {
+            "name": "R1: a `missing` item may not be resolved",
+            "proposal": {
+              "6": {
+                "like_item": "1"
+              }
+            },
+            "expect": "reject",
+            "why_contains": "carries no span"
+          },
+          {
+            "name": "R1: nor may an item that is not in the document at all",
+            "proposal": {
+              "99": {
+                "like_item": "1"
+              }
+            },
+            "expect": "reject",
+            "why_contains": "not an item of this document"
+          },
+          {
+            "name": "R7: nor one the tier was never asked about",
+            "proposal": {
+              "1": {
+                "like_item": "1"
+              }
+            },
+            "asked": [
+              "7",
+              "8"
+            ],
+            "expect": "reject",
+            "why_contains": "not among the items this tier was asked about"
+          },
+          {
+            "name": "R2: all-or-nothing — one rejected sibling discards the survivor",
+            "proposal": {
+              "1": {
+                "like_item": "1"
+              },
+              "7": [
+                0,
+                40
+              ]
+            },
+            "expect": "reject",
+            "why_contains": "SPAN_FLOOR"
+          },
+          {
+            "name": "R2: a NULL sibling is not a rejection and must not discard it",
+            "proposal": {
+              "1": {
+                "like_item": "1"
+              },
+              "7": null
+            },
+            "expect": "accept",
+            "accepts": [
+              "1"
+            ]
+          },
+          {
+            "name": "a hallucinated offset that is long and in bounds but opens on nothing",
+            "proposal": {
+              "1": [
+                0,
+                60000
+              ]
+            },
+            "expect": "reject",
+            "why_contains": "title similarity"
+          }
+        ]
+      }
+    ]
+  },
+  "triage": {
+    "class": "silent-degradation",
+    "note": "PR #58 R1 (HIGH), R2 and R7 in one case, plus the first eval coverage `escalate.verify` has ever had. R1: `verify` admitted a proposal naming a `missing` item, `apply` then wrote start/end onto it in violation of specs/001-sec10k-contract.md, and because `meta.coverage` sums every item with a non-null start, the malformed envelope inflated the exact number the D8 trigger thresholds on — measured 0.0030 -> 0.6142 on a single item. `c-2025`, one of the two held-out exam filings, is 21 `missing` + 2 `omitted`, so the first live run would have hit this. R2: ADR-036 §b and the docstring both claimed 'all-or-nothing' while the loop returned the survivors of a mixed proposal; the claim was kept and the code changed to match it. R7: the docstring claimed verify enforced the asked-for set and it did not. `xom-2021` is the fixture because it is a committed real filing that carries both a substantive Item 1 (7,884 chars, clears SPAN_FLOOR) and a genuinely `missing` Item 6 — the 2021 rule change that dropped Item 6 is already documented in the README's limitations table.",
+    "note_negative_space": "The positive control is what stops the other six passing vacuously: if `verify` regressed to rejecting everything, case 1 and case 6 go red. It still says nothing about whether a real model's answer would ever pass — that needs a credential, and ADR-036 §k records it as UNRUN."
+  },
+  "provenance": "PR #58 round 1, created 2026-08-27 from the reviewer's own repro, before the fix, per hard rule 2. Watched red at 88b4488 with only the new check type injected into that tree's adapter — full output in tasks/reviews/pr58-r1-red.txt. Read the pre-fix failure honestly: the R1 sub-case was rejected there, but by the TITLE-SIMILARITY check (item 1's heading does not read like item 6's title), not by a status guard that did not exist. On this fixture the hole was accidentally covered by a neighbouring check. The sharp demonstration — similarity passes, only the status guard rejects, and meta.coverage moves 0.0030 -> 0.6142 — is the R1 block of `escalate._demo`, which PR #58 R3 wires into CI in the same commit."
+}

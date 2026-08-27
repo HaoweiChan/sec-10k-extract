@@ -144,5 +144,5 @@ correct answer. The remaining **4 are improvable** — one filing's combined
 `ITEMS 10, 11, 12 and 13.` heading, whose four caption regions sit at disjoint,
 in-order offsets that `no_overlap_ordered` accepts and `classify` calls
 `extracted`. A deterministic heading-shape change reaches all four identically,
-at $0. ADR-020 walks each one and names the conditions that would reopen the
+at $0. **Amended 2026-08-26 (D11, ADR-036): the conditions reopened it. A triggered model tier now ships behind D8's `low_item_coverage`, and metric 11's denominator gains two values — `llm_localize` and `llm_extract` — which are emitted only on an opt-in `escalate=True` run. On the default path metric 11 is still structurally 100%, and still circular for the same reason.** ADR-020 walks each one and names the conditions that would reopen the
 decision.

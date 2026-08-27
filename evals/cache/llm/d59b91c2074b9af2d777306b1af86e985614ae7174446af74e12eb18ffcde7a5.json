@@ -1,0 +1,9 @@
+{
+ "model": "anthropic/claude-opus-5",
+ "text": "",
+ "usage": {
+  "input_tokens": 168832,
+  "output_tokens": 2048
+ },
+ "usd": 0.89536
+}

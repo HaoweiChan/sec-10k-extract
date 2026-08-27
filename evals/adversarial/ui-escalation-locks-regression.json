@@ -1,0 +1,13 @@
+{
+  "id": "ui-escalation-locks-regression",
+  "task": "repo_hygiene",
+  "suites": ["invariant", "fast"],
+  "input": {"checks": ["escalation_locks"],
+            "file": "evals/fixtures/repo_hygiene/escalation-locks-removed.py"},
+  "expect": {"min_failures": 5, "max_failures": 5},
+  "triage": {
+    "class": "cost-regression",
+    "note": "The counterpart PR #21 R1/R2/R3 established, applied to the money locks: a check asserting the real file is clean also passes vacuously once it regresses, so a known-bad fixture has to prove the miss is caught. Four mutations, five failures, exact count — `min_failures` alone is a floor and would let a regressed check that ALSO over-fires report green (PR #21 round-2 R5). Two of the four are the reviewer's own R9 mutations verbatim (`ESCALATION_ENABLED = True`; a `Budget` built from literals, which alone accounts for two failures since both ceilings are checked); the other two are the shapes that would defeat a narrower check — a literal `SERVER_MAX_USD` the operator cannot lower, and a `server_budget()` that is constructed and never called, which would silently give every request `llm.Budget`'s per-DOCUMENT default. `SERVER_MAX_CALLS` is left correctly wired in the fixture so a blanket-failing check overshoots the count rather than reaching it."
+  },
+  "provenance": "PR #58 round 2, created 2026-08-27 alongside the check it falsifies, per hard rule 2."
+}

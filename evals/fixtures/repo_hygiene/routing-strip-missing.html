@@ -1,0 +1,61 @@
+<!-- D11 regression fixture (ADR-036 §i). Six ways the routing display goes
+     silent while every OTHER hop stays correctly wired, so the check has to
+     distinguish rather than blanket-fail.
+
+       1. the escalate checkbox ships `checked`, so a paid tier is the
+          deployed default — the one shape that costs real money.
+       2. ...and `disabled` as well, the ADR-026 pair: the wire is intact and
+          the capability is unreachable. Both on one element deliberately;
+          they are independent failures of the same input.
+       3. `routingStrip` is declared and the banner never calls it, so the
+          doc-level record exists in the envelope and appears nowhere on
+          screen. This is the demo's own shape — a number computed and not
+          shown — one layer up.
+       4. the strip prints each tier's outcome but not its COST, which is the
+          undisclosed-price failure the whole milestone exists to close.
+       5. the item pane no longer says what the deterministic path had said,
+          so a model-moved span reads like any heading match.
+       6. the upload mode drops the flag from the query string, so one of the
+          three input modes can never escalate at all.
+       7. (PR #58 R6) the box is offered unconditionally: the page never asks
+          the server whether escalation is armed, never disables the control,
+          and never renders the server's own refusal. On an unarmed deployment
+          that is a tickable box whose value is silently discarded — which is
+          the dishonesty this milestone exists to remove, wearing the costume
+          of a working feature. Three pinned hops, three failures.
+
+       8. (PR #58 R17/R19) the strip has no truncation clause at all, so a
+          rung that was shown a 60,000-char window of a 351,503-char filing
+          reports its outcome as if it had read the whole thing. The clause
+          that used to sit here said "the first N chars" about a window
+          starting at offset 178,087 — a false sentence on screen, which is
+          why the pin requires the RANGE and not a length.
+
+     Caught by evals/adversarial/ui-routing-provenance-regression.json
+     (expect.min_failures/max_failures). -->
+<label class="opt"><input type="checkbox" id="escalate" checked disabled> escalate on trigger</label>
+<script>
+function escalateOn(){ const c = $("#escalate"); return !!(c && c.checked); }
+// shape 7: arming is never consulted; the box is always live and always sent
+async function boot(){
+  const m = await (await fetch("/api/meta")).json();
+  $("#fx").innerHTML = m.fixtures.map(f => `<option>${esc(f)}</option>`).join("");
+}
+function routingStrip(r){
+  if(!r) return "";
+  const tiers = (r.tiers || []).map(t => `${esc(t.tier)} → <b>${esc(t.outcome)}</b>`).join("; ");
+  return ` <span class="src" id="routing">routing: ${tiers}</span>`;
+}
+$("#banner").innerHTML = `doc_status: ${esc(st)}` + coverageStrip(w);
+$("#pane").innerHTML = `
+    <dl class="ev">
+      <dt>heading matched</dt><dd>${it.heading_text ? esc(it.heading_text) : "—"}</dd>
+    </dl>`;
+$("#go-fx").onclick = () => call("/api/extract/fixture",
+  {method:"POST", headers:{"Content-Type":"application/json"},
+   body: JSON.stringify({fixture: $("#fx").value, escalate: escalateOn()})});
+$("#go-up").onclick = () => {
+  const f = $("#up").files[0];
+  call("/api/extract/upload?filename=" + encodeURIComponent(f.name), {method:"POST", body: f});
+};
+</script>

@@ -1,0 +1,51 @@
+{
+  "id": "escalation-empty-completion",
+  "task": "sec10k",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "path": "evals/fixtures/xref-index-collapse/filing.htm"
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "route_payload",
+        "response": {
+          "text": "",
+          "usage": {
+            "input_tokens": 168832,
+            "output_tokens": 2048
+          },
+          "usd": 0.89536,
+          "finish_reason": "length"
+        },
+        "outcomes": [
+          "empty_completion",
+          "empty_completion"
+        ],
+        "error_contains": [
+          "output_tokens=2048",
+          "max_tokens=6144",
+          "finish_reason='length'"
+        ],
+        "usd": 1.79072,
+        "resolved": [],
+        "min_max_tokens": {
+          "anthropic/claude-opus-5": 6144
+        },
+        "reasoning_tokens": {
+          "anthropic/claude-opus-5": 4096,
+          "openai/gpt-5-mini": null
+        }
+      }
+    ]
+  },
+  "triage": {
+    "class": "input-variant",
+    "note": "The held-out exam on intc-2025, run live 2026-08-27, cost $0.899858 over 2 calls and resolved nothing. Rung 1 (openai/gpt-5-mini, $0.004498) worked exactly as designed and returned valid JSON saying it could not locate items 1/7/8 in its window. Rung 2 (anthropic/claude-opus-5, $0.895360) returned `output_tokens: 2048` — exactly the `max_tokens` the client sends — with EMPTY content, and that empty string reached `json.loads` as an unexplained JSONDecodeError. The `response` block above is that cached record verbatim. The class is `input-variant` rather than `eval-bug` or `flake`: an empty completion from a reasoning model whose output allowance was consumed before any content was emitted is a legitimate response shape the client did not handle, exactly as an unhandled filing layout is a legitimate document shape. It is not nondeterminism — it reproduces from the cache for $0 — and the eval machinery was not at fault, because no eval reached this path at all. The `error_contains` pins name the recorded VALUES (`finish_reason='length'`, `output_tokens=2048`, `max_tokens=6144`) and not the message's prose: a first version asserted the bare word `length`, which matched a literal in the sentence itself, so deleting the client's `finish_reason` recording left the gate green. Caught by mutation before shipping, not after.",
+    "note_negative_space": "This pins the CLIENT's handling of an empty completion. It does not pin that a real model, given room to answer, returns anything USEFUL — `escalate.verify` has still never met a real model answer, because the exam tested the transport and found it broken before the trust boundary was reached."
+  },
+  "provenance": "PR #58, created 2026-08-27 from the burned intc-2025 exam's own cached response, before the client fix, per hard rule 2. Watched red first: against the pre-fix client `route` records `unparseable` and the reported reason is a bare JSONDecodeError naming neither the empty content nor the token exhaustion. Red-first output in tasks/reviews/pr58-exam-red.txt. The payload is replayed from cache at $0; no live call was made to author or to run this case."
+}

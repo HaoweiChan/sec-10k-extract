@@ -1,0 +1,13 @@
+{
+  "id": "token-proxy-bound",
+  "task": "repo_hygiene",
+  "suites": ["invariant", "fast"],
+  "input": {"checks": ["token_proxy_bound"]},
+  "expect": {},
+  "triage": {
+    "class": "invariant-gap",
+    "note": "Every dollar figure ADR-036 publishes is derived through a chars-per-token proxy, and nothing checked that proxy against reality until the two held-out exam runs billed four real responses. The proxy was a retyped `4` for both rungs. Measured, it is wrong in BOTH directions and by model, not by one multiplier: `anthropic/claude-opus-5` tokenizes this corpus at 3.07 and 2.74 chars/token (the proxy understates tokens by up to 1.46x) while `openai/gpt-5-mini` runs 5.42 and 4.27 (the proxy overstates). The consequence that matters is the understatement: §h2 published a worst-case single call of $1.5675 while a real call on a LARGER input had already cost $2.12163, and the per-document $1.00 Budget was overshot to $2.13. The check binds the sweep script's own published ratio against the committed measurement record, in the conservative direction only — published must not exceed the measured minimum, because fewer chars per token means more tokens means more money.",
+    "note_negative_space": "Two samples per model, both SEC filings in HTML-derived normalized text, and one of the four is derived from the code path rather than measured (its only effect is to lower the bound, i.e. to make costs more conservative). This says nothing about the ratio on another corpus, and OpenRouter documents no tokenizer endpoint, so a proxy is unavoidable — it can only be measured and bounded."
+  },
+  "provenance": "PR #58, created 2026-08-27 from the two exam runs' cached responses, before the proxy was corrected, per hard rule 2. Watched red first against the then-published `CHARS_PER_TOKEN = 4`. No live call was made: all four responses were already in evals/cache/llm/, and c-2025 was not read, run or altered."
+}

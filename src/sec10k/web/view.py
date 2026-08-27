@@ -130,6 +130,14 @@ def build_view(result, display_max=DISPLAY_MAX):
         # `bp_applied` in the loop), so it means the same thing in both modes.
         "boilerplate_applied": bp_applied,
         "markdown": blocks is not None,
+        # D11 (ADR-036 §i): the doc-level routing record, passed through
+        # verbatim and ONLY when the envelope carries it — same rule as
+        # `boilerplate`/`blocks`. Absent means "escalation was not asked for",
+        # which is a different answer from "asked for, trigger stayed quiet",
+        # and the banner strip says which. Nothing here is derived: the record
+        # is small, already JSON-shaped, and a second computation of it in the
+        # view is a second place for it to disagree with the envelope.
+        "routing": _jsonable(result["routing"]) if "routing" in result else None,
     }
 
 
@@ -302,6 +310,26 @@ def _demo():
     # asked for, found nothing, Markdown on: still False
     assert both["boilerplate_excluded"] is True and both["boilerplate_applied"] is False
     json.dumps(md)
+
+    # D11: the routing record rides through only when the envelope has one,
+    # and the per-item tier provenance is already carried by `method` and
+    # `evidence` — which the item whitelist above must not drop.
+    assert off["routing"] is None and md["routing"] is None
+    rec = {"trigger": {"fired": True, "codes": ["low_item_coverage"],
+                       "items": ["1"], "message": "3%"},
+           "tiers": [{"tier": "llm_localize", "model": "openai/gpt-5-mini",
+                      "outcome": "unavailable", "error": "no key",
+                      "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0}}],
+           "resolved": [], "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0}}
+    routed = build_view({**plain, "routing": rec,
+                         "items": [dict(plain["items"][0], method="llm_localize",
+                                        confidence=0.8, evidence={
+                                            "deterministic": {"method": "heading_strict"}}),
+                                   plain["items"][1]]})
+    assert routed["routing"] == rec
+    assert routed["items"][0]["method"] == "llm_localize"
+    assert routed["items"][0]["evidence"]["deterministic"]["method"] == "heading_strict"
+    json.dumps(routed)
     print("[view self-check] ok")
 
 
