@@ -1,0 +1,80 @@
+{
+  "pr": 61,
+  "round": 3,
+  "result": "REQUEST_CHANGES",
+  "circuit_breaker": "FIRED \u2014 three review rounds without approval",
+  "counts": {
+    "HIGH": 0,
+    "MEDIUM": 4,
+    "LOW": 1
+  },
+  "round2_verified_closed": [
+    "R10",
+    "R11",
+    "R12",
+    "R13",
+    "R14 (partly \u2014 see R21)",
+    "R15",
+    "R16",
+    "R17"
+  ],
+  "door_verified_correct_as_shipped": [
+    "secret configured + no header -> 0 outbound on all three routes",
+    "valid header -> upload and url each make 1 outbound on the collapsing intc-2025",
+    "secret UNSET + header presented -> 0 outbound",
+    "free tier untouched: against 3ed5f88 with no secret, upload and url return identical item counts (23) and byte-identical (item,start,end) span lists",
+    "R10's exploit reproduced against the pre-change tree (1 outbound) and closed on the shipped tree (0)",
+    "paid_path_open is called OUTSIDE _run's try, so an exception inside the door 500s the request before extract_items \u2014 it fails CLOSED",
+    "R15's derivation: 44 scanned, fires exactly ['intc-2025','xref-index-collapse'] = DEPLOY_EXCLUDED, 4.60s wall, non-vacuous via min_scanned 40"
+  ],
+  "orchestrator_note": "The door is CORRECT as built; what is unbound is its guarantee. R18/R19 are gaps in the CHECKS, not the code \u2014 but this PR exists because unbound money properties kept being defeated, and these are the fourth consecutive round of that same defect. R20 is a hard-rule-2 violation I introduced by committing a citation to an artifact I did not verify existed.",
+  "findings": [
+    {
+      "id": "R18",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "escalation_door's executed decision table never calls paid_path_open the way production calls it \u2014 every row and every _demo assertion passes token= explicitly, so the `token is None` branch app.py actually takes is unbound, and a three-line edit there makes an UNCONFIGURED deployment bill every anonymous request with the whole gate green.",
+      "evidence": "eval_adapter.py:3448-3458 (all nine rows pass token=configured) and gate.py:99 (_demo lambda likewise). app.py:251 calls gate.paid_path_open(header, ESCALATION_ENABLED) with NO token=, so gate.py's `configured_token() if token is None else \u2026` is the only production entry and no case exercises it. With the secret UNSET and no header: shipped tree 0 outbound on all three routes; mutant gives upload outbound=1, url outbound=1, envelope reason 'the deployment is configured for the paid tier'. This is exactly the UNSET IS CLOSED property gate.py:17-23, ADR-036 \u00a7h2, README and escalation-door.json all name as the one that matters.",
+      "repro": "insert `if token is None: return True, \u2026` above gate.py's token normalisation -> gate self-check exit 0 and the suite score identical to clean",
+      "acceptance": "The table contains at least one row calling paid_path_open(presented, armed) with NO token= keyword, under a patched env asserting False when unset and the same verdict as the explicit-token row when configured \u2014 watched red on that edit.",
+      "orchestrator_verified": "REPRODUCED. The mutation leaves gate.py's self-check at exit 0 and the invariant score byte-identical to the clean copy."
+    },
+    {
+      "id": "R19",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "escalation_door pins the SHAPE of the door's one call site but not its ARGUMENTS, so both operands can be swapped for money-spending values while invariant and fast stay byte-identical to clean.",
+      "evidence": "eval_adapter.py:3523-3560 checks paid_path_open is called once inside _run, its verdict bound to a name, and that escalate=/budget=/view['escalation'] use that name \u2014 it never inspects n.args. M4: first arg becomes request.headers.get(gate.HEADER, gate.configured_token()) \u2014 with a secret configured, an anonymous request with NO header gets upload=1, url=1 and an envelope falsely reading 'a valid x-escalation-token header was presented'. M6: second arg becomes literal True \u2014 with SEC10K_ESCALATION_ENABLED=0 (the operator's runaway stop) and a valid token, shipped gives 0 outbound, M6 gives upload 1, url 1, while /api/meta still publishes escalation_enabled: false.",
+      "repro": "apply either edit to app.py:251-253 -> both suites identical to clean",
+      "acceptance": "The check asserts the first argument is a read of gate.HEADER off the request parameter and the second is the module's off-switch constant \u2014 watched red on both M4 and M6."
+    },
+    {
+      "id": "R20",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "tasks/reviews/pr61-r2-red.txt, the red-first evidence this round's four money claims rest on, does not exist in the tree or in any commit.",
+      "evidence": "git log --all over that path is empty; git status is clean; it was never written. Cited by tasks/TODO.md (TD-158's P1 CLOSURE: 'the red-first record is tasks/reviews/pr61-r2-red.txt'), evals/adversarial/escalation-door.json ('PART 1'), evals/adversarial/deployed-exclusion-derived.json ('PART 3'), and src/repo_hygiene/eval_adapter.py in two places. Siblings pr61-r1-red.txt, pr60-r2-red.txt, pr58-r3-red.txt all exist, so this is a gap, not a convention. Residue of the implementer being killed mid-work: CLAUDE.md hard rule 2's evidence for three new money cases is a dangling path.",
+      "repro": "ls tasks/reviews/pr61-r2-red.txt -> No such file; git log --all -- that path -> empty",
+      "acceptance": "Either the artifact is committed with PARTs 1-3 as the four citations describe, or every citation is rewritten to point at evidence that exists.",
+      "orchestrator_verified": "REPRODUCED, and the citation in TD-158 was committed by ME in 8c3bb78 without checking the file existed."
+    },
+    {
+      "id": "R21",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "R14's 'one census, current, everywhere it is published' is only partly met: extract_items' own public docstring still says the trigger stays quiet on '42 of 43 dev fixtures, every real EDGAR filing in the set', and the second half is now false.",
+      "evidence": "src/sec10k/extract.py:160-161 against src/sec10k/escalate.py:45-49 added by the SAME commit ('The real-filing rate is no longer zero: it is one, and it is that filing') and escalate.py:359 updated to '42 of 44'. The commit fixed extract.py:8 and missed line 160, eight lines below the module header it corrected.",
+      "repro": "grep -n '42 of 43' src/sec10k/extract.py -> line 160",
+      "acceptance": "extract.py:160 reads 42 of 44 and drops or corrects 'every real EDGAR filing in the set'; ideally the census sites are bound the way _index_h2_money binds INDEX.md to ADR-036 \u00a7h2."
+    },
+    {
+      "id": "R22",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "DEPLOY_EXCLUDED's ponytail comment still points the next reader at TD-160 as open debt and calls the trigger scan 'the stopgap', after R15 closed TD-160 and made the derivation a gate check.",
+      "evidence": "src/sec10k/web/fixtures.py:56-59 vs tasks/TODO.md's TD-160 [status: done] and evals/adversarial/deployed-exclusion-derived.json, which does derive the set (verified: adding a demo-collapse fixture reds the case).",
+      "repro": "sed -n '56,60p' src/sec10k/web/fixtures.py",
+      "acceptance": "The comment names deployed-exclusion-derived.json as what keeps the frozenset honest and states the surviving residue (nothing derives it at RUNTIME)."
+    }
+  ]
+}
