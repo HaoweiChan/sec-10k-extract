@@ -195,6 +195,13 @@ exactly as ADR-030 §b1-held-out declined to adjudicate `mrk-1995`'s 0.5274.
 
 ## c) Ruling — the item-level code warns, it does not escalate and it does not restate the status
 
+*(Amended 2026-08-28, ADR-039 / D16: a second item-level code,
+`internal_pointer_unreached`, now reaches the item codes `SPAN_FLOOR`
+structurally cannot — the pointer SHAPE, not the length, is its trigger — on
+this section's own non-escalating, no-status-change pattern. §b2's rejection
+of a blanket floor stands unchanged; ADR-039 §b3 is the design that closes
+ADR-038's three `defect` verdicts without re-opening it.)*
+
 `item_span_near_empty` is **not** in `AMBIGUOUS_CODES`, and it does **not**
 change `status`.
 

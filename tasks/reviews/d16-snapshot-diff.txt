@@ -1,0 +1,53 @@
+D16 snapshot comparison (ADR-039 §e) — origin/main vs task/D16, every
+difference enumerated.
+
+Trees:
+  origin/main  0b87705fd0aab278fee4d17a4f9febf4881e7e82  (the D14 merge),
+               materialised with `git archive origin/main | tar -x` into a
+               scratch directory — NOT a second worktree
+  task/D16     the merged tree at/after 992f97f (bbe7e01 = the D16 change,
+               992f97f = origin/main merged in, so the D14 fixture edit to
+               evals/fixtures/repo_hygiene/boilerplate-wire-values.html
+               reads identical from both sides; compared before the merge,
+               that one file also differed, with D14 — not D16 — as the
+               entire cause)
+
+Instrument: python3 evals/snapshot.py <tree> <out> — default flags, 62 dev +
+6 held-out files, the committed byte-identity harness (ADR-033 §d). Corpus
+digests as printed:
+
+  origin/main  dev:     3d129624547ee3e223d51d73fc540820c55dbef9ec1388e19f8c38e8d01fee1c
+               heldout: 4d2a7128b06a328b201a25314c4568146a6913e8cc508fa7b35d638a7abc1784
+  task/D16     dev:     0e5999f67734c8fffccf72b9e199ca816d83f17a024760e054f353c7fe8dcd6f
+               heldout: 4d2a7128b06a328b201a25314c4568146a6913e8cc508fa7b35d638a7abc1784
+
+Held-out: BYTE-IDENTICAL (same corpus digest both trees).
+
+Dev: field-by-field diff of the two snapshot files (every fixture, every
+field snapshot.py reads: normalized-text sha256, norm_chars, doc_status,
+warnings, envelope key list, and per item: item/status/start/end/confidence/
+method/heading_text):
+
+  [dev] cvx-2015/filing.htm differs:
+    warnings: removed=[] added=[('internal_pointer_unreached', '2'),
+                               ('internal_pointer_unreached', '6'),
+                               ('internal_pointer_unreached', '7A')]
+    item 2:  confidence 0.95 -> 0.8
+    item 6:  confidence 0.95 -> 0.8
+    item 7A: confidence 0.95 -> 0.8
+  [dev] 61/62 files identical in every snapshot field
+  [heldout] 6/6 files identical in every snapshot field
+
+That is the complete list. In particular, on every document of both corpora:
+  - every item's start/end/status/method/heading_text is byte-identical;
+  - every normalized-text sha256 and norm_chars is byte-identical;
+  - every doc_status is byte-identical (cvx-2015 was already
+    success_with_warning — the new code does not escalate);
+  - the envelope key list is byte-identical (no new field anywhere).
+
+The one differing document is the census's own fire list (d16-census.txt):
+warnings gain exactly the three internal_pointer_unreached entries and the
+three fired items' confidence moves 0.95 -> 0.80 via the pre-existing
+WARN_PENALTY. review_required moves false -> true on the same three items;
+snapshot.py's FIELDS tuple does not read that field (stated in ADR-035 §f),
+so it is bound instead by the promoted case's three item_field value pins.

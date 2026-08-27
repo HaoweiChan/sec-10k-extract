@@ -1,0 +1,16 @@
+{
+  "pr": 63,
+  "round": 1,
+  "task": "D16",
+  "resolved_in": "f0ca250 (bounded correction pass, D13 precedent — round 1 result was APPROVED, so this closes residuals rather than answering a REQUEST_CHANGES)",
+  "resolutions": [
+    {"id": "R1", "resolution": "fixed",
+     "detail": "ADR-008 header now reads 'Amended by: ADR-013, ADR-018, ADR-027, ADR-030, ADR-035, ADR-039 (the last five in place…)'; ADR-016 header now lists ADR-039. Prose-only; no eval case exists or is owed for a header list — the adr_headers/adr_index hygiene checks pass on the corrected text."},
+    {"id": "R2", "resolution": "fixed",
+     "detail": "ADR-039 §c3 now quotes the instrument's 0.6001. The constant PTR_COVERAGE_MIN = 0.60 and the census output are unchanged; verify with: python3 tasks/reviews/d16_census.py | tail -1 && grep -c '0.6002' specs/decisions/ADR-039-pointer-shape-escalation.md (0)."},
+    {"id": "R3", "resolution": "fixed",
+     "detail": "ADR-039 §c4 now states the nvda-2024 non-match is evidenced by absence from the census candidate table (which lists only INTERNAL_PTR_RE matches), not by a printed row. Census instrument untouched — smallest honest diff."},
+    {"id": "R4", "resolution": "rejected",
+     "detail": "No edit. The mutation-red substitute for absence pins is accepted as the repo's standing convention (ADR-035 §f pattern); recorded in the D16 ledger Status line. Rewording the Acceptance criterion after the fact was declined as gate-weakening; the deviation stays disclosed in tasks/reviews/d16-red-first.txt."}
+  ]
+}

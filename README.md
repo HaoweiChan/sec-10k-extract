@@ -174,7 +174,7 @@ Full rationale in `specs/decisions/` (18 ADRs). The ones that shaped the system:
   revisit clause has never fired; malformed HTML normalizes cleanly.
 - **Offsets, not text** (contract + INV-S2). Makes drift structurally
   impossible rather than tested-against.
-- **A label-free validator battery** (ADR-008, ADR-013, ADR-030, ADR-035). Ten validators that
+- **A label-free validator battery** (ADR-008, ADR-013, ADR-030, ADR-035, ADR-039). Eleven validators that
   need no annotations and therefore run on every filing, including ones the
   eval set has never seen. This is where robustness beyond the labelled
   fixtures comes from — and it earned its keep: on held-out filings it caught a
