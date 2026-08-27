@@ -1,12 +1,19 @@
 {
   "id": "ui-routing-provenance",
   "task": "repo_hygiene",
-  "suites": ["invariant", "fast"],
-  "input": {"checks": ["routing_provenance"]},
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "routing_provenance"
+    ]
+  },
   "expect": {},
   "triage": {
     "class": "no-mechanical-check",
-    "note": "D11's ledger row requires routing provenance to be VISIBLE, both halves: the doc-level record (trigger fired or not, tiers attempted, per-tier outcome and cost) and the per-item tier, which extends the `method` field the pane already prints as `via ...`. Nothing in the eval vocabulary could read the inspector's markup, so this is the same text-pin shape S3/D7/D10 have used since — and it carries the same limits, written out in `check_confidence_honesty`'s docstring and true here word for word: a green run asserts the pinned expressions are present and unique in one file, never that a browser renders them. It also pins the pair `ui-boilerplate-wire-values` had to add for the ADR-026 flag: the escalate checkbox must ship UNCHECKED (a paid tier is never the default) and not `disabled` (a wire nobody can reach is not a capability).",
+    "note": "D11's ledger row requires routing provenance to be VISIBLE, both halves: the doc-level record (trigger fired or not, tiers attempted, per-tier outcome and cost) and the per-item tier, which extends the `method` field the pane already prints as `via ...`. Nothing in the eval vocabulary could read the inspector's markup, so this is the same text-pin shape S3/D7/D10 have used since — and it carries the same limits, written out in `check_confidence_honesty`'s docstring and true here word for word: a green run asserts the pinned expressions are present and unique in one file, never that a browser renders them. It also pins the pair `ui-boilerplate-wire-values` had to add for the ADR-026 flag: the escalate checkbox must ship UNCHECKED (a paid tier is never the default) and not `disabled` (a wire nobody can reach is not a capability). **RE-PINNED 2026-08-27** on the owner's \"make it default on, remove the button\". The last clause of this note is now false and is replaced rather than deleted. There is no escalate checkbox to ship unchecked-and-enabled: the control, the helper that read it, the `/api/meta` arming round-trip that disabled it and the `escalation_disarmed` note it printed are all gone, and none of the three request paths carries an `escalate` flag. Six ABSENT-pins replace the pair, with the same direction of protection inverted — before, the page had to offer the capability honestly; now it must not re-acquire a say in whether the server spends. Pinned as absence rather than simply deleted because a deleted pin binds nothing, and a stray `&escalate=1` creeping back onto one wire is exactly the shape that would go unnoticed. The eight routing-strip pins are untouched, and they are now the ONLY honesty this page owes the viewer: no control announces the tier in advance any more, so the strip is where the viewer learns that a paid tier ran and what it cost.",
     "note_negative_space": "No browser walk backs this one. The D7/D10 rows each ended with a recorded live walk; D11's display half has not been driven in a browser, because the state worth looking at — a document that actually escalated — cannot be produced without a credential."
   },
   "provenance": "D11, created 2026-08-26 before the strip existed, per hard rule 2. Red at origin/main (5a44758), where `index.html` contains no `routingStrip`, no `escalateOn`, and no `#escalate` checkbox: 11 failures, recorded in tasks/reviews/d11-red-first.txt."

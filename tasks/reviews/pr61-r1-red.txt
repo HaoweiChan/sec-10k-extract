@@ -1,0 +1,266 @@
+PR #61 round 1 — repros first, then the re-pins that catch them
+===============================================================
+
+Nine findings (1 HIGH, 4 MEDIUM, 3 LOW corrected in place, 1 note-only).
+Every one reproduced on the shipped tree BEFORE anything was fixed, per hard
+rule 2; then every property re-pinned and falsified by mutation through the
+real gate, read by exit code, unpiped.
+
+No live API calls anywhere in this file. Where an outbound call had to be
+OBSERVED, OPENROUTER_BASE_URL points at a local socket listener on 127.0.0.1
+and the key is the literal string "probe-not-a-real-key". A connection to that
+listener is what "would have billed" looks like; nothing real is contacted.
+evals/heldout/ was not read, run or copied.
+
+
+PART 1 — REPROS, on the tree as committed at ced0cc3
+====================================================
+
+### R1 (HIGH) — the two hot fixtures are a one-click, and a NO-click, paid button
+
+  Which dev fixtures fire D8's trigger — re-measured, not cited:
+
+    $ python3 tasks/reviews/d11_trigger_scan.py --rates
+      # D11 trigger scan - 44 dev documents, SPAN_FLOOR=1500, COVERAGE_MIN=0.13
+      low_item_coverage fires  all  2/44 = 0.0455 -> ['intc-2025', 'xref-index-collapse']
+      0.0033  intc-2025                FIRED
+      0.0303  xref-index-collapse      FIRED
+
+    The committed artifact tasks/reviews/d11-trigger-scan.txt says 1/43 and
+    names only xref-index-collapse: it predates intc-2025 being burned to the
+    dev side. The reviewer's independent count is the correct one.
+
+  Both listed, and both BILLABLE BY NAME (real ASGI app, stand-in listener):
+
+    /api/meta lists 'intc-2025': True
+    /api/meta lists 'xref-index-collapse': True
+    /api/meta fixture count: 44 (list_fixtures: 44)
+    POST fixture='intc-2025': HTTP 200  outbound connections 1  tiers=[('llm_localize', 'rejected', True), ('llm_extract', 'unavailable', False)]
+    POST fixture='xref-index-collapse': HTTP 200  outbound connections 1  tiers=[('llm_localize', 'unavailable', False)]
+    TOTAL outbound connections to the listener: 2
+
+  And billable with NO CLICK AT ALL - a real browser, one navigation:
+
+    listener hits before browse: 0
+    navigate http://127.0.0.1:8731/?fixture=xref-index-collapse&run=1
+    listener hits after page load (no click): 1
+
+    index.html's deep link ends: if(q.get("run") === "1") $("#go-fx").click();
+    so the page bills itself on load. Every disclosure shipped in ced0cc3 said
+    the exposure requires an UPLOAD. That was false, and the wording is
+    corrected in this round rather than left to become true by accident.
+
+### R3 (MEDIUM) - only the literal "0" disarms
+
+    Against the shipped `!= "0"`, the spellings an operator plausibly types:
+
+      '0'     -> disarmed
+      'false' -> ARMED       'FALSE' -> ARMED      'no'  -> ARMED
+      'off'   -> ARMED       ''      -> ARMED      '0 '  -> ARMED
+      'False' -> ARMED       'n'     -> ARMED
+
+    Six of the eight leave the deployment spending. This repo's own
+    escalation-locks-evaded.py argues that a stop button wired to an
+    undocumented comparand is worse than no stop button.
+
+### R2, R4, R5 (MEDIUM) - three brakes the gate cannot see
+
+  Each mutation applied alone to the shipped tree; the gate and BOTH module
+  self-checks stay green, which is the finding:
+
+  R2 mutation in src/sec10k/web/app.py:
+    - global _SERVER_BUDGET
+    + from src.sec10k.llm import Budget
+    invariant: exit 0  [eval] suite 'invariant': 81/81 = 1.000  (+4 enumerated debt, unscored)
+    fast: exit 0  [eval] suite 'fast': 144/144 = 1.000  (+4 enumerated debt, unscored)
+    python3 -m src.sec10k.escalate (module self-check): exit 0
+    python3 -m src.sec10k.llm    (module self-check): exit 0
+
+  R4 mutation in src/sec10k/web/app.py:
+    - "escalation_enabled": ESCALATION_ENABLED}
+    + }
+    invariant: exit 0  [eval] suite 'invariant': 81/81 = 1.000  (+4 enumerated debt, unscored)
+    fast: exit 0  [eval] suite 'fast': 144/144 = 1.000  (+4 enumerated debt, unscored)
+    python3 -m src.sec10k.escalate (module self-check): exit 0
+    python3 -m src.sec10k.llm    (module self-check): exit 0
+
+  R5 mutation in src/sec10k/escalate.py:
+    - EXTRACT_WINDOW = 1_250_000
+    + EXTRACT_WINDOW = 25_000_000
+    invariant: exit 0  [eval] suite 'invariant': 81/81 = 1.000  (+4 enumerated debt, unscored)
+    fast: exit 0  [eval] suite 'fast': 144/144 = 1.000  (+4 enumerated debt, unscored)
+    python3 -m src.sec10k.escalate (module self-check): exit 0
+    python3 -m src.sec10k.llm    (module self-check): exit 0
+
+### R6, R7, R8 (LOW) - corrected in place
+
+  R6  build_view (view.py:140) emits "routing": ... if "routing" in result
+      else None, so the disarmed path returns routing: null, never an absent
+      key; view.py's own self-check asserts off["routing"] is None. Both
+      escalate-default-on-red.txt and index.html's comment said "no routing
+      key at all", and the probe that produced the claim read
+      .get("routing") is None, which cannot tell the two apart.
+  R7  $ git show origin/main:evals/report/history.jsonl | (count score < 1.0)
+        red lines in origin/main history.jsonl: 109
+      PR #58 committed its mutation runs; escalate-default-on dropped them.
+      Two treatments, nothing written down. ADR-025 now names the rule.
+  R8  docs/architecture/overview.md's D11 amendment still said the tier "is off
+      by default" and "no live call has been made". Four calls, $3.025692
+      (ADR-036 h4), and the deployed inspector is not opt-in since ced0cc3.
+
+### R9 - note only, no action
+
+  src/sec10k/eval_adapter.py:524's extract_items(path, escalate=True) is the
+  harness's one escalating call. It is safe because the cases that reach it are
+  tagged for documents whose trigger stays quiet - a convention, not a
+  structure. The reviewer measured zero connections under both suites and this
+  round does not change that. TD-158.
+
+
+PART 2 - THE RE-PINS, EACH FALSIFIED
+====================================
+
+Method: one mutation at a time on the fixed tree, `python3 -m evals.run --suite
+invariant` unpiped and read by EXIT CODE, then restored and re-run. Every
+mutation exits 1; every restore exits 0.
+
+### N1 — R1 / the money name is dropped from the exclusion set — the dropdown gets its one-click paid button back and everything else stays wired.
+  mutate src/sec10k/web/fixtures.py:
+    - DEPLOY_EXCLUDED = frozenset({"intc-2025", "xref-index-collapse"})
+    + DEPLOY_EXCLUDED = frozenset({"xref-index-collapse"})
+  $ python3 -m evals.run --suite invariant   ; echo $? -> 1
+    [FAIL] deployed-fixture-exclusion (adversarial, 0.0s)
+    [eval] suite 'invariant': 81/82 = 0.988  (+4 enumerated debt, unscored)
+    deployed_exclusion: 'intc-2025' is not in DEPLOY_EXCLUDED — it fires D8's trigger, so the deployment would offer it in the dropdown and bill on `?fixture=intc-2025&run=1`
+  restored; re-run exit 0: [eval] suite 'invariant': 82/82 = 1.000  (+4 enumerated debt, unscored)
+
+### N2 — R1 / the exclusion becomes COSMETIC: the menu shrinks, the resolver still finds the name. This is the finding's sharp edge.
+  mutate src/sec10k/web/app.py:
+    - if name not in deployed_fixtures():
+    + <deleted>
+  $ python3 -m evals.run --suite invariant   ; echo $? -> 1
+    [FAIL] deployed-fixture-exclusion (adversarial, 0.0s)
+    [eval] suite 'invariant': 81/82 = 0.988  (+4 enumerated debt, unscored)
+    deployed_exclusion: app.py: request-time resolution must consult the deployed listing — expected exactly one `if name not in deployed_fixtures():`, found 0. Without it an excluded name is still resolvable by the deep link and by a hand-written POST.
+  restored; re-run exit 0: [eval] suite 'invariant': 82/82 = 1.000  (+4 enumerated debt, unscored)
+
+### N3 — R1 / /api/meta reverts to the eval corpus, so the hot fixtures are listed again while the resolver refuses them — the two disagree.
+  mutate src/sec10k/web/app.py:
+    - "fixtures": deployed_fixtures(),
+    + "fixtures": list_fixtures(),
+  $ python3 -m evals.run --suite invariant   ; echo $? -> 1
+    [FAIL] fixture-discovery (adversarial, 0.01s)
+    [eval] suite 'invariant': 81/82 = 0.988  (+4 enumerated debt, unscored)
+    fixture_discovery: app.py: /api/meta must serve the shared listing — expected exactly one `"fixtures": deployed_fixtures()`, found 0
+  restored; re-run exit 0: [eval] suite 'invariant': 82/82 = 1.000  (+4 enumerated debt, unscored)
+
+### N4 — R1 / the exclusion names a fixture that does not exist — a typo that protects nothing and reads as if it did.
+  mutate src/sec10k/web/fixtures.py:
+    - DEPLOY_EXCLUDED = frozenset({"intc-2025", "xref-index-collapse"})
+    + DEPLOY_EXCLUDED = frozenset({"intc-2025", "xref-index-colapse"})
+  $ python3 -m evals.run --suite invariant   ; echo $? -> 1
+    [FAIL] deployed-fixture-exclusion (adversarial, 0.0s)
+    [FAIL] fixture-discovery (adversarial, 0.01s)
+    [eval] suite 'invariant': 80/82 = 0.976  (+4 enumerated debt, unscored)
+    fixture_discovery: DEPLOY_EXCLUDED names ['xref-index-colapse'], which are not fixtures at all — an exclusion nobody can trip protects nothing, and reads as if it did
+    deployed_exclusion: 'xref-index-collapse' is not in DEPLOY_EXCLUDED — it fires D8's trigger, so the deployment would offer it in the dropdown and bill on `?fixture=xref-index-collapse&run=1`
+  restored; re-run exit 0: [eval] suite 'invariant': 82/82 = 1.000  (+4 enumerated debt, unscored)
+
+### N5 — R2 / server_budget() loses its memo. Every name survives; only 'process-wide' stops being true. This is the reviewer's own mutation.
+  mutate src/sec10k/web/app.py:
+    - global _SERVER_BUDGET
+    + from src.sec10k.llm import Budget
+  $ python3 -m evals.run --suite invariant   ; echo $? -> 1
+    [FAIL] ui-escalation-locks (adversarial, 0.0s)
+    [eval] suite 'invariant': 81/82 = 0.988  (+4 enumerated debt, unscored)
+    escalation_locks: `server_budget()` does not declare `global _SERVER_BUDGET` — without the memo every request builds its own Budget and the ceiling is per-REQUEST, not per-deployment
+    escalation_locks: `server_budget()` returns something other than the module-level `_SERVER_BUDGET` — a fresh `Budget(...)` here is the mutation that leaves invariant and fast green while the deployment loses its only aggregate ceiling
+    escalation_locks: nothing assigns `_SERVER_BUDGET` inside `server_budget()` — the memo is never filled
+  restored; re-run exit 0: [eval] suite 'invariant': 82/82 = 1.000  (+4 enumerated debt, unscored)
+
+### N6 — R3 / the falsy set is hollowed out to the bare digit, so an operator typing `false` or `off` believes they stopped the spending.
+  mutate src/sec10k/web/app.py:
+    - DISARM_VALUES = ("0", "false", "no", "off")
+    + DISARM_VALUES = ("0",)
+  $ python3 -m evals.run --suite invariant   ; echo $? -> 1
+    [FAIL] ui-escalation-locks (adversarial, 0.0s)
+    [eval] suite 'invariant': 81/82 = 0.988  (+4 enumerated debt, unscored)
+    escalation_locks: `DISARM_VALUES` is ['0'], missing ['false', 'no', 'off'] — an operator typing one of those into the host variable would believe they had stopped the spending, and would be wrong
+  restored; re-run exit 0: [eval] suite 'invariant': 82/82 = 1.000  (+4 enumerated debt, unscored)
+
+### N7 — R3 / back to the single-literal comparison this round replaced.
+  mutate src/sec10k/web/app.py:
+    - ESCALATION_ENABLED = (os.environ.get("SEC10K_ESCALATION_ENABLED", "")
+    + ESCALATION_ENABLED = os.environ.get("SEC10K_ESCALATION_ENABLED") != "0"
+  $ python3 -m evals.run --suite invariant   ; echo $? -> 1
+    [FAIL] ui-escalation-locks (adversarial, 0.0s)
+    [eval] suite 'invariant': 81/82 = 0.988  (+4 enumerated debt, unscored)
+    escalation_locks: `ESCALATION_ENABLED` compares SEC10K_ESCALATION_ENABLED with ['NotEq'], not NotIn — escalation is on by default, so this expression is the OFF switch and any other operator breaks it
+    escalation_locks: `ESCALATION_ENABLED` is not tested against the named `DISARM_VALUES` — an inline literal is a stop button whose accepted spellings nobody can read or document
+  restored; re-run exit 0: [eval] suite 'invariant': 82/82 = 1.000  (+4 enumerated debt, unscored)
+
+### N8 — R4 / /api/meta stops publishing the arming state, which ADR-036 §h2 claims is what keeps the deployment inspectable.
+  mutate src/sec10k/web/app.py:
+    - "escalation_enabled": ESCALATION_ENABLED}
+    + }
+  $ python3 -m evals.run --suite invariant   ; echo $? -> 1
+    [FAIL] ui-boilerplate-exclusion (adversarial, 0.54s)
+    [eval] suite 'invariant': 81/82 = 0.988  (+4 enumerated debt, unscored)
+    boilerplate_plumbing: app.py: /api/meta publishes the deployment's arming state — expected exactly one `"escalation_enabled": ESCALATION_ENABLED`, found 0. If this expression changed on purpose, update its pin AND re-check that the wire still carries the checkbox's value unmodified.
+  restored; re-run exit 0: [eval] suite 'invariant': 82/82 = 1.000  (+4 enumerated debt, unscored)
+
+### N9 — R5 / EXTRACT_WINDOW raised 20x, multiplying one rung-2 call's price and voiding §h2's published ceiling.
+  mutate src/sec10k/escalate.py:
+    - EXTRACT_WINDOW = 1_250_000
+    + EXTRACT_WINDOW = 25_000_000
+  $ python3 -m evals.run --suite invariant   ; echo $? -> 1
+    [FAIL] ui-escalation-locks (adversarial, 0.01s)
+    [eval] suite 'invariant': 81/82 = 0.988  (+4 enumerated debt, unscored)
+    (RE-MEASURED after the window assertion was scoped to the REAL tree. Its
+     first revision reddened all three lock cases at 79/82, because the
+     known-bad fixtures substitute app.py and have no say over escalate.py —
+     an exact-count case must fail for its own reason. The check carries a
+     note saying so.)
+    escalation_locks: src/sec10k/escalate.py: `EXTRACT_WINDOW` is 25,000,000, outside [1,213,284, 1,500,000] — below the floor it truncates a dev filing, above the ceiling it multiplies one call's price and voids ADR-036 §h2's published MAX_USD + one call
+  $ python3 -m src.sec10k.escalate   ; echo $? -> 1
+    AssertionError: below the floor the cap truncates a dev filing; above the ceiling it multiplies one rung-2 call's price and voids ADR-036 §h2's figure
+  restored; re-run exit 0: [eval] suite 'invariant': 82/82 = 1.000  (+4 enumerated debt, unscored)
+
+
+PART 3 - THE FIX, PROVED WHERE THE FINDING LIVED
+================================================
+
+R1's own repro, re-run on the fixed tree - listing AND resolution:
+
+    /api/meta lists 'intc-2025': False
+    /api/meta lists 'xref-index-collapse': False
+    /api/meta fixture count: 42 (list_fixtures: 44)
+    POST fixture='intc-2025': HTTP 404  outbound connections 0  tiers=[]
+    POST fixture='xref-index-collapse': HTTP 404  outbound connections 0  tiers=[]
+    TOTAL outbound connections to the listener: 0
+
+    list_fixtures still returns 44: the EVAL corpus is untouched and both
+    fixtures are still eval fixtures the oracle and the bench see. Only the two
+    WEB readers shrank, and they shrank together, because _fixture_file now
+    resolves through deployed_fixtures() rather than merely sharing its
+    predicate. The refusal is the same words an unknown name gets:
+    {"code":"bad_input","message":"unknown fixture: 'intc-2025'"}
+
+Over real HTTP, same tree:
+
+    $ curl -s http://127.0.0.1:8731/api/meta
+      meta fixtures: 42 | hot names listed: []
+    $ curl -s -X POST -d '{"fixture":"intc-2025"}' .../api/extract/fixture
+      {"doc_status":"failed", ... "message":"unknown fixture: 'intc-2025'"}
+      listener hits: 0
+
+And the deep link, in a real browser, which is where the HIGH actually bit:
+
+    navigate http://127.0.0.1:8731/?fixture=xref-index-collapse&run=1
+    listener hits: 0
+
+    The page renders "No filing extracted yet." with the dropdown on its first
+    option. That is D10's own safe-degrade contract doing the work - the deep
+    link's membership guard returns before anything is assigned, and an
+    excluded fixture is simply not among the options. The two mechanisms
+    compose; neither was changed to make the other work.

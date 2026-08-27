@@ -42,6 +42,20 @@ of those 169 the round produced, and none of that diff is ever read again.
   keys never renamed. `cost_usd` is a flat `0.0` — metric 10 / ADR-020
   already established this pipeline has no paid dependency, so it is a
   reported fact, not a per-run measurement gap.
+- **Mutation-harness runs are excluded from both, and that is a DEVIATION
+  worth naming** (added 2026-08-27, PR #61 R7). A red-first or mutation
+  battery deliberately breaks the tree, runs the gate to watch it go red, and
+  restores — dozens of runs of code that was never a candidate for commit. PR
+  #58 committed those lines (109 sub-1.0 scores sit in `origin/main`'s
+  `history.jsonl`); the escalate-default-on work dropped them, and two
+  treatments of the same thing with nothing written down is the drift this ADR
+  exists to prevent. The rule from here: **a mutation battery's `history.jsonl`
+  lines and its `<ts>-<suite>.json` reports are not committed; the battery's
+  own transcript in `tasks/reviews/` is its record, and it must show the exit
+  code of every run.** `history.jsonl` is the time series of what the repo
+  actually was, and a line whose `sha` matches a tree no one could have
+  committed is noise in it. Runs of the SHIPPED tree — including the red run
+  that first proves a new case fails — ride as normal.
 - **A full report is written only when it earns its keep**: `--report`
   (new flag, explicit ask), `--suite all` (already the full-sweep suite),
   a `--dir` held-out run (unchanged from before — never traceless, per

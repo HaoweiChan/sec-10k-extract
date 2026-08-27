@@ -26,6 +26,13 @@ def _run(path, source, raw=None, exclude_boilerplate=False):
     return JSONResponse(build_view(result))
 
 
+@app.get("/api/meta")
+def api_meta():
+    # correct on purpose: PR #61 R4 pins this key, and it is not what
+    # either half of this pair is breaking
+    return {"escalation_enabled": ESCALATION_ENABLED}
+
+
 @app.post("/api/extract/fixture")
 def extract_fixture(body: dict):
     return _run(str(f), {"mode": "fixture"},

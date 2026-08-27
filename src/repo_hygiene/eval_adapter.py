@@ -26,7 +26,8 @@ from . import css_contrast
 from src.sec10k.web import anchor as web_anchor
 from src.sec10k.web import build_id
 from src.sec10k.web import capabilities as web_capabilities
-from src.sec10k.web.fixtures import fixture_file, list_fixtures
+from src.sec10k.web.fixtures import (DEPLOY_EXCLUDED, deployed_fixtures,
+                                     fixture_file, list_fixtures)
 from evals import oracle as eval_oracle
 from src.sec10k.web.view import DISPLAY_MAX, build_view
 from src.sec10k.extract import extract_items
@@ -849,10 +850,15 @@ WIRE_UI = [
      'function excludeBp(){ const c = $("#exclude-bp"); return !!(c && c.checked); }'),
     # S9 (ADR-032): the Markdown checkbox rides the same three wires; the
     # fixture/url pins moved with the body literal, deliberately
+    # Owner, 2026-08-27: the escalate flag came OFF all three wires with the
+    # control that fed it. The server decides now, so a request carrying an
+    # `escalate` key would be a client re-acquiring a say it no longer has —
+    # `ROUTING_UI_ABSENT` is what forbids that; these two only pin the two
+    # display flags that remain.
     ("the fixture mode puts the checkbox value on the wire",
-     'JSON.stringify({fixture: $("#fx").value, exclude_boilerplate: excludeBp(), markdown: renderMd(), escalate: escalateOn()})'),
+     'JSON.stringify({fixture: $("#fx").value, exclude_boilerplate: excludeBp(), markdown: renderMd()})'),
     ("the url mode puts the checkbox value on the wire",
-     'JSON.stringify({url: $("#url").value, exclude_boilerplate: excludeBp(), markdown: renderMd(), escalate: escalateOn()})'),
+     'JSON.stringify({url: $("#url").value, exclude_boilerplate: excludeBp(), markdown: renderMd()})'),
     ("the upload mode appends the checkbox value to its query string",
      '(excludeBp() ? "&exclude_boilerplate=1" : "")'),
     ("the pane SAYS it is hiding text — R5's defect was un-stripped text "
@@ -898,20 +904,29 @@ WIRE_API = [
     # it deliberately, and the wire was re-checked (see the ADR). D11 (ADR-036)
     # added the escalate flag the same way.
     #
-    # PR #58 R6 changes what this pin ASSERTS, not just how it is spelled, and
-    # that is worth reading twice. The boilerplate and Markdown flags reach
-    # `extract_items` unmodified. The escalate flag deliberately does NOT: it
-    # is ANDed with the deployment's arming switch first, so a public,
-    # unauthenticated host cannot be made to spend money by a request alone.
-    # Both halves are pinned — the gate expression and the call — because
-    # either one going missing re-opens the exposure, and because a pin that
-    # said "unmodified" here would now be pinning a lie.
-    ("_run gates escalation on the deployment's arming switch",
-     "armed = escalate and ESCALATION_ENABLED"),
-    ("_run forwards the two display flags unmodified, and the GATED escalate "
-     "flag with the process-wide budget",
+    # Owner, 2026-08-27 ("make it default on, remove the button"). PR #58 R6
+    # pinned TWO expressions here — a request-level `escalate` flag ANDed with
+    # the deployment's arming switch, and the call carrying the result. There
+    # is no request-level flag any more, so the AND is gone and one pin is
+    # left: `_run` escalates on the DEPLOYMENT's own switch and always carries
+    # the process-wide budget. The property this pin protects is unchanged and
+    # is now carried by a single expression — the two display flags reach
+    # `extract_items` unmodified, and escalation reaches it through
+    # `ESCALATION_ENABLED` and never as a constant. `escalation_locks` pins the
+    # AST half (that `ESCALATION_ENABLED` is an env comparison, and that this
+    # call site names it rather than a literal `True`); this pins the text.
+    ("_run forwards the two display flags unmodified, and escalates on the "
+     "deployment's own off-switch with the process-wide budget",
      "extract_items(path, exclude_boilerplate=exclude_boilerplate, "
-     "blocks=markdown, escalate=armed, budget=server_budget() if armed else None)"),
+     "blocks=markdown, escalate=ESCALATION_ENABLED, "
+     "budget=server_budget() if ESCALATION_ENABLED else None)"),
+    # PR #61 R4. The page stopped reading this when the control went away, and
+    # `routing_provenance`'s pin on the reader went with it — so deleting the
+    # key reddened nothing, while ADR-036 §h2 had just started claiming it is
+    # what keeps the deployment's arming state inspectable. Either the claim
+    # goes or the key is pinned; the key is one line and the claim is true.
+    ("/api/meta publishes the deployment's arming state",
+     '"escalation_enabled": ESCALATION_ENABLED'),
 ]
 
 # no trailing `\)`: `@app.post("/api/extract/x", response_model=None)` is
@@ -1339,8 +1354,12 @@ def _single_file_dirs(root):
 
 
 # both of app.py's readers of evals/fixtures/ must ask the shared rule
-META_FIXTURES = '"fixtures": list_fixtures()'      # the listing /api/meta serves
+META_FIXTURES = '"fixtures": deployed_fixtures()'  # the listing /api/meta serves
 RESOLVE_CALL = "f = fixture_file(d)"               # _fixture_file, request time
+# PR #61 R1: and request-time resolution must be the LISTING, not merely the
+# same predicate as it — an exclusion that only shrinks the menu is cosmetic
+# while the deep link and a hand-written POST still name a fixture directly.
+DEPLOY_GUARD = "if name not in deployed_fixtures():"
 
 
 def check_fixture_discovery(case):
@@ -1363,6 +1382,27 @@ def check_fixture_discovery(case):
     `input.fixtures_dirs` lists the roots to check; the default is the real
     tree plus the committed regression tree under repo_hygiene/, whose
     `two-files/` directory is the shape the three readers disagreed on.
+
+    RE-PINNED 2026-08-27 (PR #61 R1), and read this before assuming the
+    invariant weakened. D1's property was a three-way EQUALITY: single-file set
+    == list_fixtures == iter_fixtures. The deployment now refuses to serve two
+    fixtures that fire D8's trigger, so the web listing is deliberately SMALLER
+    than the eval corpus — which is exactly what D1 forbade, and is why it is
+    re-pinned rather than relaxed. The relationship asserted now:
+
+        single-file set  ==  list_fixtures  ==  iter_fixtures      (unchanged:
+            the EVAL corpus is untouched, and both excluded fixtures are still
+            eval fixtures the oracle and the bench see)
+        deployed_fixtures  ==  single-file set  -  DEPLOY_EXCLUDED (new)
+        DEPLOY_EXCLUDED    is a subset of the single-file set       (new)
+
+    The last one matters: an exclusion naming a fixture that does not exist is
+    a typo that silently protects nothing, and it is the failure this shape
+    invites. There is still ONE predicate (`fixture_file`) and now one named
+    subtraction on top of it, in one place — never a second predicate. The
+    money half — that the named set actually contains the two hot fixtures, and
+    that RESOLUTION consults it and not just the listing — is
+    `check_deployed_exclusion`.
     """
     inp = case.get("input", {})
     roots = inp.get("fixtures_dirs") or [FIXTURES,
@@ -1384,6 +1424,17 @@ def check_fixture_discovery(case):
                        f"exactly one file")
         for name in sorted(set(want) - set(yielded)):
             bad.append(f"{rel}: iter_fixtures omits fixture {name!r}")
+        # PR #61 R1. The deployed listing is the eval corpus MINUS the named
+        # exclusions — not "roughly", exactly, in both directions.
+        served, want_served = set(deployed_fixtures(root)), set(want) - DEPLOY_EXCLUDED
+        for name in sorted(served - want_served):
+            bad.append(f"{rel}: /api/meta serves {name!r}, which is either not "
+                       f"a fixture or is in DEPLOY_EXCLUDED — the deployment "
+                       f"escalates by default, so its menu is a spend surface")
+        for name in sorted(want_served - served):
+            bad.append(f"{rel}: /api/meta omits {name!r}, which is a fixture and "
+                       f"is NOT in DEPLOY_EXCLUDED — the exclusion is wider "
+                       f"than the set that names it")
         for name, path in yielded.items():
             if name in want and path != want[name]:
                 bad.append(f"{rel}: iter_fixtures yields {name!r} -> {path.name}, "
@@ -1391,6 +1442,11 @@ def check_fixture_discovery(case):
         info[rel] = {"dirs": sum(1 for d in root.iterdir() if d.is_dir()),
                      "single_file_dirs": len(want), "api_meta_listed": len(listed),
                      "iter_fixtures_yielded": len(yielded)}
+    stray = sorted(DEPLOY_EXCLUDED - set(_single_file_dirs(ROOT / FIXTURES)))
+    if stray:
+        bad.append(f"DEPLOY_EXCLUDED names {stray}, which are not fixtures at "
+                   f"all — an exclusion nobody can trip protects nothing, and "
+                   f"reads as if it did")
     api = _live((ROOT / inp.get("api_file", API_FILE)).read_text(), "py")
     n = _squash(api).count(_squash(META_FIXTURES))
     if n != 1:
@@ -1400,10 +1456,82 @@ def check_fixture_discovery(case):
     if n != 1:
         bad.append(f"app.py: _fixture_file must resolve through the shared rule — "
                    f"expected exactly one `{RESOLVE_CALL}`, found {n}")
-    if re.search(r"def\s+(_?list_fixtures|fixture_file)\b", api):
+    if re.search(r"def\s+(_?list_fixtures|deployed_fixtures|fixture_file)\b", api):
         bad.append("app.py defines its own fixture listing/predicate — there is "
                    "one rule, in src/sec10k/web/fixtures.py")
     return bad, info
+
+
+FIXTURES_MODULE = "src/sec10k/web/fixtures.py"
+
+
+def check_deployed_exclusion(case):
+    """ADR-036 §h2 / PR #61 R1. The money half of the fixture exclusion.
+
+    `fixture_discovery` pins the RELATIONSHIP (deployed = eval corpus minus
+    DEPLOY_EXCLUDED) and would stay green with an empty exclusion set. This
+    pins the three things that make the relationship worth anything:
+
+    1. the named set really contains the fixtures that fire the trigger. The
+       names come from the CASE (`input.must_exclude`), not from a second copy
+       in this file — the eval set is the spec. Deleting a name from
+       `DEPLOY_EXCLUDED` puts a one-click paid button back in the dropdown and
+       must not be a green edit.
+    2. RESOLUTION consults the listing, not merely the same predicate. This is
+       the finding's sharp edge: `?fixture=intc-2025&run=1` bills on page load
+       with no click and no upload, and `POST /api/extract/fixture` names a
+       fixture directly, so an exclusion that only shrank the menu would be
+       cosmetic. Pinned as the guard's live text in `_fixture_file`.
+    3. the set is named in ONE place. An excluded name appearing as a literal
+       in `app.py` too is a second copy that will drift, and the copy that
+       drifts is the one nobody reads.
+
+    What it does NOT prove: that the excluded fixtures are the only ones that
+    fire (that is `tasks/reviews/d11_trigger_scan.py`, re-run by hand — TD-157
+    carries deriving the set from the trigger instead of maintaining it), that
+    fastapi binds the route, or that an UPLOAD of the same document is refused.
+    It is not: upload is the deliberate act the exposure notes name, and this
+    exclusion is about what the deployment hands a passer-by.
+    """
+    inp = case.get("input", {})
+    bad = []
+    for name in inp.get("must_exclude", []):
+        if name not in DEPLOY_EXCLUDED:
+            bad.append(f"{name!r} is not in DEPLOY_EXCLUDED — it fires D8's "
+                       f"trigger, so the deployment would offer it in the "
+                       f"dropdown and bill on `?fixture={name}&run=1`")
+
+    api = _live((ROOT / inp.get("api_file", API_FILE)).read_text(), "py")
+    n = _squash(api).count(_squash(DEPLOY_GUARD))
+    if n != 1:
+        bad.append(f"app.py: request-time resolution must consult the deployed "
+                   f"listing — expected exactly one `{DEPLOY_GUARD}`, found {n}. "
+                   f"Without it an excluded name is still resolvable by the "
+                   f"deep link and by a hand-written POST.")
+    for name in sorted(DEPLOY_EXCLUDED):
+        if name in api:
+            bad.append(f"app.py names the excluded fixture {name!r} itself — "
+                       f"the set belongs in one place ({FIXTURES_MODULE})")
+
+    mod = (ROOT / inp.get("fixtures_module", FIXTURES_MODULE)).read_text()
+    assigns = [n for n in ast.parse(mod).body
+               if isinstance(n, ast.Assign)
+               and any(isinstance(t, ast.Name) and t.id == "DEPLOY_EXCLUDED"
+                       for t in n.targets)]
+    if len(assigns) != 1:
+        bad.append(f"{FIXTURES_MODULE}: expected exactly one module-level "
+                   f"`DEPLOY_EXCLUDED = ...`, found {len(assigns)}")
+    for node in assigns:
+        v = node.value
+        if not (isinstance(v, ast.Call) and isinstance(v.func, ast.Name)
+                and v.func.id == "frozenset" and len(v.args) == 1
+                and isinstance(v.args[0], ast.Set)
+                and all(isinstance(e, ast.Constant) and isinstance(e.value, str)
+                        for e in v.args[0].elts)):
+            bad.append("`DEPLOY_EXCLUDED` is not a frozenset of string literals "
+                       "— a computed or mutable set is one an import-time "
+                       "failure can silently empty")
+    return bad
 
 
 LEDGER_FILES = ["tasks/TODO.md", "evals/fixtures/README.md"]
@@ -2551,21 +2679,34 @@ ROUTING_UI = [
     ("...and the item pane shows what the deterministic path had said",
      "it.evidence && it.evidence.deterministic"),
     ("...naming the tier that replaced it", "<b>${esc(it.method)}</b>"),
-    ("the checkbox is read at request time, like every other flag",
-     'function escalateOn(){ const c = $("#escalate"); return !!(c && c.checked); }'),
-    # PR #58 R6. The owner is putting a real credential on a public,
-    # unauthenticated deployment, so the page must not offer a control the
-    # server will ignore. Three pinned expressions, one per hop: the page asks
-    # the server whether it is armed, the helper DISABLES the box rather than
-    # leaving it tickable-and-discarded, and the response's own refusal is
-    # rendered. Silently ignoring the box is the dishonesty this milestone
-    # exists to remove, so "it just does nothing" is not an acceptable state.
-    ("the page asks the server whether escalation is armed",
-     "setEscalationArmed(m.escalation_enabled !== false)"),
-    ("...and an unarmed server DISABLES the box rather than ignoring it",
-     "c.disabled = !armed;"),
-    ("...and the response's own refusal is shown",
-     "dis.hidden = !v.escalation_disarmed;"),
+]
+
+# The mirror of ROUTING_UI: expressions that must NOT be in the page at all.
+#
+# Owner decision, 2026-08-27 — "make it default on, remove the button". The
+# escalate checkbox, the helper that read it, the arming round-trip that
+# disabled it and the refusal note it printed are all gone, and the three
+# request paths no longer carry an `escalate` flag: the SERVER decides, on its
+# own off-switch (`SEC10K_ESCALATION_ENABLED=0`), and the page's only remaining
+# job is to report what the response says happened.
+#
+# Pinned as ABSENCE rather than deleted outright, because deleting them would
+# leave the property unbound in the direction it can actually rot: a control
+# creeping back — the whole assembly at once, or just a stray `&escalate=1` on
+# one wire — hands the client a say in whether the deployment spends money,
+# which is exactly what the owner removed. `escalation_disarmed` is here for
+# the same reason in the other direction: the server no longer emits it, so a
+# page still rendering it is a dead honesty note that can never fire.
+ROUTING_UI_ABSENT = [
+    ("no escalate control is offered — the server decides",
+     'id="escalate"'),
+    ("...so nothing reads a checkbox at request time", "escalateOn("),
+    ("...the fixture and url wires carry no escalate flag", "escalate:"),
+    ("...nor does the upload query string", "escalate=1"),
+    ("...the page does not ask the server whether it is armed",
+     "setEscalationArmed("),
+    ("...and renders no disarmed-refusal note the server cannot send",
+     "escalation_disarmed"),
 ]
 
 
@@ -2580,12 +2721,21 @@ def check_routing_provenance(case):
       and pane header already print as `via ...`, plus the pane's evidence row
       naming what the $0 path had said before a tier replaced it.
 
-    Plus the property that makes the whole cost argument checkable by a
-    reader: the escalate checkbox must ship UNCHECKED and not `disabled` —
-    unchecked because a paid tier must never be the default, and not disabled
-    because a wire nobody can reach is not a shipped capability. That pair is
-    exactly what `ui-boilerplate-wire-values` had to add for ADR-026's flag
-    after a mutation passed with the box permanently off.
+    Plus the property that replaced this check's original third half. It used
+    to pin that the escalate checkbox shipped UNCHECKED and not `disabled` —
+    unchecked because a paid tier must never be the default, not disabled
+    because a wire nobody can reach is not a shipped capability. The owner
+    removed the control on 2026-08-27 ("make it default on, remove the
+    button"), so there is no box to be unchecked and the deployment escalates
+    on its own switch. What is pinned instead is `ROUTING_UI_ABSENT`: no
+    control, no helper reading one, no `escalate` flag on any of the three
+    wires, no arming round-trip and no disarmed-refusal note. Same direction
+    of protection, inverted — before, the page had to offer the capability
+    honestly; now it must not re-acquire a say in whether the server spends.
+
+    Removing those pins rather than inverting them was the option NOT taken:
+    a deleted pin binds nothing, and a stray `&escalate=1` creeping back onto
+    one wire is exactly the shape that would go unnoticed.
     """
     inp = case.get("input", {})
     src = (ROOT / inp.get("file", UI_STYLESHEET)).read_text()
@@ -2596,26 +2746,13 @@ def check_routing_provenance(case):
         if n != 1:
             bad.append(f"index.html: {label} — expected exactly one "
                        f"`{expr}`, found {n}")
-    box = re.search(r'<input[^>]*id="escalate"[^>]*>', live)
-    if not box:
-        bad.append('index.html: no `id="escalate"` checkbox — the routing '
-                   "record is unreachable from the page")
-    else:
-        # bare boolean attributes, so `\b` on the tag text and NOT `_attrs`,
-        # which only sees name="value" pairs — the same detection
-        # `check_boilerplate_plumbing` uses for #exclude-bp, for the same reason
-        tag = box.group(0)
-        if re.search(r"\bchecked\b", tag):
-            bad.append("#escalate defaults to CHECKED — a paid tier must never "
-                       f"be the default: {tag}")
-        if re.search(r"\bdisabled\b", tag):
-            bad.append("#escalate is DISABLED — the wire is intact and the "
-                       f"capability is unreachable: {tag}")
-    for mode, expr in (("fixture", 'escalate: escalateOn()'),
-                       ("upload", '(escalateOn() ? "&escalate=1" : "")')):
-        if _squash(expr) not in _squash(live):
-            bad.append(f"index.html: the {mode} mode does not put the "
-                       f"checkbox on the wire — missing `{expr}`")
+    for label, expr in ROUTING_UI_ABSENT:
+        n = _squash(live).count(_squash(expr))
+        if n:
+            bad.append(f"index.html: {label} — `{expr}` occurs {n} times, "
+                       f"expected 0. The server decides whether to escalate "
+                       f"(ADR-036 §h2, owner 2026-08-27); a page that carries "
+                       f"this is taking that decision back.")
     return bad
 
 
@@ -2633,10 +2770,14 @@ def _assign(tree, name):
 def _env_get(node):
     """`os.environ.get("X" ...)` -> "X", else None. Accepts a surrounding
     `int(...)` / `float(...)` coercion, which is how the two numeric knobs
-    are written."""
+    are written, and any chain of no-argument method calls (`.strip().lower()`),
+    which is how the arming variable is normalised (PR #61 R3)."""
     if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) \
             and node.func.id in ("int", "float") and node.args:
         node = node.args[0]
+    while isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) \
+            and not node.args and not node.keywords:
+        node = node.func.value
     if isinstance(node, ast.BoolOp):          # `os.environ.get(...) or default`
         node = node.values[0]
     if not isinstance(node, ast.Call):
@@ -2654,6 +2795,18 @@ def _env_get(node):
 # Sized at ADR-036 §h2's published defaults (20 calls, $5.00) with headroom, so
 # raising a default is possible and unbounding it is not.
 DEFAULT_CEILINGS = {"SERVER_MAX_CALLS": 100, "SERVER_MAX_USD": 25.0}
+
+# PR #61 R3. The spellings an operator plausibly types to mean "stop". Not the
+# whole set the code may accept — the floor of what it MUST accept.
+DISARM_REQUIRED = {"0", "false", "no", "off"}
+
+# PR #61 R5. `escalate.EXTRACT_WINDOW` had a floor ("must not truncate any dev
+# filing", the largest committed filing at 1,213,284 chars) and no ceiling. The
+# ceiling is what stops one rung-2 call's price from being multiplied silently;
+# raising the cap past it means re-deriving ADR-036 §h2's published figure, and
+# that is exactly the friction wanted here.
+ESCALATE_MODULE = "src/sec10k/escalate.py"
+EXTRACT_WINDOW_BOUNDS = (1_213_284, 1_500_000)
 
 
 def _default_of(node):
@@ -2686,22 +2839,43 @@ def check_escalation_locks(case):
     checks over it were two `WIRE_API` source-text pins that read neither
     the constant's definition nor the budget's construction.
 
-    So this reads the SHAPE, with `ast`, not the text:
+    RE-PINNED 2026-08-27 on the owner's "make it default on, remove the
+    button". Lock 1 is INVERTED, not removed: it used to ARM paid work
+    (`== "1"`) and now DISARMS it (`!= "0"`), so the deployment escalates
+    unless the operator says stop. What this check protects is unchanged and
+    is the reason the inversion is safe to make — **the money brakes must not
+    be removable by a one-token edit** — so every assertion below is re-derived
+    for the new shape rather than dropped. The direction the semantics guard
+    moved with it: under `== "1"` the danger was an expression that read True
+    with the variable UNSET; under `!= "0"` unset means ON by design, and the
+    danger is an expression the documented off value cannot switch off.
 
-    1. `ESCALATION_ENABLED` is a comparison of `os.environ.get(<arming var>)`
-       against a constant — never a bare `True`, and never a truthiness check
-       on the credential. A key arriving must not mean "spend it".
-    2. `SEC10K_ESCALATION_MAX_CALLS` and `SEC10K_ESCALATION_MAX_USD` are each
-       read from the environment into their own module constant.
-    3. the process `Budget(...)` is constructed from those two NAMES, not from
+    It reads the SHAPE, with `ast`, not the text:
+
+    1. `ESCALATION_ENABLED` is a comparison of `os.environ.get(<off-switch
+       var>)` against a constant — never a bare `True`. A constant here is an
+       off-switch the operator does not have.
+    2. ...and the comparison is exactly `!= <off value>`, so setting
+       `SEC10K_ESCALATION_ENABLED=0` on the host really does stop the spending.
+       Any other operator or comparand leaves a switch that is documented and
+       does not work.
+    3. `SEC10K_ESCALATION_MAX_CALLS` and `SEC10K_ESCALATION_MAX_USD` are each
+       read from the environment into their own module constant, with a bounded
+       numeric default.
+    4. the process `Budget(...)` is constructed from those two NAMES, not from
        literals — which is the mutation that made the ceiling infinite.
-    4. `_run` passes that budget into `extract_items`, so the ceiling is
+    5. `_run` passes that budget into `extract_items`, so the ceiling is
        actually reached (`WIRE_API` pins the call's text; this pins that the
        budget argument is the process one and not a fresh instance).
+    6. ...and that call's `escalate=` names `ESCALATION_ENABLED` rather than a
+       literal. New in this pass, and it is what makes the inversion honest:
+       with no request flag left to AND against, `escalate=True` at the call
+       site would hard-wire paid work and leave `ESCALATION_ENABLED` sitting in
+       the file looking authoritative while nothing read it.
 
     What it does NOT prove: that fastapi binds the routes, that the deployment
-    sets either variable, or that the ceiling is the right size. It proves the
-    two locks are still WIRED, which is exactly the property that silently
+    sets any variable, or that the ceiling is the right size. It proves the
+    brakes are still WIRED, which is exactly the property that silently
     disappeared under mutation.
     """
     inp = case.get("input", {})
@@ -2715,31 +2889,58 @@ def check_escalation_locks(case):
     arm_var = inp.get("arming_var", "SEC10K_ESCALATION_ENABLED")
     armed = _assign(tree, "ESCALATION_ENABLED")
     if armed is None:
-        bad.append("no module-level `ESCALATION_ENABLED = ...` — the arming "
-                   "lock is gone entirely")
+        bad.append("no module-level `ESCALATION_ENABLED = ...` — the "
+                   "off-switch is gone entirely")
     elif not isinstance(armed, ast.Compare):
         bad.append(f"`ESCALATION_ENABLED` is {ast.dump(armed)[:60]}, not a "
-                   f"comparison against {arm_var} — a constant here arms paid "
-                   "work on a public, unauthenticated deployment")
+                   f"comparison against {arm_var} — a constant here is an "
+                   "off-switch the operator does not have, on a public, "
+                   "unauthenticated deployment that now escalates by default")
     elif _env_get(armed.left) != arm_var:
         bad.append(f"`ESCALATION_ENABLED` does not compare "
                    f"os.environ.get({arm_var!r}); left is "
                    f"{_env_get(armed.left)!r}")
     else:
-        # PR #58 R18: the SHAPE was pinned and the SEMANTICS were not, so
-        # `!= "0"` passed while evaluating True with the variable UNSET —
-        # defeating Lock 1's whole property, "a credential alone never arms
-        # paid work". The operator and the comparand are the property.
-        want = inp.get("arming_value", "1")
-        if len(armed.ops) != 1 or not isinstance(armed.ops[0], ast.Eq):
+        # PR #58 R18: the SHAPE was pinned and the SEMANTICS were not, so a
+        # one-token operator edit defeated the lock while satisfying every
+        # other assertion here. That lesson survives the 2026-08-27 inversion
+        # unchanged; only the target moved. The property now is that the
+        # DOCUMENTED off value actually disarms — `!= "0"` — so any other
+        # operator or comparand ships a stop button wired to nothing.
+        if len(armed.ops) != 1 or not isinstance(armed.ops[0], ast.NotIn):
             bad.append(f"`ESCALATION_ENABLED` compares {arm_var} with "
-                       f"{[type(o).__name__ for o in armed.ops]}, not Eq — any "
-                       "other operator arms paid work when the variable is UNSET")
+                       f"{[type(o).__name__ for o in armed.ops]}, not NotIn — "
+                       "escalation is on by default, so this expression is the "
+                       "OFF switch and any other operator breaks it")
         rhs = armed.comparators[0] if len(armed.comparators) == 1 else None
-        if not (isinstance(rhs, ast.Constant) and rhs.value == want):
-            bad.append(f"`ESCALATION_ENABLED` compares against "
-                       f"{getattr(rhs, 'value', '<non-constant>')!r}, not the "
-                       f"{want!r} ADR-036 §h2 names")
+        if not (isinstance(rhs, ast.Name) and rhs.id == "DISARM_VALUES"):
+            bad.append("`ESCALATION_ENABLED` is not tested against the named "
+                       "`DISARM_VALUES` — an inline literal is a stop button "
+                       "whose accepted spellings nobody can read or document")
+        else:
+            # PR #61 R3: the SET is the property. `!= "0"` alone left `false`,
+            # `off` and `FALSE` all ARMED, and those are what an operator types
+            # into a Zeabur variable. A stop button wired to a comparand nobody
+            # documents is worse than none — this repo's own
+            # `escalation-locks-evaded.py` makes that argument.
+            vals = _assign(tree, "DISARM_VALUES")
+            got = ([e.value for e in vals.elts
+                    if isinstance(e, ast.Constant) and isinstance(e.value, str)]
+                   if isinstance(vals, (ast.Tuple, ast.List, ast.Set)) else None)
+            want = set(inp.get("disarm_values", DISARM_REQUIRED))
+            if got is None:
+                bad.append("`DISARM_VALUES` is not a module-level literal "
+                           "tuple/list/set of strings")
+            elif not want <= set(got):
+                bad.append(f"`DISARM_VALUES` is {sorted(got)}, missing "
+                           f"{sorted(want - set(got))} — an operator typing one "
+                           f"of those into the host variable would believe they "
+                           f"had stopped the spending, and would be wrong")
+            elif any(v != v.strip().lower() for v in got):
+                bad.append(f"`DISARM_VALUES` has a member that is not already "
+                           f"stripped and lowercase ({sorted(got)}) — the "
+                           f"comparison normalises the input, so such a member "
+                           f"can never match")
 
     knobs = {"SERVER_MAX_CALLS": inp.get("calls_var", "SEC10K_ESCALATION_MAX_CALLS"),
              "SERVER_MAX_USD": inp.get("usd_var", "SEC10K_ESCALATION_MAX_USD")}
@@ -2797,6 +2998,83 @@ def check_escalation_locks(case):
             for n in ast.walk(tree)):
         bad.append("nothing calls `server_budget()` — the process budget is "
                    "constructed and never passed, so nothing is bounded")
+
+    # PR #61 R2. `server_budget()`'s MEMO is the only thing that makes the
+    # budget process-wide, and nothing read it: deleting three lines gave every
+    # request its own $5 / 20-call ceiling with invariant and fast byte-
+    # identical. This check's own docstring already claimed to pin "the process
+    # one and not a fresh instance"; now it does. Two assertions, because
+    # either alone is evadable — the function must declare the module memo
+    # `global`, and it must RETURN that name rather than a fresh construction.
+    memo = inp.get("memo_var", "_SERVER_BUDGET")
+    fn = next((n for n in tree.body if isinstance(n, ast.FunctionDef)
+               and n.name == "server_budget"), None)
+    if fn is None:
+        bad.append("no module-level `def server_budget(...)` — there is no "
+                   "process budget to be process-wide")
+    else:
+        if not any(isinstance(n, ast.Global) and memo in n.names
+                   for n in ast.walk(fn)):
+            bad.append(f"`server_budget()` does not declare `global {memo}` — "
+                       f"without the memo every request builds its own Budget "
+                       f"and the ceiling is per-REQUEST, not per-deployment")
+        rets = [n for n in ast.walk(fn) if isinstance(n, ast.Return)]
+        if not rets or not all(isinstance(r.value, ast.Name) and r.value.id == memo
+                               for r in rets):
+            bad.append(f"`server_budget()` returns something other than the "
+                       f"module-level `{memo}` — a fresh `Budget(...)` here is "
+                       f"the mutation that leaves invariant and fast green "
+                       f"while the deployment loses its only aggregate ceiling")
+        if not any(isinstance(n, ast.Assign) and n.targets and any(
+                isinstance(t, ast.Name) and t.id == memo for t in n.targets)
+                for n in ast.walk(fn)):
+            bad.append(f"nothing assigns `{memo}` inside `server_budget()` — "
+                       f"the memo is never filled")
+
+    # PR #61 R5. Lock 3's cap had a FLOOR and no ceiling, so raising it to
+    # 25,000,000 left the gate and the module self-check green while one rung-2
+    # call's price rose ~20x and §h2's published figure silently stopped being
+    # true. Read from escalate.py, because that is where the cap lives and a
+    # money brake belongs to whichever file holds it.
+    #
+    # REAL TREE ONLY. The known-bad fixtures substitute app.py and have no say
+    # over escalate.py, so asserting a second file against them adds a failure
+    # they cannot cause and breaks their exact counts — measured: the first
+    # revision of this reddened all three lock cases on one window mutation
+    # instead of the one whose file it is.
+    win_file = inp.get("window_file", None if "file" in inp else ESCALATE_MODULE)
+    lo, hi = inp.get("window_bounds", EXTRACT_WINDOW_BOUNDS)
+    win = (_assign(ast.parse((ROOT / win_file).read_text()), "EXTRACT_WINDOW")
+           if win_file else None)
+    if win_file is None:
+        pass
+    elif not (isinstance(win, ast.Constant) and isinstance(win.value, int)
+            and not isinstance(win.value, bool)):
+        bad.append(f"{win_file}: `EXTRACT_WINDOW` is not a plain integer "
+                   f"literal — the published per-call ceiling is derived from "
+                   f"it and must be readable here")
+    elif not lo <= win.value <= hi:
+        bad.append(f"{win_file}: `EXTRACT_WINDOW` is {win.value:,}, outside "
+                   f"[{lo:,}, {hi:,}] — below the floor it truncates a dev "
+                   f"filing, above the ceiling it multiplies one call's price "
+                   f"and voids ADR-036 §h2's published MAX_USD + one call")
+
+    # Owner, 2026-08-27. With no request-level flag left to AND against, the
+    # call site is where the off-switch is either honoured or quietly orphaned:
+    # `escalate=True` here hard-wires paid work and leaves `ESCALATION_ENABLED`
+    # in the file looking authoritative with nothing reading it.
+    calls = [n for n in ast.walk(tree)
+             if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+             and n.func.id == "extract_items"]
+    for c in calls:
+        v = {k.arg: k.value for k in c.keywords}.get("escalate")
+        if v is None:
+            bad.append("the `extract_items(...)` call passes no `escalate=` "
+                       "keyword — the deployment's own switch reaches nothing")
+        elif not (isinstance(v, ast.Name) and v.id == "ESCALATION_ENABLED"):
+            bad.append("`extract_items(escalate=...)` is not the constant "
+                       "ESCALATION_ENABLED — a literal here hard-wires paid "
+                       "work and orphans the operator's off-switch")
     return bad
 
 
@@ -2888,6 +3166,7 @@ CHECKS = {
     "build_identity": check_build_identity,
     "ledger_table_shape": check_ledger_table_shape,
     "fixture_discovery": check_fixture_discovery,
+    "deployed_exclusion": check_deployed_exclusion,
     "split_breakpoint": check_split_breakpoint,
     "exclusion_note": check_exclusion_note,
     "exclusion_note_trigger": check_exclusion_note_trigger,

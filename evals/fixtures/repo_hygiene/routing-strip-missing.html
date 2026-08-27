@@ -1,45 +1,60 @@
-<!-- D11 regression fixture (ADR-036 §i). Six ways the routing display goes
-     silent while every OTHER hop stays correctly wired, so the check has to
-     distinguish rather than blanket-fail.
+<!-- D11 regression fixture (ADR-036 §i). Two families of defect, so the check
+     has to distinguish rather than blanket-fail: the routing display going
+     SILENT, and the removed escalate control CREEPING BACK.
 
-       1. the escalate checkbox ships `checked`, so a paid tier is the
-          deployed default — the one shape that costs real money.
-       2. ...and `disabled` as well, the ADR-026 pair: the wire is intact and
-          the capability is unreachable. Both on one element deliberately;
-          they are independent failures of the same input.
-       3. `routingStrip` is declared and the banner never calls it, so the
+     RE-DERIVED 2026-08-27 on the owner's "make it default on, remove the
+     button". Shapes 1, 2, 6 and 7 of the previous revision pinned a checkbox
+     that no longer exists — it shipped `checked` (a paid tier as the deployed
+     default), it shipped `disabled` (a wire nobody can reach), the upload mode
+     dropped its flag, and the page never asked the server whether it was
+     armed. None of those is a defect the page can still have. They are
+     replaced by ONE shape with the same count and the opposite polarity:
+
+       1. THE CONTROL COMES BACK, whole. A `#escalate` checkbox, an
+          `escalateOn()` helper reading it, the flag on the fixture wire and on
+          the upload query string, the `/api/meta` arming round-trip, and the
+          `escalation_disarmed` note. Six failures, one per absent-pin. On a
+          public unauthenticated deployment the server is what decides whether
+          money is spent; a page carrying any of this is a client taking that
+          decision back, and the last of the six is worse than useless — the
+          server no longer emits `escalation_disarmed`, so that note can never
+          fire and reads as an honesty mechanism while being dead code.
+
+     The display half is unchanged, and is the reason the strip is the only
+     honesty this page still owes the viewer now that no control announces the
+     tier in advance:
+
+       2. `routingStrip` is declared and the banner never calls it, so the
           doc-level record exists in the envelope and appears nowhere on
           screen. This is the demo's own shape — a number computed and not
           shown — one layer up.
-       4. the strip prints each tier's outcome but not its COST, which is the
+       3. the strip prints each tier's outcome but not its COST, which is the
           undisclosed-price failure the whole milestone exists to close.
-       5. the item pane no longer says what the deterministic path had said,
-          so a model-moved span reads like any heading match.
-       6. the upload mode drops the flag from the query string, so one of the
-          three input modes can never escalate at all.
-       7. (PR #58 R6) the box is offered unconditionally: the page never asks
-          the server whether escalation is armed, never disables the control,
-          and never renders the server's own refusal. On an unarmed deployment
-          that is a tickable box whose value is silently discarded — which is
-          the dishonesty this milestone exists to remove, wearing the costume
-          of a working feature. Three pinned hops, three failures.
-
-       8. (PR #58 R17/R19) the strip has no truncation clause at all, so a
+       4. (PR #58 R17/R19) the strip has no truncation clause at all, so a
           rung that was shown a 60,000-char window of a 351,503-char filing
           reports its outcome as if it had read the whole thing. The clause
           that used to sit here said "the first N chars" about a window
           starting at offset 178,087 — a false sentence on screen, which is
           why the pin requires the RANGE and not a length.
+       5. the item pane no longer says what the deterministic path had said,
+          so a model-moved span reads like any heading match...
+       6. ...and no longer names the tier that replaced it.
+
+     Eleven failures, exact count: 6 from shape 1, one each from 2-6.
+     `function routingStrip(r)`, its `if(!r) return "";` guard and the
+     per-tier outcome are left correctly wired on purpose, so a check that
+     blanket-failed would overshoot the count rather than reach it.
 
      Caught by evals/adversarial/ui-routing-provenance-regression.json
      (expect.min_failures/max_failures). -->
-<label class="opt"><input type="checkbox" id="escalate" checked disabled> escalate on trigger</label>
+<label class="opt"><input type="checkbox" id="escalate"> escalate on trigger</label>
 <script>
 function escalateOn(){ const c = $("#escalate"); return !!(c && c.checked); }
-// shape 7: arming is never consulted; the box is always live and always sent
+function setEscalationArmed(armed){ const c = $("#escalate"); if(c) c.disabled = !armed; }
 async function boot(){
   const m = await (await fetch("/api/meta")).json();
   $("#fx").innerHTML = m.fixtures.map(f => `<option>${esc(f)}</option>`).join("");
+  setEscalationArmed(m.escalation_enabled !== false);
 }
 function routingStrip(r){
   if(!r) return "";
@@ -47,6 +62,8 @@ function routingStrip(r){
   return ` <span class="src" id="routing">routing: ${tiers}</span>`;
 }
 $("#banner").innerHTML = `doc_status: ${esc(st)}` + coverageStrip(w);
+const dis = $("#escalate-note");
+if(dis){ dis.hidden = !v.escalation_disarmed; }
 $("#pane").innerHTML = `
     <dl class="ev">
       <dt>heading matched</dt><dd>${it.heading_text ? esc(it.heading_text) : "—"}</dd>
@@ -56,6 +73,7 @@ $("#go-fx").onclick = () => call("/api/extract/fixture",
    body: JSON.stringify({fixture: $("#fx").value, escalate: escalateOn()})});
 $("#go-up").onclick = () => {
   const f = $("#up").files[0];
-  call("/api/extract/upload?filename=" + encodeURIComponent(f.name), {method:"POST", body: f});
+  call("/api/extract/upload?filename=" + encodeURIComponent(f.name) +
+       (escalateOn() ? "&escalate=1" : ""), {method:"POST", body: f});
 };
 </script>

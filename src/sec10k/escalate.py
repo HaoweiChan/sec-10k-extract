@@ -493,7 +493,12 @@ def _demo():
     #     it was handed and returns unparseable text, so no fabricated model
     #     answer ever enters the pipeline (repo rule 4) and both rungs run to
     #     completion leaving one tier record each.
-    assert EXTRACT_WINDOW >= 1_213_284, "the cap must not truncate any dev filing"
+    # PR #61 R5: a floor alone let 25,000,000 through green while one call's
+    # price rose ~20x. The ceiling is re-pinned in repo_hygiene
+    # (`EXTRACT_WINDOW_BOUNDS`) too, so the eval gate sees it and not only CI.
+    assert 1_213_284 <= EXTRACT_WINDOW <= 1_500_000, (
+        "below the floor the cap truncates a dev filing; above the ceiling it "
+        "multiplies one rung-2 call's price and voids ADR-036 §h2's figure")
     import src.sec10k.llm as _llm
     seen = []
 

@@ -149,14 +149,28 @@ Full rationale in `specs/decisions/` (18 ADRs). The ones that shaped the system:
 
 - **Deterministic first, and a model tier only on a measured trigger**
   (ADR-000/003, settled in ADR-020, **superseded 2026-08-26 by ADR-036, D11**).
-  No model is in the DEFAULT extraction path, and cost on that path is
-  structurally $0 — not "cheap", zero. ADR-036 adds an opt-in slow path
+  No model is in the DEFAULT extraction path of the LIBRARY, and cost on that
+  path is structurally $0 — not "cheap", zero. ADR-036 adds a slow path
   (`extract_items(path, escalate=True)`, via OpenRouter) that is entered only when D8's
   document-level `low_item_coverage` fires — measured on **0 of 28 real dev
-  filings**, so the default stays free — and whose answers are discarded unless
+  filings** — and whose answers are discarded unless
   a deterministic re-check accepts their offsets. With no API credential it
-  refuses loudly rather than degrading, and as of this commit no live call has
-  ever been made: the held-out exam is UNRUN (ADR-036 §k). The paragraph below
+  refuses loudly rather than degrading.
+  `extract_items(path)` keeps `escalate=False`, which is what keeps the eval
+  gate and CI at $0 and offline. **The DEPLOYED inspector is different since
+  2026-08-27** (owner: "make it default on, remove the button"): it escalates
+  on every request, there is no checkbox and no request-level flag, and the
+  operator's only switch is the host variable `SEC10K_ESCALATION_ENABLED`, set
+  to any of `0`, `false`, `no`, `off` (stripped and case-insensitive; unset or
+  empty means ON). It has no auth and no rate limit, so any caller can trigger
+  paid work with one **upload** — bounded by the process-wide budget (which a
+  redeploy refills) and, really, by the credit limit on the API key. Upload is
+  the only route because the two committed fixtures that fire the trigger are
+  excluded from the deployment's listing *and* from its request-time
+  resolution (`fixtures.DEPLOY_EXCLUDED`); until PR #61 they were not, and one
+  click — or a `?fixture=…&run=1` link, with no click at all — was enough. The routing strip reports what
+  each request's tiers did and cost. ADR-036 §h2 states this rather than
+  softening it. The paragraph below
   is the 2026-08-19 ruling it supersedes, kept because its reasoning about
   *precision* failures is unchanged and still governs.
 - **Deterministic first, LLM ruled out** (ADR-000/003, settled in ADR-020). No
