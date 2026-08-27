@@ -12,7 +12,10 @@ asserted to actually move. That movement IS the claim TD-145 makes.
 
 For each of the two view modes (plain `pre.text`, Markdown `div.text.md`):
   1. deep-link `?fixture=aapl-2025&run=1`, open Item 1A (long text — the
-     R7 evidence names its 68,162 characters).
+     R7 evidence names its 68,162 characters; the pane renders the
+     TRUNCATED first 40,000 of them (`text_chars` in the artifact), which
+     still overflows the box, so the scroll assertion is non-vacuous —
+     PR #62 R1).
   2. the region named for the item is found via `get_by_role("region",
      name=...)` — the ARIA engine, never a CSS selector on the attribute.
   3. `tabindex` is "0" in the LIVE DOM, and pressing Tab from the focus
