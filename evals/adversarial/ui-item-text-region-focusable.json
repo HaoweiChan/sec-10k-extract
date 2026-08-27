@@ -1,0 +1,26 @@
+{
+  "id": "ui-item-text-region-focusable",
+  "task": "repo_hygiene",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "item_text_region"
+    ],
+    "role": "region",
+    "tabindex": "0",
+    "containers": [
+      "text",
+      "text md"
+    ],
+    "label_must_interpolate": "${esc(it.item)}"
+  },
+  "expect": {},
+  "triage": {
+    "class": "no-mechanical-check",
+    "note": "D14, TD-145 promoted — the ARIA APG scrollable-region-focusable pattern. PR #55 R7's evidence: D10 gave the two item-text containers `role=\"region\"` without `tabindex=\"0\"`, so the page advertises named regions that a keyboard-only user is told exist but cannot scroll on engines lacking auto-focusable scroll containers (mitigated on Chrome 127+/current Firefox, not elsewhere; concrete state: aapl-2025 Item 1A renders 68,162 characters into a fixed-height `overflow:auto` box with no focusable descendants). This case extends `check_item_text_region` with a `tabindex` requirement: each pinned container's `tabindex` attribute must equal the input's value. Red pre-fix, observed 2026-08-28 against the file before `tabindex=\"0\"` was added, two failures: `class=\"text md\": tabindex is None, want '0' — a named scrollable region without it is unreachable by keyboard on engines lacking auto-focusable scroll containers` and `class=\"text\": tabindex is None, want '0' — a named scrollable region without it is unreachable by keyboard on engines lacking auto-focusable scroll containers`. Green once both containers carry `tabindex=\"0\"` alongside the role and interpolating label the base `ui-item-text-region` case pins. BOTH containers are pinned deliberately — the same slot in two view modes (ADR-032), so fixing only the `<pre>` would let Markdown mode silently keep the gap. The live keyboard half (Tab reaches the region, ArrowDown/PageDown actually move scrollTop) is asserted by `tasks/reviews/d14_keyboard_walk.py`, since a source attribute and a focusable scrolling element are not the same claim."
+  },
+  "provenance": "D14 (TD-145 promoted), created 2026-08-28 before the tabindex fix, per hard rule 2. The two failure lines quoted above were pasted verbatim from a pre-fix `run_case` run observed 2026-08-28; the same red also failed the invariant suite (80/82) with `[FAIL] ui-item-text-region-focusable` and `[FAIL] ui-item-text-region`, the latter because the base case now carries the same `tabindex` pin per TD-145's acceptance. Narrative: `tasks/reviews/pr55-r1.json` R7, routed to debt as TD-145 and promoted 2026-08-28."
+}

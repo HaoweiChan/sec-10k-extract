@@ -859,12 +859,13 @@ WIRE_UI = [
      "under this label, and the inverse, a silent strip, is the same lie",
      '(VIEW.boilerplate_excluded ? "boilerplate hidden · " : "")'),
     # D10 moved this pin: the same render now carries role=region + an
-    # item-naming aria-label (ui-item-text-region). Re-checked per the pin's
+    # item-naming aria-label (ui-item-text-region). D14 moved it again:
+    # tabindex="0" (ui-item-text-region-focusable). Re-checked per the pin's
     # own failure message — the STRIPPED string is still what is rendered,
     # `display_text ?? text` unmodified, and the new attributes are display
     # metadata that touch neither end of the wire.
     ("the extracted-item pane renders the STRIPPED string",
-     '<pre class="text" role="region" aria-label="Item ${esc(it.item)} extracted text">'
+     '<pre class="text" role="region" tabindex="0" aria-label="Item ${esc(it.item)} extracted text">'
      '${esc(it.display_text ?? it.text)}</pre>'),
     ("the truncation notice counts the STRIPPED string",
      '${(it.display_text ?? it.text).length.toLocaleString()}'),
@@ -2318,6 +2319,7 @@ def check_item_text_region(case):
     text = _live((ROOT / inp.get("file", UI_STYLESHEET)).read_text(), "js")
     want_expr = inp.get("label_must_interpolate", "${esc(it.item)}")
     want_role = inp.get("role", "region")
+    want_tab = inp.get("tabindex")  # D14: ARIA APG scrollable-region pattern
     found, bad = {}, []
     for tag in re.findall(r'<(?:pre|div)[^>]*\bclass="text[^"]*"[^>]*>', text):
         attrs = _attrs(tag)
@@ -2326,6 +2328,11 @@ def check_item_text_region(case):
         if attrs.get("role") != want_role:
             bad.append(f'class="{key}": role is {attrs.get("role")!r}, '
                        f"want {want_role!r}")
+        if want_tab is not None and attrs.get("tabindex") != want_tab:
+            bad.append(f'class="{key}": tabindex is {attrs.get("tabindex")!r}, '
+                       f"want {want_tab!r} — a named scrollable region without "
+                       f"it is unreachable by keyboard on engines lacking "
+                       f"auto-focusable scroll containers")
         name = _named(attrs, text)
         if not name:
             bad.append(f'class="{key}": no accessible name naming the item — '
