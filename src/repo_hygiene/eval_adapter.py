@@ -1626,6 +1626,22 @@ def check_deployed_exclusion(case):
     return bad
 
 
+# PR #61 R21. Where the trigger census is PUBLISHED, and the shape it is
+# published in. `src/repo_hygiene/eval_adapter.py` is deliberately absent: its
+# one "18 of 43 dev documents" is a different statistic (rung 1's window
+# offset, PR #58 R17) that this sweep does not re-derive, and pinning a
+# denominator whose numerator nothing here can check would be the vacuity this
+# whole PR is about. Recorded rather than silently skipped.
+CENSUS_FILES = ["src/sec10k/extract.py", "src/sec10k/escalate.py", "README.md",
+                "docs/architecture/overview.md",
+                "specs/decisions/ADR-036-tiered-escalation.md"]
+# `\s+`, not " ": the sentence these figures live in wraps, and the first
+# revision of this pin missed `"42 of 43\n    dev fixtures"` — the exact
+# line R21 found — because a newline sat where it wanted a space.
+CENSUS_RE = re.compile(r"(\d+)\s+of\s+(?:the\s+)?(\d+)\s+(dev|real)\b")
+TRIGGER_SCAN = "tasks/reviews/d11_trigger_scan.py"
+
+
 def check_deployed_exclusion_derived(case):
     """PR #61 R15 / TD-160. `DEPLOY_EXCLUDED` must EQUAL the set of fixtures
     that actually fire the trigger — re-derived here, not maintained by hand.
@@ -1659,12 +1675,13 @@ def check_deployed_exclusion_derived(case):
     inp = case.get("input", {})
     root = ROOT / inp.get("fixtures_dir", FIXTURES)
     code = inp.get("trigger", "low_item_coverage")
-    fires, scanned = set(), 0
+    fires, names = set(), []
     for name, path in sorted(_single_file_dirs(root).items()):
-        scanned += 1
+        names.append(name)
         r = extract_items(str(path))
         if any(w.get("code") == code for w in r.get("warnings", [])):
             fires.add(name)
+    scanned = len(names)
     bad = []
     if scanned < inp.get("min_scanned", 40):
         bad.append(f"only {scanned} fixtures scanned — a sweep that sees "
@@ -1678,8 +1695,42 @@ def check_deployed_exclusion_derived(case):
         bad.append(f"{name!r} is in DEPLOY_EXCLUDED but does not fire {code} — "
                    f"a demo entry withheld for no reason, and an exclusion "
                    f"nobody can trip protects nothing while reading as if it did")
+
+    # PR #61 R21. The same defect class as R16, on the census instead of a
+    # dollar figure: `extract.py`'s public docstring still said the trigger
+    # stays quiet on "42 of 43 dev fixtures, every real EDGAR filing in the
+    # set" after the corpus grew to 44 and the real-filing rate stopped being
+    # zero — eight lines below a header the SAME commit corrected. Restating a
+    # measurement in six files makes five of them free to rot.
+    #
+    # This sweep already knows the true denominators, so binding them costs a
+    # regex. The SYNTHETIC roster comes from `d11_trigger_scan.py`, which is
+    # the source of record for the dev/real split (`evals/fixtures/README.md`
+    # is its provenance) — importing it beats a second copy that can disagree.
+    # ponytail: DENOMINATORS only. The numerators are claims about different
+    # statistics per site (fires, stays quiet, refuses before any item) and
+    # pinning each would mean re-deriving each; the corpus size is the part
+    # that goes stale for everyone at once, which is what happened.
+    spec = importlib.util.spec_from_file_location(
+        "d11_scan", ROOT / inp.get("scan_script", TRIGGER_SCAN))
+    scan_mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(scan_mod)
+    want = {"dev": scanned,
+            "real": sum(1 for n in names if n not in scan_mod.SYNTHETIC)}
+    for rel in inp.get("census_files", CENSUS_FILES):
+        for m in CENSUS_RE.finditer((ROOT / rel).read_text()):
+            n, denom, kind = int(m.group(1)), int(m.group(2)), m.group(3)
+            if denom != want[kind]:
+                bad.append(f"{rel}: publishes '{m.group(0)}' — the {kind} "
+                           f"corpus is {want[kind]}, not {denom}. A census "
+                           f"restated in {len(CENSUS_FILES)} files rots in "
+                           f"{len(CENSUS_FILES) - 1} of them.")
+            elif n > denom:
+                bad.append(f"{rel}: publishes '{m.group(0)}', a count larger "
+                           f"than the corpus it is out of")
     return bad, {"deployed_exclusion_scanned": scanned,
-                 "deployed_exclusion_fires": sorted(fires)}
+                 "deployed_exclusion_fires": sorted(fires),
+                 "census_corpus": want}
 
 
 LEDGER_FILES = ["tasks/TODO.md", "evals/fixtures/README.md"]
@@ -3454,8 +3505,10 @@ def check_escalation_door(case):
             # row the `MIN_TOKEN_CHARS` floor is unbound: deleting the length
             # test left every other row passing, because a mismatched token
             # fails the compare anyway. Found by mutation N3 in
-            # tasks/reviews/pr61-r2-red.txt — the battery's one green, fixed
-            # here rather than written up as a limitation.
+            # tasks/reviews/pr61-r2-red.txt PART 2 — the battery's one green,
+            # fixed here rather than written up as a limitation. That edit
+            # (N3a) reds today because this row exists; the green run is a
+            # fact about a check that no longer ships and the artifact says so.
             (("abc", True, "abc"), False),
             ((None, True, good), False),        # no header
             (("", True, good), False),          # empty header
@@ -3488,6 +3541,50 @@ def check_escalation_door(case):
                            f"is told nothing assumes the tier ran")
             elif not got and configured and configured in (why or ""):
                 bad.append("the refusal reason contains the secret itself")
+
+        # PR #61 R18. Every row above passes `token=` — and NOTHING in
+        # production does. `app.py` calls `gate.paid_path_open(header,
+        # ESCALATION_ENABLED)` with two positional arguments, so
+        # `configured_token() if token is None else …` is the ONLY branch a
+        # request ever takes, and it was exercised by no row and no `_demo`
+        # assertion. Measured on the reviewer's mutation: a three-line
+        # `if token is None: return True, …` there bills every anonymous
+        # request on an UNCONFIGURED deployment, with `gate.py`'s self-check at
+        # exit 0 and the suite score identical to clean. That is the
+        # UNSET-IS-CLOSED property `gate.py`, ADR-036 §h2, README and this
+        # case's own triage all name as the one that matters.
+        #
+        # So these rows call the door EXACTLY as `_run` does — no `token=` — and
+        # move the secret in the environment instead.
+        for env_secret, presented, want in ((None, good, False),
+                                            (None, None, False),
+                                            ("", good, False),
+                                            (good, None, False),
+                                            (good, good, True)):
+            with _patched_env(**{gate.TOKEN_VAR: env_secret}):
+                try:
+                    got, why = gate.paid_path_open(presented, True)
+                except Exception as e:
+                    bad.append(f"gate.paid_path_open(presented, armed) — the "
+                               f"production call, no token= — raised "
+                               f"{type(e).__name__}: {e}")
+                    continue
+                ref = gate.paid_path_open(presented, True,
+                                          token=env_secret or "")
+            if bool(got) is not want:
+                bad.append(
+                    f"the PRODUCTION call gate.paid_path_open(header, armed) "
+                    f"with {gate.TOKEN_VAR}={env_secret!r} and header="
+                    f"{'set' if presented else presented!r} is {got!r}, want "
+                    f"{want!r}" + ("" if env_secret else
+                                   " — an UNCONFIGURED deployment must be "
+                                   "closed to everyone; this is the one branch "
+                                   "app.py takes and no `token=` row reaches"))
+            elif bool(got) is not bool(ref[0]):
+                bad.append(f"gate.paid_path_open reads {gate.TOKEN_VAR} "
+                           f"differently from an explicit `token=` of the same "
+                           f"value ({got!r} vs {ref[0]!r}) — the table above "
+                           f"then proves nothing about the production path")
         with _patched_env(**{gate.TOKEN_VAR: "  " + good + "  "}):
             if gate.configured_token() != good:
                 bad.append(f"gate.configured_token() does not read "
@@ -3527,6 +3624,60 @@ def check_escalation_door(case):
     elif not any(a.arg == "request" for a in run_fn.args.args):
         bad.append(f"{api_file}: `{runner}` takes no `request`, so the door "
                    f"has no header to read and cannot be reached from any mode")
+
+    # PR #61 R19. The call's SHAPE was pinned and its ARGUMENTS were not, so
+    # both operands could be swapped for money-spending values with invariant
+    # and fast byte-identical to clean. Measured by the reviewer:
+    #   arg 0 -> `request.headers.get(gate.HEADER, gate.configured_token())`:
+    #            an anonymous request with NO header is handed the secret as
+    #            the default and gets in, and the envelope then reads "a valid
+    #            x-escalation-token header was presented", which is a lie the
+    #            viewer has no way to check.
+    #   arg 1 -> `True`: the operator's runaway stop is defeated while
+    #            /api/meta still publishes `escalation_enabled: false`.
+    # Both are one-token edits on the line the rest of this check certifies.
+    off_const = inp.get("off_switch", "ESCALATION_ENABLED")
+    for c in door[:1]:
+        if len(c.args) < 2:
+            bad.append(f"{api_file}: the door is called with {len(c.args)} "
+                       f"positional argument(s); it takes the request's header "
+                       f"and the deployment's off-switch, in that order")
+            continue
+        gets = [n for n in ast.walk(c.args[0])
+                if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+                and n.func.attr == "get"
+                and isinstance(n.func.value, ast.Attribute)
+                and n.func.value.attr == "headers"]
+        if len(gets) != 1:
+            bad.append(f"{api_file}: the door's first argument makes "
+                       f"{len(gets)} read(s) of `<request>.headers.get(...)` — "
+                       f"the presented token must come from the REQUEST and "
+                       f"from nowhere else")
+        for g in gets:
+            obj = g.func.value.value
+            if not (isinstance(obj, ast.Name) and obj.id == "request"):
+                bad.append(f"{api_file}: the door's header read is not off the "
+                           f"`request` parameter — a header taken from anywhere "
+                           f"else is not the caller's")
+            if len(g.args) != 1 or g.keywords:
+                bad.append(f"{api_file}: `headers.get(...)` is called with "
+                           f"{len(g.args)} argument(s) — a DEFAULT here is the "
+                           f"exploit: a request that sent no header is handed "
+                           f"one, gets in, and is told a valid header was "
+                           f"presented")
+            elif not ((isinstance(g.args[0], ast.Attribute)
+                       and g.args[0].attr == "HEADER")
+                      or (isinstance(g.args[0], ast.Name)
+                          and g.args[0].id == "HEADER")):
+                bad.append(f"{api_file}: the door reads a header name that is "
+                           f"not `gate.HEADER` — the module that decides and "
+                           f"the module that reads must name the same header")
+        off = c.args[1]
+        if not (isinstance(off, ast.Name) and off.id == off_const):
+            bad.append(f"{api_file}: the door's second argument is "
+                       f"{ast.dump(off)[:40]}, not the module constant "
+                       f"`{off_const}` — a literal here defeats the operator's "
+                       f"runaway stop while /api/meta goes on publishing it")
 
     # the name the door's verdict is bound to, and the two places it must land
     verdict = None

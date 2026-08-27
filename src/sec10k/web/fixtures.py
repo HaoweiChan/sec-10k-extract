@@ -53,10 +53,19 @@ def list_fixtures(root: Path = FIXTURES):
 # `fixture-discovery` pins that relationship (deployed = single-file set minus
 # this set) instead of the old plain equality.
 #
-# ponytail: a hand-maintained set, not a coverage scan at import time. Adding a
-# collapsing fixture and forgetting this list re-opens the hole; the upgrade
-# path is to derive it from the trigger, which costs a full extraction sweep
-# per process start — TD-160 carries that, with the scan as the stopgap.
+# Hand-maintained HERE and derived in the GATE (PR #61 R15, which closed
+# TD-160). `evals/adversarial/deployed-exclusion-derived.json` sweeps every
+# fixture through `extract_items` and asserts this set EQUALS the set that
+# fires `low_item_coverage`, in both directions — so adding a collapsing
+# fixture and forgetting this list reds the `fast` suite instead of silently
+# re-opening the hole. It is in `fast` and not `invariant` because the sweep
+# costs ~4.6s and the PostToolUse hook runs `invariant` on every edit.
+# ponytail: nothing derives this at RUNTIME, so the listing path stays pure
+# stdlib and takes no dependency on the extractor. Surviving residue: a tree
+# edited and deployed WITHOUT running the gate would still ship a stale set.
+# Acceptable since TD-158's door, which makes this the second layer rather
+# than the brake; the upgrade path if that ever changes is an import-time
+# derivation, at the cost of a full sweep per process start.
 DEPLOY_EXCLUDED = frozenset({"intc-2025", "xref-index-collapse"})
 
 

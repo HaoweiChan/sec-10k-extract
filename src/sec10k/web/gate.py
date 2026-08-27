@@ -119,6 +119,23 @@ def _demo():
     # HEADER is what app.py reads off the request; keep it lower-case so the
     # ASGI header mapping and a hand-written curl agree
     assert HEADER == HEADER.lower() and MIN_TOKEN_CHARS >= 16
+
+    # PR #61 R18. Everything above passes `token=`, and NOTHING in production
+    # does — `app.py` calls `paid_path_open(header, ESCALATION_ENABLED)`, so
+    # the `token is None` branch was the only one a request ever took and the
+    # only one nothing exercised. These four call it the way `_run` does.
+    old = os.environ.get(TOKEN_VAR)
+    try:
+        os.environ.pop(TOKEN_VAR, None)
+        assert paid_path_open(good, True)[0] is False   # UNSET IS CLOSED
+        assert paid_path_open(None, True)[0] is False
+        os.environ[TOKEN_VAR] = good
+        assert paid_path_open(good, True)[0] is True
+        assert paid_path_open(None, True)[0] is False
+    finally:
+        os.environ.pop(TOKEN_VAR, None)
+        if old is not None:
+            os.environ[TOKEN_VAR] = old
     print("gate: ok")
 
 

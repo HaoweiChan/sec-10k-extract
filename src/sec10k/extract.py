@@ -157,10 +157,13 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
     flags above this one is NOT a pure annotation: when the trigger fires AND a
     tier's answer survives `escalate.verify`, the resolved items' spans,
     `method` and `heading_text` move, with the deterministic answer preserved
-    under `evidence.deterministic`. When the trigger does NOT fire — 42 of 43
-    dev fixtures, every real EDGAR filing in the set — nothing moves, nothing
-    is spent, and the only difference from a default run is the presence of the
-    `routing` key itself.
+    under `evidence.deterministic`. When the trigger does NOT fire — 42 of 44
+    dev fixtures, and 28 of the 29 real EDGAR filings among them — nothing
+    moves, nothing is spent, and the only difference from a default run is the
+    presence of the `routing` key itself. The exception is `intc-2025`, the
+    collapsed real filing the live exam burned to the dev side: this line said
+    "every real EDGAR filing in the set" until 2026-08-28 (PR #61 R21), eight
+    lines below a module header the same commit had already corrected.
 
     THE SLOW PATH REFUSES RATHER THAN DEGRADES. With no `OPENROUTER_API_KEY` in
     the environment, or with a spent `budget`, a fired trigger produces a
