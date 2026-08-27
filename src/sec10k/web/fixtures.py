@@ -56,7 +56,7 @@ def list_fixtures(root: Path = FIXTURES):
 # ponytail: a hand-maintained set, not a coverage scan at import time. Adding a
 # collapsing fixture and forgetting this list re-opens the hole; the upgrade
 # path is to derive it from the trigger, which costs a full extraction sweep
-# per process start — TD-157 carries that, with the scan as the stopgap.
+# per process start — TD-160 carries that, with the scan as the stopgap.
 DEPLOY_EXCLUDED = frozenset({"intc-2025", "xref-index-collapse"})
 
 

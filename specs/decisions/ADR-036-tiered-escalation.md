@@ -690,7 +690,7 @@ for a new-transport request.
 > have to know the feature exists. **The real remaining brake is the credit
 > limit on the OpenRouter key itself** — it is the only ceiling that survives
 > a redeploy, and it should be set as if it were the only one, because it very
-> nearly is. Auth or a rate limit is the fix and is a debt row (`TD-155`); the
+> nearly is. Auth or a rate limit is the fix and is a debt row (`TD-158`); the
 > owner accepted this exposure knowingly on 2026-08-27.
 
 PR #58 R6 and R12, and the reason they were repaired rather than disclosed: the owner is

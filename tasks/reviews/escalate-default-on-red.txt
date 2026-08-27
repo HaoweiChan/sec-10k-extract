@@ -185,7 +185,7 @@ red. The four checks were live over exactly the code that changed.
   deliberately-broken CHECK fixtures this branch re-derived — source files for
   the wire checks, not 10-K filings — which `snapshot.py` extracts because
   `corpus()` walks every subdirectory of `evals/fixtures` and skips only
-  `.md`. That is an instrument defect, not a result: logged as TD-156.
+  `.md`. That is an instrument defect, not a result: logged as TD-159.
   Neither tree's `evals/heldout/` was read, run or copied — the comparison
   trees carry `src`, `evals/fixtures` and `evals/snapshot.py` and nothing else,
   so `corpus(root, "evals/heldout/fixtures")` returns {} on both (0 files,

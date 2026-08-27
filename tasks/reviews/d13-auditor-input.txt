@@ -1,0 +1,83 @@
+Each block below is one item as the pipeline published it, with the item's span text verbatim.
+
+========================================================================
+FILING cvx-2015  (filing.htm)   ITEM 2
+  document: doc_status=success_with_warning  meta.coverage=0.2718  normalized chars=417517  chars inside some item span=113501
+  document warnings (code, item): [('unattributed_content', None), ('item_span_near_empty', '7'), ('item_span_near_empty', '8')]
+  item: status=extracted  confidence=0.95  review_required=False  method=heading_strict
+  item span: [107079,107613) = 534 chars
+  span text VERBATIM:
+'Item 2. Properties\n\nThe location and character of the company’s crude oil and natural gas properties and its refining, marketing, transportation and chemicals facilities are described on page 3 under Item 1. Business. Information required by Subpart 1200 of Regulation S-K (“Disclosure by Registrants Engaged in Oil and Gas Producing Activities”) is also contained in Item 1 and in Tables I through VII on pages FS-61 through FS-71. Note 16, “Properties, Plant and Equipment,” to the company’s financial statements is on page FS-41.\n\n'
+
+========================================================================
+FILING cvx-2015  (filing.htm)   ITEM 6
+  document: doc_status=success_with_warning  meta.coverage=0.2718  normalized chars=417517  chars inside some item span=113501
+  document warnings (code, item): [('unattributed_content', None), ('item_span_near_empty', '7'), ('item_span_near_empty', '8')]
+  item: status=extracted  confidence=0.95  review_required=False  method=heading_strict
+  item span: [112301,112420) = 119 chars
+  span text VERBATIM:
+'Item 6. Selected Financial Data\n\nThe selected financial data for years 2011 through 2015 are presented on page FS-60.\n\n'
+
+========================================================================
+FILING cvx-2015  (filing.htm)   ITEM 7A
+  document: doc_status=success_with_warning  meta.coverage=0.2718  normalized chars=417517  chars inside some item span=113501
+  document warnings (code, item): [('unattributed_content', None), ('item_span_near_empty', '7'), ('item_span_near_empty', '8')]
+  item: status=extracted  confidence=0.95  review_required=False  method=heading_strict
+  item span: [112700,113153) = 453 chars
+  span text VERBATIM:
+'Item 7A. Quantitative and Qualitative Disclosures About Market Risk\n\nThe company’s discussion of interest rate, foreign currency and commodity price market risk is contained in Management’s Discussion and Analysis of Financial Condition and Results of Operations — “Financial and Derivative Instrument Market Risk,” on page FS-15 and in Note 10 to the Consolidated Financial Statements, “Financial and Derivative Instruments,” beginning on page FS-35.\n\n'
+
+========================================================================
+FILING cvx-2015  (filing.htm)   ITEM 8
+  document: doc_status=success_with_warning  meta.coverage=0.2718  normalized chars=417517  chars inside some item span=113501
+  document warnings (code, item): [('unattributed_content', None), ('item_span_near_empty', '7'), ('item_span_near_empty', '8')]
+  item: status=extracted  confidence=0.8  review_required=True  method=heading_strict
+  item span: [113153,113342) = 189 chars
+  span text VERBATIM:
+'Item 8. Financial Statements and Supplementary Data\n\nThe index to Management’s Discussion and Analysis, Consolidated Financial Statements and Supplementary Data is presented on page FS-1.\n\n'
+
+========================================================================
+FILING bac-2006  (filing.htm)   ITEM 3
+  document: doc_status=success  meta.coverage=0.9285  normalized chars=705848  chars inside some item span=655376
+  document warnings (code, item): []
+  item: status=extracted  confidence=0.95  review_required=False  method=heading_strict
+  item span: [47045,47274) = 229 chars
+  span text VERBATIM:
+'Item 3. LEGAL PROCEEDINGS\n\nSee “Litigation and Regulatory Matters” in Note 13 of the Consolidated Financial Statements beginning on page 137 for Bank of America’s litigation disclosure which is incorporated herein by reference.\n\n'
+
+========================================================================
+FILING bac-2006  (filing.htm)   ITEM 6
+  document: doc_status=success  meta.coverage=0.9285  normalized chars=705848  chars inside some item span=655376
+  document warnings (code, item): []
+  item: status=extracted  confidence=0.95  review_required=False  method=heading_strict
+  item span: [54146,54348) = 202 chars
+  span text VERBATIM:
+'Item 6. Selected Financial Data\n\nSee Table 5 in the MD&A on page 21 and Table XII of the Statistical Financial Information on page 95 which are incorporated herein by reference.\n\n10\n\nTable of Contents\n\n'
+
+========================================================================
+FILING spatz-2014  (filing.htm)   ITEM 8
+  document: doc_status=success_with_warning  meta.coverage=0.6632  normalized chars=65197  chars inside some item span=43237
+  document warnings (code, item): [('unattributed_content', None), ('item_span_near_empty', '8')]
+  item: status=extracted  confidence=0.8  review_required=True  method=heading_strict
+  item span: [30680,30921) = 241 chars
+  span text VERBATIM:
+"Item 8.\n\nFinancial Statements and Supplementing Data\n\nThe financial statements of the Company and the related report of the Company's independent registered public accounting firm thereon are included in this report on pages 15 through 22.\n\n"
+
+========================================================================
+FILING jpm-2024  (filing.htm)   ITEM 7
+  document: doc_status=ambiguous  meta.coverage=0.9931  normalized chars=1213284  chars inside some item span=1204938
+  document warnings (code, item): [('last_item_dominates', '15'), ('item_span_near_empty', '7'), ('item_span_near_empty', '8')]
+  item: status=extracted  confidence=0.75  review_required=True  method=heading_strict
+  item span: [189096,189494) = 398 chars
+  span text VERBATIM:
+'Item 7. Management’s Discussion and Analysis of Financial Condition and Results of Operations.\n\nManagement’s discussion and analysis of financial condition and results of operations, entitled “Management’s discussion and analysis,” appears on pages 52–167. Such information should be read in conjunction with the Consolidated Financial Statements and Notes thereto, which appear on pages 172–321.\n\n'
+
+========================================================================
+FILING mrk-1995  (filing.txt)   ITEM 5
+  document: doc_status=success_with_warning  meta.coverage=0.7593  normalized chars=81842  chars inside some item span=62142
+  document warnings (code, item): [('item_span_near_empty', '7'), ('item_span_near_empty', '8')]
+  item: status=extracted  confidence=0.95  review_required=False  method=heading_strict
+  item span: [61944,62175) = 231 chars
+  span text VERBATIM:
+"ITEM 5.  MARKET FOR THE REGISTRANT'S COMMON EQUITY AND RELATED STOCKHOLDER\nMATTERS.\n\n     The information required for this item is incorporated by reference to\npages 37 and 51 of the Company's 1995 Annual Report to stockholders.\n\n"
+

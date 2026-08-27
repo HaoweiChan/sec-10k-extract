@@ -63,7 +63,7 @@ place with a dated owner note.
   "spent" is a state a push undoes. The real remaining brake is the credit
   limit on the OpenRouter key itself. That paragraph is in ADR-036 §h2, in the
   D11 ledger row, in `README.md` and in `app.py`'s own header comment, and it
-  is a P1 debt row (`TD-155`) rather than a caveat. The owner accepted it
+  is a P1 debt row (`TD-158`) rather than a caveat. The owner accepted it
   knowingly; the record says so in those words.
 
 ## The review round that followed, and the one thing it changed my mind about

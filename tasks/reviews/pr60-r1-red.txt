@@ -1,0 +1,177 @@
+# PR #60 round 1 — repros captured RED before any fix
+# tree: 4311fb1 (D13 commit 3ed9003 + the review artifact)
+# Every block below runs against the COMMITTED tree and shows the finding true.
+
+################################################################ R1 (MEDIUM, repair)
+## claim: ADR-038 §c1 names FS-index lines as the pointed-at CONTENT.
+--- what the ADR says today:
+  142:prose referring to the tables) and **1 outside every span**, at 127,268: the
+  160:127,200, in the 294,291-char tail. The selected financial data are in no
+  532:  (match at 127,200, outside every span); the auditor used
+--- what is actually at those offsets (orchestrator-verified, reproduced):
+  [127172:127205] = 'Five-Year Financial Summary FS-60'
+  [127207:127268] = 'Supplemental Information on Oil and Gas Producing Activities '
+  [363489:363530] = 'Five-Year Financial Summary\n\nUnaudited\n\nM'
+  [366212:366260] = 'Table I - Costs Incurred in Exploration, Propert'
+--- RED: 127,200 / 127,268 are index lines; the real table/Table I are at 363,489 / 366,212.
+
+################################################################ R2 (MEDIUM, repair)
+## claim: the ADR-034 amendment credits the auditor with items never put to it, and defers a trip ADR-038 asserts.
+--- what ADR-034 says today:
+586:| **A2 declined** — ↑ **SETTLED 2026-08-27** at D13: [ADR-038](ADR-038-internal-pointer-adjudication.md) ran the named instrument (an extraction-auditor pass over `cvx-2015` 6/7/8 plus the `bac-2006` / `spatz-2014` instances) and adjudicated every enumerated item. The threshold — one instance both reads agree is wrong — is met or not per ADR-038 §d; the decline's outcome stands either way, because the adjudicated defect is an escalation-layer one that a capability milestone would not fix | — | — |
+--- the items ACTUALLY put to the blind auditor:
+  FILING cvx-2015  (filing.htm)   ITEM 2
+  FILING cvx-2015  (filing.htm)   ITEM 6
+  FILING cvx-2015  (filing.htm)   ITEM 7A
+  FILING cvx-2015  (filing.htm)   ITEM 8
+  FILING bac-2006  (filing.htm)   ITEM 3
+  FILING bac-2006  (filing.htm)   ITEM 6
+  FILING spatz-2014  (filing.htm)   ITEM 8
+  FILING jpm-2024  (filing.htm)   ITEM 7
+  FILING mrk-1995  (filing.txt)   ITEM 5
+--- RED: cvx-2015 item 7 and bac-2006 item 7A appear in the ADR-034 sentence and NOT in the sample.
+--- RED: ADR-038 §d6 does not mention the cvx-7 omission:
+  occurrences of "item 7" in §d6: 0
+--- RED: the same ADR-034 line hedges while ADR-038 asserts TRIPPED/MET in three places:
+  406:### d2) `cvx-2015` item 6 — the threshold in ADR-034 §f row 2 is MET
+  542:**ADR-034 §f row 2's reopener is TRIPPED**, and saying so is the point of
+
+################################################################ R3 (MEDIUM, repair)
+## claim: xom-2021 item 8 readmitted without being tested against R1 prong 1; census 14->18 published in 4+ places.
+--- §e3 elides the schedules sentence and quotes item 8 with an ellipsis:
+596:> item 8 (737): `Reference is made to the following in the Financial Section of this report: …`
+--- the elided sentence, and the sentence lengths (derived, --prong1):
+  ===== xom-2021 item 8  span=737  body=685  status=extracted
+     [0]  506 chars  'Reference is made to the following in the Financial Section of this report:\n\n•Consolidated financial statements, together with the report thereon of PricewaterhouseCoopers LLP (PCAOB ID 238) dated February 23, 2022, beginning with the section entitled “Report of Independent Registered Public Accounting Firm” and continuing through “Note 19: Income and Other Taxes”;\n\n•“Supplemental Information on Oil and Gas Exploration and Production Activities” (unaudited); and\n\n•“Frequently Used Terms” (unaudited).'
+     [1]  176 chars  'Financial Statement Schedules have been omitted because they are not applicable or the required information is shown in the consolidated financial statements or notes thereto.'
+     [2]    1 chars  ''
+  
+--- CALIBRATION: the three bodies ADR-034 §b3 REJECTED for substantive standalone prose:
+  ===== ba-2003 item 5  span=587  body=508  status=extracted
+     [0]   74 chars  'The principal market for our common stock is the New York Stock Exchange.'
+     [1]  145 chars  'It is also listed on the Amsterdam, Brussels, London, Swiss and Tokyo Exchanges as well as various regional stock exchanges in the United States.'
+     [2]  172 chars  'Additional information required by this item is incorporated by reference from the table captioned Quarterly Financial Data (Unaudited) on page 114 and Item 12 on page 122.'
+     [3]   89 chars  'The number of holders of common stock as of February 27, 2004, is approximately 135,640.'
+     [4]   24 chars  '11\n\nTable of Contents'
+  
+  ===== intc-2002 item 5  span=629  body=567  status=extracted
+     [0]  201 chars  'STOCKHOLDER MATTERS\n\nThe information regarding market, market price range and dividend information may be found in "Financial Information by Quarter (Unaudited)" in Item 8 on page 78 of this Form 10-K.'
+     [1]  359 chars  'Additional information concerning dividends may be found in the following sections of this Form 10-K: "Selected Financial Data" in Item 6 and "Consolidated Statements of Cash Flows" and "Consolidated Statements of Stockholders\' Equity" in Item 8. \nAs of February 21, 2003, there were approximately 240,000 registered holders of record of Intel\'s common stock.'
+     [2]    5 chars  '24'
+  
+  ===== textron-2001 item 5  span=523  body=446  status=extracted
+     [0]  104 chars  'MATTERS\n\n     Our Common Stock is traded on the New York, Chicago and Pacific Stock\nExchanges.'
+     [1]   86 chars  'At December 29, 2001, there were approximately 21,000 holders of\nTextron Common Stock.'
+     [2]  252 chars  'The information on the price range of Textron\'s Common\nStock and dividends paid per share appearing under "Common Stock Information" on\npage 60 of our 2001 Annual Report to Shareholders is incorporated by reference\ninto this Annual Report on Form 10-K.'
+     [3]    1 chars  ''
+  
+--- RED: ADR-007's 300-char remainder rule does NOT reproduce §b3 — intc-2002 item 5's ONLY
+         standalone content is 'As of February 21, 2003, there were approximately 240,000
+         registered holders of record of Intel's common stock.' = 110 chars, well under 300,
+         yet §b3 rejects it. So prong 1 cannot be a length test.
+--- RED: §e3 blames the scan ONLY on the digit; d9_class_scan.py also caps at BODY_MAX:
+  41:BODY_MAX = 700           # chars; cvx-2015's are 280/189, intc-2025's 20..226
+  xom-2021 item 8 span = 737 chars, BODY_MAX = 700 -> excluded for LENGTH too
+--- RED: the 14->18 census figure, every published location:
+  specs/decisions/ADR-038-internal-pointer-adjudication.md:608:**14 items across 5 filings to 18 across 6** — §b3's 14 (`cvx-2015` 5,
+  specs/decisions/ADR-034-pointer-and-fanout-rulings.md:205:items across 5 filings to 18 across 6. The other rejections in this paragraph
+  specs/decisions/INDEX.md:46:- ADR-038 — D13 decision row: the ADR-019 §e internal-pointer disagreement is ADJUDICATED item by item on a rule stated before it is applied — a pointer body is judged at TWO layers, the SPAN (INV-S2, correct on every in-class item, so ADR-004 shape 2 and ADR-005 both STAND) and the ENVELOPE (`confidence` "must be honest", `review_required` true exactly when a warning carries the item's code). Verdicts: **`defect`** on `cvx-2015` 2/6/7A — clean at 0.95 with their targets outside every span — **`correct`** on `cvx-2015` 7/8, `ge-1994` 8, `spatz-2014` 8 (already carried by ADR-035's `item_span_near_empty`), `jpm-2024` 1C/7/7A/8 and `bac-2006` 3/6/7A (target inside another span), **`out-of-class`** on `mrk-1995` 5/7 (external document, the calibration check) and `nvda-2024` 8 (names no position). ADR-034 §b3's class test is corrected: `xom-2021` items 7/7A/8/15 are readmitted, the dev total moves 14 items/5 filings → 18/6. **A2 is NOT promoted** — the defect is the escalation layer's item set (TD-5), not internal-pointer resolution — and no extractor behaviour changed (`evals/snapshot.py`, byte-identical) — enforced by `evals/adversarial/cvx-2015-silent-pointer-items.json` (`debt`, watched red), `evals/adversarial/cvx-2015-internal-pointer.json`, `evals/adversarial/ledger-line-refs.json` (floor 11 → 14), `tasks/reviews/d13_span_dump.py` · amends ADR-019 (§e), ADR-034 (§b3, §e2, §f) · re-affirms ADR-004, ADR-005
+  tasks/TODO.md:1002:Not taken because: Enumerating them means editing `evals/adversarial/cvx-2015-internal-pointer.json` and ADR-019 §e, and the A2 sub-class they belong to is DECLINED — so the enumeration buys nothing until the auditor disagreement that keeps A2 declined is adjudicated. Out of D9's spec, which was to rule, not to re-census. **WIDENED 2026-08-27 by ADR-038 (D13), row STAYS OPEN — the understatement is bigger than this row says and has a mechanism this row does not name.** ADR-034 §b3's scan required a digit, so it could only ever find PAGE-NUMBERED pointers; under ADR-038's R1 a titled section or an index is a locatable position too. `specs/decisions/ADR-038-internal-pointer-adjudication.md:585` reads "The census is understated by more than TD-149 records, and by a mechanism TD-149 does not name". `xom-2021` — a filing §b3 names only in its REJECTION list — carries four in-class items its scan could not see (7, 7A, 8, 15), all `correct` under R3, and §b3's rejection of its item 15 for "no page number at all" is overturned because `ge-1994` item 8 has no page number either and was admitted. Conversely `nvda-2024` item 8, which ADR-019 §e's amendment named a class member, is ruled OUT on the same prong. Adjudicated dev total moves **14 items across 5 filings → 18 items across 6**. Two further unenumerated findings, neither ruled on: `spatz-2014` items 8 and 15 point at each other with the financial statements in neither span (TD-157), and `ge-1994` item 6 is the `mrk-1995` 5/7 external shape in the same filing whose item 7 is already IBR (folded into TD-150). Still open because enumerating them means editing a committed case and ADR-019 §e, which D13's spec did not authorise and which a re-census, not a ruling, should do
+--- RED: xom-2021 items 7A and 8 are the two whose span text §e3 does not quote in full.
+
+################################################################ R4 (MEDIUM, repair)
+## claim: §d3 contains two statements its own committed auditor output contradicts.
+--- statement 1, as written:
+  467:  **not** concede the 0.95 group on the same ruling — and on the 0.95 group
+  468-  the two reads already agree. So the residue is: the auditor holds a
+--- the auditor's own 0.95 group (verbatim from the committed output):
+  173:- **cvx-2015 Item 8, spatz-2014 Item 8, jpm-2024 Item 7** are my three weakest WRONGs. All three signal honestly (0.8/0.75, `review_required=True`, and jpm additionally `doc_status=ambiguous`). Their defect is purely the Structure-B definitional question. If an ADR rules that an intra-document pointer stays `extracted` and that item spans are heading-to-heading with no obligation to resolve internal references, I would concede all three to RIGHT. I would **not** concede rows 1, 2, 3, 5, 6 (the 0.95/`False` ones) or row 9 on that ruling.
+--- which rows those are, from the auditor's own verdict table:
+  | # | Filing | Item | Verdict |
+  |---|--------|------|---------|
+  | 1 | cvx-2015 | 2 | **WRONG** |
+  | 2 | cvx-2015 | 6 | **WRONG** |
+  | 3 | cvx-2015 | 7A | **WRONG** |
+  | 4 | cvx-2015 | 8 | **WRONG** |
+  | 5 | bac-2006 | 3 | **WRONG** |
+  | 6 | bac-2006 | 6 | **WRONG** |
+  | 7 | spatz-2014 | 8 | **WRONG** |
+  | 8 | jpm-2024 | 7 | **WRONG** |
+  | 9 | mrk-1995 | 5 | **WRONG** |
+  
+--- RED: rows 1,2,3,5,6 = cvx 2/6/7A AND bac 3/6; the two reads do NOT agree on bac 3/6.
+--- statement 2, as written:
+  469-  status-layer objection to ADR-004 that this row has no mandate to settle,
+  470:  and once ADR-004 is granted, four of the five divergences reduce to
+--- the five divergences per §d1: cvx 8, bac 3, bac 6, spatz 8, jpm 7.
+--- RED: granting ADR-004 concedes cvx 8, spatz 8, jpm 7 = THREE; residue is TWO (bac 3/6). No reading gives four.
+
+################################################################ R5 (LOW)
+## claim: §b states no mixed inside/outside rule; §c2 hides ge-1994's out=5.
+  8:ge-1994         8     86   0.8   Truesuccess_with_warning    0.2306     275043  index under item 14={'14': 1}|out=5
+--- what §c2 reports:
+  218:`(?i)statement of financial position` matches at 78,112, inside item 14. The
+--- RED: out=5 is printed by the dump and never reported in §c2; §b's R3 mentions multiple TARGETS, not mixed matches for one target:
+  R3 third bullet (TARGETS, not matches): 99:- **any named target outside every span** counts, not just the principal
+
+################################################################ R6 (LOW)
+## claim: 'eleven correct verdicts' and '45 dev fixtures' are both wrong.
+  645:| the eleven `correct` verdicts | the contract gains a clause, or a case gains an assertion, that a span must hold the substance responsive to its item and not merely the labelled text. R2's premise — that INV-S2 is all `extracted` claims — is then false and every in-class item is a defect | `specs/001-sec10k-contract.md` + the golden set | one clause |
+  496:   45 dev fixtures plus the held-out set: `{'7': 7, '8': 15, '1': 2}`.
+  actual dev fixtures with a filing: 44
+--- RED: 45 is the auditor's count, not a re-derived one; and after §e3's readmission the overturn row understates.
+
+################################################################ R7 (LOW)
+## claim: §d6 says 'no variance estimate' while the prior run of the same instrument on the same item said CORRECT.
+--- the prior read, committed:
+  | 21 | cvx-2015-shallow | 6 | extracted | 0.95 | CORRECT |
+--- RED: §d2 declares convergence without naming that the convergent read is run 2 of an instrument whose run 1 said the opposite.
+
+################################################################ R8 (LOW)
+## claim: §g8 calls the bac-2006 gap an ORDERING; the unstated move is a SCOPE switch for 'the output'.
+  - **target inside some span** — the responsive content is in the output,
+    under another item's code. Nothing the filing contains is absent from the
+    envelope; the mis-location is the filing's own labelling, which ADR-004
+    forbids the extractor to second-guess. → `correct`.
+  - **target outside every span** — the responsive content is in
+    `normalized_text` and inside no span; the envelope does not contain the
+    answer. Whether that is a *defect* turns on whether the envelope says so.
+    `confidence` "must be honest" (`specs/001-sec10k-contract.md`) and
+    `review_required` is "true exactly when some warning in `warnings` carries
+    this item's code". An item reported at 0.95 with `review_required: false`
+    is asserting a clean read of an item whose answer the output does not
+    hold. → `defect`. An item already carrying an item-level warning, or
+    capped by an `ambiguous` document verdict, has already said it. →
+    `correct`.
+--- the contract makes review_required explicitly item-level:
+  93:  the span is clean when a layer-8 check fired on it. It is **item-level**:
+--- RED: §b never says at which scope 'the output does not contain the answer' is evaluated.
+  713:   ordering of the two questions was shown wrong — only that R3 asks them in
+  714:   the order §b states and was applied uniformly. A reviewer who thinks the
+
+################################################################ SWEEP (post-fix)
+## Claim-level sweep across ADR-038, ADR-034, ADR-019, INDEX.md, tasks/TODO.md,
+## the two cvx debt-case triage notes and prompts/024. Six stale claims that NO
+## finding named were caught here; all are corrected in the same commit:
+##   1. ADR-038 §b  'contribute eleven correct verdicts' -> ten (jpm 4 + xom 3 + bac 3)
+##   2. ADR-038 §e1 'all eleven correct ones' -> fourteen
+##   3. ADR-038 §b  'the two out-of-class items' -> four, in three different prongs
+##   4. ADR-038 §g1 'xom-2021 15 correct if readmitted' -> it IS admitted by prong 2
+##   5. ADR-038 §g4 'four more in-class items on xom-2021' -> three (item 8 out on prong 1)
+##   6. tasks/TODO.md TD-5 'all 45 dev fixtures' and TD-12 'the eleven correct ones'
+## Plus the R3 census propagation (18/6 -> 17/6) in all five published locations.
+
+--- post-fix: no stale census / count / roster claim survives anywhere:
+    (grep exit 1 — 1 means clean)
+
+--- post-fix: the census, everywhere it is published:
+specs/decisions/ADR-038-internal-pointer-adjudication.md:736:**So the census moves to 17 items across 6 filings, not 18** — §b3's 14
+specs/decisions/INDEX.md:46:- ADR-038 — D13 decision row: the ADR-019 §e internal-pointer disagreement is ADJUDICATED item by item on a rule stated before it is applied — a pointer body
+specs/decisions/ADR-034-pointer-and-fanout-rulings.md:205:items across 5 filings to 17 across 6 (corrected from 18 the same day; see the
+specs/decisions/ADR-034-pointer-and-fanout-rulings.md:218:only** — dev total **14 items across 5 filings → 17 across 6**, not 18. Item 8
+prompts/024-d13-internal-pointer-adjudication.md:58:  adjudicated dev census moves 14 items/5 filings → **17/6** (TD-149 widened).
+tasks/TODO.md:96:Status: ruled 2026-08-27 by [ADR-038](../specs/decisions/ADR-038-internal-pointer-adjudication.md). Local gate GREEN by exit code (`invariant` 81/81, `fast` 144/144, baselin
+tasks/TODO.md:1002:Not taken because: Enumerating them means editing `evals/adversarial/cvx-2015-internal-pointer.json` and ADR-019 §e, and the A2 sub-class they belong to is DECLINED — s
+
+--- post-fix: ledger line refs re-derived and GREEN (ADR-034 :509->:523, :561->:575; ADR-038 :585->:677, :346->:396):
+    GREEN

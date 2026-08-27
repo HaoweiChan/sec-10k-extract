@@ -1487,7 +1487,7 @@ def check_deployed_exclusion(case):
        drifts is the one nobody reads.
 
     What it does NOT prove: that the excluded fixtures are the only ones that
-    fire (that is `tasks/reviews/d11_trigger_scan.py`, re-run by hand — TD-157
+    fire (that is `tasks/reviews/d11_trigger_scan.py`, re-run by hand — TD-160
     carries deriving the set from the trigger instead of maintaining it), that
     fastapi binds the route, or that an UPLOAD of the same document is refused.
     It is not: upload is the deliberate act the exposure notes name, and this
