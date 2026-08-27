@@ -1102,6 +1102,36 @@ paragraph) — **and as of 2026-08-27 it also escalates by default, so any
 caller can trigger paid work with one upload and no opt-in** (§h2's owner
 note; the process budget is the bound and a redeploy refills it).
 
+> **Amendment, 2026-08-28 (D17).** The two holes this section opens are now
+> narrower, and one is closed. **(a) The trust boundary is exercised by a
+> committed adversarial battery**: `evals/adversarial/escalation-verify-battery.json`
+> (17 sub-cases against xom-2021's real items — out-of-bounds, sub-`SPAN_FLOOR`,
+> wrong-region and mid-paragraph offsets, INV-S1 overlaps between existing and
+> proposed siblings, malformed shapes, mixed-proposal all-or-nothing, with the
+> item list deep-compared byte-untouched after every sub-case) and
+> `evals/adversarial/escalation-route-parse.json` (6 crafted transport texts
+> through `route`'s real parse path), both fast+invariant, red-first with an
+> 8-mutation matrix (`tasks/reviews/d17-red-first.txt`). One **genuine gap**
+> was found and fixed in the same PR: JSON booleans — `isinstance(True, int)`
+> is True, so `[true, N]` passed §b check 3's shape test and was ACCEPTED
+> whenever the coerced `[1, N]` verified, and `route`'s `int()` coercion
+> laundered the bool into a plausible offset before `verify` ever saw it.
+> Both entry points now reject booleans; floats and digit strings were probed
+> and ruled benign coercion, recorded rather than "fixed". This closes the
+> "only constructed proposals" half of the hole; whether a REAL model's
+> answer ever passes `verify` still needs a credential.
+> **(b) The intc-2025 measurement was attempted against the fixed ladder**
+> (`tasks/reviews/d17-intc-measurement.txt`, runner `d17_intc_measurement.py`,
+> hard $5.00 pre-call cost gate built per §d3 and self-checked): rung 1
+> replayed its committed real response from cache at $0 — the cache hit
+> itself proving §h4 changed nothing about rung 1's request — and still
+> localizes nothing; rung 2's post-fix request is a new cache key and needs a
+> live call, and the run recorded the loud refusal: **still unmeasured —
+> credential absent in the delivery environment, refused loudly, $0.000000
+> spent, envelope untouched.** The one open question of this section is now
+> exactly one billed call wide (projected $1.114685 by the committed
+> price/proxy records).
+
 ## l) Falsifiers
 
 | Ruling | What would falsify it | How to check | Cost of the check |

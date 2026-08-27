@@ -1,0 +1,225 @@
+{
+  "id": "escalation-verify-battery",
+  "task": "sec10k",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "path": "evals/fixtures/xom-2021/filing.htm"
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "envelope_shape"
+      },
+      {
+        "type": "verify_guards",
+        "cases": [
+          {
+            "name": "positive control — item 1's own real span verifies",
+            "proposal": {
+              "1": {
+                "like_item": "1"
+              }
+            },
+            "expect": "accept",
+            "accepts": [
+              "1"
+            ]
+          },
+          {
+            "name": "bounds: a negative start is outside the document",
+            "proposal": {
+              "1": [
+                -5,
+                60000
+              ]
+            },
+            "expect": "reject",
+            "why_contains": "outside normalized_text"
+          },
+          {
+            "name": "bounds: an end past the document is outside it",
+            "proposal": {
+              "16": {
+                "like_item": "16",
+                "overrun": 5
+              }
+            },
+            "expect": "reject",
+            "why_contains": "outside normalized_text"
+          },
+          {
+            "name": "bounds: start == end is an empty span, not a resolution",
+            "proposal": {
+              "1": [
+                7000,
+                7000
+              ]
+            },
+            "expect": "reject",
+            "why_contains": "outside normalized_text"
+          },
+          {
+            "name": "bounds: start > end is inverted",
+            "proposal": {
+              "1": [
+                8000,
+                7000
+              ]
+            },
+            "expect": "reject",
+            "why_contains": "outside normalized_text"
+          },
+          {
+            "name": "floor: item 1's own opening truncated below SPAN_FLOOR",
+            "proposal": {
+              "1": {
+                "like_item": "1",
+                "trunc": 1499
+              }
+            },
+            "expect": "reject",
+            "why_contains": "SPAN_FLOOR"
+          },
+          {
+            "name": "wrong region: item 1 proposed at item 2's real content",
+            "proposal": {
+              "1": {
+                "like_item": "2"
+              }
+            },
+            "expect": "reject",
+            "why_contains": "title similarity"
+          },
+          {
+            "name": "wrong region: offsets landing mid-paragraph in real prose",
+            "proposal": {
+              "2": {
+                "like_item": "2",
+                "shift": 800
+              }
+            },
+            "expect": "reject",
+            "why_contains": "title similarity"
+          },
+          {
+            "name": "INV-S1: item 1 grown into item 1A's existing span",
+            "proposal": {
+              "1": {
+                "like_item": "1",
+                "grow": 5000
+              }
+            },
+            "expect": "reject",
+            "why_contains": "INV-S1"
+          },
+          {
+            "name": "INV-S1: two sibling proposals overlapping each other",
+            "proposal": {
+              "1": {
+                "like_item": "1",
+                "grow": 5000
+              },
+              "1A": {
+                "like_item": "1A"
+              }
+            },
+            "expect": "reject",
+            "why_contains": "INV-S1"
+          },
+          {
+            "name": "a sibling proposal duplicating another item's proposed span",
+            "proposal": {
+              "1": {
+                "like_item": "1"
+              },
+              "1A": {
+                "like_item": "1"
+              }
+            },
+            "expect": "reject",
+            "why_contains": "title similarity"
+          },
+          {
+            "name": "shape: JSON booleans are not offsets (isinstance(True, int) is True)",
+            "proposal": {
+              "1": [
+                true,
+                60000
+              ]
+            },
+            "expect": "reject",
+            "why_contains": "not an [int, int] offset pair"
+          },
+          {
+            "name": "shape: float offsets are not offsets",
+            "proposal": {
+              "1": [
+                5350.5,
+                13234.5
+              ]
+            },
+            "expect": "reject",
+            "why_contains": "not an [int, int] offset pair"
+          },
+          {
+            "name": "shape: string offsets are not offsets",
+            "proposal": {
+              "1": [
+                "5350",
+                "13234"
+              ]
+            },
+            "expect": "reject",
+            "why_contains": "not an [int, int] offset pair"
+          },
+          {
+            "name": "shape: a dict value is not an offset pair",
+            "proposal": {
+              "1": {
+                "start": 5350,
+                "end": 13234
+              }
+            },
+            "expect": "reject",
+            "why_contains": "not an [int, int] offset pair"
+          },
+          {
+            "name": "shape: a 3-tuple is not an offset pair",
+            "proposal": {
+              "1": [
+                5350,
+                13234,
+                9
+              ]
+            },
+            "expect": "reject",
+            "why_contains": "not an [int, int] offset pair"
+          },
+          {
+            "name": "all-or-nothing: one out-of-bounds sibling discards the good one",
+            "proposal": {
+              "1": {
+                "like_item": "1"
+              },
+              "2": [
+                -5,
+                60000
+              ]
+            },
+            "expect": "reject",
+            "why_contains": "outside normalized_text"
+          }
+        ]
+      }
+    ]
+  },
+  "triage": {
+    "class": "silent-degradation",
+    "note": "D17 deliverable (a): ADR-036 §k records that `escalate.verify` — the trust boundary the whole ladder rests on — had never been handed a bad answer: both exam models answered 'cannot locate', so §b's checks were proven only against `_demo`'s constructed proposals and one 7-sub-case guards file. This battery hands the REAL verify every crafted-bad-answer class as fixture input against xom-2021's real items and real normalized_text: out-of-bounds offsets (negative, past-end, empty, inverted), sub-SPAN_FLOOR spans, plausible-but-wrong offsets at the wrong region and mid-paragraph, INV-S1 overlaps with an existing sibling and between two proposed siblings, a duplicate-sibling proposal, malformed shapes (bool/float/string/dict/3-tuple), and a mixed good+bad proposal asserting all-or-nothing. The harness additionally deep-compares the item list after every sub-case: verify must be a pure checker and the deterministic output byte-untouched. ONE GENUINE GAP found while authoring: JSON booleans pass `isinstance(v, int)` because bool subclasses int, so `[true, N]` was ACCEPTED whenever the coerced span `[1, N]` verified — probed and demonstrated against a constructed document whose body starts at offset 1, where verify returned an accepted span with `start: True`, which `apply` would have published as `\"start\": true` in the envelope. Fixed in the same PR by excluding bool from the shape check; the boolean sub-case here was watched red against the pre-fix tree.",
+    "note_negative_space": "The positive control stops the battery passing vacuously: if verify regressed to rejecting everything, it goes red. `why_contains` pins the REASON, so a class rejected only by a neighbouring check (the escalation-verify-guards provenance documents exactly that trap) is red, not accidentally green. This still says nothing about whether a real model's honest answer would ever pass verify — that needs a credential, and ADR-036 §k records where that measurement stands."
+  },
+  "provenance": "D17, created 2026-08-28 per hard rule 2. Red-first evidence in tasks/reviews/d17-red-first.txt: the boolean sub-case red against the pre-fix tree (a genuine gap — rejected on this fixture only by the accidental neighbouring similarity check, and ACCEPTED outright on the offset-1 construction now pinned in escalate._demo), and every other class proven able to fail by mutating verify (bounds check removed, SPAN_FLOOR removed, similarity removed, INV-S1 removed, pre-R2 continue restored, in-place mutation introduced) with this case red under each mutation and green on restore. Offsets are borrowed from the fixture's own envelope via like_item/shift/trunc/grow/overrun so they cannot go stale; the only literal offsets are deliberately-invalid ones."
+}

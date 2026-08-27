@@ -1,0 +1,126 @@
+{
+  "id": "escalation-route-parse",
+  "task": "sec10k",
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "path": "evals/fixtures/xref-index-collapse/filing.htm"
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "route_payload",
+        "response": {
+          "text": "{\"1\": [12",
+          "usage": {
+            "input_tokens": 0,
+            "output_tokens": 0
+          },
+          "usd": 0.0
+        },
+        "outcomes": [
+          "unparseable",
+          "unparseable"
+        ],
+        "resolved": [],
+        "untouched": true
+      },
+      {
+        "type": "route_payload",
+        "response": {
+          "text": "\"cannot locate any of the requested items\"",
+          "usage": {
+            "input_tokens": 0,
+            "output_tokens": 0
+          },
+          "usd": 0.0
+        },
+        "outcomes": [
+          "unparseable",
+          "unparseable"
+        ],
+        "resolved": [],
+        "untouched": true
+      },
+      {
+        "type": "route_payload",
+        "response": {
+          "text": "{\"1\": [true, 60000]}",
+          "usage": {
+            "input_tokens": 0,
+            "output_tokens": 0
+          },
+          "usd": 0.0
+        },
+        "outcomes": [
+          "unparseable",
+          "unparseable"
+        ],
+        "error_contains": [
+          "not a character offset"
+        ],
+        "resolved": [],
+        "untouched": true
+      },
+      {
+        "type": "route_payload",
+        "response": {
+          "text": "{\"1\": {\"start\": 100, \"end\": 60000}}",
+          "usage": {
+            "input_tokens": 0,
+            "output_tokens": 0
+          },
+          "usd": 0.0
+        },
+        "outcomes": [
+          "unparseable",
+          "unparseable"
+        ],
+        "resolved": [],
+        "untouched": true
+      },
+      {
+        "type": "route_payload",
+        "response": {
+          "text": "{\"1\": 42}",
+          "usage": {
+            "input_tokens": 0,
+            "output_tokens": 0
+          },
+          "usd": 0.0
+        },
+        "outcomes": [
+          "unparseable",
+          "unparseable"
+        ],
+        "resolved": [],
+        "untouched": true
+      },
+      {
+        "type": "route_payload",
+        "response": {
+          "text": "{\"1\": [100.7, 60000.2]}",
+          "usage": {
+            "input_tokens": 0,
+            "output_tokens": 0
+          },
+          "usd": 0.0
+        },
+        "outcomes": [
+          "rejected",
+          "rejected"
+        ],
+        "resolved": [],
+        "untouched": true
+      }
+    ]
+  },
+  "triage": {
+    "class": "silent-degradation",
+    "note": "D17 deliverable (a), the route()-parse half of the battery: ADR-036 §k's first hole is that the trust boundary had never met a bad answer, and the parse path between the transport and verify had eval coverage only for the recorded empty-completion payload. These six checks hand route's REAL parse path crafted transport texts — truncated JSON, a top-level string, a JSON-boolean offset pair, a dict-shaped span, a bare scalar, and float offsets — asserting the outcome is honest (`unparseable`/`rejected`), nothing resolves, and the deterministic item list is byte-untouched (`untouched: true` deep-compares). The boolean check is the sharp one: `int(true)` is 1, so route's offset coercion LAUNDERED a JSON boolean into a plausible integer offset that then competed on the same terms as a real answer — through this path even the fixed verify shape-check never sees the bool. Fixed in the same PR: route now refuses to coerce booleans (TypeError -> outcome `unparseable`, error naming it), watched red first against the pre-fix tree where the outcome was ['rejected', 'rejected']. VERDICT ON FLOATS, recorded rather than forced into a finding: `int()` truncation moves a float offset by under one character, preserving the model's evident intent, so the coercion is ruled benign leniency and the float check pins the current honest behaviour — coerced, then rejected by verify's own bounds on this fixture, with nothing applied. Same ruling for digit strings (int('5350') parses), which verify-battery covers at the verify layer.",
+    "note_negative_space": "The stub replaces the TRANSPORT with the case's declared text, per the _demo / PR #58 R19 precedent — no model output is fabricated as real, no network, no credential. These checks bind the parse path's handling of junk; they do not bind what a real model actually returns, which remains the credential-gated measurement ADR-036 §k tracks."
+  },
+  "provenance": "D17, created 2026-08-28 per hard rule 2. Red-first evidence in tasks/reviews/d17-red-first.txt: the boolean check red against the pre-fix tree (outcomes ['rejected', 'rejected'] != ['unparseable', 'unparseable'] — the bool was silently coerced to offset 1), the remaining checks proven non-vacuous by mutation (route's parse-error handling and the fix's own guard each removed in turn, case red, restore green). The fixture is the committed synthetic xref-index-collapse, the same one escalation-empty-completion replays, because it is the smallest committed filing whose warnings genuinely fire the low_item_coverage trigger."
+}
