@@ -440,6 +440,78 @@ def eval_check(result, chk, path=None):
                 if sorted(got) != sorted(sub["accepts"]):
                     return (f"{sub['name']}: verify accepted {sorted(got)} != "
                             f"{sorted(sub['accepts'])} (why={why})")
+    elif t == "route_payload":
+        # PR #58 / the intc-2025 exam. Replays a RECORDED transport response
+        # through `escalate.route` and asserts the router reports something
+        # honest about it. The payload in the case is the one the live run
+        # actually produced — 2,048 output tokens and empty content — so this
+        # is the exam's evidence kept as a $0 regression test rather than as a
+        # paragraph. Same shape as `verify_guards`: the case supplies only what
+        # the TRANSPORT returned, and everything else is the real pipeline over
+        # this fixture's real text and real items.
+        import copy
+
+        import src.sec10k.llm as _llm
+        from src.sec10k.escalate import route
+        sent = []
+
+        def _stub(model, system, user, max_tokens, budget, **kw):
+            sent.append({"model": model, "max_tokens": max_tokens,
+                         "reasoning_tokens": kw.get("reasoning_tokens")})
+            # `cached: False` by default — the exam's calls were live and
+            # BILLED, and the point of replaying the payload is that the cost
+            # of a call that returned nothing is still reported.
+            return {"cached": False, **chk["response"], "model": model}
+
+        real, _llm.call = _llm.call, _stub
+        try:
+            rec, extra = route(result["normalized_text"],
+                               copy.deepcopy(result["items"]),
+                               result["warnings"])
+        except Exception as e:                     # the pre-fix behaviour
+            return (f"route CRASHED on the recorded payload "
+                    f"({type(e).__name__}: {e}) — a transport that returns "
+                    "empty content must be reported, not raised through")
+        finally:
+            _llm.call = real
+        got = [x["outcome"] for x in rec["tiers"]]
+        if "outcomes" in chk and got != chk["outcomes"]:
+            return f"tier outcomes {got} != {chk['outcomes']}"
+        if "error_contains" in chk:
+            blob = " ".join(x.get("error", "") for x in rec["tiers"])
+            for want in chk["error_contains"]:
+                if want not in blob:
+                    return (f"no tier error mentions {want!r} — the record must "
+                            f"say WHAT happened; got {blob!r}")
+        if "usd" in chk and round(rec["cost"]["usd"], 6) != chk["usd"]:
+            return (f"routing.cost.usd {rec['cost']['usd']} != {chk['usd']} — a "
+                    "call that was billed and produced nothing must still be "
+                    "reported as billed")
+        if "resolved" in chk and sorted(rec["resolved"]) != sorted(chk["resolved"]):
+            return f"routing.resolved {rec['resolved']} != {chk['resolved']}"
+        # per-MODEL, because the rungs differ on measured evidence: the exam
+        # showed `openai/gpt-5-mini` answering correctly inside 2,048 tokens
+        # with no reasoning budget, and `anthropic/claude-opus-5` spending all
+        # 2,048 on thinking and emitting nothing. Asserting one floor across
+        # both would demand a change to the rung that works.
+        by_model = {x["model"]: x for x in sent}
+        for model, want in (chk.get("min_max_tokens") or {}).items():
+            got_call = by_model.get(model)
+            if got_call is None:
+                return f"no call was made to {model} — nothing to bound"
+            if got_call["max_tokens"] < want:
+                return (f"{model} was called with max_tokens "
+                        f"{got_call['max_tokens']} < {want} — the exam paid "
+                        "$0.895360 for 2,048 output tokens of nothing because "
+                        "the allowance was consumed before any content emerged")
+        for model, want in (chk.get("reasoning_tokens") or {}).items():
+            got_call = by_model.get(model)
+            if got_call is None or got_call["reasoning_tokens"] != want:
+                return (f"{model} was sent reasoning_tokens="
+                        f"{got_call and got_call['reasoning_tokens']!r}, want "
+                        f"{want!r} — OpenRouter documents that for Anthropic "
+                        "models max_tokens must be strictly higher than the "
+                        "reasoning budget, so the split must be explicit")
     elif t == "escalation_invariant":
         # ADR-036 §f, asserted as the equality the ADR claims it is rather than
         # left to `evals/snapshot.py` alone: run the same file with the flag on
@@ -805,7 +877,9 @@ BLOCK_LABEL_KEYS = {"kind", "start", "end", "level", "ordered", "strong", "item"
 
 # ADR-036 §g. The routing record's contract shape, asserted structurally so a
 # case that merely asks for escalation still catches a malformed one.
-ROUTING_OUTCOMES = {"resolved", "rejected", "unparseable", "unavailable"}
+ROUTING_OUTCOMES = {"resolved", "rejected", "unparseable", "unavailable",
+                    # the intc-2025 exam: billed, and nothing came back
+                    "empty_completion"}
 COST_KEYS = {"llm_calls", "tokens", "usd"}
 
 

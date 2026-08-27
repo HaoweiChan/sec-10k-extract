@@ -1,36 +1,38 @@
 # ADR-036 §d, derived. Prices from tasks/reviews/2026-08-27-openrouter-models.json;
-# char counts from the §c1 census; model = chars/4 + 250 in, 150 out.
-#   llm_localize  openai/gpt-5-mini          $0.25/$2.0 per MTok, input capped at 60,000 chars
-#   llm_extract   anthropic/claude-opus-5    $5.0/$25.0 per MTok, input capped at 1,250,000 chars
+# char counts from the §c1 census; model = chars/4 + 250 in, output at each rung's own ceiling (an UPPER BOUND).
+#   llm_localize  openai/gpt-5-mini          $0.25/$2.0 per MTok, input capped at 60,000 chars, output ceiling 2,048 tok
+#   llm_extract   anthropic/claude-opus-5    $5.0/$25.0 per MTok, input capped at 1,250,000 chars, output ceiling 6,144 tok (incl. 4,096 reasoning)
 
 ## §d1 — per document
 document                               chars    rung 1    rung 2    ladder
-xref-index-collapse                    33061    0.0024    0.0463    0.0488
-median span-bearing dev filing        102529    0.0041    0.1332    0.1373
-bac-2006 (2nd largest)                705848    0.0041    0.8873    0.8914
-jpm-2024 (largest)                   1213284    0.0041    1.5216    1.5257
-  (rung 1 input tokens on the median filing: 15,250; rung 2: 25,882)
+xref-index-collapse                    33061    0.0062    0.1962    0.2024
+median span-bearing dev filing        108893    0.0079    0.2910    0.2989
+bac-2006 (2nd largest)                705848    0.0079    1.0372    1.0451
+jpm-2024 (largest)                   1213284    0.0079    1.6715    1.6794
+  (rung 1 input tokens on the median filing: 15,250; rung 2: 27,473)
 
 ## §d2 — the CHOSEN trigger (low_item_coverage), whole dev sweep
-  xref-index-collapse            33061 chars  $0.0488
-  1 of 43 documents escalate   TOTAL $0.0488
+  intc-2025                     517976 chars  $0.8102
+  xref-index-collapse            33061 chars  $0.2024
+  2 of 44 documents escalate   TOTAL $1.0126
 
 ## §d4 — the WIDE trigger (+ item_span_near_empty), whole dev sweep
-  jpm-2024                     1213284 chars  $1.5257
-  cvx-2015                      417517 chars  $0.5310
-  xom-2021                      388848 chars  $0.4952
-  ibr-pointer-first             362718 chars  $0.4625
-  ge-1994                       362717 chars  $0.4625
-  nvda-2024                     341155 chars  $0.4356
-  fy2021-item9c                 102529 chars  $0.1373
-  sandston-2021                 102434 chars  $0.1372
-  ko-1997                        97206 chars  $0.1306
-  reac-2015                      79649 chars  $0.1087
-  spatz-2014                     65197 chars  $0.0906
-  xref-index-collapse            33061 chars  $0.0488
-  12 of 43 documents escalate   TOTAL $4.5656   ratio 93.6x
+  jpm-2024                     1213284 chars  $1.6794
+  intc-2025                     517976 chars  $0.8102
+  cvx-2015                      417517 chars  $0.6847
+  xom-2021                      388848 chars  $0.6488
+  ibr-pointer-first             362718 chars  $0.6162
+  ge-1994                       362717 chars  $0.6162
+  nvda-2024                     341155 chars  $0.5892
+  fy2021-item9c                 102529 chars  $0.2909
+  sandston-2021                 102434 chars  $0.2908
+  ko-1997                        97206 chars  $0.2843
+  reac-2015                      79649 chars  $0.2623
+  spatz-2014                     65197 chars  $0.2443
+  xref-index-collapse            33061 chars  $0.2024
+  13 of 44 documents escalate   TOTAL $7.2195   ratio 7.1x
 
 ## §h2 — the effective deployment ceiling
-  one rung-2 call is capped at 1,250,000 chars = $1.5675
+  one rung-2 call is capped at 1,250,000 chars = $1.7173
   Budget refuses only once spent >= max_usd, so the effective ceiling
-  is MAX_USD + $1.5675 (default $5.00 -> $6.5675).
+  is MAX_USD + $1.7173 (default $5.00 -> $6.7173).

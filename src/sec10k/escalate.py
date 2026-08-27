@@ -73,11 +73,36 @@ SPAN_STATUSES = ("extracted", "incorporated_by_reference")
 # `tasks/reviews/2026-08-27-openrouter-models.json`, which is also where
 # `llm.usd()` reads their per-token price — there is no hand-maintained price
 # table. Per-document estimates: ADR-036 §d.
+# The answer is a small JSON map of offsets — a few hundred tokens at most.
+# `MAX_TOKENS` is what the ANSWER may use; a reasoning rung additionally gets
+# `REASONING_TOKENS` of thinking, and the request's `max_tokens` is the sum, so
+# the two never compete for one allowance.
+#
+# Sized by the intc-2025 exam, 2026-08-27, which billed $0.895360 for exactly
+# this mistake: `max_tokens: 2048` and no reasoning budget sent to
+# `anthropic/claude-opus-5` came back with `completion_tokens: 2048` and EMPTY
+# content — the whole allowance spent thinking, nothing left to answer with.
+# OpenRouter documents the requirement: for Anthropic models `max_tokens` must
+# be strictly higher than the reasoning budget.
+#
+# On cost: of that $0.895360, only $0.0512 was output — the other $0.844160 was
+# the input, paid whatever comes back. So a bigger answer allowance is nearly
+# free (6,144 output tokens at $25/MTok caps one rung-2 call's output at
+# $0.1536) while too small an allowance means paying the input for a guaranteed
+# empty answer. The cost-discipline move here is UP, not down.
+MAX_TOKENS = 2048        # the answer
+REASONING_TOKENS = 4096  # the thinking, for a rung whose model does that
+
+# (rung, model, reasoning_tokens). The third element is 0 for a rung that must
+# NOT be sent a reasoning budget: `openai/gpt-5-mini` answered the exam
+# correctly at 842 output tokens with none, and changing a rung that demonstrably
+# works — on a provider behaviour this repo cannot test without spending — is the
+# unverified change this PR has been burned by four times. Only the rung the
+# exam proved broken gets the new parameter.
 RUNGS = (
-    ("llm_localize", "openai/gpt-5-mini"),
-    ("llm_extract", "anthropic/claude-opus-5"),
+    ("llm_localize", "openai/gpt-5-mini", 0),
+    ("llm_extract", "anthropic/claude-opus-5", REASONING_TOKENS),
 )
-MAX_TOKENS = 2048        # the answer is a small JSON map of offsets, not prose
 LOCALIZE_WINDOW = 60_000  # chars of unattributed text rung 1 is allowed to see
 
 # Chars of the document rung 2 is allowed to see. PR #58 R12: rung 2 used to
@@ -322,7 +347,7 @@ def route(text, items, warnings, budget=None):
     codes = tr["items"] or [i["item"] for i in items
                             if i.get("start") is not None]
     extra = []
-    for rung, model in RUNGS:
+    for rung, model, think in RUNGS:
         free = _windows(text, items)
         if rung == "llm_localize":
             shown, offset = _window_text(text, free, LOCALIZE_WINDOW)
@@ -348,7 +373,8 @@ def route(text, items, warnings, budget=None):
                  "truncated": len(shown) < len(text),
                  "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0}}
         try:
-            got = call(model, SYSTEM, prompt, MAX_TOKENS, budget)
+            got = call(model, SYSTEM, prompt, MAX_TOKENS + think, budget,
+                       reasoning_tokens=think or None)
         except EscalationUnavailable as e:
             # LOUD AND STRUCTURED. Repo rule 4: a live dependency that cannot
             # be reached fails visibly; it never degrades into a fabricated
@@ -362,6 +388,26 @@ def route(text, items, warnings, budget=None):
                          "tokens": sum(got["usage"].values()),
                          "usd": 0.0 if got["cached"] else got["usd"]}
         entry["cached"] = got["cached"]
+        # THE intc-2025 EXAM'S OWN FAILURE, given a name. An empty completion
+        # used to fall through to `json.loads` and be recorded as `unparseable`
+        # with a bare JSONDecodeError — true, but it explained nothing, so the
+        # routing record could not say why $0.895360 bought nothing. It is its
+        # own outcome now, carrying the numbers that identify it, and the cost
+        # is recorded BEFORE the branch: a call that was billed and produced
+        # nothing must still be reported as billed.
+        if not (got.get("text") or "").strip():
+            entry.update(
+                outcome="empty_completion",
+                error=(f"the model returned empty content: "
+                       f"finish_reason={got.get('finish_reason')!r}, "
+                       f"output_tokens={got['usage'].get('output_tokens')} of "
+                       f"max_tokens={got.get('max_tokens', MAX_TOKENS + think)}"
+                       " — the output allowance was consumed before any content "
+                       "was emitted (OpenRouter normalizes finish_reason to "
+                       "'length' when the token limit is reached). Nothing came "
+                       "back to parse, and the call was billed."))
+            record["tiers"].append(entry)
+            continue
         try:
             proposal = json.loads(got["text"].strip().removeprefix("```json")
                                   .removesuffix("```").strip())
@@ -440,7 +486,7 @@ def _demo():
     import src.sec10k.llm as _llm
     seen = []
 
-    def _stub(model, system, user, max_tokens, budget, timeout=120):
+    def _stub(model, system, user, max_tokens, budget, timeout=120, **kw):
         seen.append(user)
         return {"text": "not json", "usage": {"input_tokens": 0, "output_tokens": 0},
                 "usd": 0.0, "model": model, "cached": True}

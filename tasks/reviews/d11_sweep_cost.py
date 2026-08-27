@@ -24,13 +24,21 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, ROOT)
 
-from src.sec10k.escalate import EXTRACT_WINDOW, LOCALIZE_WINDOW, RUNGS  # noqa: E402
+from src.sec10k.escalate import (EXTRACT_WINDOW, LOCALIZE_WINDOW,  # noqa: E402
+                                 MAX_TOKENS, RUNGS)
 from src.sec10k.llm import price                                        # noqa: E402
 
 # §d's stated model, in one place. `chars/4` is the token proxy (no tokenizer
 # call is available offline); SYS is the system prompt; OUT is the answer, a
 # small JSON map of offsets.
-CHARS_PER_TOKEN, SYS_TOKENS, OUT_TOKENS = 4, 250, 150
+CHARS_PER_TOKEN, SYS_TOKENS = 4, 250
+# OUTPUT is the rung's own `max_tokens` CEILING, not a guessed 150 (changed
+# 2026-08-27, after the intc-2025 exam). Reasoning tokens are billed as output
+# and a reasoning rung can spend its whole allowance thinking —
+# `anthropic/claude-opus-5` returned exactly 2,048 output tokens of nothing —
+# so 150 understated output cost by more than an order of magnitude. A ceiling
+# cannot understate, which is the property a published cost figure needs, so
+# every output figure below is an UPPER BOUND rather than an expectation.
 
 
 def _census():
@@ -41,17 +49,21 @@ def _census():
     return mod.scan()
 
 
-def rung_cost(chars, model, cap):
+def rung_cost(chars, model, cap, out_tokens):
     """(usd, input_tokens) for one call of one rung over a document."""
     cin, cout = price(model)
     itok = min(chars, cap) / CHARS_PER_TOKEN + SYS_TOKENS
-    return itok * cin / 1e6 + OUT_TOKENS * cout / 1e6, int(itok)
+    return itok * cin / 1e6 + out_tokens * cout / 1e6, int(itok)
+
+
+def _rung(i):
+    """(model, input cap, output ceiling) for rung i, read from escalate."""
+    _, model, think = RUNGS[i]
+    return model, (LOCALIZE_WINDOW if i == 0 else EXTRACT_WINDOW), MAX_TOKENS + think
 
 
 def ladder(chars):
-    (r1, _), (r2, _) = (rung_cost(chars, RUNGS[0][1], LOCALIZE_WINDOW),
-                        rung_cost(chars, RUNGS[1][1], EXTRACT_WINDOW))
-    return r1 + r2
+    return sum(rung_cost(chars, *_rung(i))[0] for i in (0, 1))
 
 
 def main():
@@ -62,11 +74,13 @@ def main():
 
     print("# ADR-036 §d, derived. Prices from tasks/reviews/2026-08-27-openrouter-models.json;")
     print(f"# char counts from the §c1 census; model = chars/{CHARS_PER_TOKEN} + "
-          f"{SYS_TOKENS} in, {OUT_TOKENS} out.")
-    for rung, model in RUNGS:
+          f"{SYS_TOKENS} in, output at each rung's own ceiling (an UPPER BOUND).")
+    for i, (rung, model, think) in enumerate(RUNGS):
         cin, cout = price(model)
-        cap = LOCALIZE_WINDOW if rung == "llm_localize" else EXTRACT_WINDOW
-        print(f"#   {rung:13} {model:26} ${cin}/${cout} per MTok, input capped at {cap:,} chars")
+        _, cap, out = _rung(i)
+        print(f"#   {rung:13} {model:26} ${cin}/${cout} per MTok, input capped at "
+              f"{cap:,} chars, output ceiling {out:,} tok"
+              + (f" (incl. {think:,} reasoning)" if think else ""))
 
     print("\n## §d1 — per document")
     print(f"{'document':34} {'chars':>9} {'rung 1':>9} {'rung 2':>9} {'ladder':>9}")
@@ -75,12 +89,12 @@ def main():
              ("bac-2006 (2nd largest)", by["bac-2006"]["chars"]),
              ("jpm-2024 (largest)", by["jpm-2024"]["chars"])]
     for label, c in named:
-        a, ai = rung_cost(c, RUNGS[0][1], LOCALIZE_WINDOW)
-        b, bi = rung_cost(c, RUNGS[1][1], EXTRACT_WINDOW)
+        a, ai = rung_cost(c, *_rung(0))
+        b, bi = rung_cost(c, *_rung(1))
         print(f"{label:34} {c:>9} {a:>9.4f} {b:>9.4f} {a + b:>9.4f}")
     print(f"  (rung 1 input tokens on the median filing: "
-          f"{rung_cost(median, RUNGS[0][1], LOCALIZE_WINDOW)[1]:,}; "
-          f"rung 2: {rung_cost(median, RUNGS[1][1], EXTRACT_WINDOW)[1]:,})")
+          f"{rung_cost(median, *_rung(0))[1]:,}; "
+          f"rung 2: {rung_cost(median, *_rung(1))[1]:,})")
 
     # the chosen trigger: exactly the documents low_item_coverage fires on
     chosen = [r for r in rows if r["low_item_coverage"]]
@@ -102,7 +116,7 @@ def main():
         "bac-2006 is silent (§c3) and must not appear in the wide set"
 
     print(f"\n## §h2 — the effective deployment ceiling")
-    worst, _ = rung_cost(10 ** 9, RUNGS[1][1], EXTRACT_WINDOW)
+    worst, _ = rung_cost(10 ** 9, *_rung(1))
     print(f"  one rung-2 call is capped at {EXTRACT_WINDOW:,} chars = ${worst:.4f}")
     print(f"  Budget refuses only once spent >= max_usd, so the effective ceiling")
     print(f"  is MAX_USD + ${worst:.4f} (default $5.00 -> ${5.00 + worst:.4f}).")

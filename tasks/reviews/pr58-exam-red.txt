@@ -1,0 +1,51 @@
+PR #58 — the intc-2025 exam: red-first record for the client fix.
+Tree: task/D11 at 389b7f1. Date: 2026-08-27. No live call made; the payload is
+replayed from evals/cache/llm/ at $0. c-2025 was NOT run and was NOT read.
+
+=== the exam's own evidence, from the cache (free, offline) ===
+  anthropic/claude-opus-5    usd=0.89536    in= 168832 out= 2048  text=''
+  openai/gpt-5-mini          usd=0.004498   in=  11257 out=  842  text='{"1": null, "7": null, "8": null}'
+  rung 2: output_tokens == 2048 == the max_tokens the client sends, content empty.
+  NOTE: the cached record carries no `finish_reason` — the client never stored it,
+  so the exam's own diagnosis had to come from arithmetic and documentation
+  rather than from the response. That omission is part of what is fixed.
+
+=== cost arithmetic (why the fix is cheap) ===
+  input   168832 tok x $5.00/MTok  = $0.844160
+  output    2048 tok x $25.00/MTok = $0.051200
+  total                          = $0.895360  (cache says 0.895360)
+  => the wasted output was $0.05, not $0.90. The $0.84 input was paid
+     regardless. Raising the answer allowance is therefore nearly free;
+     NOT raising it means paying the $0.84 for a guaranteed empty answer.
+
+=== the new case, run against the PRE-FIX client ===
+  escalation-empty-completion: FAILED
+   - tier outcomes ['unparseable', 'unparseable'] != ['empty_completion', 'empty_completion']
+  `unparseable` is what the exam recorded too. It is not wrong, but it is not
+  an explanation: the reason string is a bare JSONDecodeError that names neither
+  the empty content nor the exhausted allowance, so the routing record could not
+  tell anyone WHY $0.895360 bought nothing.
+
+=== AFTER: the four bindings, mutated on the repaired tree ===
+  MUTATE  the empty-completion branch removed (fall back through to json.loads)
+    eval gate: 'invariant': 79/80 = 0.988  (+4 enumerated debt, unscored)  FAIL=['escalation-empty-completion']   _demos: escalate:ok llm:ok
+    VERDICT  : RED
+  MUTATE  the reasoning budget dropped from rung 2
+    eval gate: 'invariant': 79/80 = 0.988  (+4 enumerated debt, unscored)  FAIL=['escalation-empty-completion']   _demos: escalate:ok llm:ok
+    VERDICT  : RED
+  MUTATE  finish_reason no longer recorded by the client
+    eval gate: 'invariant': 80/80 = 1.000  (+4 enumerated debt, unscored)  FAIL=none   _demos: escalate:ok llm:RED
+    VERDICT  : RED
+  MUTATE  the tier cost zeroed on the empty-completion path
+    eval gate: 'invariant': 79/80 = 0.988  (+4 enumerated debt, unscored)  FAIL=['escalation-empty-completion']   _demos: escalate:ok llm:ok
+    VERDICT  : RED
+  RESTORE -> 'invariant': 80/80 = 1.000  (+4 enumerated debt, unscored), _demos escalate:ok llm:ok
+
+  All four RED, restore GREEN. Note the third row: the eval case CANNOT bind the
+  client's `finish_reason` recording, because its stub replaces `llm.call`
+  entirely — a first attempt asserted the bare word "length", which matched a
+  literal in the router's own message and left the mutation GREEN. The recording
+  is bound in `llm._demo` instead (via `_normalize`, extracted for exactly that
+  purpose), and the case now pins the recorded VALUES
+  (`finish_reason='length'`, `output_tokens=2048`, `max_tokens=6144`).
+  Caught by mutation before shipping, not after.

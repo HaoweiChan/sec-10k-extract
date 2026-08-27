@@ -199,21 +199,63 @@ def _credential():
     return key
 
 
-def _body(model, system, user, max_tokens):
+def _body(model, system, user, max_tokens, reasoning_tokens=None):
     """The OpenAI-shaped request body OpenRouter expects.
 
     Its own function so `_demo` can assert the SHAPE rather than text-match the
-    file. The previous Anthropic client sent a reasoning-effort knob in a
-    nested config object; OpenRouter's chat-completions surface has no
-    equivalent, so it is DROPPED rather than mapped onto something that means
-    something else, and this body has exactly three keys.
+    file.
+
+    **`reasoning` is sent when the rung asks for it (2026-08-27).** An earlier
+    version of this docstring said OpenRouter's chat-completions surface "has no
+    equivalent" of a reasoning knob and that the body has exactly three keys.
+    That was WRONG, and the intc-2025 exam billed $0.895360 to find out:
+    OpenRouter documents a `reasoning` request parameter taking `effort` OR
+    `max_tokens` (mutually exclusive), and documents that **"for Anthropic
+    models, `max_tokens` must be strictly higher than the reasoning budget to
+    ensure there are tokens available for the final response after thinking"**.
+    We sent `max_tokens: 2048` and no reasoning budget to a reasoning model; the
+    allowance went entirely to thinking, `completion_tokens` came back as
+    exactly 2048, and `content` was empty.
+
+    Sending the split EXPLICITLY is what makes the outcome deterministic rather
+    than dependent on a provider default: the caller states the thinking budget,
+    and `max_tokens` is that budget plus room for the answer.
     """
-    return {"model": model, "max_tokens": max_tokens,
+    body = {"model": model, "max_tokens": max_tokens,
             "messages": [{"role": "system", "content": system},
                          {"role": "user", "content": user}]}
+    if reasoning_tokens:
+        body["reasoning"] = {"max_tokens": reasoning_tokens}
+    return body
 
 
-def call(model, system, user, max_tokens, budget, timeout=120):
+def _normalize(payload, text, choice, model, max_tokens):
+    """The provider response reduced to the record this repo stores and prices.
+
+    Its own function so `_demo` can assert what the record CARRIES without a
+    socket — which matters because `finish_reason` is a diagnostic, and a
+    diagnostic nothing asserts is one that quietly stops being written. The
+    intc-2025 exam had to be diagnosed from arithmetic precisely because this
+    field was thrown away.
+    """
+    u = payload.get("usage") or {}
+    return {
+        "text": text,
+        "usage": {"input_tokens": u.get("prompt_tokens", 0),
+                  "output_tokens": u.get("completion_tokens", 0)},
+        "usd": usd(model, u.get("prompt_tokens", 0), u.get("completion_tokens", 0)),
+        "model": model,
+        # OpenRouter normalizes this to one of tool_calls / stop / length /
+        # content_filter / error, and `length` is the documented signal that the
+        # token limit was reached — so an exhausted allowance is DETECTABLE
+        # rather than inferred from arithmetic.
+        "finish_reason": choice.get("finish_reason"),
+        "max_tokens": max_tokens,
+    }
+
+
+def call(model, system, user, max_tokens, budget, timeout=120,
+         reasoning_tokens=None):
     """One OpenRouter chat-completions request.
 
     Returns {"text", "usage", "usd", "model", "cached"}.
@@ -229,7 +271,7 @@ def call(model, system, user, max_tokens, budget, timeout=120):
 
     budget.take()
     api_key = _credential()
-    body = _body(model, system, user, max_tokens)
+    body = _body(model, system, user, max_tokens, reasoning_tokens)
     base = os.environ.get("OPENROUTER_BASE_URL") or DEFAULT_BASE_URL
     req = urllib.request.Request(
         base.rstrip("/") + "/chat/completions",
@@ -261,14 +303,7 @@ def call(model, system, user, max_tokens, budget, timeout=120):
     if choice.get("finish_reason") == "content_filter":
         raise EscalationUnavailable("provider refused: finish_reason=content_filter")
 
-    u = payload.get("usage") or {}
-    got = {
-        "text": text,
-        "usage": {"input_tokens": u.get("prompt_tokens", 0),
-                  "output_tokens": u.get("completion_tokens", 0)},
-        "usd": usd(model, u.get("prompt_tokens", 0), u.get("completion_tokens", 0)),
-        "model": model,
-    }
+    got = _normalize(payload, text, choice, model, max_tokens)
     budget.charge(got["usd"], sum(got["usage"].values()))
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     hit.write_text(json.dumps(got, indent=1, sort_keys=True))
@@ -293,13 +328,31 @@ def _demo():
         assert gone not in src, f"{gone!r} is Anthropic-transport residue — swap incomplete"
     # the request body is OpenAI-shaped and carries no reasoning-effort knob —
     # asserted on the SHAPE, so a text pin cannot be satisfied by a comment
+    # the record the client stores must carry the DIAGNOSTICS, not just the
+    # text: `finish_reason` and the `max_tokens` it was measured against are
+    # what turn "empty content" into "the allowance ran out" without a second
+    # billed call (the intc-2025 exam cost $0.895360 and could not say which).
+    rec = _normalize({"usage": {"prompt_tokens": 10, "completion_tokens": 2048}},
+                     "", {"finish_reason": "length"}, RUNGS[1][1], 2048)
+    assert rec["finish_reason"] == "length", rec
+    assert rec["max_tokens"] == 2048 and rec["usage"]["output_tokens"] == 2048
+    assert rec["text"] == "" and rec["usd"] == usd(RUNGS[1][1], 10, 2048)
+    assert {"text", "usage", "usd", "model", "finish_reason", "max_tokens"} <= set(rec)
+
     b = _body("m", "sys", "usr", 7)
     assert set(b) == {"model", "max_tokens", "messages"}, sorted(b)
     assert [m["role"] for m in b["messages"]] == ["system", "user"]
     assert b["messages"][0]["content"] == "sys" and b["max_tokens"] == 7
+    # ...and the reasoning split is sent when a rung asks for it. OpenRouter
+    # documents that for Anthropic models `max_tokens` must be strictly higher
+    # than the reasoning budget; the exam proved what happens when it is not.
+    assert "reasoning" not in _body("m", "s", "u", 7)
+    r = _body("m", "s", "u", 6144, reasoning_tokens=4096)
+    assert r["reasoning"] == {"max_tokens": 4096} and r["max_tokens"] == 6144
+    assert r["max_tokens"] > r["reasoning"]["max_tokens"], "no room left to answer"
 
     # 1. pricing comes from the committed record, and an unknown slug RAISES
-    for _, model in RUNGS:
+    for _, model, _think in RUNGS:
         cin, cout = price(model)
         assert cin > 0 and cout > 0, (model, cin, cout)
     # the exact figures ADR-036 §d is derived from, pinned so a re-fetch that
