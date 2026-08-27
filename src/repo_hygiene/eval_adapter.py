@@ -13,6 +13,7 @@ case-declared, because WHICH text sits on WHICH ground is the reviewable part.
 """
 import ast
 import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -2799,6 +2800,72 @@ def check_escalation_locks(case):
     return bad
 
 
+
+TOKEN_RATIO_FILE = "tasks/reviews/2026-08-27-token-ratio.json"
+SWEEP_SCRIPT = "tasks/reviews/d11_sweep_cost.py"
+
+
+def check_token_proxy_bound(case):
+    """The published chars-per-token proxy must not sit ABOVE the measured
+    minimum for any model, because every cost figure in ADR-036 is derived
+    through it.
+
+    Why this exists, and why the direction matters. More chars per token means
+    FEWER tokens for the same text, so a proxy above the measured ratio
+    UNDERSTATES the token count and therefore understates the price. That is
+    the failure the two held-out exam runs exposed: a retyped `4` for both
+    rungs, against a measured 2.74 for `anthropic/claude-opus-5` — so §h2
+    published a worst-case single call of $1.5675 while a real call on a
+    LARGER input had already cost $2.12163.
+
+    The check binds the SWEEP SCRIPT's own published value (not a copy of it)
+    against the committed measurement record, so a hand-edited artifact or a
+    reintroduced constant both go red. It also refuses to pass vacuously: every
+    rung's model must carry at least one sample.
+
+    What it does NOT establish: that the bound is right for any other corpus.
+    Two samples per model, both SEC filings in HTML-derived normalized text.
+    The record says so in its own `honesty` field.
+    """
+    inp = case.get("input", {})
+    bad = []
+    rec = json.loads((ROOT / inp.get("ratio_file", TOKEN_RATIO_FILE)).read_text())
+    spec = importlib.util.spec_from_file_location(
+        "_sweep", ROOT / inp.get("script", SWEEP_SCRIPT))
+    mod = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(mod)
+    except Exception as e:
+        return [f"{SWEEP_SCRIPT} does not import: {type(e).__name__}: {e}"]
+
+    observed = {}
+    for smp in rec.get("samples", []):
+        observed.setdefault(smp["model"], []).append(smp["chars_per_token"])
+    if not observed:
+        return [f"{TOKEN_RATIO_FILE} carries no samples — the bound would be vacuous"]
+
+    from src.sec10k.escalate import RUNGS
+    for _rung, model, _think in RUNGS:
+        if model not in observed:
+            bad.append(f"no measured chars-per-token sample for {model} — a rung "
+                       "whose price nothing measured is a guessed price")
+            continue
+        try:
+            published = mod.chars_per_token(model)
+        except Exception as e:
+            bad.append(f"{SWEEP_SCRIPT} cannot publish a ratio for {model} "
+                       f"({type(e).__name__}: {e})")
+            continue
+        low = min(observed[model])
+        if published > low:
+            bad.append(
+                f"{model}: published chars/token {published} > measured minimum "
+                f"{low} — a proxy above the measured ratio UNDERSTATES tokens and "
+                f"therefore understates every cost figure derived from it "
+                f"(samples: {sorted(observed[model])})")
+    return bad, {"token_proxy_samples": {m: len(v) for m, v in observed.items()}}
+
+
 CHECKS = {
     "adr_headers": lambda case: check_adr_headers(),
     "adr_index": lambda case: check_index(),
@@ -2833,6 +2900,7 @@ CHECKS = {
     "escalation_seam": check_escalation_seam,
     "routing_provenance": check_routing_provenance,
     "escalation_locks": check_escalation_locks,
+    "token_proxy_bound": check_token_proxy_bound,
 }
 
 

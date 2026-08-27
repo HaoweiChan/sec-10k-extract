@@ -114,13 +114,24 @@ LOCALIZE_WINDOW = 60_000  # chars of unattributed text rung 1 is allowed to see
 #
 # 1,250,000 is not a round number pulled from nowhere: it is the largest
 # committed dev filing (jpm-2024, 1,213,284 chars) rounded up. So no document
-# in the corpus is truncated, every published figure in ADR-036 §d is
-# unchanged, and one call's price on ARBITRARY input is now bounded by the
-# same worst case the dev corpus already measured. That bound is a DERIVED
-# figure, not one restated here: `tasks/reviews/d11_sweep_cost.py` prints it
-# under "§h2 — the effective deployment ceiling", and ADR-036 §h2 quotes the
-# script. This comment used to carry its own hand-typed number, which was the
-# fifth such figure in this branch and was wrong (PR #58 R22).
+# in the corpus is truncated, and one call's price on ARBITRARY input is
+# bounded. That bound is a DERIVED figure, not one restated here:
+# `tasks/reviews/d11_sweep_cost.py` prints it under "§h2 — the effective
+# deployment ceiling", and ADR-036 §h2 quotes the script. This comment used to
+# carry its own hand-typed number, which was the fifth such figure in this
+# branch and was wrong (PR #58 R22).
+#
+# KEPT, on a premise that has since changed (2026-08-27). The value was chosen
+# when the bound it produced was believed to be $1.5675; the corrected
+# per-model token proxy puts it at $2.4697, so the window bounds one call to
+# roughly 1.6x what was published. The window is NOT re-tuned to chase the old
+# dollar figure, because that figure was never the requirement — "bounded on
+# arbitrary input" was, and it still is — and shrinking it to ~844,000 chars
+# would truncate `jpm-2024`, giving up the property that justified the number
+# in order to preserve a number that was wrong. The levers for a smaller
+# ceiling are the documented ones: lower `SEC10K_ESCALATION_MAX_USD`, or build
+# §d3's projected-cost pre-check. Both are the operator's call, not a silent
+# re-tune here. ADR-036 §h2 states the corrected ceiling.
 #
 # Truncation is never silent: the tier record publishes `input_chars` and
 # `truncated`, so a resolution over a clipped document says so.

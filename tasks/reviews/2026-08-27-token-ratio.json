@@ -1,0 +1,59 @@
+{
+  "date": "2026-08-27",
+  "why": "Every published cost figure rests on a chars-per-token proxy. It was 4 for both rungs, retyped, and never measured. These are the only real measurements this repo has: four billed responses from the two held-out exam runs. They show the error is NOT one multiplier — it is PER MODEL, and the two rungs err in OPPOSITE directions.",
+  "no_tokenizer_endpoint": "OpenRouter documents no /tokenize or /count_tokens endpoint; token counts come back only as a byproduct of a billed completion (checked 2026-08-27). A proxy is therefore unavoidable — but it can be measured and bounded rather than guessed.",
+  "samples": [
+    {
+      "document": "intc-2025",
+      "rung": "llm_localize",
+      "model": "openai/gpt-5-mini",
+      "prompt_chars": 61007,
+      "input_tokens": 11257,
+      "chars_per_token": 5.4195,
+      "how": "MEASURED"
+    },
+    {
+      "document": "intc-2025",
+      "rung": "llm_extract",
+      "model": "anthropic/claude-opus-5",
+      "prompt_chars": 518984,
+      "input_tokens": 168832,
+      "chars_per_token": 3.074,
+      "how": "MEASURED"
+    },
+    {
+      "document": "c-2025",
+      "rung": "llm_localize",
+      "model": "openai/gpt-5-mini",
+      "prompt_chars": 61000,
+      "input_tokens": 14298,
+      "chars_per_token": 4.2663,
+      "how": "DERIVED — prompt length from the code path (window capped at LOCALIZE_WINDOW, `codes` empty), not from the filing, which was not read. Its effect is only to LOWER the bound, i.e. to make costs more conservative, never less."
+    },
+    {
+      "document": "c-2025",
+      "rung": "llm_extract",
+      "model": "anthropic/claude-opus-5",
+      "prompt_chars": 1162300,
+      "input_tokens": 424281,
+      "chars_per_token": 2.7395,
+      "how": "REPORTED — prompt_chars back-derived from the orchestrator's stated chars/4+250 proxy prediction of 290,825; c-2025 was not read."
+    }
+  ],
+  "observed_chars_per_token": {
+    "openai/gpt-5-mini": [
+      4.2663,
+      5.4195
+    ],
+    "anthropic/claude-opus-5": [
+      2.7395,
+      3.074
+    ]
+  },
+  "rule": "PUBLISHED = the MINIMUM observed chars/token per model, rounded DOWN to 1 dp. Minimum, because fewer chars per token means MORE tokens for the same text, so the minimum is the conservative end: it cannot understate a cost. Rounded down for the same reason.",
+  "published_chars_per_token": {
+    "openai/gpt-5-mini": 4.2,
+    "anthropic/claude-opus-5": 2.7
+  },
+  "honesty": "TWO samples per model. That is thin, and it is a bound rather than an estimate precisely because it is thin. Both samples for each model come from the same two documents, both SEC filings in HTML-derived normalized text, so nothing here says what the ratio would be on a different corpus. Re-derive when more billed responses exist."
+}

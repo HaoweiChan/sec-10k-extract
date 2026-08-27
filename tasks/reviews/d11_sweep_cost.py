@@ -18,6 +18,8 @@ Deterministic, offline, $0. Held-out is NOT read: the census it reuses covers
 `evals/fixtures` only.
 """
 import importlib.util
+import json
+import math
 import os
 import sys
 
@@ -31,7 +33,41 @@ from src.sec10k.llm import price                                        # noqa: 
 # §d's stated model, in one place. `chars/4` is the token proxy (no tokenizer
 # call is available offline); SYS is the system prompt; OUT is the answer, a
 # small JSON map of offsets.
-CHARS_PER_TOKEN, SYS_TOKENS = 4, 250
+SYS_TOKENS = 250
+TOKEN_RATIO = os.path.join(ROOT, "tasks", "reviews", "2026-08-27-token-ratio.json")
+
+
+def chars_per_token(model):
+    """Chars per input token for `model`, DERIVED from billed responses.
+
+    Not a constant, and not one value for every model. The proxy was `4` for
+    both rungs, retyped and never measured, until the two held-out exam runs
+    billed four real responses. Measured, it is wrong in BOTH directions and
+    the split is per model, not one multiplier:
+
+        anthropic/claude-opus-5   3.0740, 2.7395  -> `4` UNDERSTATED tokens 1.46x
+        openai/gpt-5-mini         5.4195, 4.2663  -> `4` overstated them
+
+    The understatement is the one that cost money: ADR-036 §h2 published a
+    worst-case single call of $1.5675 while a real call on a LARGER input had
+    already been billed $2.12163, and the per-document $1.00 `Budget` was
+    overshot to $2.13.
+
+    The published value is the MINIMUM observed per model, floored to 1 dp —
+    minimum because fewer chars per token means MORE tokens for the same text,
+    so it is the end that cannot understate a price. Samples, provenance and an
+    honest note about their thinness (two per model, one corpus) live in
+    `tasks/reviews/2026-08-27-token-ratio.json`; `token_proxy_bound` pins this
+    function against that record. OpenRouter documents no tokenizer endpoint,
+    so a proxy is unavoidable — it can only be measured and bounded.
+    """
+    rec = json.load(open(TOKEN_RATIO))
+    seen = [s["chars_per_token"] for s in rec["samples"] if s["model"] == model]
+    if not seen:
+        raise KeyError(f"no measured chars-per-token sample for {model!r} in "
+                       f"{os.path.basename(TOKEN_RATIO)} — refusing to guess a "
+                       "ratio for a model nothing has measured")
+    return math.floor(min(seen) * 10) / 10
 # OUTPUT is the rung's own `max_tokens` CEILING, not a guessed 150 (changed
 # 2026-08-27, after the intc-2025 exam). Reasoning tokens are billed as output
 # and a reasoning rung can spend its whole allowance thinking —
@@ -52,7 +88,7 @@ def _census():
 def rung_cost(chars, model, cap, out_tokens):
     """(usd, input_tokens) for one call of one rung over a document."""
     cin, cout = price(model)
-    itok = min(chars, cap) / CHARS_PER_TOKEN + SYS_TOKENS
+    itok = min(chars, cap) / chars_per_token(model) + SYS_TOKENS
     return itok * cin / 1e6 + out_tokens * cout / 1e6, int(itok)
 
 
@@ -73,7 +109,7 @@ def main():
     median = spanned[len(spanned) // 2]
 
     print("# ADR-036 §d, derived. Prices from tasks/reviews/2026-08-27-openrouter-models.json;")
-    print(f"# char counts from the §c1 census; model = chars/{CHARS_PER_TOKEN} + "
+    print(f"# char counts from the §c1 census; model = chars/proxy + "
           f"{SYS_TOKENS} in, output at each rung's own ceiling (an UPPER BOUND).")
     for i, (rung, model, think) in enumerate(RUNGS):
         cin, cout = price(model)

@@ -1,0 +1,80 @@
+{
+  "pr": 58,
+  "event": "c-2025 exam result: token proxy corrected, empty-items gap logged as debt",
+  "date": "2026-08-27",
+  "red_first_record": "tasks/reviews/pr58-exam-red.txt",
+  "no_live_calls": "none made this round. All four billed responses were already in evals/cache/llm/. c-2025 was NOT read, run or altered.",
+  "exam_verdict": {
+    "criterion": "D11: 'the slow path completes the D6 filings it never trained against'",
+    "result": "NOT MET — the ladder rescued neither filing",
+    "total_spent_usd": 3.025692,
+    "intc-2025": "$0.899858, resolved []; rung 2 returned empty content (client bug). BURNED.",
+    "c-2025": "$2.125834, resolved []; rung 1 rejected, rung 2 WORKED and returned parseable {\"7A\": null} — an honest 'cannot locate', outcome `rejected` not `unparseable`. NOT burned.",
+    "what_it_proved": [
+      "D8's trigger fired correctly on both unseen filings (coverage 0.0033 and 0.0)",
+      "rung 1 answered honestly and cheaply on both ($0.004498, $0.004204), returning null rather than inventing spans",
+      "the transport works after the §h4 fix — confirmed by a real call"
+    ],
+    "what_it_did_not_prove": "escalate.verify was NEVER handed a bad answer to reject. Both models said 'cannot locate'; neither returned a wrong span. The trust boundary remains untested against a real adversarial response."
+  },
+  "token_proxy": {
+    "finding": "the retyped chars/4 proxy is wrong PER MODEL and in BOTH directions — not one multiplier. Both of the orchestrator's data points were rung 2, which is why it first looked like a single 1.46x correction.",
+    "samples": 4,
+    "samples_per_model": 2,
+    "measured": {
+      "anthropic/claude-opus-5": [
+        3.074,
+        2.7395
+      ],
+      "openai/gpt-5-mini": [
+        5.4195,
+        4.2663
+      ]
+    },
+    "how_established": "two MEASURED by reconstructing intc-2025's prompts through the real code path (that fixture is now dev-side) and comparing to the billed input_tokens; one REPORTED (c-2025 rung 2, from the orchestrator's stated proxy prediction); one DERIVED from the code path alone (c-2025 rung 1 — window capped at LOCALIZE_WINDOW, codes empty), whose only effect is to LOWER the bound, i.e. make costs more conservative, never less.",
+    "decision": "a conservative UPPER BOUND on cost, not a corrected constant and not a range in the arithmetic: published chars/token is the MINIMUM observed per model, floored to 1 dp (2.7 and 4.2). Minimum because fewer chars per token means more tokens means more money. The range IS published, in the record and in §h5, alongside an explicit note that two samples per model on one corpus cannot support an estimate.",
+    "not_retyped": "chars_per_token(model) in d11_sweep_cost.py reads tasks/reviews/2026-08-27-token-ratio.json and computes the floor; no multiplier is written in any prose or code. token-proxy-bound.json pins the function against the record and refuses to pass if any rung's model has no sample.",
+    "tokenizer_endpoint": "OpenRouter documents none (checked 2026-08-27) — token counts come back only as a byproduct of a billed completion, so a proxy is unavoidable."
+  },
+  "figures_that_moved": {
+    "rung 2 worst single call": "$1.5675 -> $2.4697 (a real c-2025 call on a LARGER input had already been billed $2.12163 against the published $1.5675)",
+    "effective deployment ceiling": "MAX_USD + $1.5675 ($6.5675) -> MAX_USD + $2.4697 ($7.4697)",
+    "chosen-trigger dev sweep": "$1.0126 -> $1.3440",
+    "wide-trigger dev sweep": "$7.2195 -> $9.6754",
+    "wide-vs-narrow ratio": "7.1x -> 7.2x",
+    "median filing ladder": "$0.2989 -> $0.3642",
+    "jpm-2024 ladder": "$1.6794 -> $2.4094",
+    "all_derived_by": "tasks/reviews/d11_sweep_cost.py — no hand-typed number"
+  },
+  "extract_window": {
+    "decision": "KEPT at 1,250,000",
+    "why": "its premise changed but its requirement did not. It was chosen when the bound it produced was believed to be $1.5675; the corrected proxy puts it at $2.4697. The requirement was 'one call's price is bounded on arbitrary input', not 'bounded at $1.5675' — and shrinking it to ~844,000 chars to restore the old number would truncate jpm-2024, giving up the property that justified the value in order to preserve a value that was wrong.",
+    "levers_offered_instead": [
+      "lower SEC10K_ESCALATION_MAX_USD",
+      "build §d3's projected-cost pre-check"
+    ],
+    "stated_where": "escalate.py's EXTRACT_WINDOW comment and ADR-036 §h5, both saying the premise changed rather than silently re-tuning."
+  },
+  "empty_items_debt": {
+    "fixed": false,
+    "reason": "fixing it would burn c-2025 and leave D11 with no exam at all",
+    "mechanism_from_source": "escalate.trigger builds its `items` hint only from item_span_near_empty warnings, and that validator measures a SPAN's length (validate.py: `if code in spans` then `chars = spans[code][1] - spans[code][0]`), so it cannot fire on an item with no span. A document whose coverage collapses to 0 with every item missing/omitted fires low_item_coverage while the targeting signal stays silent.",
+    "dev_coverage": "ZERO of 44 dev fixtures reproduce it — the trigger fires on exactly 2 (intc-2025, xref-index-collapse) and BOTH yield items ['1','7','8']. Verified by scan.",
+    "observed_on": "c-2025's live run, which returned items: []",
+    "row_records": [
+      "the mechanism from the source reading",
+      "that no dev fixture reproduces it",
+      "that it was observed on c-2025's live run",
+      "that fixing it — including authoring a synthetic zero-span fixture BECAUSE this run revealed the shape — would burn c-2025",
+      "explicitly, that this is a known gap shipping unfixed, not an oversight"
+    ]
+  },
+  "mutations": "2 mutations, 2 RED, restore GREEN. The second deletes the EVIDENCE rather than the code — the check refuses to pass with a rung whose model nothing has measured, so the bound cannot be disarmed by emptying the record it reads.",
+  "gate": {
+    "invariant": "81/81 = 1.000",
+    "fast": "144/144 = 1.000",
+    "debt": 4,
+    "baseline": "unchanged",
+    "verified": "unpiped exit codes"
+  }
+}

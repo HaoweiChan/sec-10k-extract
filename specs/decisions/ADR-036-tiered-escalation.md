@@ -22,7 +22,7 @@ RE-AFFIRMED, not moved — §e). Narrative:
 `docs/evals/audits/2026-08-25-demo-intel-citi-postmortem.md` §7.
 
 **Ruling**: four decisions. (1) The ladder is `deterministic → llm_localize (small model, the largest unattributed region, capped at `LOCALIZE_WINDOW`) → llm_extract (large model, the document capped at `EXTRACT_WINDOW`)` — BOTH rungs' inputs are bounded, so one call's price is bounded on arbitrary input, entered **only** when `low_item_coverage` fires, opt-in behind `escalate=True`, and no rung's answer is used until `escalate.verify` re-derives its offsets against the deterministic output (bounds, `SPAN_FLOOR`, INV-S1 ordering, and a `SIM_FLOOR` heading match). (2) **Text-less / scanned filings stay OUT of scope** and the README row is re-affirmed, so **no vision rung is built** (§e). (3) The envelope publishes a `routing` record and two new `method` values, and the inspector renders both. (4) With no `OPENROUTER_API_KEY` the slow path **refuses loudly** — a `routing` outcome of `unavailable` plus an `escalation_unavailable` warning — and never degrades silently.
-**Because**: measured over all 43 dev filing fixtures, `low_item_coverage` fires on **2 of 44 (0.0455), and on 1 of 29 real EDGAR filings**, so the ladder's default cost is exactly $0.00 and the whole dev corpus escalates for an estimated $1.0126 (derived, `tasks/reviews/d11_sweep_cost.py`; the $0.056 this header carried until 2026-08-27 was the pre-OpenRouter figure and is withdrawn — PR #58 R20). **Both figures moved on 2026-08-27 when the live exam burned `intc-2025` and its fixture moved to the dev side (`evals/heldout/README.md`, Burn 2026-08-27): the trigger now fires on a REAL filing and not only on the synthetic, which is stronger evidence, and the sweep is 21× more expensive because that filing is 517,976 chars.** The item-level `item_span_near_empty` fires on 13 of 44 (10 of 29 real) and is deliberately NOT the trigger, because escalating on it would spend money on the A2 class ADR-034 §e2 declined and put the dev escalation rate at 27.9%.
+**Because**: measured over all 44 dev filing fixtures, `low_item_coverage` fires on **2 of 44 (0.0455), and on 1 of 29 real EDGAR filings**, so the ladder's default cost is exactly $0.00 and the whole dev corpus escalates for an estimated $1.3440 (derived, `tasks/reviews/d11_sweep_cost.py`; the $0.056 this header carried until 2026-08-27 was the pre-OpenRouter figure and is withdrawn — PR #58 R20). **Both figures moved on 2026-08-27 when the live exam burned `intc-2025` and its fixture moved to the dev side (`evals/heldout/README.md`, Burn 2026-08-27): the trigger now fires on a REAL filing and not only on the synthetic, which is stronger evidence, and the sweep is 21× more expensive because that filing is 517,976 chars.** The item-level `item_span_near_empty` fires on 13 of 44 (10 of 29 real) and is deliberately NOT the trigger, because escalating on it would spend money on the A2 class ADR-034 §e2 declined and put the dev escalation rate at 27.9%.
 **Enforced by**: `evals/adversarial/escalation-trigger-quiet.json` and `evals/adversarial/escalation-no-credential.json` (fast + invariant), `evals/adversarial/ui-routing-provenance.json` + `evals/adversarial/ui-routing-provenance-regression.json` (its 11-failure mutation fixture `evals/fixtures/repo_hygiene/routing-strip-missing.html`), `evals/adversarial/escalation-seam-offline.json`, `src/sec10k/escalate.py::_demo`, `src/sec10k/llm.py::_demo`, `src/sec10k/web/view.py::_demo`, `evals/adversarial/escalation-verify-guards.json` (PR #58 R1/R2/R7 — the first case that reaches `verify` at all), `src/sec10k/eval_adapter.py::_routing_shape` + the `routing` / `escalation_invariant` / `verify_guards` check types, and `.github/workflows/ci.yml`'s unit-tests job, which runs both `_demo`s (PR #58 R3: before it did, every guard in this ADR was deletable with the gate 100% green). Red-first record with its sha: `tasks/reviews/d11-red-first.txt`. Measurement: `tasks/reviews/d11_trigger_scan.py` (§c's census) and `tasks/reviews/d11_sweep_cost.py` (§d's dollars, derived from that census and the committed price record rather than retyped — PR #58 R8), plus `evals/adversarial/ui-escalation-locks.json` with its two mutation fixtures — `escalation-locks-removed.py` (the locks deleted, PR #58 R9) and `escalation-locks-evaded.py` (every name and shape intact and both locks defeated by three one-token edits, PR #58 R18) — which bind §h2's locks.
 
 ---
@@ -341,35 +341,44 @@ wrong again.
 
 | document | chars | rung 1 (`gpt-5-mini`) | rung 2 (`claude-opus-5`) | full ladder |
 |---|---|---|---|---|
-| `xref-index-collapse` | 33,061 | ~$0.0062 | ~$0.1962 | ~$0.2024 |
-| `intc-2025` (the real collapse, burned in) | 517,976 | ~$0.0079 | ~$0.8023 | ~$0.8102 |
-| median span-bearing dev filing | 108,893 | ~$0.0079 | ~$0.2910 | ~$0.2989 |
-| `bac-2006` (2nd largest) | 705,848 | ~$0.0079 | ~$1.0372 | ~$1.0451 |
-| `jpm-2024` (largest) | 1,213,284 | ~$0.0079 | ~$1.6715 | ~$1.6794 |
+| `xref-index-collapse` | 33,061 | ~$0.0061 | ~$0.2161 | ~$0.2222 |
+| `intc-2025` (the real collapse, burned in) | 517,976 | ~$0.0077 | ~$1.1141 | ~$1.1218 |
+| median span-bearing dev filing | 108,893 | ~$0.0077 | ~$0.3565 | ~$0.3642 |
+| `bac-2006` (2nd largest) | 705,848 | ~$0.0077 | ~$1.4620 | ~$1.4697 |
+| `jpm-2024` (largest) | 1,213,284 | ~$0.0077 | ~$2.4017 | ~$2.4094 |
 
-**Every figure in this table went UP on 2026-08-27, and the reason is the exam.**
-Output was previously estimated at a guessed 150 tokens per call. The live run
-showed why that was wrong: reasoning tokens are billed as output, and
-`anthropic/claude-opus-5` spent its entire 2,048-token allowance thinking and
-emitted nothing (§h4). The model now prices output at each rung's own
-`max_tokens` **ceiling** — 2,048 for rung 1, 6,144 for rung 2 including its
-4,096-token reasoning budget — so the published figure is an UPPER BOUND that
-cannot understate, which is the property a cost figure needs. The arithmetic,
-once, so the rest re-derives: rung 2 on the median filing is
-`min(108893, 1250000)/4 + 250 = 27,473` input tokens at $5.00/MTok = $0.137365,
-plus a 6,144-token output ceiling at $25.00/MTok = $0.153600, = **$0.2910**.
+**Every figure in this table went UP on 2026-08-27, twice, and both times the
+exam is the reason.** First: output was estimated at a guessed 150 tokens per
+call, and the run showed reasoning tokens are billed as output — rung 2 spent
+its entire 2,048-token allowance thinking and emitted nothing (§h4) — so output
+is now priced at each rung's own `max_tokens` **ceiling**, 2,048 for rung 1 and
+6,144 for rung 2 including its 4,096-token reasoning budget.
+
+Second, and larger: **the chars-per-token proxy was wrong, per model, in both
+directions** (§h5). It was a retyped `4` for both rungs. Measured against four
+billed responses it is 3.0740 / 2.7395 for `anthropic/claude-opus-5` — so `4`
+understated rung 2's tokens by up to **1.46×** — and 5.4195 / 4.2663 for
+`openai/gpt-5-mini`, where it overstated. The proxy is now derived per model
+from `tasks/reviews/2026-08-27-token-ratio.json` as the MINIMUM observed value
+floored to 1 dp (2.7 and 4.2), minimum because fewer chars per token means more
+tokens means more money, so it is the end that cannot understate. Both changes
+push every figure the same way: up. The arithmetic, once, so the rest
+re-derives: rung 2 on the median filing is `min(108893, 1250000)/2.7 + 250 =
+40,580` input tokens at $5.00/MTok = $0.202900, plus a 6,144-token output
+ceiling at $25.00/MTok = $0.153600, = **$0.3565**.
 
 ### d2. Per-corpus estimate
 
 A full `escalate=True` sweep of all 44 dev filings costs an estimated
-**$1.0126** — `intc-2025` at $0.8102 plus `xref-index-collapse` at $0.2024,
+**$1.3440** — `intc-2025` at $1.1218 plus `xref-index-collapse` at $0.2222,
 because the other 42 stop at rung 0. A default-flag sweep costs **$0.00**,
 measured, not estimated: no tier is reachable.
 
 Before 2026-08-27 this figure was **$0.0488** over 43 documents, when the only
-escalating document was a 33,061-char synthetic. The burn moved a 517,976-char
-real filing onto the dev side and the sweep price rose 21×. Nothing about the
-trigger changed; the corpus did.
+escalating document was a 33,061-char synthetic and the token proxy was wrong.
+The burn moved a 517,976-char real filing onto the dev side and the corrected
+proxy raised every per-document price; together the sweep rose 27×. Nothing
+about the trigger changed; the corpus and the arithmetic did.
 
 ### d3. Where the budget does not hold, said plainly
 
@@ -399,17 +408,17 @@ retyped by hand rather than read from the census.** It is now derived by
 derivation reproduces the reviewer's independent figure exactly.
 
 Routing on `item_span_near_empty` as well would escalate **13 of 44** dev
-documents for an estimated **$7.2195 per sweep against the chosen trigger's
-$1.0126 — 7.1×**. `bac-2006` is **not** among the thirteen (§c3: it is silent),
+documents for an estimated **$9.6754 per sweep against the chosen trigger's
+$1.3440 — 7.2×**. `bac-2006` is **not** among the thirteen (§c3: it is silent),
 and the script asserts that rather than trusting it. Per document, largest
-first: `jpm-2024` $1.6794, `intc-2025` $0.8102, `cvx-2015` $0.6847, `xom-2021`
-$0.6488, `ibr-pointer-first` $0.6162, `ge-1994` $0.6162, `nvda-2024` $0.5892,
-`fy2021-item9c` $0.2909, `sandston-2021` $0.2908, `ko-1997` $0.2843,
-`reac-2015` $0.2623, `spatz-2014` $0.2443, `xref-index-collapse` $0.2024.
+first: `jpm-2024` $2.4094, `intc-2025` $1.1218, `cvx-2015` $0.9358, `xom-2021`
+$0.8827, `ibr-pointer-first` $0.8343, `ge-1994` $0.8343, `nvda-2024` $0.7943,
+`fy2021-item9c` $0.3524, `sandston-2021` $0.3523, `ko-1997` $0.3426,
+`reac-2015` $0.3101, `spatz-2014` $0.2833, `xref-index-collapse` $0.2222.
 
 **This ratio has now moved twice, and the second move goes AGAINST the ruling.**
 It was published as $3.4/~60× (wrong), corrected to $4.5656/93.6× (right for its
-corpus), and is now **7.1×** — because the burn put a large real collapsed
+corpus), and is now **7.2×** — because the burn put a large real collapsed
 filing on the escalating side of the comparison, so the narrow trigger's own
 sweep is no longer nearly free. The cost gap between the two triggers is an
 order of magnitude smaller than this section claimed a day ago. **The ruling
@@ -638,10 +647,10 @@ deployment is attacker-supplied and capped only by `MAX_BYTES` (25 MB). A
 doubling the configured ceiling. Rung 2's input is now capped at
 `EXTRACT_WINDOW = 1,250,000` chars — the largest committed dev filing rounded
 up, so no dev document is truncated and no figure in §d moves — which caps one
-rung-2 call at an estimated **$1.7173**.
+rung-2 call at an estimated **$2.4697**.
 
-**So the effective deployment ceiling is `SEC10K_ESCALATION_MAX_USD` + $1.7173,
-i.e. $6.7173 at the default $5.00**, not $5.00. It is stated that way here
+**So the effective deployment ceiling is `SEC10K_ESCALATION_MAX_USD` + $2.4697,
+i.e. $7.4697 at the default $5.00**, not $5.00. It is stated that way here
 rather than as MAX_USD alone, and `tasks/reviews/d11_sweep_cost.py` prints it
 so the two cannot drift. Truncation is never silent: each tier record publishes
 `input_chars` and `truncated`, so a resolution over a clipped document says so.
@@ -731,6 +740,56 @@ outcome, so `intc-2025` is burned and moved to the dev side; the owner ruled
 the burn is taken rather than argued around, and declined a second amendment to
 the rule. `evals/heldout/README.md`, Burn 2026-08-27, carries the accounting.
 **D11's surviving exam is one filing.**
+
+## h5) The token proxy was wrong, per model, in both directions (2026-08-27)
+
+Every dollar figure this ADR publishes is derived through a chars-per-token
+proxy, and nothing checked that proxy against reality until the two held-out
+exam runs billed four real responses. It was a retyped `4` for both rungs.
+
+| model | measured chars/token | what `4` did |
+|---|---|---|
+| `anthropic/claude-opus-5` | 3.0740 (`intc-2025`), 2.7395 (`c-2025`) | **UNDERSTATED tokens by up to 1.46×** |
+| `openai/gpt-5-mini` | 5.4195 (`intc-2025`), 4.2663 (`c-2025`) | overstated them |
+
+**It is not one multiplier — it is per model, and the two rungs err in opposite
+directions.** Both of the orchestrator's data points happened to be rung 2,
+which is why the error first looked like a single 1.46× correction.
+
+The understatement is the one that cost money. §h2 published a worst-case single
+call of **$1.5675** while a real `c-2025` rung-2 call on a *larger* input had
+already been billed **$2.12163**; the per-document `Budget` of $1.00 was
+overshot to $2.13 — which is the disclosed "ceiling plus one call's own price"
+behaviour of §d3, except that the disclosed price was wrong.
+
+**The correction.** `chars_per_token(model)` in `tasks/reviews/d11_sweep_cost.py`
+reads `tasks/reviews/2026-08-27-token-ratio.json` and returns the **minimum**
+observed value for that model, floored to 1 dp — 2.7 and 4.2. Minimum, because
+fewer chars per token means more tokens for the same text, so it is the end that
+cannot understate a price. No number is retyped anywhere;
+`evals/adversarial/token-proxy-bound.json` pins the function against the record,
+in the conservative direction only, and refuses to pass if any rung's model has
+no sample.
+
+**How thin this is, said rather than implied.** Two samples per model. Both
+documents are SEC filings in HTML-derived normalized text, so nothing here says
+what the ratio would be on another corpus. One of the four is derived from the
+code path rather than measured, and its only effect is to *lower* the bound —
+it can make costs more conservative, never less. OpenRouter documents no
+tokenizer endpoint (checked 2026-08-27): token counts come back only as a
+byproduct of a billed completion, so a proxy is unavoidable and can only be
+measured and bounded. This is a bound, not an estimate, precisely because two
+points cannot support an estimate.
+
+**`EXTRACT_WINDOW` is kept at 1,250,000 on a premise that has changed.** It was
+chosen when the bound it produced was believed to be $1.5675; the corrected
+proxy puts it at $2.4697. It is not re-tuned to chase the old figure, because
+that figure was never the requirement — "bounded on arbitrary input" was, and it
+still is — and shrinking it to ~844,000 chars would truncate `jpm-2024`, giving
+up the property that justified the number to preserve a number that was wrong.
+The levers for a smaller ceiling are the documented ones: lower
+`SEC10K_ESCALATION_MAX_USD`, or build §d3's projected-cost pre-check. Both are
+the operator's call.
 
 ## h3) The seam — the gate stays offline and $0, and it is measured
 
@@ -838,12 +897,41 @@ cannot be produced without a credential.
 
 ## k) What is NOT done, and must not be read as done
 
-**The held-out exam RAN on 2026-08-27, on one of its two filings, and failed.**
-`intc-2025`, `escalate=True`, $0.899858, `resolved: []` — §h4 has the diagnosis
-and `evals/heldout/README.md` has the burn. It is now on the dev side, so
-**D11's surviving exam is `c-2025` alone, which remains unrun and unread.** The
-paragraph below is the position as it stood before that run, kept because its
-last two sentences are still exactly true of `c-2025`.
+**THE HELD-OUT EXAM RAN ON BOTH FILINGS AND THE LADDER RESCUED NEITHER.
+D11's acceptance criterion — "the slow path completes the D6 filings it never
+trained against" — is NOT MET.** Stated flatly because softening it would be
+the dishonesty this whole milestone is about.
+
+| | cost | outcome |
+|---|---|---|
+| `intc-2025`, 2026-08-27 | $0.899858, 2 calls | `resolved: []`. Rung 2 returned empty content: the CLIENT was broken (§h4). Burned by the fix it exposed. |
+| `c-2025`, 2026-08-27 | $2.125834, 2 calls | `resolved: []`. Rung 1 `rejected`; rung 2 **worked** and returned parseable `{"7A": null}` — an honest "cannot locate". Not burned. |
+
+**$3.025692 of real money, and no item resolved on either filing.**
+
+What the exam DID prove, which is not nothing:
+
+* **D8's trigger fired correctly on both unseen filings** — `intc-2025`
+  coverage 0.0033, `c-2025` coverage 0.0 — which is the sensor §c is about,
+  working on documents it had never seen.
+* **Rung 1 answered honestly and cheaply on both** ($0.004498, $0.004204),
+  returning `null` for items it could not locate rather than inventing spans.
+  That is the behaviour §b's prompt asks for and it is the cheap rung's whole
+  job.
+* **The transport works after the §h4 fix**, confirmed by a real call:
+  `c-2025`'s rung 2 came back parseable with `finish_reason: "stop"`, outcome
+  `rejected` and not `unparseable`.
+
+And what it did NOT prove, which is the important half: **`verify` was never
+handed a bad answer to reject.** Both models said "I cannot locate this"; neither
+returned a wrong span. So §b's five checks — the trust boundary this design
+rests on — remain untested against a real adversarial response. The ladder's
+safety property is still only proven against constructed proposals.
+
+`intc-2025` is now on the dev side (`evals/heldout/README.md`, Burn
+2026-08-27), so **D11's surviving exam is `c-2025`, and it has now been spent
+too — though not burned: the owner ruled its outcome fixes nothing.** The
+paragraph below is the position as it stood before either run.
 
 **The D11 ledger row defines success on held-out
 — "the slow path completes the D6 filings it never trained against". That run
@@ -855,8 +943,8 @@ not iterated against; the only held-out numbers in this document are the ones
 ADR-035 §b4 already published, cited under the 2026-08-26 amendment that a
 ruling citing an outcome is not influence.
 
-**Two live calls have now been made, and they changed nothing about the
-trust boundary.** Every dollar figure is still an estimate (§d), now re-derived
+**Four live calls have now been made across two exam runs, $3.025692 in total,
+and they changed nothing about the trust boundary.** Every dollar figure is still an estimate (§d), now re-derived
 on measured ceilings. No `verify()` has ever been run against a real model's
 answer — only against
 `_demo`'s constructed proposals, which test the checker and say nothing about
@@ -885,4 +973,4 @@ paragraph).
 | Escalation is free by default | any default-flag run reports a non-zero `cost` | `evals/snapshot.py`, and the `escalation-trigger-quiet` case's `usd: 0.0` | $0 |
 | The gate stays offline | any network module appears in a gate import | `escalation-seam-offline`, every run | $0 |
 | A model cannot move a span it should not | a fabricated offset passes `verify` | attack `escalate._demo`'s proposals; the live run's `rejections` list | $0 |
-| A2 stays declined | someone adjudicates the pointer-bodied-item-7/8 class as a defect | a decision, not a measurement | §d4's $7.2195/sweep, 7.1× (derived by `tasks/reviews/d11_sweep_cost.py`) |
+| A2 stays declined | someone adjudicates the pointer-bodied-item-7/8 class as a defect | a decision, not a measurement | §d4's $9.6754/sweep, 7.2× (derived by `tasks/reviews/d11_sweep_cost.py`) |

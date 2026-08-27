@@ -49,3 +49,45 @@ replayed from evals/cache/llm/ at $0. c-2025 was NOT run and was NOT read.
   purpose), and the case now pins the recorded VALUES
   (`finish_reason='length'`, `output_tokens=2048`, `max_tokens=6144`).
   Caught by mutation before shipping, not after.
+
+
+================================================================================
+PR #58 — the c-2025 exam: token-proxy correction, red-first record.
+Tree: task/D11 at b9a704a. Date: 2026-08-27. NO live call was made this round —
+all four responses were already in evals/cache/llm/. c-2025 was NOT read, run
+or altered; the two samples attributed to it come from its cached response plus
+the orchestrator's reported proxy figure and the code path's own window cap.
+
+=== the four billed responses this repo now has ===
+  anthropic/claude-opus-5    in= 424281 out=    9 usd=2.12163    finish=stop     text='{"7A": null}'
+  openai/gpt-5-mini          in=  14298 out=  315 usd=0.004204   finish=stop     text='{}'
+  anthropic/claude-opus-5    in= 168832 out= 2048 usd=0.89536    finish=None     text=''
+  openai/gpt-5-mini          in=  11257 out=  842 usd=0.004498   finish=None     text='{"1": null, "7": null, "8": null}'
+
+=== the measurement: the proxy is wrong PER MODEL, in BOTH directions ===
+  intc-2025   openai/gpt-5-mini             61,007 chars /  11,257 tok = 5.4195 c/t  [MEASURED]
+  intc-2025   anthropic/claude-opus-5      518,984 chars / 168,832 tok =  3.074 c/t  [MEASURED]
+  c-2025      openai/gpt-5-mini             61,000 chars /  14,298 tok = 4.2663 c/t  [DERIVED]
+  c-2025      anthropic/claude-opus-5    1,162,300 chars / 424,281 tok = 2.7395 c/t  [REPORTED]
+
+  anthropic/claude-opus-5    observed [2.7395, 3.074] -> published 2.7
+  openai/gpt-5-mini          observed [4.2663, 5.4195] -> published 4.2
+
+  a proxy of 4 for opus-5 understates tokens by 1.46 x
+
+=== the case, run against the then-published `return 4` ===
+  token-proxy-bound: FAILED
+   - anthropic/claude-opus-5: published chars/token 4 > measured minimum 2.7395 — a proxy above the measured ratio UNDERSTATES tokens and therefore understates every cost figure derived from it (samples: [2.7395, 3.074])
+
+=== AFTER: the corrected proxy, mutated ===
+  MUTATE  the token proxy reverted to a flat 4 for every model
+    eval gate: 'invariant': 80/81 = 0.988  (+4 enumerated debt, unscored)  FAIL=['token-proxy-bound']
+    VERDICT  : RED
+  MUTATE  the measurement record's opus-5 samples deleted
+    eval gate: 'invariant': 80/81 = 0.988  (+4 enumerated debt, unscored)  FAIL=['token-proxy-bound']
+    VERDICT  : RED
+  RESTORE -> 'invariant': 81/81 = 1.000  (+4 enumerated debt, unscored), FAIL=none
+  Both RED, restore GREEN. The second mutation matters as much as the first: it
+  deletes the EVIDENCE rather than the code, and the check refuses to pass with
+  a rung whose model nothing has measured — so the bound cannot be disarmed by
+  emptying the record it reads.
