@@ -236,3 +236,46 @@ PART C — clean-tree gate after the repair:
   python3 -m src.sec10k.web.limiter      : limiter: ok
   python3 -m evals.run --suite invariant : 87/87 = 1.000
   python3 -m evals.run --suite fast      : 151/151 = 1.000 (baseline 1.0)
+
+
+APPENDIX — PR #65 round 2 repair (2026-08-28)
+=============================================
+Reviewer findings tasks/reviews/pr65-r2.json (R1/R2 confirmed closed):
+R3 (MEDIUM) the round-1 drain was SELF-REFERENTIAL — loop bound and threshold
+both `sing.burst`, and nothing tied the singleton's burst/per_minute to
+MAX_BURST/MAX_PER_MINUTE, so attribute inflation (bypassing _bounded_int,
+which pins only construction) self-certified. R4 (LOW) _demo's drain lacked
+the try/finally its eval_adapter twin has.
+
+PART A — R3 REPRODUCED: the burst-inflation mutant GREEN against the
+pre-repair tree (the check as committed in 4399caf):
+
+clean tree: run_case passed=True (0 failures); self-check exit 0 (limiter: ok)
+
+N3 burst inflation (reviewer's R3 mutant): limiter.py `LIMITER = Limiter(); LIMITER.burst = 10**6; LIMITER._tokens = float(10**6)`
+  python3 -m src.sec10k.web.limiter -> exit 0 (limiter: ok)
+  run_case(free-tier-limit) -> STILL GREEN, 0 failure(s)
+
+restored tree: passed=True
+
+PART B — the repair: BOTH twins pin the singleton's CONFIG before draining —
+check_free_tier_limit refuses `sing.burst > MAX_BURST or sing.per_minute >
+MAX_PER_MINUTE` (and only drains inside those bounds, so the drain loop can
+never be attacker-sized); _demo asserts the same two bounds and wraps its
+drain in try/finally (R4), leaving the singleton full even on assertion
+failure. Mutant re-run against the repaired twins — RED in both:
+
+clean tree: run_case passed=True (0 failures); self-check exit 0 (limiter: ok)
+
+N3 burst inflation (reviewer's R3 mutant): limiter.py `LIMITER = Limiter(); LIMITER.burst = 10**6; LIMITER._tokens = float(10**6)`
+  python3 -m src.sec10k.web.limiter -> exit 1 (AssertionError: 1000000)
+  run_case(free-tier-limit) -> RED, 1 failure(s)
+     - the PRODUCTION singleton is configured burst=1000000, per_minute=30, over the module's own MAX_BURST 500 / MAX_PER_MINUTE 3000 — a self-referential drain would happily confirm an inflated limit (PR #65 R3)
+
+restored tree: passed=True
+
+PART C — clean-tree gate after the repair (pre-merge; the merged-tree gate
+runs are in the merge commit's own message):
+  python3 -m src.sec10k.web.limiter      : limiter: ok
+  python3 -m evals.run --suite invariant : 87/87 = 1.000
+  python3 -m evals.run --suite fast      : 151/151 = 1.000 (baseline 1.0)

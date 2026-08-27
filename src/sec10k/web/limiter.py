@@ -154,10 +154,17 @@ def _demo():
     # isinstance pin accepted an always-allow subclass that admitted
     # 1000/1000 while this self-check printed ok
     assert type(LIMITER) is Limiter
+    # PR #65 R3: the drain below is bounded by LIMITER.burst itself, so the
+    # config must be pinned first or an inflated attribute self-certifies
+    assert LIMITER.burst <= MAX_BURST, LIMITER.burst
+    assert LIMITER.per_minute <= MAX_PER_MINUTE, LIMITER.per_minute
     LIMITER.reset()
-    admitted = sum(1 for _ in range(LIMITER.burst + 3) if LIMITER.allow()[0])
-    assert admitted <= LIMITER.burst + 1, admitted   # it must actually refuse
-    LIMITER.reset()
+    try:                              # PR #65 R4: leave the singleton full
+        admitted = sum(1 for _ in range(LIMITER.burst + 3)
+                       if LIMITER.allow()[0])
+        assert admitted <= LIMITER.burst + 1, admitted   # it must refuse
+    finally:
+        LIMITER.reset()
     print("limiter: ok")
 
 

@@ -3920,6 +3920,18 @@ def check_free_tier_limit(case):
                        f"Limiter — a subclass here is how an always-allow "
                        f"override ships while every Limiter(...) row stays "
                        f"green (PR #65 R1)")
+        elif not (sing.burst <= lim_mod.MAX_BURST
+                  and sing.per_minute <= lim_mod.MAX_PER_MINUTE):
+            # PR #65 R3: the drain below is bounded by sing.burst ITSELF, so
+            # without this row an inflated attribute (bypassing _bounded_int,
+            # which pins only construction) makes the drain confirm whatever
+            # the mutation chose — measured green at burst = 10**6
+            bad.append(f"the PRODUCTION singleton is configured burst="
+                       f"{sing.burst}, per_minute={sing.per_minute}, over the "
+                       f"module's own MAX_BURST {lim_mod.MAX_BURST} / "
+                       f"MAX_PER_MINUTE {lim_mod.MAX_PER_MINUTE} — a "
+                       f"self-referential drain would happily confirm an "
+                       f"inflated limit (PR #65 R3)")
         else:
             try:
                 sing.reset()
