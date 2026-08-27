@@ -1,6 +1,6 @@
 # ADR-022 — The DONE split: a second sanctioned ledger file, and the rule that keeps its gates observable
 
-Date: 2026-08-20. Status: accepted. Amends: ADR-009.
+Date: 2026-08-20. Status: accepted. Amends: ADR-009. Amended by: ADR-037.
 
 **Ruling**: `tasks/DONE.md` becomes the second sanctioned ledger file — an append-only, one-line-per-milestone archive; a row may leave `TODO.md` only when its Status carries no `UNRUN` gate.
 **Because**: `TODO.md` is a working set (a hot/cold split: live rows vs. settled history) that has grown to 21 rows of settled history, and archiving it must not let an unobserved gate quietly disappear the way ADR-009 was written to stop.
