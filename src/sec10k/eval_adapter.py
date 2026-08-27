@@ -414,7 +414,13 @@ def eval_check(result, chk, path=None):
         # the item whose span to borrow), and the only thing the case supplies
         # is which item the proposal claims — which is exactly the thing a
         # model gets to choose, and therefore the thing that must be guarded.
+        import json as _json
+
         from src.sec10k.escalate import verify
+        # D17: verify is a pure checker — after EVERY sub-case, accepted or
+        # rejected, the deterministic item list must be byte-untouched. Only
+        # `apply` may move a span, and only on an accepted proposal.
+        items_before = _json.dumps(result["items"], sort_keys=True)
         for sub in chk["cases"]:
             proposal = {}
             for code, spec in sub["proposal"].items():
@@ -423,12 +429,27 @@ def eval_check(result, chk, path=None):
                     if src is None or src.get("start") is None:
                         return (f"{sub['name']}: like_item {spec['like_item']} "
                                 "has no span in this fixture")
-                    proposal[code] = [src["start"], src["end"]]
+                    s, e = src["start"], src["end"]
+                    # D17 modifiers, applied to the borrowed REAL span so a
+                    # case can aim at mid-paragraph prose (`shift`), a
+                    # sub-floor stub (`trunc`), an overlap with a sibling's
+                    # real span (`grow`), or past the document (`overrun`)
+                    # without hand-typing fixture offsets that would go stale.
+                    s, e = s + spec.get("shift", 0), e + spec.get("shift", 0)
+                    if "trunc" in spec:
+                        e = s + spec["trunc"]
+                    e += spec.get("grow", 0)
+                    if "overrun" in spec:
+                        e = len(result["normalized_text"]) + spec["overrun"]
+                    proposal[code] = [s, e]
                 else:
                     proposal[code] = spec
             asked = set(sub["asked"]) if "asked" in sub else None
             got, why = verify(result["normalized_text"], result["items"],
                               proposal, asked=asked)
+            if _json.dumps(result["items"], sort_keys=True) != items_before:
+                return (f"{sub['name']}: verify MUTATED the deterministic "
+                        "item list — it must be a pure checker")
             if sub["expect"] == "reject":
                 if got:
                     return (f"{sub['name']}: verify ACCEPTED {sorted(got)} — "
@@ -464,9 +485,9 @@ def eval_check(result, chk, path=None):
             return {"cached": False, **chk["response"], "model": model}
 
         real, _llm.call = _llm.call, _stub
+        items_in = copy.deepcopy(result["items"])
         try:
-            rec, extra = route(result["normalized_text"],
-                               copy.deepcopy(result["items"]),
+            rec, extra = route(result["normalized_text"], items_in,
                                result["warnings"])
         except Exception as e:                     # the pre-fix behaviour
             return (f"route CRASHED on the recorded payload "
@@ -477,6 +498,12 @@ def eval_check(result, chk, path=None):
         got = [x["outcome"] for x in rec["tiers"]]
         if "outcomes" in chk and got != chk["outcomes"]:
             return f"tier outcomes {got} != {chk['outcomes']}"
+        # D17: a transport answer the router did not accept must leave the
+        # deterministic item list byte-untouched — all-or-nothing, and
+        # nothing applied means NOTHING moved.
+        if chk.get("untouched") and items_in != result["items"]:
+            return ("route mutated the item list on an answer it did not "
+                    "accept — the deterministic output must stand untouched")
         if "error_contains" in chk:
             blob = " ".join(x.get("error", "") for x in rec["tiers"])
             for want in chk["error_contains"]:

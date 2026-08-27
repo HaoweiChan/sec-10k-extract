@@ -266,8 +266,15 @@ def verify(text, items, proposal, asked=None):
                        f"only {list(SPAN_STATUSES)} may be resolved, and writing "
                        "offsets here would inflate meta.coverage")
             continue
+        # D17: bool is EXCLUDED explicitly because it subclasses int —
+        # isinstance(True, int) is True, so before 2026-08-28 a JSON
+        # `[true, N]` passed this check and was accepted as [1, N] whenever
+        # that span verified, publishing `"start": true` in the envelope.
+        # Pinned red-first in evals/adversarial/escalation-verify-battery.json
+        # and demonstrated in _demo below.
         if not (isinstance(span, (list, tuple)) and len(span) == 2
-                and all(isinstance(v, int) for v in span)):
+                and all(isinstance(v, int) and not isinstance(v, bool)
+                        for v in span)):
             why.append(f"item {code}: {span!r} is not an [int, int] offset pair")
             continue
         s, e = span
@@ -429,6 +436,18 @@ def route(text, items, warnings, budget=None):
         try:
             proposal = json.loads(got["text"].strip().removeprefix("```json")
                                   .removesuffix("```").strip())
+            # D17: refuse to coerce JSON booleans BEFORE int() can launder
+            # them — int(True) is 1, so `{"1": [true, N]}` used to reach
+            # verify as the plausible integer pair [1+offset, N+offset] and
+            # compete on the same terms as a real answer, and even the
+            # verify-side bool guard never sees the bool on this path. Floats
+            # and digit strings stay coerced by ruling (benign: int() moves a
+            # float by under one character and parses the number the model
+            # evidently meant); a bool is an answer to a different question.
+            # Red-first: evals/adversarial/escalation-route-parse.json.
+            if any(isinstance(x, bool) for v in proposal.values()
+                   if isinstance(v, (list, tuple)) for x in v):
+                raise TypeError("JSON true/false is not a character offset")
             proposal = {k: (None if v is None else [int(v[0]) + offset,
                                                    int(v[1]) + offset])
                         for k, v in proposal.items()}
@@ -580,6 +599,20 @@ def _demo():
     assert bad == {} and "not an item of this document" in why[0], why
     # not an offset pair at all
     assert verify(text, items, {"1": "page 42"})[0] == {}
+    # --- D17: JSON booleans. `isinstance(True, int)` is True, so the shape
+    #     check must exclude bool EXPLICITLY. The sharp construction: a
+    #     document whose real body starts at offset 1, so [True, N] coerced
+    #     to [1, N] is exactly the span that verifies. Before 2026-08-28 this
+    #     returned {'1': {'start': True, ...}} — an ACCEPTED proposal whose
+    #     start `apply` would have published as `"start": true`.
+    bt = "x" + body
+    bit = [{"item": "1", "start": 1, "end": 21, "status": "extracted",
+            "method": "heading_strict", "heading_text": None}]
+    assert verify(bt, bit, {"1": [1, 1 + len(body)]})[0], \
+        "the honest int twin of the bool span must verify, or this probes nothing"
+    bad, why = verify(bt, bit, {"1": [True, 1 + len(body)]})
+    assert bad == {} and "not an [int, int] offset pair" in why[0], (bad, why)
+    assert verify(bt, bit, {"1": [False, 1 + len(body)]})[0] == {}
     # a long, in-bounds, correctly-ordered span that does NOT open with the
     # item's heading — the hallucination shape, and the one that matters
     tailat = text.index("tail ")

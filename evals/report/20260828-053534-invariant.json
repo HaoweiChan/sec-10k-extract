@@ -1,0 +1,6091 @@
+{
+  "suite": "invariant",
+  "score": 0.9886363636363636,
+  "git_sha": "fa0fcea0701f40da4d597fb99b579d91e37f5f26-dirty",
+  "table_cells_fidelity": null,
+  "table_rows_fidelity": null,
+  "structure_blocks_fidelity": null,
+  "structure_bounds_fidelity": null,
+  "results": [
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 23,
+      "n_extracted": 18,
+      "doc_status": "success",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 16053
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 68162
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 43
+        },
+        {
+          "item": "1C",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2704
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 520
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 5408
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 93
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2685
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 54
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 18144
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 3037
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 61402
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 101
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 4511
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 574
+        },
+        {
+          "item": "9C",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 105
+        },
+        {
+          "item": "10",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 11898
+        },
+        {
+          "item": "16",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 69
+        }
+      ],
+      "seconds": 0.17,
+      "id": "aapl-2025-structure",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "seconds": 0.01,
+      "id": "adr-header-and-index",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "seconds": 0.15,
+      "id": "report-citations-resolve",
+      "kind": "golden"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 0,
+      "n_extracted": 0,
+      "doc_status": "unsupported",
+      "items_summary": [],
+      "seconds": 0.03,
+      "id": "amended-cover-refused",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 17,
+      "n_extracted": 14,
+      "doc_status": "success",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 18119
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2165
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 9378
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 200
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 587
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 3730
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 169468
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 4207
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_lenient",
+          "chars": 170958
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 101
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1066
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 14911
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 3112
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 9533
+        }
+      ],
+      "seconds": 0.24,
+      "id": "ba-2003-asterisk-ibr",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 23,
+      "n_extracted": 18,
+      "doc_status": "success",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 16053
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 68162
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 43
+        },
+        {
+          "item": "1C",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2704
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 520
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 5408
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 93
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2685
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 54
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 18144
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 3037
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 61402
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 101
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 4511
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 574
+        },
+        {
+          "item": "9C",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 105
+        },
+        {
+          "item": "10",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 11898
+        },
+        {
+          "item": "16",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 69
+        }
+      ],
+      "seconds": 0.29,
+      "id": "blocks-offsets-invariant",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 20,
+      "n_extracted": 16,
+      "doc_status": "success",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 37695
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_lenient",
+          "chars": 39029
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 294
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1966
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 199
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 59
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1715
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1410
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 85111
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 3748
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 111892
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 111
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 6824
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 55
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1453
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 5475
+        }
+      ],
+      "seconds": 0.84,
+      "id": "blocks-wrapped-invariant",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 20,
+      "n_extracted": 16,
+      "doc_status": "success",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 37695
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_lenient",
+          "chars": 39029
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 294
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1966
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 199
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 59
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1715
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1410
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 85111
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 3748
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 111892
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 111
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 6824
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 55
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1453
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 5475
+        }
+      ],
+      "seconds": 0.72,
+      "id": "boilerplate-offsets-invariant",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "seconds": 0.39,
+      "id": "build-identity",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 21,
+      "n_extracted": 20,
+      "doc_status": "success",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 7496
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 129
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 142
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 367
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 503
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 70
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2162
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 161
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 13015
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 197
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 15611
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 102
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 7166
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 186
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 6161
+        },
+        {
+          "item": "11",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 3357
+        },
+        {
+          "item": "12",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2174
+        },
+        {
+          "item": "13",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 833
+        },
+        {
+          "item": "14",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1253
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1371
+        },
+        {
+          "item": "16",
+          "status": "omitted",
+          "confidence": 0.8,
+          "method": "status_keyword",
+          "chars": null
+        }
+      ],
+      "seconds": 0.09,
+      "id": "caps-cover-taxonomy",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 21,
+      "n_extracted": 20,
+      "doc_status": "success",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 7496
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 129
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 142
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 367
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 503
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 70
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2162
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 161
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 13015
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 197
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 15611
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 102
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 7166
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 186
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 6161
+        },
+        {
+          "item": "11",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 3357
+        },
+        {
+          "item": "12",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2174
+        },
+        {
+          "item": "13",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 833
+        },
+        {
+          "item": "14",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1253
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1371
+        },
+        {
+          "item": "16",
+          "status": "omitted",
+          "confidence": 0.8,
+          "method": "status_keyword",
+          "chars": null
+        }
+      ],
+      "seconds": 0.09,
+      "id": "comma-cover-period",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 20,
+      "n_extracted": 16,
+      "doc_status": "success_with_warning",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 82907
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 14404
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 43
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.8,
+          "method": "heading_strict",
+          "chars": 534
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2428
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 325
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1935
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.8,
+          "method": "heading_strict",
+          "chars": 119
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.8,
+          "method": "heading_strict",
+          "chars": 280
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.8,
+          "method": "heading_strict",
+          "chars": 453
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.8,
+          "method": "heading_strict",
+          "chars": 189
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 105
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1928
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 49
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 3241
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1868
+        }
+      ],
+      "seconds": 0.4,
+      "id": "cvx-2015-pointer-flagged",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 20,
+      "n_extracted": 16,
+      "doc_status": "success_with_warning",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 82907
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 14404
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 43
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.8,
+          "method": "heading_strict",
+          "chars": 534
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2428
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 325
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1935
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.8,
+          "method": "heading_strict",
+          "chars": 119
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.8,
+          "method": "heading_strict",
+          "chars": 280
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.8,
+          "method": "heading_strict",
+          "chars": 453
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.8,
+          "method": "heading_strict",
+          "chars": 189
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 105
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1928
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 49
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 3241
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1868
+        }
+      ],
+      "seconds": 0.39,
+      "id": "cvx-2015-silent-pointer-items",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "seconds": 0.0,
+      "id": "deployed-fixture-exclusion",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [
+        "evals/fixtures/repo_hygiene/escalation-door-open.py: 2 `extract_items(...)` call(s), 1 of them outside `_run` \u2014 the paid path must have exactly one entrance, or the door is a guard the next endpoint walks around (PR #61 R13)",
+        "evals/fixtures/repo_hygiene/escalation-door-open.py: `extract_items(escalate=...)` is not the door's verdict `escalate` \u2014 the decision is taken and then not used, which is the shape R13 found and R10 paid for",
+        "evals/fixtures/repo_hygiene/escalation-door-open.py: `_run` never sets `view['escalation']` \u2014 with the tier behind a token, `routing: null` is the common case, and an envelope that says nothing lets a viewer believe the paid path ran and stayed quiet"
+      ],
+      "seconds": 0.0,
+      "id": "escalation-door-open",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "seconds": 0.01,
+      "id": "escalation-door",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 16,
+      "n_extracted": 16,
+      "doc_status": "ambiguous",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 18
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 20
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 27
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 117
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 83
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 33
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 95
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 69
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 53
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 105
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 61
+        },
+        {
+          "item": "11",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 33
+        },
+        {
+          "item": "12",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 112
+        },
+        {
+          "item": "13",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 57
+        },
+        {
+          "item": "14",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 44
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 76
+        }
+      ],
+      "seconds": 0.03,
+      "id": "escalation-empty-completion",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 16,
+      "n_extracted": 16,
+      "doc_status": "ambiguous",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 18
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 20
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 27
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 117
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 83
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 33
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 95
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 69
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 53
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 105
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 61
+        },
+        {
+          "item": "11",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 33
+        },
+        {
+          "item": "12",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 112
+        },
+        {
+          "item": "13",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 57
+        },
+        {
+          "item": "14",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 44
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 76
+        }
+      ],
+      "seconds": 0.01,
+      "id": "escalation-no-credential",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "route_payload",
+            "response": {
+              "text": "{\"1\": [true, 60000]}",
+              "usage": {
+                "input_tokens": 0,
+                "output_tokens": 0
+              },
+              "usd": 0.0
+            },
+            "outcomes": [
+              "unparseable",
+              "unparseable"
+            ],
+            "error_contains": [
+              "not a character offset"
+            ],
+            "resolved": [],
+            "untouched": true
+          },
+          "why": "tier outcomes ['rejected', 'rejected'] != ['unparseable', 'unparseable']"
+        }
+      ],
+      "n_items": 16,
+      "n_extracted": 16,
+      "doc_status": "ambiguous",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 18
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 20
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 27
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 117
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 83
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 33
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 95
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 69
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 53
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 105
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 61
+        },
+        {
+          "item": "11",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 33
+        },
+        {
+          "item": "12",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 112
+        },
+        {
+          "item": "13",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 57
+        },
+        {
+          "item": "14",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 44
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 76
+        }
+      ],
+      "seconds": 0.01,
+      "id": "escalation-route-parse",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "escalation_seam_modules_loaded": 142,
+      "seconds": 0.13,
+      "id": "escalation-seam-offline",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 23,
+      "n_extracted": 21,
+      "doc_status": "success",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 39138
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 53793
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 43
+        },
+        {
+          "item": "1C",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 9839
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 5908
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 329
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 59
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2306
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 42
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 100250
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 575
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 184132
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 111
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1539
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 385
+        },
+        {
+          "item": "9C",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 106
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1962
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1028
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 297
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 20758
+        },
+        {
+          "item": "16",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 71
+        }
+      ],
+      "seconds": 0.82,
+      "id": "escalation-trigger-quiet",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 22,
+      "n_extracted": 18,
+      "doc_status": "ambiguous",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 7884
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 26805
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 46
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 55072
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 293
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 7215
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 1332
+        },
+        {
+          "item": "6",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 267
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 413
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 737
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 101
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 2218
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 35
+        },
+        {
+          "item": "9C",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 109
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 815
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 1883
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "incorporated_by_reference",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 209
+        },
+        {
+          "item": "16",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 274655
+        }
+      ],
+      "seconds": 0.26,
+      "id": "escalation-verify-battery",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 22,
+      "n_extracted": 18,
+      "doc_status": "ambiguous",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 7884
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 26805
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 46
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 55072
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 293
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 7215
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 1332
+        },
+        {
+          "item": "6",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 267
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 413
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 737
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 101
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 2218
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 35
+        },
+        {
+          "item": "9C",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 109
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 815
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 1883
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "incorporated_by_reference",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 209
+        },
+        {
+          "item": "16",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 274655
+        }
+      ],
+      "seconds": 0.26,
+      "id": "escalation-verify-guards",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "evals/fixtures": {
+        "dirs": 45,
+        "single_file_dirs": 44,
+        "api_meta_listed": 44,
+        "iter_fixtures_yielded": 44
+      },
+      "evals/fixtures/repo_hygiene/fixture-discovery": {
+        "dirs": 2,
+        "single_file_dirs": 1,
+        "api_meta_listed": 1,
+        "iter_fixtures_yielded": 1
+      },
+      "seconds": 0.01,
+      "id": "fixture-discovery",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 14,
+      "n_extracted": 10,
+      "doc_status": "success_with_warning",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 46929
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 233
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 17213
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 169
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1850
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 441
+        },
+        {
+          "item": "7",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.8,
+          "method": "heading_strict",
+          "chars": 86
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 314
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 4805
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 10377
+        }
+      ],
+      "seconds": 0.02,
+      "id": "ge-1994-oldformat",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 23,
+      "n_extracted": 18,
+      "doc_status": "ambiguous",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 51737
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 107081
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 53
+        },
+        {
+          "item": "1C",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 3740
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 907
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 199
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 59
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 4020
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 43
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 40464
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 3509
+        },
+        {
+          "item": "8",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 101
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 3061
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 477
+        },
+        {
+          "item": "9C",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 431
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 2302
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "incorporated_by_reference",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "incorporated_by_reference",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 107939
+        },
+        {
+          "item": "16",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 49
+        }
+      ],
+      "seconds": 0.21,
+      "id": "heading-unnumbered",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "seconds": 0.18,
+      "id": "heldout-provenance-claims",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 20,
+      "n_extracted": 15,
+      "doc_status": "success",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 20850
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 16306
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 307
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1017
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 229
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 4857
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2015
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 202
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 333940
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 175
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 270737
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 194
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1347
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 68
+        },
+        {
+          "item": "10",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1134
+        }
+      ],
+      "seconds": 0.54,
+      "id": "html-title-metadata",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 14,
+      "n_extracted": 10,
+      "doc_status": "success_with_warning",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 46929
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 233
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 17213
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 169
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1850
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 441
+        },
+        {
+          "item": "7",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.8,
+          "method": "heading_strict",
+          "chars": 86
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 314
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 4806
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 10377
+        }
+      ],
+      "seconds": 0.04,
+      "id": "ibr-pointer-first",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 15,
+      "n_extracted": 7,
+      "doc_status": "success_with_warning",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 9721
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1146
+        },
+        {
+          "item": "3",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 131
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 805
+        },
+        {
+          "item": "6",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "7",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "7A",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "8",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 167
+        },
+        {
+          "item": "10",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 459
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 7779
+        }
+      ],
+      "seconds": 0.02,
+      "id": "ibr-security-holders",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 22,
+      "n_extracted": 18,
+      "doc_status": "ambiguous",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 7884
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 26805
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 46
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 55072
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 293
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 7215
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 1332
+        },
+        {
+          "item": "6",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 267
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 413
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 737
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 101
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 2218
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 35
+        },
+        {
+          "item": "9C",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 109
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 815
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 1883
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "incorporated_by_reference",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 209
+        },
+        {
+          "item": "16",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 274655
+        }
+      ],
+      "seconds": 0.8,
+      "id": "images-offsets-invariant",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 20,
+      "n_extracted": 8,
+      "doc_status": "ambiguous",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 69555
+        },
+        {
+          "item": "1A",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "1B",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "2",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "3",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 18
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 2321
+        },
+        {
+          "item": "6",
+          "status": "incorporated_by_reference",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "7",
+          "status": "incorporated_by_reference",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "7A",
+          "status": "incorporated_by_reference",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "8",
+          "status": "incorporated_by_reference",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 101
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 3890
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 49
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 1917
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "incorporated_by_reference",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "incorporated_by_reference",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 10486
+        }
+      ],
+      "seconds": 0.08,
+      "id": "interior-span-dominates",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 21,
+      "n_extracted": 12,
+      "doc_status": "ambiguous",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 7496
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 129
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 142
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 367
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 503
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 38600
+        },
+        {
+          "item": "5",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "6",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "7",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "7A",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "8",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "9",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "9A",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "9B",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 6161
+        },
+        {
+          "item": "11",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 3357
+        },
+        {
+          "item": "12",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 2174
+        },
+        {
+          "item": "13",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 833
+        },
+        {
+          "item": "14",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 1253
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 1371
+        },
+        {
+          "item": "16",
+          "status": "omitted",
+          "confidence": 0.75,
+          "method": "status_keyword",
+          "chars": null
+        }
+      ],
+      "seconds": 0.09,
+      "id": "items-stripped-escalation",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 23,
+      "n_extracted": 18,
+      "doc_status": "success",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 16053
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 68162
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 43
+        },
+        {
+          "item": "1C",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2704
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 520
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 5408
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 93
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2685
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 54
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 18144
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 3037
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 61402
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 101
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 4511
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 574
+        },
+        {
+          "item": "9C",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 105
+        },
+        {
+          "item": "10",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 11898
+        },
+        {
+          "item": "16",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 69
+        }
+      ],
+      "seconds": 0.08,
+      "id": "ixbrl-hidden-metadata",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 21,
+      "n_extracted": 18,
+      "doc_status": "success",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 19579
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 23422
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 54
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 3820
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 492
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 51
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 3114
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 4033
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_lenient",
+          "chars": 81079
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 489
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 202155
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 112
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2824
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 56
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2127
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1666
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 928
+        },
+        {
+          "item": "16",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 201
+        }
+      ],
+      "seconds": 0.53,
+      "id": "jnj-bare-headings",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 0,
+      "n_extracted": 0,
+      "doc_status": "unsupported",
+      "items_summary": [],
+      "seconds": 0.0,
+      "id": "ksb-unsupported",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "seconds": 0.0,
+      "id": "ledger-line-refs",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [
+        "evals/fixtures/repo_hygiene/ledger-table-malformed.md:12: 4 cells, header has 3",
+        "evals/fixtures/repo_hygiene/ledger-table-malformed.md:13: 2 cells, header has 3",
+        "evals/fixtures/repo_hygiene/ledger-table-malformed.md:14: 4 cells, header has 3",
+        "evals/fixtures/repo_hygiene/ledger-table-malformed.md:14: code span `grep 'a|b'` carries a pipe",
+        "evals/fixtures/repo_hygiene/ledger-table-malformed.md:15: 4 cells, header has 3",
+        "evals/fixtures/repo_hygiene/ledger-table-malformed.md:15: code span `grep 'a\\|b'` carries a pipe",
+        "evals/fixtures/repo_hygiene/ledger-table-malformed.md:16: 4 cells, header has 3",
+        "evals/fixtures/repo_hygiene/ledger-table-malformed.md:17: 4 cells, header has 3",
+        "evals/fixtures/repo_hygiene/ledger-table-malformed.md:25: 3 cells, header has 2"
+      ],
+      "seconds": 0.0,
+      "id": "ledger-table-shape-regression",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "seconds": 0.0,
+      "id": "ledger-table-shape",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 21,
+      "n_extracted": 20,
+      "doc_status": "success",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 10718
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 22925
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 98
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 159
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 369
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 54
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2052
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 279
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 3763
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 122
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 23178
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 112
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 4762
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 46
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2274
+        },
+        {
+          "item": "11",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1731
+        },
+        {
+          "item": "12",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2058
+        },
+        {
+          "item": "13",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 503
+        },
+        {
+          "item": "14",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1075
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 864
+        },
+        {
+          "item": "16",
+          "status": "omitted",
+          "confidence": 0.8,
+          "method": "status_keyword",
+          "chars": null
+        }
+      ],
+      "seconds": 0.04,
+      "id": "spaced-letter-heading",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 21,
+      "n_extracted": 20,
+      "doc_status": "success_with_warning",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 10718
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 23148
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 98
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 159
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 369
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 54
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2052
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 279
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 3763
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 122
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.65,
+          "method": "heading_strict",
+          "chars": 22955
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 112
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 4761
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 46
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2274
+        },
+        {
+          "item": "11",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1731
+        },
+        {
+          "item": "12",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2058
+        },
+        {
+          "item": "13",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 503
+        },
+        {
+          "item": "14",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1075
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 864
+        },
+        {
+          "item": "16",
+          "status": "omitted",
+          "confidence": 0.8,
+          "method": "status_keyword",
+          "chars": null
+        }
+      ],
+      "seconds": 0.08,
+      "id": "spans-transposed",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 23,
+      "n_extracted": 22,
+      "doc_status": "ambiguous",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 40569
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 136416
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 44
+        },
+        {
+          "item": "1C",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 172
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 2100
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 106
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 55
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 2834
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 18
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 398
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 274
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 372
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 102
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 2234
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 2266
+        },
+        {
+          "item": "9C",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 118
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 4800
+        },
+        {
+          "item": "11",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 53
+        },
+        {
+          "item": "12",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 1399
+        },
+        {
+          "item": "13",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 104
+        },
+        {
+          "item": "14",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 82
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 1010422
+        },
+        {
+          "item": "16",
+          "status": "omitted",
+          "confidence": 0.75,
+          "method": "status_keyword",
+          "chars": null
+        }
+      ],
+      "seconds": 2.06,
+      "id": "tables-offsets-invariant",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 21,
+      "n_extracted": 20,
+      "doc_status": "success",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 7496
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 129
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 142
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 367
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 503
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 70
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2162
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 161
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 13015
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 197
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 15611
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 102
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 7166
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 186
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 6161
+        },
+        {
+          "item": "11",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 3357
+        },
+        {
+          "item": "12",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2174
+        },
+        {
+          "item": "13",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 833
+        },
+        {
+          "item": "14",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1253
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1371
+        },
+        {
+          "item": "16",
+          "status": "omitted",
+          "confidence": 0.8,
+          "method": "status_keyword",
+          "chars": null
+        }
+      ],
+      "seconds": 0.09,
+      "id": "toc-titled",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "token_proxy_samples": {
+        "openai/gpt-5-mini": 2,
+        "anthropic/claude-opus-5": 2
+      },
+      "seconds": 0.0,
+      "id": "token-proxy-bound",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 0,
+      "n_extracted": 0,
+      "doc_status": "failed",
+      "items_summary": [],
+      "seconds": 0.0,
+      "id": "truncated-download",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "fixtures_checked": 45,
+      "items_checked": 751,
+      "seconds": 8.14,
+      "id": "ui-anchor-contract-boilerplate",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "fixtures_checked": 45,
+      "items_checked": 751,
+      "seconds": 8.02,
+      "id": "ui-anchor-contract",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "banner_attrs": {
+        "id": "banner",
+        "class": "s-idle",
+        "role": "status",
+        "aria-label": "doc_status"
+      },
+      "seconds": 0.0,
+      "id": "ui-banner-status-role",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [
+        "#exclude-bp defaults to CHECKED \u2014 ADR-026 is opt-in and OFF must stay today's behaviour: <input type=\"checkbox\" id=\"exclude-bp\" checked>",
+        "index.html: the excludeBp() helper reads the checkbox's own .checked \u2014 expected exactly one `function excludeBp(){ const c = $(\"#exclude-bp\"); return !!(c && c.checked); }`, found 0. If this expression changed on purpose, update its pin AND re-check that the wire still carries the checkbox's value unmodified.",
+        "index.html: the fixture mode puts the checkbox value on the wire \u2014 expected exactly one `JSON.stringify({fixture: $(\"#fx\").value, exclude_boilerplate: excludeBp(), markdown: renderMd()})`, found 0. If this expression changed on purpose, update its pin AND re-check that the wire still carries the checkbox's value unmodified.",
+        "index.html: the pane SAYS it is hiding text \u2014 R5's defect was un-stripped text under this label, and the inverse, a silent strip, is the same lie \u2014 expected exactly one `(VIEW.boilerplate_excluded ? \"boilerplate hidden \u00b7 \" : \"\")`, found 0. If this expression changed on purpose, update its pin AND re-check that the wire still carries the checkbox's value unmodified.",
+        "index.html: the extracted-item pane renders the STRIPPED string \u2014 expected exactly one `<pre class=\"text\" role=\"region\" tabindex=\"0\" aria-label=\"Item ${esc(it.item)} extracted text\">${esc(it.display_text ?? it.text)}</pre>`, found 0. If this expression changed on purpose, update its pin AND re-check that the wire still carries the checkbox's value unmodified.",
+        "index.html: the truncation notice counts the STRIPPED string \u2014 expected exactly one `${(it.display_text ?? it.text).length.toLocaleString()}`, found 0. If this expression changed on purpose, update its pin AND re-check that the wire still carries the checkbox's value unmodified.",
+        "app.py: _run forwards the two display flags unmodified, and escalates and bills on the same single decision \u2014 expected exactly one `extract_items(path, exclude_boilerplate=exclude_boilerplate, blocks=markdown, escalate=escalate, budget=server_budget() if escalate else None)`, found 0. If this expression changed on purpose, update its pin AND re-check that the wire still carries the checkbox's value unmodified.",
+        "app.py /api/extract/upload: the handler reads the flag off the request and forwards it unmodified \u2014 expected exactly one `exclude_boilerplate=request.query_params.get(\"exclude_boilerplate\") == \"1\"`, found 0. If this expression changed on purpose, update its pin AND re-check that the wire still carries the checkbox's value unmodified.",
+        "app.py /api/extract/url: the handler reads the flag off the request and forwards it unmodified \u2014 expected exactly one `exclude_boilerplate=bool((body or {}).get(\"exclude_boilerplate\"))`, found 0. If this expression changed on purpose, update its pin AND re-check that the wire still carries the checkbox's value unmodified."
+      ],
+      "seconds": 0.0,
+      "id": "ui-boilerplate-exclusion-regression",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "items_stripped": 16,
+      "seconds": 0.54,
+      "id": "ui-boilerplate-exclusion",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [
+        "#exclude-bp is DISABLED \u2014 the wire is intact and the capability is still unreachable: <input type=\"checkbox\" id=\"exclude-bp\" disabled>",
+        "index.html: the fixture mode puts the checkbox value on the wire \u2014 expected exactly one `JSON.stringify({fixture: $(\"#fx\").value, exclude_boilerplate: excludeBp(), markdown: renderMd()})`, found 0. If this expression changed on purpose, update its pin AND re-check that the wire still carries the checkbox's value unmodified.",
+        "index.html: the url mode puts the checkbox value on the wire \u2014 expected exactly one `JSON.stringify({url: $(\"#url\").value, exclude_boilerplate: excludeBp(), markdown: renderMd()})`, found 0. If this expression changed on purpose, update its pin AND re-check that the wire still carries the checkbox's value unmodified.",
+        "index.html: nothing may shadow the excludeBp() helper \u2014 `function excludeBp` occurs 2 times, expected 1",
+        "app.py's /api/extract routes are ['/api/extract/fixture', '/api/extract/paste', '/api/extract/upload', '/api/extract/url'], not the ['/api/extract/fixture', '/api/extract/upload', '/api/extract/url'] this check knows how to pin \u2014 an input mode was added or removed without wiring it",
+        "app.py /api/extract/fixture: the handler reads the flag off the request and forwards it unmodified \u2014 expected exactly one `exclude_boilerplate=bool((body or {}).get(\"exclude_boilerplate\"))`, found 0. If this expression changed on purpose, update its pin AND re-check that the wire still carries the checkbox's value unmodified.",
+        "app.py /api/extract/upload: the handler reads the flag off the request and forwards it unmodified \u2014 expected exactly one `exclude_boilerplate=request.query_params.get(\"exclude_boilerplate\") == \"1\"`, found 0. If this expression changed on purpose, update its pin AND re-check that the wire still carries the checkbox's value unmodified.",
+        "app.py /api/extract/url: the handler reads the flag off the request and forwards it unmodified \u2014 expected exactly one `exclude_boilerplate=bool((body or {}).get(\"exclude_boilerplate\"))`, found 0. If this expression changed on purpose, update its pin AND re-check that the wire still carries the checkbox's value unmodified."
+      ],
+      "seconds": 0.0,
+      "id": "ui-boilerplate-wire-values",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [
+        "#cap-box appears after #trace-box in the file \u2014 want order ['cap-box', 'trace-box', 'meta-box']"
+      ],
+      "seconds": 0.0,
+      "id": "ui-bottom-panel-order-regression",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "seconds": 0.0,
+      "id": "ui-bottom-panel-order",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [
+        "works_well row 0: every cell is the identical placeholder 'x'",
+        "works_well row 0: cell(s) under 8 chars (placeholder-shaped): ['x', 'x', 'x']",
+        "works_well row 1: every cell is the identical placeholder 'x'",
+        "works_well row 1: cell(s) under 8 chars (placeholder-shaped): ['x', 'x', 'x']",
+        "works_well row 2: every cell is the identical placeholder 'x'",
+        "works_well row 2: cell(s) under 8 chars (placeholder-shaped): ['x', 'x', 'x']",
+        "works_well row 3: every cell is the identical placeholder 'x'",
+        "works_well row 3: cell(s) under 8 chars (placeholder-shaped): ['x', 'x', 'x']",
+        "works_well row 4: every cell is the identical placeholder 'x'",
+        "works_well row 4: cell(s) under 8 chars (placeholder-shaped): ['x', 'x', 'x']",
+        "works_well row 5: every cell is the identical placeholder 'x'",
+        "works_well row 5: cell(s) under 8 chars (placeholder-shaped): ['x', 'x', 'x']",
+        "works_well row 6: every cell is the identical placeholder 'x'",
+        "works_well row 6: cell(s) under 8 chars (placeholder-shaped): ['x', 'x', 'x']",
+        "works_well row 7: every cell is the identical placeholder 'x'",
+        "works_well row 7: cell(s) under 8 chars (placeholder-shaped): ['x', 'x', 'x']",
+        "works_well row 8: every cell is the identical placeholder 'x'",
+        "works_well row 8: cell(s) under 8 chars (placeholder-shaped): ['x', 'x', 'x']",
+        "difficult row 0: every cell is the identical placeholder 'x'",
+        "difficult row 0: cell(s) under 8 chars (placeholder-shaped): ['x', 'x', 'x']",
+        "difficult row 1: every cell is the identical placeholder 'x'",
+        "difficult row 1: cell(s) under 8 chars (placeholder-shaped): ['x', 'x', 'x']",
+        "difficult row 2: every cell is the identical placeholder 'x'",
+        "difficult row 2: cell(s) under 8 chars (placeholder-shaped): ['x', 'x', 'x']"
+      ],
+      "works_well_rows": 9,
+      "difficult_entries": 3,
+      "seconds": 0.0,
+      "id": "ui-capabilities-parse-content",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "works_well_rows": 9,
+      "difficult_entries": 7,
+      "seconds": 0.0,
+      "id": "ui-capabilities-parse",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [
+        "bare confidence, no qualifier beside it: 'conf ${it.confidence ?? \"\u2014\"}</span> </div></button>`; }).join(\"\"); } function show(' \u2014 a number a viewer reads with no link back to doc_status or to the warnings that moved it is the demo defect",
+        "bare confidence, no qualifier beside it: 'conf ${it.confidence ?? \"\u2014\"}${docQual()} \u00b7 via ${esc(it.method || \"\u2014\")}`; $(\"#pane\").inn' \u2014 a number a viewer reads with no link back to doc_status or to the warnings that moved it is the demo defect",
+        "missing pinned expression (the qualifier reads the response's own doc_status and the item's own evidence.warnings): const QUALIFIED = [\"success_with_warning\", \"ambiguous\"];",
+        "missing pinned expression (the qualifier reads the response's own doc_status and the item's own evidence.warnings): $(\"#banner\").innerHTML = `doc_status: ${esc(st)}` +\n    (n ? ` <span class=\"src\">\u2014 ${esc(n)}</span>` : \"\") +\n    (src ? ` <span class=\"src\">${esc(src)}</span>` : \"\") +\n    coverageStrip(w);",
+        "missing pinned expression (the qualifier reads the response's own doc_status and the item's own evidence.warnings): const flag = (it.evidence && (it.evidence.warnings || []).length) ? \" lo\"\n               : (docQual() ? \" docw\" : \"\");",
+        "docQual(): body differs from the pinned one at char 9 \u2014 pinned 'VIEW&&VIEW.doc_status)||\"\";returnQUALIFIED.includes(st)?`\u00b7do', found '$(\"#doc-status-filter\")||{}).value||\"\";returnQUALIFIED.inclu'. The body is pinned whole because a pinned LINE can sit unreachable below an early return (PR #53 R2)",
+        "itemQual(): body differs from the pinned one at char 7 \u2014 pinned '(it.evidence&&it.evidence.warnings)||[];returnw.length?`\u00b7\u26a0${', found 'it.confidence<0.9?[\"low\"]:[];returnw.length?`\u00b7\u26a0${esc(w.join('. The body is pinned whole because a pinned LINE can sit unreachable below an early return (PR #53 R2)",
+        "coverageStrip(): body differs from the pinned one at char 31 \u2014 pinned 'unattributed_content\");if(!u)return\"\";constm=/^(\\\\d+)%/.exec(', found 'toc_manifest_mismatch\");if(!u)return\"\";constm=/^(\\\\d+)%/.exec'. The body is pinned whole because a pinned LINE can sit unreachable below an early return (PR #53 R2)",
+        "coverageStrip(): does not say 'unattributed content:'",
+        "coverageStrip(): does not say 'interior gaps are not counted'",
+        "coverageStrip(): does not say 'true non-coverage can be up to 9.7 points higher'",
+        "coverageStrip(): says 'is attributed to items' \u2014 the banner may neither publish the complement of this figure as an attributed share (interior gaps are not counted, so it is not one) nor label the figure itself as coverage when what it measures is NON-coverage (PR #53 R7)",
+        "coverageStrip(): says 'the rest of the document is covered' \u2014 the banner may neither publish the complement of this figure as an attributed share (interior gaps are not counted, so it is not one) nor label the figure itself as coverage when what it measures is NON-coverage (PR #53 R7)",
+        "coverageStrip(): says '100 -' \u2014 the banner may neither publish the complement of this figure as an attributed share (interior gaps are not counted, so it is not one) nor label the figure itself as coverage when what it measures is NON-coverage (PR #53 R7)",
+        "coverageStrip(): says 'document coverage:' \u2014 the banner may neither publish the complement of this figure as an attributed share (interior gaps are not counted, so it is not one) nor label the figure itself as coverage when what it measures is NON-coverage (PR #53 R7)"
+      ],
+      "conf_sites": 2,
+      "coverage_text": "const u = warns.find(x => x.code === \"toc_manifest_mismatch\"); if(!u) return \"\"; const m = /^(\\d+)%/.exec(u.message || \"\"); return ` document coverage: ${ m ? `${esc(m[1])}% of the document lies outside every item` : esc(u.message) } \u2014 the rest of the document is covered, and ${100 - (m ? +m[1] : 0)}% is attributed to items.`;",
+      "seconds": 0.0,
+      "id": "ui-confidence-honesty-regression",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "conf_sites": 2,
+      "coverage_text": "const u = warns.find(x => x.code === \"unattributed_content\"); if(!u) return \"\"; const m = /^(\\d+)%/.exec(u.message || \"\"); return ` unattributed content: ${ m ? `${esc(m[1])}% of the document lies outside every item` : esc(u.message) } \u2014 interior gaps are not counted, so true non-coverage can be up to 9.7 points higher (ADR-019 \u00a7d)`;",
+      "seconds": 0.0,
+      "id": "ui-confidence-honesty",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "measured": {
+        "dark/body-ink": 12.2,
+        "dark/pre-ink": 15.78,
+        "dark/pane-ink": 15.04,
+        "dark/hint-dim": 6.42,
+        "dark/mode-label-dim": 6.42,
+        "dark/ev-dt-dim": 6.42,
+        "dark/summary-dim": 6.42,
+        "dark/none-dim": 6.42,
+        "dark/sha-dim": 6.42,
+        "dark/footer-dim": 5.21,
+        "dark/banner-idle": 5.21,
+        "dark/legend-amber": 9.93,
+        "dark/warn-code": 9.93,
+        "dark/caret-amber": 8.05,
+        "dark/link-accent": 10.67,
+        "dark/link-accent-panel": 10.67,
+        "dark/banner-ok": 7.94,
+        "dark/banner-warn": 9.09,
+        "dark/banner-amb": 8.75,
+        "dark/banner-bad": 5.71,
+        "dark/src-ok": 7.94,
+        "dark/src-warn": 9.09,
+        "dark/src-amb": 8.75,
+        "dark/src-bad": 5.71,
+        "dark/src-idle": 5.21,
+        "dark/row-code": 9.93,
+        "dark/row-code-hover": 9.08,
+        "dark/row-code-selected": 8.13,
+        "dark/row-title": 15.04,
+        "dark/row-title-hover": 13.75,
+        "dark/row-title-selected": 12.33,
+        "dark/badge-plain": 6.42,
+        "dark/badge-plain-hover": 5.87,
+        "dark/badge-plain-selected": 5.26,
+        "dark/badge-extracted": 8.57,
+        "dark/badge-extracted-hover": 7.83,
+        "dark/badge-extracted-selected": 7.02,
+        "dark/badge-missing": 5.96,
+        "dark/badge-missing-hover": 5.45,
+        "dark/badge-missing-selected": 4.88,
+        "dark/badge-ibr": 10.67,
+        "dark/badge-ibr-hover": 9.76,
+        "dark/badge-ibr-selected": 8.75,
+        "dark/badge-lo": 9.93,
+        "dark/button-label": 10.14,
+        "dark/button-label-hover": 7.95,
+        "light/body-ink": 11.65,
+        "light/pre-ink": 12.49,
+        "light/pane-ink": 14.46,
+        "light/hint-dim": 5.82,
+        "light/mode-label-dim": 5.82,
+        "light/ev-dt-dim": 5.82,
+        "light/summary-dim": 5.82,
+        "light/none-dim": 5.82,
+        "light/sha-dim": 5.82,
+        "light/footer-dim": 4.69,
+        "light/banner-idle": 4.69,
+        "light/legend-amber": 6.75,
+        "light/warn-code": 6.75,
+        "light/caret-amber": 5.44,
+        "light/link-accent": 5.69,
+        "light/link-accent-panel": 5.69,
+        "light/banner-ok": 4.78,
+        "light/banner-warn": 5.04,
+        "light/banner-amb": 4.9,
+        "light/banner-bad": 4.85,
+        "light/src-ok": 4.78,
+        "light/src-warn": 5.04,
+        "light/src-amb": 4.9,
+        "light/src-bad": 4.85,
+        "light/src-idle": 4.69,
+        "light/row-code": 6.75,
+        "light/row-code-hover": 5.42,
+        "light/row-code-selected": 6.01,
+        "light/row-title": 14.46,
+        "light/row-title-hover": 11.61,
+        "light/row-title-selected": 12.87,
+        "light/badge-plain": 5.82,
+        "light/badge-plain-hover": 4.67,
+        "light/badge-plain-selected": 5.18,
+        "light/badge-extracted": 6.36,
+        "light/badge-extracted-hover": 5.11,
+        "light/badge-extracted-selected": 5.66,
+        "light/badge-missing": 6.62,
+        "light/badge-missing-hover": 5.31,
+        "light/badge-missing-selected": 5.89,
+        "light/badge-ibr": 5.69,
+        "light/badge-ibr-hover": 4.57,
+        "light/badge-ibr-selected": 5.06,
+        "light/badge-lo": 6.75,
+        "light/button-label": 6.21,
+        "light/button-label-hover": 6.86
+      },
+      "min_ratio_measured": 4.57,
+      "seconds": 0.06,
+      "id": "ui-contrast-and-specificity",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "deep_link_pins": 6,
+      "seconds": 0.0,
+      "id": "ui-deep-link",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [
+        "#sidebar: no height declared",
+        "#pane: no height declared",
+        "#source: no height declared",
+        "#sidebar: no scrolling overflow declared for the item list (got None)"
+      ],
+      "heights": {
+        "#sidebar": null,
+        "#pane": null,
+        "#source": null
+      },
+      "list_overflow": null,
+      "seconds": 0.0,
+      "id": "ui-equal-pane-heights-regression",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "heights": {
+        "#sidebar": "74vh",
+        "#pane": "74vh",
+        "#source": "74vh"
+      },
+      "list_overflow": "auto",
+      "seconds": 0.16,
+      "id": "ui-equal-pane-heights",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [
+        "`DISARM_VALUES` is ['0'], missing ['false', 'no', 'off'] \u2014 an operator typing one of those into the host variable would believe they had stopped the spending, and would be wrong",
+        "`SEC10K_ESCALATION_ENABLED` set to ['false', 'no', 'off', 'FALSE', 'Off', '  no'] leaves escalation ARMED \u2014 those are what an operator types into a Zeabur variable, and a stop button that ignores them is worse than none",
+        "`SERVER_MAX_CALLS`'s `or <default>` fallback is absent or is not a plain numeric literal (a computed default like `10 ** 9` reads as a ceiling and is not one) \u2014 an unset variable must not mean 'no ceiling'",
+        "`SERVER_MAX_USD`'s `or <default>` fallback is absent or is not a plain numeric literal (a computed default like `10 ** 9` reads as a ceiling and is not one) \u2014 an unset variable must not mean 'no ceiling'",
+        "`server_budget()` does not declare `global _SERVER_BUDGET` \u2014 without the memo every request builds its own Budget and the ceiling is per-REQUEST, not per-deployment",
+        "`server_budget()` returns something other than the module-level `_SERVER_BUDGET` \u2014 a fresh `Budget(...)` here is the mutation that leaves invariant and fast green while the deployment loses its only aggregate ceiling",
+        "nothing assigns `_SERVER_BUDGET` inside `server_budget()` \u2014 the memo is never filled",
+        "`server_budget()` hands back a budget whose spend has been reset (calls=0 after one take, same object: False) \u2014 the OBJECT being shared is not the property; the COUNTERS are, and a per-request allowance bounds nothing when the caller is anonymous and unlimited",
+        "`extract_items(escalate=...)` is Constant(value=True), not a name bound from the door's decision \u2014 a literal here hard-wires paid work and orphans every switch above it"
+      ],
+      "seconds": 0.0,
+      "id": "ui-escalation-locks-evaded",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [
+        "`ESCALATION_ENABLED` is Constant(value=True), not a comparison against SEC10K_ESCALATION_ENABLED \u2014 a constant here is an off-switch the operator does not have, on a public, unauthenticated deployment that now escalates by default",
+        "`SEC10K_ESCALATION_ENABLED` set to ['0', 'false', 'no', 'off', 'FALSE', 'Off', '0 ', '  no'] leaves escalation ARMED \u2014 those are what an operator types into a Zeabur variable, and a stop button that ignores them is worse than none",
+        "`SERVER_MAX_USD` is not read from os.environ['SEC10K_ESCALATION_MAX_USD'] (got None) \u2014 a literal here is a ceiling the operator cannot lower",
+        "`Budget(max_calls=...)` is not the constant SERVER_MAX_CALLS \u2014 a literal here is the mutation that made the process ceiling infinite (PR #58 R9)",
+        "`Budget(max_usd=...)` is not the constant SERVER_MAX_USD \u2014 a literal here is the mutation that made the process ceiling infinite (PR #58 R9)",
+        "nothing calls `server_budget()` \u2014 the process budget is constructed and never passed, so nothing is bounded"
+      ],
+      "seconds": 0.0,
+      "id": "ui-escalation-locks-regression",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "seconds": 0.01,
+      "id": "ui-escalation-locks",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [
+        "#bp-note: does not ship `hidden` \u2014 the note would stand on screen with exclusion off, where it is simply false",
+        "missing pinned expression (the note follows the response's own exclusion state): $(\"#bp-note\").hidden = !v.boilerplate_applied;",
+        "#bp-note: does not say 'the two panes will not agree'",
+        "#bp-note: does not say 'no raw-to-normalized offset map in this pipeline'",
+        "#bp-note: does not say 'That is what exclusion accounts for, and only that'",
+        "#bp-note: says 'panes match' \u2014 the panes do NOT agree and no offset map exists; the note may not imply either",
+        "#bp-note: says 'offset map exists' \u2014 the panes do NOT agree and no offset map exists; the note may not imply either"
+      ],
+      "note_text": "Boilerplate exclusion applies to the derived normalized_text only. The compare pane serves the raw filing bytes, and the two panes match once the offset map exists, so the page breaks and running heads line up on both sides.",
+      "seconds": 0.0,
+      "id": "ui-exclusion-note-regression",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "applied_by_run": {
+        "evals/fixtures/ge-1994/filing.txt blocks=False": true,
+        "evals/fixtures/ge-1994/filing.txt blocks=True": true,
+        "evals/fixtures/msft-2013/filing.htm blocks=False": true,
+        "evals/fixtures/msft-2013/filing.htm blocks=True": true,
+        "evals/fixtures/aapl-2025/filing.htm blocks=False": false,
+        "evals/fixtures/aapl-2025/filing.htm blocks=True": false,
+        "evals/fixtures/aapl-2026-10q/filing.htm blocks=False": false,
+        "evals/fixtures/aapl-2026-10q/filing.htm blocks=True": false,
+        "evals/fixtures/truncated-download/filing.htm blocks=False": false,
+        "evals/fixtures/truncated-download/filing.htm blocks=True": false
+      },
+      "r1_shape_runs": 6,
+      "pre_s9_expression_by_run": {
+        "evals/fixtures/ge-1994/filing.txt blocks=False": true,
+        "evals/fixtures/ge-1994/filing.txt blocks=True": true,
+        "evals/fixtures/msft-2013/filing.htm blocks=False": true,
+        "evals/fixtures/msft-2013/filing.htm blocks=True": true,
+        "evals/fixtures/aapl-2025/filing.htm blocks=False": false,
+        "evals/fixtures/aapl-2025/filing.htm blocks=True": true,
+        "evals/fixtures/aapl-2026-10q/filing.htm blocks=False": false,
+        "evals/fixtures/aapl-2026-10q/filing.htm blocks=True": false,
+        "evals/fixtures/truncated-download/filing.htm blocks=False": false,
+        "evals/fixtures/truncated-download/filing.htm blocks=True": false
+      },
+      "runs_where_pre_s9_expression_diverges": [
+        "evals/fixtures/aapl-2025/filing.htm blocks=True"
+      ],
+      "seconds": 1.72,
+      "id": "ui-exclusion-note-trigger",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "note_text": "Boilerplate exclusion applies to the derived normalized_text only. The compare pane serves the raw filing bytes, so it still shows every page break and running head the extracted pane drops \u2014 the two panes will not agree while this is on. That is what exclusion accounts for, and only that: with Markdown rendering on the extracted pane also differs in form, which is ADR-032's separate derived view and is stated in the pane's own evidence. There is no raw-to-normalized offset map in this pipeline (ADR-026 \u00a7a), so this is a known limit of the compare view, not a fault in either pane.",
+      "seconds": 0.0,
+      "id": "ui-exclusion-note",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [
+        "https://fonts.googleapis.com/css2: external stylesheet is render-blocking (media='unset') \u2014 a blackholed host stops first paint; want media=print + an onload promoting it to all",
+        "//cdn.example.net/icons.css: media='print' but no onload promoting it to all/screen \u2014 the sheet never applies on screen",
+        "https://fonts.googleapis.com/css2: external stylesheet is render-blocking (media='unset') \u2014 a blackholed host stops first paint; want media=print + an onload promoting it to all",
+        "https://fonts.googleapis.com/css2: external stylesheet is render-blocking (media='unset') \u2014 a blackholed host stops first paint; want media=print + an onload promoting it to all"
+      ],
+      "seconds": 0.0,
+      "id": "ui-font-link-nonblocking-regression",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "seconds": 0.0,
+      "id": "ui-font-link-nonblocking",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "item_text_containers": {
+        "text md": {
+          "class": "text md",
+          "role": "region",
+          "tabindex": "0",
+          "aria-label": "Item ${esc(it.item)} extracted text"
+        },
+        "text": {
+          "class": "text",
+          "role": "region",
+          "tabindex": "0",
+          "aria-label": "Item ${esc(it.item)} extracted text"
+        }
+      },
+      "seconds": 0.0,
+      "id": "ui-item-text-region-focusable",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "item_text_containers": {
+        "text md": {
+          "class": "text md",
+          "role": "region",
+          "tabindex": "0",
+          "aria-label": "Item ${esc(it.item)} extracted text"
+        },
+        "text": {
+          "class": "text",
+          "role": "region",
+          "tabindex": "0",
+          "aria-label": "Item ${esc(it.item)} extracted text"
+        }
+      },
+      "seconds": 0.0,
+      "id": "ui-item-text-region",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [
+        "header: margin does not centre (both inline sides must be auto)",
+        "footer: margin does not centre (both inline sides must be auto)"
+      ],
+      "seconds": 0.0,
+      "id": "ui-layout-centering-asymmetric",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "seconds": 0.0,
+      "id": "ui-layout-centering",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "mode_button_names": {
+        "go-fx": "Extract the selected committed fixture",
+        "go-up": "Extract the uploaded filing",
+        "go-url": "Extract from the EDGAR document URL"
+      },
+      "mode_button_labels": {
+        "go-fx": "Extract",
+        "go-up": "Extract",
+        "go-url": "Extract"
+      },
+      "seconds": 0.0,
+      "id": "ui-mode-button-names",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "ge-1994_spanned_items": 14,
+      "msft-2013_spanned_items": 20,
+      "seconds": 0.26,
+      "id": "ui-offset-reproduction-contract",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [
+        "pane-meta details renders `open` \u2014 must start collapsed",
+        ".pane-meta: not position:absolute \u2014 back in #pane's flex flow, competing with pre.text for height",
+        ".pane-meta: no non-zero left inset \u2014 sits flush against the pane edge",
+        "pre.text: margin-bottom is '14px', want 0 \u2014 a non-zero bottom margin is a gutter #source-body's iframe never had, so the content bottoms can't match"
+      ],
+      "seconds": 0.0,
+      "id": "ui-pane-meta-amendment-regression",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "seconds": 0.0,
+      "id": "ui-pane-meta-amendment",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [
+        "index.html: ...and the banner calls it \u2014 expected exactly one `routingStrip(v.routing)`, found 0",
+        "index.html: the strip prints the money, not just the outcome \u2014 expected exactly one ``$${Number(c.usd || 0).toFixed(4)}`, found 0",
+        "index.html: the strip says what each rung actually saw when its input was clipped \u2014 expected exactly one `t.truncated ? ` \u00b7 saw chars ${Number(t.offset).toLocaleString()}`, found 0",
+        "index.html: ...and the item pane shows what the deterministic path had said \u2014 expected exactly one `it.evidence && it.evidence.deterministic`, found 0",
+        "index.html: ...naming the tier that replaced it \u2014 expected exactly one `<b>${esc(it.method)}</b>`, found 0",
+        "index.html: no escalate control is offered \u2014 the server decides \u2014 `id=\"escalate\"` occurs 1 times, expected 0. The server decides whether to escalate (ADR-036 \u00a7h2, owner 2026-08-27); a page that carries this is taking that decision back.",
+        "index.html: ...so nothing reads a checkbox at request time \u2014 `escalateOn(` occurs 3 times, expected 0. The server decides whether to escalate (ADR-036 \u00a7h2, owner 2026-08-27); a page that carries this is taking that decision back.",
+        "index.html: ...the fixture and url wires carry no escalate flag \u2014 `escalate:` occurs 1 times, expected 0. The server decides whether to escalate (ADR-036 \u00a7h2, owner 2026-08-27); a page that carries this is taking that decision back.",
+        "index.html: ...nor does the upload query string \u2014 `escalate=1` occurs 1 times, expected 0. The server decides whether to escalate (ADR-036 \u00a7h2, owner 2026-08-27); a page that carries this is taking that decision back.",
+        "index.html: ...the page does not ask the server whether it is armed \u2014 `setEscalationArmed(` occurs 2 times, expected 0. The server decides whether to escalate (ADR-036 \u00a7h2, owner 2026-08-27); a page that carries this is taking that decision back.",
+        "index.html: ...and renders no disarmed-refusal note the server cannot send \u2014 `escalation_disarmed` occurs 1 times, expected 0. The server decides whether to escalate (ADR-036 \u00a7h2, owner 2026-08-27); a page that carries this is taking that decision back."
+      ],
+      "seconds": 0.0,
+      "id": "ui-routing-provenance-regression",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "seconds": 0.0,
+      "id": "ui-routing-provenance",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [
+        ".split: base rule declares '196px 1fr' \u2014 want three tracks (sidebar + both compare panes) at full width",
+        "@media(max-width:1100px): stacks the panes at widths up to 1100px, so #source and #pane are not on screen together at 1024px (want a stacking breakpoint < 1024)",
+        "the JS does not watch matchMedia(\"(max-width:1100px)\") \u2014 the width the CSS stacks at and the width the control calls itself inactive at must be the same number",
+        "missing pinned expression (syncOn() refuses to sync through a disabled control): function syncOn(){ const c = $(\"#sync-scroll\"); return !!(c && c.checked && !c.disabled); }",
+        "missing pinned expression (the stacked state disables the control AND says so in words): function syncStacked(){\n  const c = $(\"#sync-scroll\"); if(!c) return;\n  c.disabled = STACKED.matches;\n  $(\"#sync-state\").textContent = STACKED.matches ? \" \u2014 inactive: panes stacked\" : \"\";\n}",
+        "missing pinned expression (crossing the breakpoint re-evaluates it, so a resize cannot leave a live-looking control sitting over stacked panes): STACKED.addEventListener(\"change\", syncStacked);",
+        "#sync-state: no element carrying the \"inactive\" wording \u2014 a silently disabled checkbox still looks like a live control"
+      ],
+      "stack_widths": [
+        1100,
+        820
+      ],
+      "split_columns": "196px 1fr",
+      "seconds": 0.0,
+      "id": "ui-split-breakpoint-regression",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "stack_widths": [
+        1000,
+        820
+      ],
+      "split_columns": "290px 1fr 1fr",
+      "seconds": 0.01,
+      "id": "ui-split-breakpoint",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [
+        ".it .ttl: color is 'var(--dim)', want 'var(--ink)'",
+        ".it .ttl: font-weight is None, want >= 600"
+      ],
+      "color": "var(--dim)",
+      "font_weight": null,
+      "seconds": 0.0,
+      "id": "ui-title-legibility-regression",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "color": "var(--ink)",
+      "font_weight": 700,
+      "seconds": 0.0,
+      "id": "ui-title-legibility",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [
+        "it.truncated referenced before .pane-meta (offset 152 < 266) \u2014 still an in-flow sibling stealing pre.text's flex height"
+      ],
+      "seconds": 0.0,
+      "id": "ui-truncated-notice-in-overlay-regression",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "seconds": 0.0,
+      "id": "ui-truncated-notice-in-overlay",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [
+        "10.5px < 11px floor"
+      ],
+      "seconds": 0.0,
+      "id": "ui-typography-floor-decimal",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "seconds": 0.0,
+      "id": "ui-typography-floor",
+      "kind": "adversarial"
+    },
+    {
+      "passed": true,
+      "failures": [],
+      "n_items": 16,
+      "n_extracted": 16,
+      "doc_status": "ambiguous",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 18
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 20
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 27
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 117
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 83
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 33
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 95
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 69
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 53
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 105
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 61
+        },
+        {
+          "item": "11",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 33
+        },
+        {
+          "item": "12",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 112
+        },
+        {
+          "item": "13",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 57
+        },
+        {
+          "item": "14",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 44
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 76
+        }
+      ],
+      "seconds": 0.01,
+      "id": "xref-index-collapse",
+      "kind": "adversarial"
+    }
+  ],
+  "debt": [
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "item_present",
+            "item": "10",
+            "status": "extracted"
+          },
+          "why": "item 10 not extracted: missing"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "11",
+            "status": "extracted"
+          },
+          "why": "item 11 not extracted: missing"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "12",
+            "status": "extracted"
+          },
+          "why": "item 12 not extracted: missing"
+        },
+        {
+          "check": {
+            "type": "item_present",
+            "item": "13",
+            "status": "extracted"
+          },
+          "why": "item 13 not extracted: missing"
+        },
+        {
+          "check": {
+            "type": "min_chars",
+            "item": "10",
+            "value": 500
+          },
+          "why": "item has no span"
+        }
+      ],
+      "n_items": 20,
+      "n_extracted": 11,
+      "doc_status": "success_with_warning",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 173201
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 59724
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 53
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2347
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 34842
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 226
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 4511
+        },
+        {
+          "item": "6",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "7",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "7A",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "8",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 111
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1420
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 5066
+        },
+        {
+          "item": "10",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "11",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "13",
+          "status": "missing",
+          "confidence": 0.4,
+          "method": "status_keyword",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 745
+        }
+      ],
+      "seconds": 0.16,
+      "id": "axp-2008-combined-part-iii",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "min_chars",
+            "item": "7",
+            "value": 5000
+          },
+          "why": "item 7 has 280 chars < 5000"
+        },
+        {
+          "check": {
+            "type": "min_chars",
+            "item": "8",
+            "value": 5000
+          },
+          "why": "item 8 has 189 chars < 5000"
+        }
+      ],
+      "n_items": 20,
+      "n_extracted": 16,
+      "doc_status": "success_with_warning",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 82907
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 14404
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 43
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.8,
+          "method": "heading_strict",
+          "chars": 534
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2428
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 325
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1935
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.8,
+          "method": "heading_strict",
+          "chars": 119
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.8,
+          "method": "heading_strict",
+          "chars": 280
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.8,
+          "method": "heading_strict",
+          "chars": 453
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.8,
+          "method": "heading_strict",
+          "chars": 189
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 105
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1928
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 49
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 3241
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1868
+        }
+      ],
+      "seconds": 0.39,
+      "id": "cvx-2015-internal-pointer",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "1A",
+            "value": "make an investment in our securities speculative or risky"
+          },
+          "why": "item 1A missing text 'make an investment in our securities speculative or risky'"
+        },
+        {
+          "check": {
+            "type": "min_chars",
+            "item": "1",
+            "value": 2000
+          },
+          "why": "item 1 has 147 chars < 2000"
+        },
+        {
+          "check": {
+            "type": "min_chars",
+            "item": "1A",
+            "value": 20000
+          },
+          "why": "item 1A has 35 chars < 20000"
+        },
+        {
+          "check": {
+            "type": "min_chars",
+            "item": "7",
+            "value": 2000
+          },
+          "why": "item 7 has 226 chars < 2000"
+        },
+        {
+          "check": {
+            "type": "min_chars",
+            "item": "8",
+            "value": 50000
+          },
+          "why": "item 8 has 66 chars < 50000"
+        }
+      ],
+      "n_items": 23,
+      "n_extracted": 23,
+      "doc_status": "ambiguous",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 147
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 35
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 41
+        },
+        {
+          "item": "1C",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 34
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 33
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 41
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 47
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 128
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 20
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 226
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 78
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 66
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 99
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 43
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 114
+        },
+        {
+          "item": "9C",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 93
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 78
+        },
+        {
+          "item": "11",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 37
+        },
+        {
+          "item": "12",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 109
+        },
+        {
+          "item": "13",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 88
+        },
+        {
+          "item": "14",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 62
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 75
+        },
+        {
+          "item": "16",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_strict",
+          "chars": 33
+        }
+      ],
+      "seconds": 0.3,
+      "id": "intc-2025-collapse-burned",
+      "kind": "adversarial"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "text_contains",
+            "item": "1",
+            "value": "The information found on our website is not part of this or any other report we file with"
+          },
+          "why": "item 1 missing text 'The information found on our website is not part of this or any other report we file with'"
+        }
+      ],
+      "n_items": 20,
+      "n_extracted": 16,
+      "doc_status": "success",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 37695
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_lenient",
+          "chars": 39029
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 294
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1966
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 199
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 59
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1715
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1410
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 85111
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 3748
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 111892
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 111
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 6824
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 55
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1453
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 5475
+        }
+      ],
+      "seconds": 0.24,
+      "id": "msft-2013-website-block",
+      "kind": "adversarial"
+    }
+  ]
+}
