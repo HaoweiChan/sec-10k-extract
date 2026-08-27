@@ -1,0 +1,102 @@
+{
+  "pr": 61,
+  "round": 2,
+  "result": "REQUEST_CHANGES",
+  "counts": {
+    "HIGH": 1,
+    "MEDIUM": 6,
+    "LOW": 1
+  },
+  "reviewer": "groundwork:pr-reviewer, fresh context, falsification-only",
+  "orchestrator_verified": [
+    "clean baseline invariant 84/84 = 1.000",
+    "R11 mutation (drop .strip().lower()) -> 82/84",
+    "R12 mutation (counter reset inside server_budget) -> 82/84",
+    "R13 mutation (added /api/demo/run bypass endpoint) -> 82/84",
+    "R14 residue is historical-by-design, not stale",
+    "R16 no 1.5675 remains in INDEX.md; R17 comment names DISARM_VALUES"
+  ],
+  "note": "The implementer agent was terminated mid-R13 by an API session limit. Its work was already complete and gating green; this artifact and the commit were finished by the orchestrator, and every resolution above marked ORCHESTRATOR-VERIFIED was re-proved by mutation rather than taken on report.",
+  "findings": [
+    {
+      "id": "R10",
+      "severity": "HIGH",
+      "route": "repair",
+      "claim": "R1's repaired disclosure \u2014 'an upload is the ONLY route' \u2014 is still false: POST /api/extract/url reaches extract_items(..., escalate=ESCALATION_ENABLED) on a collapsing public EDGAR document with no upload, no fixture name and no click.",
+      "evidence": "app.py extract_url accepts any https://www.sec.gov/Archives/ URL and calls the same _run as the upload path. intc-2025 is a REAL Intel EDGAR filing firing low_item_coverage at coverage 0.0033, so its own Archives URL bills. All four disclosure sites R1's acceptance named were corrected to a sentence still wrong: README, ADR-036 \u00a7h2, app.py header, TD-155(now TD-158). DEPLOY_EXCLUDED closes the fixture route and does nothing to the URL route.",
+      "repro": "POST /api/extract/url with the intc-2025 Archives URL, EDGAR fetch stubbed to the committed bytes, OPENROUTER_BASE_URL at a counting listener -> HTTP 200, ONE outbound connection, routing.trigger.fired=true",
+      "acceptance": "The disclosure sites say what is true, or the URL route is closed; a red-first case pins whichever is chosen.",
+      "resolution": "OWNER CHOSE OPTION B \u2014 close it at the door. New src/sec10k/web/gate.py: extraction stays open, free and unauthenticated; only the paid tier is gated; CLOSED when unset, so a forgotten variable means 'free demo', never 'free to bill me'. Cases escalation-door.json + escalation-door-open.json (the PR #21 R1 vacuity counterpart). TD-158 CLOSED rather than reworded; TD-162 opened for what actually remains (free-tier abuse: no rate limit, no request cap, no CPU bound)."
+    },
+    {
+      "id": "R11",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "R3's widening is only half pinned: the .strip().lower() normalisation is stated in four places and asserted nowhere, so deleting it is a green edit that re-arms FALSE, Off and '0 '.",
+      "evidence": "_env_get was widened to step OVER any chain of no-arg method calls, so the normalisation is invisible to check_escalation_locks \u2014 the same helper and the same evasion class PR #58 R18 already caught once.",
+      "repro": "delete .strip().lower() from the ESCALATION_ENABLED expression -> both suites green before the fix",
+      "acceptance": "escalation_locks reds on that deletion, watched red first.",
+      "resolution": "Fixed. ORCHESTRATOR-VERIFIED: the mutation now takes invariant to 82/84 against a clean 84/84."
+    },
+    {
+      "id": "R12",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "R2's memo re-pin proves the Budget object is shared but not that its counters are, so a three-line self-reset inside server_budget() satisfies all three AST assertions and makes aggregate spend unbounded.",
+      "evidence": "Measured with SEC10K_ESCALATION_MAX_CALLS=1 and six uploads: shipped tree 1 outbound connection, mutant 6. Lock 2 is described in ADR-036 \u00a7h2 as 'now the only ceiling'.",
+      "repro": "insert a counter reset before `return _SERVER_BUDGET` -> gate identical to baseline before the fix",
+      "acceptance": "A check reds on that mutation, watched red first.",
+      "resolution": "Fixed. ORCHESTRATOR-VERIFIED: the counter-reset mutation now takes invariant to 82/84."
+    },
+    {
+      "id": "R13",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The DEPLOY_EXCLUDED guard is pinned only as one literal line inside _fixture_file; a second fixture-resolving endpoint outside the /api/extract/ prefix bypasses the exclusion entirely with a green gate.",
+      "evidence": "DEPLOY_GUARD counted for exactly one occurrence; the endpoint enumeration knows only the three /api/extract/* routes. An added /api/demo/run served both excluded fixtures with one outbound connection each while every check passed.",
+      "repro": "add an endpoint resolving fixture_file((FIXTURES / name).resolve()) and calling _run",
+      "acceptance": "The check asserts the property \u2014 every path touching FIXTURES/fixture_file in app.py is dominated by the membership guard \u2014 watched red on the added-endpoint mutation.",
+      "resolution": "Fixed via FIXTURE_PRIMITIVES property pin. ORCHESTRATOR-VERIFIED: adding the bypass endpoint now takes invariant to 82/84."
+    },
+    {
+      "id": "R14",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The stale 1/43, 0/28 census is not confined to d11-trigger-scan.txt: it is also in escalate.py, ADR-036 \u00a7d (contradicting \u00a7c1 in the same file) and INDEX.md \u2014 a line this PR rewrote.",
+      "evidence": "Independently re-derived: low_item_coverage fires on exactly ['intc-2025','xref-index-collapse'] = 2/44.",
+      "repro": "python3 tasks/reviews/d11_trigger_scan.py --rates vs the four published sites",
+      "acceptance": "One census, current, everywhere it is published; the scan artifact regenerated to name both hot fixtures.",
+      "resolution": "Fixed. ORCHESTRATOR-VERIFIED: the three surviving '1/43' strings are all explicitly HISTORICAL ('the figures this comment carried until then', 'The previous figures', 'This paragraph said') \u2014 the correct pattern of recording a wrong figure as wrong rather than silently swapping it."
+    },
+    {
+      "id": "R15",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The rejection of 'derive DEPLOY_EXCLUDED from the trigger' rests on a cost that only applies to the runtime version; an eval-time derivation costs 4.6s and was never considered, and without it adding a collapsing fixture is a green edit that puts a one-click paid button back in the dropdown.",
+      "evidence": "Measured 4.53s user / 4.6s wall over 44 fixtures against a 29.9s invariant suite. Demonstrated by copying xref-index-collapse to a new fixture dir: gate green, /api/meta lists it, POST bills.",
+      "repro": "add evals/fixtures/demo-collapse/ and run the suite",
+      "acceptance": "Either the rejection is re-argued against the eval-time option, or the check gains the sweep and asserts {n : trigger fires} subset-of DEPLOY_EXCLUDED, watched red first.",
+      "resolution": "Taken, not re-argued: new case deployed-exclusion-derived.json; TD-160 closed."
+    },
+    {
+      "id": "R16",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "INDEX.md:44 \u2014 a line this PR rewrote \u2014 still publishes the effective ceiling as MAX_USD + $1.5675, which ADR-036 \u00a7h2 itself supersedes with $2.4697 after a real billed call of $2.12163 falsified it.",
+      "evidence": "INDEX.md:44 vs ADR-036 \u00a7h2.",
+      "repro": "git diff origin/main...HEAD -- specs/decisions/INDEX.md",
+      "acceptance": "INDEX.md reads $2.4697 or cites \u00a7h2 rather than restating a figure.",
+      "resolution": "Fixed. ORCHESTRATOR-VERIFIED: no '1.5675' remains in INDEX.md."
+    },
+    {
+      "id": "R17",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "A fifth statement of the off-switch, inside /api/meta, was not updated with R3's widening and describes a narrower disarm set than the code implements.",
+      "evidence": "app.py's /api/meta comment said it reads false only where the operator set SEC10K_ESCALATION_ENABLED=0.",
+      "repro": "compare that comment against the DISARM_VALUES tuple",
+      "acceptance": "The comment names DISARM_VALUES rather than the single literal.",
+      "resolution": "Fixed in place. ORCHESTRATOR-VERIFIED: the comment now names DISARM_VALUES \u2014 0, false, no, off."
+    }
+  ]
+}

@@ -29,8 +29,10 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 
 from src.sec10k.extract import extract_items
 from src.sec10k.web import capabilities as capabilities_mod
+from src.sec10k.web import gate
 from src.sec10k.web.build_id import git_sha
-from src.sec10k.web.fixtures import FIXTURES, ROOT, fixture_file, list_fixtures
+from src.sec10k.web.fixtures import (FIXTURES, ROOT, deployed_fixtures,
+                                     fixture_file)
 from src.sec10k.web.view import build_view
 
 STATIC = Path(__file__).resolve().parent / "static"
@@ -39,29 +41,75 @@ MAX_BYTES = 25 * 1024 * 1024                  # provisional cap, both upload and
 ALLOWED_SUFFIX = (".htm", ".html", ".txt")
 
 # ---------------------------------------------------------------- ADR-036 §h2
-# The deployed inspector is PUBLIC and UNAUTHENTICATED, and all three extract
-# endpoints accept an `escalate` flag. PR #58 R6: with a credential present on
-# the host, an anonymous caller could upload collapsed filings and drive
-# unbounded opus-class calls; nothing bounded aggregate spend, because
-# `escalate.route` builds a fresh per-document `Budget` and no caller passed
-# one. Two independent locks, because the owner is about to put a real key on
-# this host:
+# The deployed inspector is PUBLIC and UNAUTHENTICATED. It escalates BY
+# DEFAULT — owner decision, 2026-08-27, "make it default on, remove the
+# button": there is no `escalate` flag on any endpoint and no control on the
+# page, because a capability the viewer has to find and tick is a capability
+# most viewers never see.
 #
-# 1. ARMING. A credential ALONE never arms paid work. Escalation is refused
-#    server-side unless `SEC10K_ESCALATION_ENABLED=1` is ALSO set. Deliberately
-#    a second variable and not a truthiness check on the key: the key arrives
-#    for its own reasons, and "a key exists" must not mean "spend it".
-# 2. A PROCESS-WIDE CEILING. One `Budget` for the life of the server process,
-#    shared by every request, so the bound is on the DEPLOYMENT and not on each
-#    document. When it is spent the tier refuses like any other
-#    `EscalationUnavailable` and says so in the routing record. It does not
-#    reset on its own; restarting the process is the deliberate act that
-#    refills it.
+# Lock 1 is therefore INVERTED, not removed. It used to arm paid work
+# (`== "1"`, off until someone opts in); it now DISARMS it, on until the
+# operator says stop. An off-switch costs nothing, does not contradict
+# "default on", and means a runaway is stopped by an env var on the host
+# rather than by a code change and a redeploy.
 #
-# Neither lock touches a local run: `python3 -m src.sec10k.escalate`, the eval
-# suites and a direct `extract_items(..., escalate=True)` call all bypass this
-# module entirely, and a developer who exports both variables gets the tier.
-ESCALATION_ENABLED = os.environ.get("SEC10K_ESCALATION_ENABLED") == "1"
+# PR #61 R3: it takes a documented FALSY SET, not the single literal "0".
+# `SEC10K_ESCALATION_ENABLED=false` is what an operator actually types into a
+# Zeabur variable, and a stop button that silently ignores it is worse than no
+# stop button, because someone will believe it. Compared after `.strip()` and
+# `.lower()`, so `FALSE`, `Off` and `"0 "` all disarm. UNSET and EMPTY both
+# ARM — that is the owner's default-on, and `os.environ.get(VAR, "")` makes
+# the two states identical on purpose. Anything not in the set arms.
+#
+# Lock 2 is UNTOUCHED and now matters more, because it is the only ceiling
+# left: one `Budget` for the life of the server process, shared by every
+# request, so the bound is on the DEPLOYMENT and not on each document. When it
+# is spent the tier refuses like any other `EscalationUnavailable` and says so
+# in the routing record. It does not reset on its own; restarting the process
+# is the deliberate act that refills it — which also means a redeploy refills
+# it. Lock 3 (ADR-036 §h2, `EXTRACT_WINDOW`) lives in `escalate.route` and is
+# untouched too.
+#
+# LOCK 4, THE DOOR — and it is why the paragraph that used to sit here is
+# gone rather than edited (PR #61 R10, owner decision "close it at the door").
+# That paragraph said any anonymous caller could trigger paid work by UPLOADING
+# a collapsing document, and that an upload was the only route. Both halves
+# were wrong. PR #61 R1 had already found that two committed fixtures made the
+# dropdown a one-click paid button and `?fixture=<name>&run=1` a paid PAGE
+# LOAD; R10 then found that excluding those fixtures still did not close the
+# money path, because `POST /api/extract/url` extracts ANY
+# `https://www.sec.gov/Archives/…` URL — and `intc-2025` is a real Intel EDGAR
+# filing whose own Archives URL bills. Excluding fixtures could never fix that:
+# extracting arbitrary EDGAR URLs is the feature, and every collapsing filing
+# on EDGAR is one.
+#
+# So the paid path is now closed at the door instead. `web.gate.paid_path_open`
+# is consulted ONCE, in `_run`, which is the single point all three input modes
+# converge on and the only caller of `extract_items` in this file — so fixture,
+# upload and URL are covered by construction rather than by three guards that
+# can drift (R13 is that failure: a per-line guard a second endpoint walked
+# around). Escalation runs only for a request carrying a valid
+# `X-Escalation-Token`; with no `SEC10K_ESCALATION_TOKEN` on the host it runs
+# for NOBODY. Unset means closed, never open.
+#
+# Extraction itself is untouched and stays open, free and unauthenticated —
+# that is the product, and an evaluator with no secret still gets every item,
+# every span and every pane. What they do not get is a bill, and the envelope
+# says which of the two happened (`escalation.reason`, on screen in the routing
+# strip) instead of going quiet about it.
+#
+# The fixture exclusion below stays as the second layer: with the door shut it
+# is no longer what makes the spend bounded, but a paid button in a public
+# dropdown is worth not shipping even when it is locked.
+#
+# Neither web lock touches a local run: `python3 -m src.sec10k.escalate`, the
+# eval suites and a direct `extract_items(..., escalate=True)` call all bypass
+# this module entirely, and `extract_items`' own `escalate=False` default is
+# deliberately unchanged — flipping it would put paid calls on every
+# `python3 -m evals.run` and in CI, destroying the $0 offline gate.
+DISARM_VALUES = ("0", "false", "no", "off")
+ESCALATION_ENABLED = (os.environ.get("SEC10K_ESCALATION_ENABLED", "")
+                      .strip().lower() not in DISARM_VALUES)
 SERVER_MAX_CALLS = int(os.environ.get("SEC10K_ESCALATION_MAX_CALLS") or 20)
 SERVER_MAX_USD = float(os.environ.get("SEC10K_ESCALATION_MAX_USD") or 5.00)
 _SERVER_BUDGET = None
@@ -101,8 +149,17 @@ SOURCE_CACHE_MAX = 3
 
 def _fixture_file(name: str) -> Path:
     """Resolve a fixture name to its single filing file, refusing traversal.
-    Same predicate as the /api/meta listing (fixtures.py), so a name the
-    dropdown offers always resolves here."""
+
+    Resolution is the LISTING, not merely the same predicate as it (PR #61 R1):
+    a name `/api/meta` does not offer is refused here in the same words an
+    unknown name is, because the deep link and a hand-written POST both name a
+    fixture directly and an exclusion that only shrank the menu would be
+    cosmetic. `deployed_fixtures()` is the one place the exclusion is named.
+    """
+    if name not in deployed_fixtures():
+        raise FileNotFoundError(f"unknown fixture: {name!r}")
+    # kept below the membership guard rather than deleted: it is the check that
+    # still holds if these two are ever reordered, and it costs one comparison
     d = (FIXTURES / name).resolve()
     if d.parent != FIXTURES.resolve() or not d.is_dir():
         raise FileNotFoundError(f"unknown fixture: {name!r}")
@@ -159,7 +216,7 @@ def _cache_source(raw: bytes, suffix: str, normalized: str) -> str:
 
 def _run(path: str, source: dict, raw: bytes = None,
          exclude_boilerplate: bool = False, markdown: bool = False,
-         escalate: bool = False):
+         request: Request = None):
     """Extract and shape for the UI. Never leaks a traceback to the browser.
 
     `raw` is the original bytes already in hand for upload/URL; the fixture
@@ -172,33 +229,40 @@ def _run(path: str, source: dict, raw: bytes = None,
     It changes nothing in the envelope except adding the `boilerplate` spans;
     build_view is what turns those into a stripped PANE (S8). `markdown` is
     ADR-032's, the same way: `blocks=True` adds the `blocks` (+ `tables`)
-    annotation and build_view renders the pane from it (S9). `escalate` is
-    ADR-036's, and is the ONE flag here that can spend money — it is off unless
-    the viewer ticks the box, it does nothing at all unless the D8 trigger
-    fires, and with no `OPENROUTER_API_KEY` on the server it produces a routing
-    record whose tier outcome is `unavailable`, never a fabricated item. It is
-    honoured only on a deployment ARMED with `SEC10K_ESCALATION_ENABLED=1`
-    (ADR-036 §h2) and always carries the process-wide budget.
+    annotation and build_view renders the pane from it (S9).
+
+    Escalation is NOT a request flag any more (owner, 2026-08-27) and it is
+    not automatic either (owner, PR #61 R10). It is one decision taken HERE,
+    for all three input modes, by `gate.paid_path_open`: the deployment must be
+    armed, a secret must be configured, and this request must carry it. It then
+    still does nothing unless the D8 trigger fires, and with no
+    `OPENROUTER_API_KEY` on the server it produces a routing record whose tier
+    outcome is `unavailable`, never a fabricated item.
+
+    `request` defaults to None on purpose. A future endpoint that forgets to
+    pass it gets the FREE path, not a free-for-all — the fail-safe direction,
+    and the reason the choke point is structural rather than a convention every
+    call site has to remember.
     """
-    # ADR-036 §h2. `escalate` is honoured only when this deployment is armed,
-    # and then it always carries the PROCESS-wide budget. The refusal is never
-    # silent: `escalation_disarmed` rides back on the response so the page can
-    # say the box did nothing, which is the whole point of the milestone.
-    armed = escalate and ESCALATION_ENABLED
+    # ADR-036 §h2 + TD-158. The ONE place the paid path can be entered, and the
+    # only `extract_items` call in this file. The process-wide budget rides
+    # along whenever it does open — it is the ceiling BEHIND the door, not
+    # instead of it.
+    escalate, why = gate.paid_path_open(
+        request.headers.get(gate.HEADER) if request is not None else None,
+        ESCALATION_ENABLED)
     try:
         result = extract_items(path, exclude_boilerplate=exclude_boilerplate,
-                               blocks=markdown, escalate=armed,
-                               budget=server_budget() if armed else None)
+                               blocks=markdown, escalate=escalate,
+                               budget=server_budget() if escalate else None)
     except Exception as e:                       # refuse loudly, hard rule 4
         return _err(500, "extractor_exception", f"{type(e).__name__}: {e}",
                     source=source)
     view = build_view(result)
-    if escalate and not ESCALATION_ENABLED:
-        view["escalation_disarmed"] = (
-            "This deployment is not armed for paid escalation: "
-            "SEC10K_ESCALATION_ENABLED is not set, so the request ran the "
-            "deterministic pipeline only and no routing record was produced. "
-            "The box was not silently ignored — this is it saying so.")
+    # Said, not implied. `routing: null` alone cannot distinguish "the paid
+    # tier was never offered to you" from "it ran and stayed quiet", and a
+    # viewer who is told nothing assumes the second.
+    view["escalation"] = {"ran": escalate, "reason": why}
     body = raw
     if body is None:
         try:
@@ -219,17 +283,34 @@ def index():
 
 @app.get("/api/meta")
 def api_meta():
-    return {"git_sha": git_sha(ROOT), "fixtures": list_fixtures(),
+    return {"git_sha": git_sha(ROOT), "fixtures": deployed_fixtures(),
             "max_bytes": MAX_BYTES, "allowed_suffix": list(ALLOWED_SUFFIX),
-            # ADR-036 §h2 — so the page can disable the escalate box and SAY
-            # why, instead of offering a control the server will ignore.
-            # Reports arming only; the budget's remaining balance is deliberately
-            # not published, because it is a fact about other people's requests.
-            "escalation_enabled": ESCALATION_ENABLED}
+            # ADR-036 §h2 — the deployment's behaviour stays inspectable
+            # without a control on the page. TWO facts, because since PR #61
+            # R10 one no longer implies the other:
+            #
+            # `escalation_enabled` is the operator's off-switch only. It reads
+            # false where SEC10K_ESCALATION_ENABLED is set to any member of
+            # DISARM_VALUES — `0`, `false`, `no`, `off`, compared after
+            # `.strip().lower()`, so `FALSE`, `Off` and `"0 "` all disarm.
+            # PR #61 R17: this comment used to describe a single-literal `0`,
+            # which stopped being true in R3 and would have sent an operator
+            # looking for a switch that had already widened.
+            #
+            # `escalation_token_required` is the DOOR (TD-158). True whenever
+            # a secret is configured — which is to say, whenever any request
+            # can reach the paid tier at all. Note the polarity: false does not
+            # mean "open to all", it means "closed to all", because an
+            # unconfigured secret disables escalation rather than waiving it.
+            #
+            # Neither publishes the secret, and neither publishes the budget's
+            # remaining balance — that is a fact about other people's requests.
+            "escalation_enabled": ESCALATION_ENABLED,
+            "escalation_token_required": bool(gate.configured_token())}
 
 
 @app.post("/api/extract/fixture")
-def extract_fixture(body: dict):
+def extract_fixture(body: dict, request: Request):
     name = (body or {}).get("fixture", "")
     try:
         f = _fixture_file(name)
@@ -237,8 +318,7 @@ def extract_fixture(body: dict):
         return _err(404, "bad_input", str(e))
     return _run(str(f), {"mode": "fixture", "name": name, "file": f.name},
                 exclude_boilerplate=bool((body or {}).get("exclude_boilerplate")),
-                markdown=bool((body or {}).get("markdown")),
-                escalate=bool((body or {}).get("escalate")))
+                markdown=bool((body or {}).get("markdown")), request=request)
 
 
 @app.post("/api/extract/upload")
@@ -266,11 +346,11 @@ async def extract_upload(request: Request):
                     exclude_boilerplate=request.query_params.get(
                         "exclude_boilerplate") == "1",
                     markdown=request.query_params.get("markdown") == "1",
-                    escalate=request.query_params.get("escalate") == "1")
+                    request=request)
 
 
 @app.post("/api/extract/url")
-def extract_url(body: dict):
+def extract_url(body: dict, request: Request):
     url = ((body or {}).get("url") or "").strip()
     if not url.startswith("https://www.sec.gov/Archives/"):
         return _err(400, "bad_input",
@@ -298,8 +378,7 @@ def extract_url(body: dict):
         return _run(str(p), {"mode": "url", "name": url, "bytes": len(raw),
                              "sha256": hashlib.sha256(raw).hexdigest()[:16]}, raw=raw,
                     exclude_boilerplate=bool((body or {}).get("exclude_boilerplate")),
-                    markdown=bool((body or {}).get("markdown")),
-                    escalate=bool((body or {}).get("escalate")))
+                    markdown=bool((body or {}).get("markdown")), request=request)
 
 
 @app.get("/api/source/{token}")

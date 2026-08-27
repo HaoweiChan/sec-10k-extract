@@ -1,13 +1,20 @@
 {
   "id": "ui-escalation-locks",
   "task": "repo_hygiene",
-  "suites": ["invariant", "fast"],
-  "input": {"checks": ["escalation_locks"]},
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "escalation_locks"
+    ]
+  },
   "expect": {},
   "triage": {
     "class": "cost-regression",
-    "note": "PR #58 R9 — PR #58 R3's failure mode reappearing on the code that guards the credential. The two ADR-036 §h2 locks on the public deployment's money WORK (the reviewer exercised them live), but nothing in the gate stopped them being removed: setting `ESCALATION_ENABLED = True` and building the process `Budget` with an effectively infinite ceiling left invariant 76/76, fast 139/139 and BOTH module self-checks green. `app.py` imports fastapi, so it cannot carry a self-check the dependency-free CI unit job would run, and the only checks over it were two `WIRE_API` source-text pins that read neither the constant's definition nor the budget's construction. This reads the SHAPE with `ast`: the arming constant must be a comparison of `os.environ.get('SEC10K_ESCALATION_ENABLED')` against a constant and never a bare `True`; both ceilings must be read from their own env vars; the one `Budget(...)` must be constructed from those two NAMES rather than literals; and something must actually call `server_budget()`.",
-    "note_negative_space": "It does not prove FastAPI binds the routes, that the deployment sets either variable, or that the ceiling is the right SIZE — only that both locks are still wired, which is the property that silently disappeared under mutation. The size question is ADR-036 §h2's, and the effective ceiling is MAX_USD plus one capped call, stated there."
+    "note": "PR #58 R9 — PR #58 R3's failure mode reappearing on the code that guards the credential. The two ADR-036 §h2 locks on the public deployment's money WORK (the reviewer exercised them live), but nothing in the gate stopped them being removed: setting `ESCALATION_ENABLED = True` and building the process `Budget` with an effectively infinite ceiling left invariant 76/76, fast 139/139 and BOTH module self-checks green. `app.py` imports fastapi, so it cannot carry a self-check the dependency-free CI unit job would run, and the only checks over it were two `WIRE_API` source-text pins that read neither the constant's definition nor the budget's construction. This reads the SHAPE with `ast`: the arming constant must be a comparison of `os.environ.get('SEC10K_ESCALATION_ENABLED')` against a constant and never a bare `True`; both ceilings must be read from their own env vars; the one `Budget(...)` must be constructed from those two NAMES rather than literals; and something must actually call `server_budget()`. **RE-PINNED 2026-08-27** on the owner's \"make it default on, remove the button\". The deployment now escalates by DEFAULT and `ESCALATION_ENABLED` is the operator's OFF switch (`SEC10K_ESCALATION_ENABLED=0`), so the arming assertion is inverted rather than dropped: the expression must still be an `os.environ.get(...)` comparison and never a bare `True` — a constant is now an off-switch the operator does not have. One assertion is ADDED, because the inversion creates a new way to orphan the switch: with no request-level flag left to AND against, the `extract_items(...)` call site's `escalate=` must NAME `ESCALATION_ENABLED` rather than pass a literal. Both ceilings, their env vars, their bounded defaults, the single `Budget` built from the two NAMES and the `server_budget()` call are untouched — and they carry more weight than before, being the only ceiling left once nobody has to tick anything to spend money. The property is the one this case has always had: **the money brakes cannot be removed by a one-token edit.**",
+    "note_negative_space": "It does not prove FastAPI binds the routes, that the deployment sets either variable, or that the ceiling is the right SIZE — only that both locks are still wired, which is the property that silently disappeared under mutation. The size question is ADR-036 §h2's, and the effective ceiling is MAX_USD plus one capped call, stated there. Unchanged by the inversion, and one thing added: it does not prove the deployment is reachable only by people who should reach it. It is not, and after this change any anonymous caller can trigger paid work — see ADR-036 §h2's 2026-08-27 note, which says so rather than softening it."
   },
   "provenance": "PR #58 round 2, created 2026-08-27 from the reviewer's own two mutations, before the check existed, per hard rule 2. Red-first record and the both-ways proof (mutation red, real file green) in tasks/reviews/pr58-r2-red.txt."
 }

@@ -1,0 +1,18 @@
+{
+  "id": "escalation-door-open",
+  "task": "repo_hygiene",
+  "suites": ["invariant", "fast"],
+  "input": {
+    "checks": ["escalation_door"],
+    "file": "evals/fixtures/repo_hygiene/escalation-door-open.py"
+  },
+  "expect": {
+    "min_failures": 3,
+    "max_failures": 3
+  },
+  "triage": {
+    "class": "cost-regression",
+    "note": "The counterpart PR #21 R1/R2/R3 established, applied to the door: a check asserting the real file is clean passes vacuously the day it regresses, so a known-bad fixture has to prove the miss is caught, and an exact count rather than a floor so a check that ALSO over-fires cannot report green (PR #21 round-2 R5). Three mutations, three failures. (1) `escalate=ESCALATION_ENABLED` — the door is consulted and its answer discarded, which `escalation_locks` cannot see because the argument is still a NAME and still not a literal. (2) a fourth `/api/extract/paste` endpoint calling `extract_items` directly: R13's shape exactly, a second path a once-written guard does not dominate, and the reason this check counts ENTRANCES instead of counting a guard. (3) `view['escalation']` never set, so the envelope goes quiet about a decision it took. `budget=` is left correctly conditioned, `_run` keeps its `request`, and `paid_path_open` is still called exactly once, so a blanket-failing check overshoots the count rather than reaching it. The behavioural half of `escalation_door` (the imported decision table) is scoped off when `input.file` substitutes app.py, for the reason `escalation_locks`' window bound already learned: a fixture that cannot influence a second file must not be charged for it."
+  },
+  "provenance": "PR #61 round 2, created 2026-08-28 alongside the check it falsifies, per hard rule 2."
+}

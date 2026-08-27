@@ -1,0 +1,122 @@
+{
+  "pr": 61,
+  "round": 1,
+  "result": "REQUEST_CHANGES",
+  "scope": "ced0cc3 — escalation default-on on the deployed inspector, toggle removed",
+  "counts": {
+    "HIGH": 1,
+    "MEDIUM": 4,
+    "LOW": 4
+  },
+  "artifact_note": "Written by the implementer from the coordinator's message, which carried the findings in full; no reviewer-authored artifact existed. The `claim`, `evidence`, `repro` and `acceptance` fields are the reviewer's, condensed; `resolution` and `verified` are the implementer's and are the part a reader should be sceptical of. Every finding was reproduced BEFORE it was fixed (hard rule 2) and every re-pinned property was falsified afterwards — tasks/reviews/pr61-r1-red.txt carries both, read by exit code.",
+  "verified": [
+    "R1's fix closes RESOLUTION, not just listing: POST /api/extract/fixture naming either excluded fixture -> HTTP 404 and ZERO outbound connections to a stand-in listener, over both the ASGI app and real HTTP; the deep link `?fixture=xref-index-collapse&run=1` in a real browser -> zero connections.",
+    "The EVAL corpus is untouched: list_fixtures() and iter_fixtures() both still see 44 fixtures including both excluded names; only deployed_fixtures() returns 42.",
+    "Nine mutations, one per re-pinned property, each invariant exit 1 and each restore exit 0.",
+    "No live API calls: OPENROUTER_BASE_URL=http://127.0.0.1:<port> throughout, key the literal 'probe-not-a-real-key'. evals/heldout/ not read, run or copied.",
+    ".eval-baseline.json, requirements.txt and pyproject.toml identical to origin/main.",
+    "Gate green through the real pre-commit hook, exit code, unpiped."
+  ],
+  "implementer_note": "Two things the findings did not name, both logged rather than fixed. (1) TD-160: DEPLOY_EXCLUDED is hand-maintained, so a future fixture that collapses re-opens the hole silently; deriving it from the trigger costs a full extraction sweep per process start, and the stopgap is that d11_trigger_scan.py is the named source and its committed artifact was ALREADY stale (1/43, pre-dating intc-2025's move to the dev side) — which is how this class of drift shows up. (2) the window-bound check's first revision coupled the app.py fixture cases to escalate.py and reddened all three lock cases on one mutation; scoped to the real tree, and the check says why. Also of note: ADR-036 h2 says the effective ceiling is MAX_USD + $2.4697 while specs/decisions/INDEX.md still says + $1.5675 — a pre-existing disagreement neither this round nor ced0cc3 introduced, not fixed here because it belongs to whoever re-derives the figure.",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "HIGH",
+      "route": "repaired",
+      "claim": "The deployed dropdown offers two fixtures that fire D8's `low_item_coverage`, so each is a one-click paid button — and `?fixture=<name>&run=1` bills on PAGE LOAD, with no click and no upload, because the deep link ends `$(\"#go-fx\").click()`. Every disclosure shipped in ced0cc3 (README:164, TD-158, ADR-036 h2, app.py's header) says the exposure requires an upload. That wording is false.",
+      "evidence": "Independently re-measured: `python3 tasks/reviews/d11_trigger_scan.py --rates` -> `low_item_coverage fires all 2/44 = 0.0455 -> ['intc-2025', 'xref-index-collapse']`, coverage 0.0033 and 0.0303. (The committed artifact tasks/reviews/d11-trigger-scan.txt says 1/43 and names only xref-index-collapse; it predates intc-2025 moving to the dev side.) Against a stand-in listener: POST /api/extract/fixture with each name -> HTTP 200 and one outbound connection each. In a real browser, navigating to `?fixture=xref-index-collapse&run=1` -> one outbound connection with no click.",
+      "repro": "tasks/reviews/pr61-r1-red.txt PART 1, R1.",
+      "acceptance": "The two names are absent from /api/meta AND refused by POST /api/extract/fixture in the same words an unknown name gets; the exclusion is named in one place; D1's invariant is re-pinned rather than edited to pass; the four disclosure sites are corrected.",
+      "resolution": "`DEPLOY_EXCLUDED = frozenset({\"intc-2025\", \"xref-index-collapse\"})` and `deployed_fixtures()` in src/sec10k/web/fixtures.py. /api/meta serves `deployed_fixtures()`; `_fixture_file` now RESOLVES THROUGH THE LISTING (`if name not in deployed_fixtures(): raise FileNotFoundError(f\"unknown fixture: {name!r}\")`) rather than merely sharing its predicate, so the deep link and a hand-written POST are closed by construction and the exclusion cannot be cosmetic. D1: `fixture_discovery` re-pinned from a three-way equality to the new relationship — eval corpus (list_fixtures == iter_fixtures == single-file set) UNCHANGED, `deployed_fixtures == single-file set - DEPLOY_EXCLUDED`, and `DEPLOY_EXCLUDED` a subset of the single-file set so a typo'd exclusion cannot silently protect nothing. New red-first case `deployed-fixture-exclusion` pins the money half. Disclosures corrected at README, TD-158, ADR-036 h2 (owner note and closing paragraph), app.py's header and prompts/024.",
+      "verified": "After: /api/meta 42 fixtures, neither name listed; POST each -> HTTP 404 `unknown fixture`, ZERO outbound connections; over real HTTP the same; browser `?fixture=xref-index-collapse&run=1` -> zero connections and the page degrades to 'No filing extracted yet.' (D10's own membership guard). `list_fixtures()` still 44 — the eval corpus is untouched. Mutations N1-N4 in pr61-r1-red.txt PART 2."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repaired",
+      "claim": "`server_budget()`'s memoization is the only thing making the budget process-wide, and nothing pins it. Deleting three lines gives every request its own $5 / 20-call budget with invariant and fast byte-identical. `check_escalation_locks`'s own docstring claims to pin 'the process one and not a fresh instance'; it did not.",
+      "evidence": "Mutation applied alone: invariant exit 0 81/81, fast exit 0 144/144, both module self-checks exit 0.",
+      "repro": "tasks/reviews/pr61-r1-red.txt PART 1, R2 block.",
+      "acceptance": "A check that reds on that mutation.",
+      "resolution": "`check_escalation_locks` now reads `server_budget`'s AST: it must declare `global _SERVER_BUDGET`, must RETURN that name (never a fresh construction), and must assign it. Three assertions because each is independently evadable. A runtime `server_budget() is server_budget()` case was rejected: app.py imports fastapi and cannot be imported by the no-install CI jobs (ADR-003) — the same reason this check is AST-based at all.",
+      "verified": "Mutation N5: invariant exit 1, 81/82, ui-escalation-locks FAILED with all three messages; restored exit 0. Added to escalation-locks-evaded.py as mutation 5 (count 4 -> 7)."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repaired",
+      "claim": "Only the literal `\"0\"` disarms. `false`, `no`, `off`, `FALSE`, `''` and `'0 '` all leave it ARMED, and every operator-facing statement gives only the positive form.",
+      "evidence": "Eight spellings tested against `!= \"0\"`: six leave it ARMED, including `false` and `off`, which is what an operator types into a Zeabur variable.",
+      "repro": "tasks/reviews/pr61-r1-red.txt PART 1, R3.",
+      "acceptance": "Either document that the off value is the literal 0 and any other value arms, or widen to a documented falsy set with escalation_locks re-pinned and watched red.",
+      "resolution": "Widened, not documented away — the finding's own argument (this repo's escalation-locks-evaded.py) is that a stop button wired to an undocumented comparand is worse than none, and documenting a footgun on a money path leaves the footgun. `DISARM_VALUES = (\"0\", \"false\", \"no\", \"off\")`, compared after `.strip().lower()`. UNSET and EMPTY still ARM — that is the owner's default-on, and `os.environ.get(VAR, \"\")` makes the two states identical on purpose; stated in app.py's header, ADR-036 h2 and README. `escalation_locks` re-pinned from NotEq/\"0\" to NotIn against the NAMED constant, plus a floor on the set's membership (`DISARM_REQUIRED`) and a guard that every member is already stripped-and-lowercase (a member that is not can never match). `_env_get` gained a no-arg-method-call unwrap so it still sees through `.strip().lower()`.",
+      "verified": "Mutations N6 (set hollowed to `(\"0\",)`) and N7 (back to `!= \"0\"`): both invariant exit 1, restored exit 0. escalation-locks-evaded.py's mutation 1 re-derived to the hollowed set."
+    },
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "route": "repaired",
+      "claim": "`escalation_enabled` survives in /api/meta but the page no longer reads it and ROUTING_UI's pin was removed, so deleting the key reds nothing — while ADR-036 h2 newly claims it is what keeps the deployment inspectable.",
+      "evidence": "Key deleted: invariant exit 0 81/81, fast exit 0 144/144.",
+      "repro": "tasks/reviews/pr61-r1-red.txt PART 1, R4 block.",
+      "acceptance": "Add a pin that goes red on that deletion, or drop the claim.",
+      "resolution": "Pinned, not dropped: the claim is true and the pin is one line. `WIRE_API` gains `\"escalation_enabled\": ESCALATION_ENABLED`. The two boilerplate wire fixtures gained a matching `/api/meta` stub so their exact counts (9 and 8) are unchanged and neither pair grows an unnamed tenth failure.",
+      "verified": "Mutation N8: invariant exit 1, 81/82, ui-boilerplate-exclusion FAILED; restored exit 0."
+    },
+    {
+      "id": "R5",
+      "severity": "MEDIUM",
+      "route": "repaired",
+      "claim": "`assert EXTRACT_WINDOW >= 1_213_284` is a floor; raising it to 25,000,000 leaves the gate and the module self-check green while one call's price rises ~20x, silently voiding the published MAX_USD + one call.",
+      "evidence": "EXTRACT_WINDOW = 25_000_000: invariant exit 0, fast exit 0, `python3 -m src.sec10k.escalate` exit 0, `python3 -m src.sec10k.llm` exit 0.",
+      "repro": "tasks/reviews/pr61-r1-red.txt PART 1, R5 block.",
+      "acceptance": "An upper bound that reds on that mutation.",
+      "resolution": "Two places, deliberately: escalate._demo's assert becomes `1_213_284 <= EXTRACT_WINDOW <= 1_500_000` (the CI self-check), and `check_escalation_locks` reads escalate.py's `EXTRACT_WINDOW` against `EXTRACT_WINDOW_BOUNDS` so the EVAL GATE sees it too — the finding was that the self-check alone did not catch it. Scoped to the real tree: the known-bad app.py fixtures have no say over escalate.py, and the first revision reddened all three lock cases on one window mutation instead of the one whose file it is.",
+      "verified": "Mutation N9: invariant exit 1, 81/82, ui-escalation-locks FAILED (only), and `python3 -m src.sec10k.escalate` exit 1 with the assertion; restored exit 0."
+    },
+    {
+      "id": "R6",
+      "severity": "LOW",
+      "route": "corrected in place",
+      "claim": "The disarmed path emits `routing: null`, not 'no routing key at all' — both escalate-default-on-red.txt and index.html:916-917 say the latter.",
+      "evidence": "view.py:140 `\"routing\": _jsonable(result[\"routing\"]) if \"routing\" in result else None`; view.py's own self-check asserts `off[\"routing\"] is None`. The probe that produced the claim read `.get(\"routing\") is None`, which cannot distinguish absent from null.",
+      "repro": "tasks/reviews/pr61-r1-red.txt PART 1, R6.",
+      "acceptance": "Correct both statements.",
+      "resolution": "Both corrected, and the transcript says WHY it was wrong (the probe's own predicate) rather than silently restating it.",
+      "verified": "grep: no 'no `routing` key' claim remains."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "route": "corrected in place",
+      "claim": "Only the four green runs reached history.jsonl; PR #58's red mutation runs are in main's copy, so the two treatments differ silently.",
+      "evidence": "`git show origin/main:evals/report/history.jsonl` holds 109 lines with score < 1.0.",
+      "repro": "tasks/reviews/pr61-r1-red.txt PART 1, R7.",
+      "acceptance": "Either let them ride or record the exclusion in ADR-025.",
+      "resolution": "Recorded in ADR-025 as a named deviation with its reasoning: a mutation battery's history lines and reports are NOT committed, the battery's transcript in tasks/reviews/ is its record and must show every run's exit code, and runs of the SHIPPED tree — including a new case's first red — ride as normal. Choosing the rule and writing it down is the fix; either treatment is defensible, two undocumented treatments is not.",
+      "verified": "ADR-025 section 1 carries the bullet."
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "route": "corrected in place",
+      "claim": "docs/architecture/overview.md:22-26 still says the tier 'is off by default' and 'no live call has been made'; both are now false.",
+      "evidence": "Four live calls, $3.025692 (ADR-036 h4/k); the deployed inspector escalates on every request since ced0cc3.",
+      "repro": "tasks/reviews/pr61-r1-red.txt PART 1, R8.",
+      "acceptance": "Correct both.",
+      "resolution": "Corrected in place with the correction dated and attributed, and the library/deployment split stated so the paragraph cannot go stale the same way again.",
+      "verified": "grep: neither claim remains in overview.md."
+    },
+    {
+      "id": "R9",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "The harness's one `escalate=True` (src/sec10k/eval_adapter.py:524) is safe by case-tagging convention, not structurally.",
+      "evidence": "Reviewer confirmed zero connections under both suites.",
+      "repro": "n/a — note only.",
+      "acceptance": "None requested.",
+      "resolution": "Logged as TD-161 rather than changed. Nothing in this round touches that call, and making it structural (a harness-wide refusal to escalate unless a case opts in) is a change to the eval harness, not to the web layer this PR is about.",
+      "verified": "n/a."
+    }
+  ]
+}

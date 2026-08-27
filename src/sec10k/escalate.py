@@ -35,11 +35,18 @@ from src.sec10k.validate import SPAN_FLOOR
 
 # WHICH D8 code escalates the DOCUMENT — the single most consequential constant
 # in this file, and the one the whole cost argument rests on (ADR-036 §c).
-# Measured 2026-08-26 over all 43 dev filing fixtures
-# (`tasks/reviews/d11_trigger_scan.py`):
+# RE-DERIVED 2026-08-28 (PR #61 R14) over all 44 dev filing fixtures
+# (`tasks/reviews/d11_trigger_scan.py --rates`, artifact
+# `tasks/reviews/d11-trigger-scan.txt`):
 #
-#   low_item_coverage      1/43 = 0.0233 overall, 0/28 on real EDGAR filings
-#   item_span_near_empty  12/43 = 0.2791 overall, 9/28 on real EDGAR filings
+#   low_item_coverage      2/44 = 0.0455 overall, 1/29 on real EDGAR filings
+#   item_span_near_empty  13/44 = 0.2955 overall, 10/29 on real EDGAR filings
+#
+# The figures this comment carried until then — 1/43 and 0/28 — were measured
+# 2026-08-26 and went stale the moment the live exam burned `intc-2025` to the
+# dev side. The real-filing rate is no longer zero: it is one, and it is that
+# filing. Nothing about the ruling below changes, and saying so is the point —
+# `item_span_near_empty` is still an order of magnitude more frequent.
 #
 # Only the first is here. ADR-035 §c already ruled that a single pointer-bodied
 # item is a fact about that ITEM and not a verdict on the document — it warns,
@@ -349,7 +356,7 @@ def route(text, items, warnings, budget=None):
     record = {"trigger": tr, "tiers": [], "resolved": [],
               "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0}}
     if not tr["fired"]:
-        # THE COMMON CASE, and the one the cost budget lives on: 42 of 43 dev
+        # THE COMMON CASE, and the one the cost budget lives on: 42 of 44 dev
         # documents land here, spend nothing, and are byte-identical to a run
         # with the flag off.
         return record, []
@@ -493,7 +500,12 @@ def _demo():
     #     it was handed and returns unparseable text, so no fabricated model
     #     answer ever enters the pipeline (repo rule 4) and both rungs run to
     #     completion leaving one tier record each.
-    assert EXTRACT_WINDOW >= 1_213_284, "the cap must not truncate any dev filing"
+    # PR #61 R5: a floor alone let 25,000,000 through green while one call's
+    # price rose ~20x. The ceiling is re-pinned in repo_hygiene
+    # (`EXTRACT_WINDOW_BOUNDS`) too, so the eval gate sees it and not only CI.
+    assert 1_213_284 <= EXTRACT_WINDOW <= 1_500_000, (
+        "below the floor the cap truncates a dev filing; above the ceiling it "
+        "multiplies one rung-2 call's price and voids ADR-036 §h2's figure")
     import src.sec10k.llm as _llm
     seen = []
 

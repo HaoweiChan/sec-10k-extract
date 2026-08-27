@@ -5,7 +5,13 @@ UNRUN and said so in §k**. **AMENDED 2026-08-27 in the PR #58 round-1 repair**:
 the provider swapped from the Anthropic Messages API to OpenRouter on owner
 instruction (§h1, and every dollar figure in §d is recomputed on OpenRouter's
 published pricing); the deployed inspector gained three independent locks before
-a credential lands on it (§h2); `verify` gained the span-status guard the
+a credential lands on it (§h2) — **amended again 2026-08-27 on owner
+instruction, "make it default on, remove the button": the escalate control is
+gone, the deployed service escalates on every request, Lock 1 is INVERTED into
+an operator off-switch and Locks 2/3 are untouched; `extract_items`' own
+`escalate=False` default is deliberately NOT changed, and the exposure this
+creates on an unauthenticated endpoint is stated in §h2 rather than
+softened**; `verify` gained the span-status guard the
 reviewer's HIGH finding named and its all-or-nothing claim was made true (§b);
 and §c1/§c3/§d4 are corrected where their cited evidence did not match the
 source. Each correction is marked in place. **Supersedes
@@ -38,7 +44,7 @@ footnote.
 |---|---|---|
 | Six of seven residual-failure classes are **precision** failures a recall-only fallback cannot reach | **Still true, and this ADR does not claim otherwise.** The ladder is a recall mechanism; it moves spans into unattributed text and cannot fix a span that is in the wrong place for a precision reason. | Nothing. §i names what this ladder does not reach. |
 | The one real recall gap (`axp-2008`, 4 of 768 items) closes deterministically at $0 | **Still true.** | Nothing — and ADR-034 §e3 already ruled the `axp-2008` fan-out "subsumed by D11" on the escalation-ladder principle, which is exactly what this document builds. |
-| Therefore no fallback ships | **No longer true**, and this is the whole change | Two things arrived after 2026-08-19 that ADR-020 could not have measured: the 2026-08-24 demo, where two real filings (Intel, Citigroup) collapsed onto cross-reference index rows and were reported at `conf 0.95`; and D8's `low_item_coverage`, a **measured, document-level, zero-false-positive** signal for exactly that shape. ADR-020's argument was "no fallback ships *unconditionally*, because there is no gap worth the money". The gap is now identified, and — critically — so is a trigger that costs nothing on 42 of 43 dev documents. |
+| Therefore no fallback ships | **No longer true**, and this is the whole change | Two things arrived after 2026-08-19 that ADR-020 could not have measured: the 2026-08-24 demo, where two real filings (Intel, Citigroup) collapsed onto cross-reference index rows and were reported at `conf 0.95`; and D8's `low_item_coverage`, a **measured, document-level, zero-false-positive** signal for exactly that shape. ADR-020's argument was "no fallback ships *unconditionally*, because there is no gap worth the money". The gap is now identified, and — critically — so is a trigger that costs nothing on 42 of 44 dev documents. |
 
 **What ADR-020 got right, and this ADR keeps.** The escalation-ladder
 principle: the deterministic pipeline is the default and the only path on a
@@ -58,7 +64,7 @@ collapsed document can be billed.
 
 ```
 rung 0   deterministic        always, $0, unchanged
-   │     … `low_item_coverage` in warnings?  no → STOP. This is 42/43 dev documents.
+   │     … `low_item_coverage` in warnings?  no → STOP. This is 42/44 dev documents.
    ▼
 rung 1   llm_localize         openai/gpt-5-mini, input = the largest UNATTRIBUTED
    │                          region only, capped at 60,000 chars
@@ -152,7 +158,7 @@ ADR-035 §b4 already published are cited rather than re-measured.
 
 ### c1. The two candidate triggers, measured
 
-| code | fires on | of all 43 | of 28 real filings |
+| code | fires on | of all 44 | of 29 real filings |
 |---|---|---|---|
 | `low_item_coverage` (doc-level, escalating, ADR-035 §d) | `xref-index-collapse`, `intc-2025` | **2/44 = 0.0455** | **1/29 = 0.0345** |
 | `item_span_near_empty` (item-level, non-escalating, ADR-035 §c) | 13 fixtures, 20 item hits | 13/44 = 0.2955 | 10/29 = 0.3448 |
@@ -162,8 +168,8 @@ fixture to the dev side. The previous figures — 1/43 and 0/28 for the doc-leve
 code — were correct for a corpus that did not contain a real collapsed filing.
 It does now, and §c2's admission below is the paragraph most changed by it.
 
-The 12: `cvx-2015`(7,8), `fy2021-item9c`(8), `ge-1994`(8), `ibr-pointer-first`(8),
-`jpm-2024`(7,8), `ko-1997`(8), `nvda-2024`(8), `reac-2015`(8),
+The 13: `cvx-2015`(7,8), `fy2021-item9c`(8), `ge-1994`(8), `ibr-pointer-first`(8),
+`intc-2025`(1,7,8), `jpm-2024`(7,8), `ko-1997`(8), `nvda-2024`(8), `reac-2015`(8),
 `sandston-2021`(8), `spatz-2014`(8), `xom-2021`(7,8),
 `xref-index-collapse`(1,7,8).
 
@@ -176,8 +182,8 @@ of weight:
    the document." A code that deliberately does not escalate `doc_status`
    should not escalate to a paid tier either.
 2. **The cost budget the D11 ledger row itself imposes.** The row requires
-   "dev escalation rate stays near zero so the default cost stays $0". 0/28 on
-   real filings is near zero. 9/28 is not.
+   "dev escalation rate stays near zero so the default cost stays $0". 1/29 on
+   real filings is near zero. 10/29 is not.
 3. **It would spend money on a class nobody has ruled is broken.** Stated
    precisely, because the first version of this paragraph over-claimed and the
    reviewer caught it (PR #58 R5). Of the nine real filings
@@ -290,7 +296,11 @@ silent on all five. Read against D8's item-level code, it does not. So:
 ## d) Cost — one measured input, one ESTIMATE clearly labelled
 
 **The measured half.** The escalation rate is measured, deterministic and $0:
-1 of 43 dev documents, 0 of 28 real filings.
+**2 of 44 dev documents, 1 of 29 real filings** (re-derived 2026-08-28, PR #61
+R14; `tasks/reviews/d11-trigger-scan.txt`). This paragraph said 1 of 43 and 0
+of 28 until then, contradicting §c1's own table two hundred lines above it,
+which had been re-derived on 2026-08-27 and this one had not. Both now come
+from the same run of the same script.
 
 **The estimated half, and why it is an estimate.** Nothing here has been
 billed. Token counts come from a **4 characters ≈ 1 token** proxy over
@@ -440,7 +450,7 @@ unchanged, and no vision rung is built.** Four reasons, strongest first.
    `normalization_collapse` **before any item exists** — before `expected`,
    before `validate`, before `meta.coverage`. There is no item span, so
    `low_item_coverage` cannot fire, so the trigger cannot fire, so escalation
-   is unreachable. Measured: 4 of 43 dev documents refuse before any item
+   is unreachable. Measured: 4 of 44 dev documents refuse before any item
    exists (`aapl-2026-10q`, `amended-cover-2021`, `ksb-2007` as `unsupported`;
    `truncated-download` as `failed`). Admitting scanned input is therefore not
    "add a rung" — it is "make a refusal into a trigger", which is a different
@@ -450,9 +460,9 @@ unchanged, and no vision rung is built.** Four reasons, strongest first.
    download, every mis-fetched page and every non-10-K form would be a
    candidate too — the classes are indistinguishable at the point of refusal,
    which is exactly why the contract tests collapse *before* form identity.
-   The escalation rate stops being 0/28 and becomes "however many bad inputs
+   The escalation rate stops being 1/29 and becomes "however many bad inputs
    arrive", which is unbounded and adversary-controlled.
-3. **The corpus has zero instances.** 0 of 43 dev filings and 0 of 7 held-out
+3. **The corpus has zero instances.** 0 of 44 dev filings and 0 of 7 held-out
    filings are text-less (the held-out figure from ADR-035 §b4's published
    table, not from a new read). EDGAR has required machine-readable HTML or
    text since 1996. A capability with no committed instance cannot be evaluated
@@ -578,7 +588,7 @@ hop of the ADR-026 flag's path. Three of those hops gained the `escalate`
 flag, so three pins were re-spelled and the three mutation fixtures that carry
 their correct halves were re-spelled with them — the same move S9 (ADR-032)
 made when `blocks=markdown` joined the same call, and the wire was re-checked
-by hand rather than assumed: `#escalate` → `escalateOn()` → request body or
+by hand rather than assumed — **and removed 2026-08-27 with the control itself (§h2's owner note); the hop below described the opt-in wire**: `#escalate` → `escalateOn()` → request body or
 query string → handler → `_run` → `extract_items`. `ui-confidence-honesty`'s
 banner pin moved for the same reason (the banner now also calls
 `routingStrip`). **A moved pin is the one change in this diff that can hide a
@@ -612,7 +622,114 @@ stdlib `urllib.request` + `json`. `PROMPT_VERSION` moved to
 `d11.2-openrouter`, so no cached response from the old transport can be served
 for a new-transport request.
 
-## h2) The deployed inspector: three locks, because a real credential is about to land on it
+## h2) The deployed inspector: four locks, because a real credential landed on it
+
+> **AMENDED 2026-08-27 — owner decision: "make it default on, remove the
+> button."** The deployed inspector now escalates on EVERY request. The
+> escalate checkbox is gone from `index.html`, along with the helper that read
+> it, the `/api/meta` arming round-trip that disabled it, the
+> `escalation_disarmed` refusal note, and the request-level `escalate` flag on
+> all three endpoints. The server decides; the client has no say.
+>
+> **Lock 1 is INVERTED, not removed.** `ESCALATION_ENABLED` used to ARM paid
+> work (`os.environ.get("SEC10K_ESCALATION_ENABLED") == "1"`, off until
+> someone opted in); it now DISARMS it — on until the operator says stop.
+> **The off value is a documented falsy SET, not one literal** (PR #61 R3):
+> `SEC10K_ESCALATION_ENABLED` is stripped, lowercased and tested against
+> `DISARM_VALUES = ("0", "false", "no", "off")`. The first cut compared
+> against `"0"` alone, which left `false`, `off`, `FALSE` and `"0 "` all
+> ARMED — and those are what an operator types into a Zeabur variable, so it
+> was a stop button that would be believed and would not work. **UNSET and
+> EMPTY both ARM**, deliberately: that is the default-on this section exists
+> to record, and `os.environ.get(VAR, "")` makes the two states identical.
+> Anything not in the set arms. An off-switch costs nothing, does not contradict "default on", and
+> means a runaway is stopped by an env var on the host rather than by a code
+> change and a redeploy. The check that binds it moved with it: the semantics
+> pin that PR #58 R18 added — the shape alone is not the property — is
+> re-derived for the new direction, and `escalation_locks` now also pins that
+> the `extract_items(...)` call site NAMES `ESCALATION_ENABLED` rather than
+> passing a literal, because with no request flag left to AND against,
+> `escalate=True` would orphan the switch while leaving it in the file looking
+> authoritative. Mutation transcripts: `tasks/reviews/escalate-default-on-red.txt`.
+>
+> **Locks 2 and 3 are UNTOUCHED**, and they carry more weight than they did:
+> the process-wide `Budget` (`SEC10K_ESCALATION_MAX_CALLS`,
+> `SEC10K_ESCALATION_MAX_USD`) and `EXTRACT_WINDOW`'s input cap inside
+> `escalate.route` are now the only ceilings, because nobody has to tick
+> anything to spend money. The effective deployment ceiling below is unchanged.
+>
+> **SCOPE, stated because getting it wrong would be serious.** This is a WEB
+> LAYER change only. `extract_items`' own `escalate=False` default is
+> deliberately unchanged. Flipping the library default would put paid API
+> calls on every `python3 -m evals.run` and in CI, destroying the $0 offline
+> gate the whole eval harness depends on — and §l's falsifier "escalation is
+> free by default" would go from true to meaningless.
+>
+> **WHAT THIS EXPOSED, and how it was closed — the two corrections in order,
+> because each one falsified the sentence before it.**
+>
+> As first written this note said: the deployment has **no authentication and
+> no rate limit**, and now no opt-in either, so **any caller can trigger paid
+> work by uploading a document that collapses**. Two rounds of review found
+> that claim wrong twice, and in opposite directions.
+>
+> **CORRECTION 1 — 2026-08-27, PR #61 R1.** No upload was needed at all.
+> `intc-2025` (coverage 0.0033) and `xref-index-collapse` (0.0303) both fire
+> the trigger and were both in the deployed dropdown, so one click did it, and
+> `?fixture=intc-2025&run=1` did it on PAGE LOAD, because the deep link ends
+> `$("#go-fx").click()`. `fixtures.DEPLOY_EXCLUDED` is a named set the
+> deployment neither LISTS nor RESOLVES: `_fixture_file` refuses an excluded
+> name in the same words an unknown one gets, because an exclusion that only
+> shrank the menu would be cosmetic while the deep link and a hand-written
+> POST both name a fixture directly. Both stay EVAL fixtures —
+> `list_fixtures`/`iter_fixtures` and therefore the oracle, the bench and every
+> case are untouched — and D1's invariant is re-pinned to the new relationship
+> (deployed = eval corpus minus the named set) rather than edited to pass.
+> Bound by `evals/adversarial/deployed-fixture-exclusion.json`; transcripts in
+> `tasks/reviews/pr61-r1-red.txt`.
+>
+> **CORRECTION 2 — 2026-08-28, PR #61 R10, and it falsified correction 1's own
+> closing sentence.** That sentence read "an upload is now the only route", and
+> it was not. `POST /api/extract/url` accepts any
+> `https://www.sec.gov/Archives/…` URL and reached the same `_run` with
+> escalation on — and `intc-2025` is a real Intel EDGAR filing whose own
+> Archives URL still billed. Excluding committed fixtures could never have
+> fixed that: extracting arbitrary EDGAR URLs is the FEATURE, so every
+> collapsing filing on EDGAR was a paid call for an anonymous caller. Four
+> places said an upload was the only route and all four were false.
+>
+> **LOCK 4 — THE DOOR (owner decision, 2026-08-28: "close it at the door").**
+> `src/sec10k/web/gate.py::paid_path_open` is consulted ONCE, in `_run`, which
+> is the single point fixture, upload and URL converge on and the only caller
+> of `extract_items` in the web layer. Escalation runs only for a request
+> presenting a valid `X-Escalation-Token`; the operator's off-switch is folded
+> into the same decision. **Unset is CLOSED, not open**: with no
+> `SEC10K_ESCALATION_TOKEN` on the host — or one shorter than
+> `MIN_TOKEN_CHARS` — the paid tier is unreachable by everyone, so a forgotten
+> variable makes the demo free rather than free to bill. **Deterministic
+> extraction is untouched**: it stays open, unauthenticated and $0 on all three
+> routes, and when the door does not open the envelope publishes
+> `escalation.reason` and the page prints it, rather than going quiet.
+>
+> Bound by `evals/adversarial/escalation-door.json`, which IMPORTS `gate.py`
+> and runs the decision table rather than reading its shape — `gate.py` is
+> stdlib-only for exactly that reason — plus
+> `evals/adversarial/escalation-door-open.json` for the miss. The choke point
+> is pinned as a property, not a line: exactly one `extract_items` entrance,
+> inside `_run`, escalating and billing on the SAME name. PR #61 R13 is why —
+> a guard counted as one literal in one function is a guard the next endpoint
+> walks around.
+>
+> **What the door does NOT close, stated because the previous version of this
+> paragraph was the thing that went stale.** The FREE tier is still open to
+> anyone: no rate limit, no request cap, a 25 MB upload ceiling, and a large
+> filing costs real CPU and memory. That is a denial-of-service and
+> hosting-cost surface, not a billing one, and it is `TD-162`. Behind the door,
+> the process `Budget` still bounds a token holder and still **resets on every
+> redeploy**, so "spent" is a state a push undoes; the credit limit on the
+> OpenRouter key remains the only ceiling that survives one, and should be set
+> as if it were the only one. `TD-158` — auth or a rate limit on the escalating
+> path — is CLOSED by this lock rather than narrowed.
 
 PR #58 R6 and R12, and the reason they were repaired rather than disclosed: the owner is
 putting a credential on a **public, unauthenticated** Zeabur deployment whose
@@ -622,7 +739,11 @@ anonymous caller could upload collapsed filings and drive opus-class calls
 until the account ran dry — and nothing bounded aggregate spend, because
 `route()` builds a fresh per-document `Budget` and no caller passed one.
 
-**Lock 1 — a credential alone never arms paid work.** The server refuses to
+**Lock 1 — a credential alone never arms paid work.** *(Superseded
+2026-08-27 by the owner note above: the variable's sense is INVERTED and the
+default is now ON. The reasoning below is kept because it is what makes the
+off-switch a separate variable rather than a truthiness check on the key, and
+that part is unchanged.)* The server refuses to
 escalate unless `SEC10K_ESCALATION_ENABLED=1` is *also* set. Deliberately a
 second variable rather than a truthiness check on the key: the key arrives for
 its own reasons, and "a key exists" must not mean "spend it". Verified with a
@@ -659,7 +780,18 @@ What this still does not bound is a document whose real content sits past
 (cap on projected cost once the first live run supplies real token counts,
 which closes §d3's overshoot in the same move).
 
-**And the refusal is never silent, which is the whole milestone.** An unarmed
+**And the refusal is never silent, which is the whole milestone.**
+*(SUPERSEDED 2026-08-27: there is no box, so there is no ticked box to ignore
+and no `escalation_disarmed` message — the server stopped emitting it. What
+replaced this paragraph's three pinned hops is their mirror: six ABSENT-pins
+in `routing_provenance` forbidding the control, the helper, the flag on any
+wire, the arming round-trip and the dead refusal note from creeping back, and
+`routing-strip-missing.html`'s shape 1 is now "the control comes back, whole",
+worth six of its eleven failures. `/api/meta` still publishes
+`escalation_enabled` — almost always true now — so the deployment stays
+inspectable without a control on the page, and the routing strip is where a
+viewer learns a paid tier ran and what it cost. The original text follows.)*
+An unarmed
 deployment does not quietly ignore a ticked box. `/api/meta` publishes
 `escalation_enabled`, the page disables the control and says why, and any
 request that asked anyway comes back with an `escalation_disarmed` message
@@ -683,7 +815,12 @@ the point: a bound that only guarded the deployment would not bound a sweep, and
 rate limit on the deployment, so an anonymous caller can still consume the
 process budget — denying the capability to everyone else — and can still cost
 CPU. The locks bound *spend*, which is the irreversible resource; availability
-is not bounded and is a debt row.
+is not bounded and is a debt row. **Widened 2026-08-27 by the owner note at
+the top of this section**: with the opt-in removed, that caller no longer has
+to find or tick anything, and the process budget they consume refills on every
+redeploy. **Narrowed the same day (PR #61 R1)**: they must now bring their own
+document, because the two committed fixtures that fire the trigger are neither
+listed nor resolvable on the deployment. The credit limit on the OpenRouter key is the brake that does not.
 
 ## h4) The exam ran, was billed, and broke the client (2026-08-27)
 
@@ -961,7 +1098,9 @@ reasons are published in full.
 window is unknown, and if it cannot then rung 1 is pure waste that always
 escalates to rung 2 (§d). **The deployment has no authentication and no rate
 limit** — the §h2 locks bound spend, not availability (§h2's closing
-paragraph).
+paragraph) — **and as of 2026-08-27 it also escalates by default, so any
+caller can trigger paid work with one upload and no opt-in** (§h2's owner
+note; the process budget is the bound and a redeploy refills it).
 
 ## l) Falsifiers
 
@@ -970,7 +1109,7 @@ paragraph).
 | `low_item_coverage` is the right trigger | it fires on a real filing that is NOT collapsed (a false positive), or a held-out collapse does not fire it | re-run `tasks/reviews/d11_trigger_scan.py` after any fixture expansion; the held-out run when a credential exists | $0 / one exam |
 | The ladder is worth its price | the held-out run shows rung 2 resolving nothing that rung 1 did not, or `verify` rejecting every real answer | the held-out run, reading `routing.tiers[*].outcome` and `rejections` | one exam + ~$0.2 |
 | Scanned input stays out of scope | a committed text-less 10-K fixture appears, or a user brings one | `d11_trigger_scan.py`'s "refused before any item exists" line, plus the fixtures README | $0 |
-| Escalation is free by default | any default-flag run reports a non-zero `cost` | `evals/snapshot.py`, and the `escalation-trigger-quiet` case's `usd: 0.0` | $0 |
+| Escalation is free by default — the LIBRARY default, `extract_items(path)`; the DEPLOYED service has escalated by default since 2026-08-27 (§h2) and is not free | any default-flag run reports a non-zero `cost`; or the web layer's default-on leaks into `extract_items`' own signature | `evals/snapshot.py`, and the `escalation-trigger-quiet` case's `usd: 0.0` | $0 |
 | The gate stays offline | any network module appears in a gate import | `escalation-seam-offline`, every run | $0 |
 | A model cannot move a span it should not | a fabricated offset passes `verify` | attack `escalate._demo`'s proposals; the live run's `rejections` list | $0 |
 | A2 stays declined | someone adjudicates the pointer-bodied-item-7/8 class as a defect | a decision, not a measurement | §d4's $9.6754/sweep, 7.2× (derived by `tasks/reviews/d11_sweep_cost.py`) |

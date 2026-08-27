@@ -1,0 +1,227 @@
+escalate-default-on — the money checks, re-pinned and re-proved
+================================================================
+
+Owner instruction, 2026-08-27: "make it default on, remove the button". The
+deployed inspector escalates on every request; the escalate checkbox, the
+helper that read it, the /api/meta arming round-trip and the request-level
+`escalate` flag are gone. `extract_items`' own `escalate=False` default is
+UNCHANGED — flipping it would put paid calls on every `python3 -m evals.run`
+and in CI. ADR-036 §h2 carries the decision and the exposure it creates.
+
+Four checks pinned the removed behaviour. None was deleted to make the gate
+pass; each was re-pinned to the NEW property and then falsified, because this
+repo's recurring defect is a safety mechanism nobody bound.
+
+  escalation_locks   was: arming is `os.environ.get(VAR) == "1"` (Eq, "1").
+                     now: the same expression is the operator's OFF switch and
+                          must be `!= "0"` (NotEq, "0") — never a constant —
+                          and, NEW, the `extract_items(...)` call site's
+                          `escalate=` must NAME `ESCALATION_ENABLED` rather
+                          than a literal, because with no request flag left to
+                          AND against, `escalate=True` would orphan the switch.
+                          Both ceilings, their env vars, their bounded
+                          defaults, the single Budget built from the two NAMES
+                          and the server_budget() call are untouched.
+                          M1-M7 below.
+  routing_provenance was: the #escalate checkbox ships unchecked and enabled,
+                          the page asks the server whether it is armed, the
+                          box is disabled when it is not, the refusal is
+                          rendered, and the flag rides two named wires.
+                     now: six ABSENT-pins — no control, no helper reading one,
+                          no `escalate` flag on any wire, no arming round-trip,
+                          no `escalation_disarmed` note (the server no longer
+                          emits it, so rendering it is a dead honesty
+                          mechanism). The eight routing-strip pins are
+                          unchanged and are now the ONLY honesty the page
+                          owes the viewer. M8-M10 below.
+  WIRE_API           was: two pins — `armed = escalate and ESCALATION_ENABLED`
+                          plus the call carrying `escalate=armed`.
+                     now: one pin — the call carrying `escalate=
+                          ESCALATION_ENABLED` and the process budget. There is
+                          no request-level flag to gate, so there is no gate
+                          expression. M6, M7.
+  WIRE_UI            was: the fixture and url bodies carry `escalate:
+                          escalateOn()`.
+                     now: they carry the two display flags only. M8.
+
+Method: one mutation at a time on the shipped tree, `python3 -m evals.run
+--suite invariant` run unpiped and read by EXIT CODE, then restored and re-run.
+Every mutation exits 1; every restore exits 0. The check messages under each
+run are the checks' own output, which evals.run summarises away.
+
+The mutation runs' report artifacts and their history.jsonl lines are not
+committed: they are runs of a deliberately-broken tree, not of this branch.
+This file is their record.
+
+Known-bad fixtures, exact counts (run as cases in every invariant/fast suite):
+  escalation-locks-removed.py    5 failures  ui-escalation-locks-regression
+  escalation-locks-evaded.py     4 failures  ui-escalation-locks-evaded
+  routing-strip-missing.html    11 failures  ui-routing-provenance-regression
+  boilerplate-wire-broken.py     9 failures  ui-boilerplate-exclusion-regression
+                                             (was 10; WIRE_API is one pin again)
+
+Red-first, before any check was touched: removing the control and the flag
+from app.py and index.html took the invariant suite to 77/81 — ui-deep-link,
+ui-escalation-locks, ui-routing-provenance and ui-boilerplate-exclusion all
+red. The four checks were live over exactly the code that changed.
+
+### M1 — escalation_locks / arming semantics — revert the off-switch to the old ARM form `== "1"`. Default-on is silently undone and an unset host is quiet.
+  mutate src/sec10k/web/app.py: os.environ.get("SEC10K_ESCALATION_ENABLED") != "0"
+       ->        os.environ.get("SEC10K_ESCALATION_ENABLED") == "1"
+  $ python3 -m evals.run --suite invariant   ; echo $? -> 1
+    [FAIL] ui-escalation-locks (adversarial, 0.0s)
+    [eval] suite 'invariant': 80/81 = 0.988  (+4 enumerated debt, unscored)
+    escalation_locks: `ESCALATION_ENABLED` compares SEC10K_ESCALATION_ENABLED with ['Eq'], not NotEq — escalation is on by default, so this expression is the OFF switch and any other operator breaks it
+    escalation_locks: `ESCALATION_ENABLED` compares against '1', not the '0' ADR-036 §h2 names — setting SEC10K_ESCALATION_ENABLED=0 must actually stop the spending
+  restored; re-run exit 0: [eval] suite 'invariant': 81/81 = 1.000  (+4 enumerated debt, unscored)
+
+### M2 — escalation_locks / arming is a constant — `True`. The operator's stop button is not connected; only a redeploy can stop a runaway.
+  mutate src/sec10k/web/app.py: ESCALATION_ENABLED = os.environ.get("SEC10K_ESCALATION_ENABLED") != "0"
+       ->        ESCALATION_ENABLED = True
+  $ python3 -m evals.run --suite invariant   ; echo $? -> 1
+    [FAIL] ui-escalation-locks (adversarial, 0.0s)
+    [eval] suite 'invariant': 80/81 = 0.988  (+4 enumerated debt, unscored)
+    escalation_locks: `ESCALATION_ENABLED` is Constant(value=True), not a comparison against SEC10K_ESCALATION_ENABLED — a constant here is an off-switch the operator does not have, on a public, unauthenticated deployment that now escalates by default
+  restored; re-run exit 0: [eval] suite 'invariant': 81/81 = 1.000  (+4 enumerated debt, unscored)
+
+### M3 — escalation_locks / the off-switch is wired to an undocumented comparand — `!= "off"`. SEC10K_ESCALATION_ENABLED=0 stops nothing.
+  mutate src/sec10k/web/app.py: os.environ.get("SEC10K_ESCALATION_ENABLED") != "0"
+       ->        os.environ.get("SEC10K_ESCALATION_ENABLED") != "off"
+  $ python3 -m evals.run --suite invariant   ; echo $? -> 1
+    [FAIL] ui-escalation-locks (adversarial, 0.0s)
+    [eval] suite 'invariant': 80/81 = 0.988  (+4 enumerated debt, unscored)
+    escalation_locks: `ESCALATION_ENABLED` compares against 'off', not the '0' ADR-036 §h2 names — setting SEC10K_ESCALATION_ENABLED=0 must actually stop the spending
+  restored; re-run exit 0: [eval] suite 'invariant': 81/81 = 1.000  (+4 enumerated debt, unscored)
+
+### M4 — escalation_locks / lock 2 — the process Budget built from literals, so the only remaining ceiling is effectively infinite (PR #58 R9 verbatim).
+  mutate src/sec10k/web/app.py: Budget(max_calls=SERVER_MAX_CALLS, max_usd=SERVER_MAX_USD)
+       ->        Budget(max_calls=10**9, max_usd=10.0**9)
+  $ python3 -m evals.run --suite invariant   ; echo $? -> 1
+    [FAIL] ui-escalation-locks (adversarial, 0.0s)
+    [eval] suite 'invariant': 80/81 = 0.988  (+4 enumerated debt, unscored)
+    escalation_locks: `Budget(max_calls=...)` is not the constant SERVER_MAX_CALLS — a literal here is the mutation that made the process ceiling infinite (PR #58 R9)
+    escalation_locks: `Budget(max_usd=...)` is not the constant SERVER_MAX_USD — a literal here is the mutation that made the process ceiling infinite (PR #58 R9)
+  restored; re-run exit 0: [eval] suite 'invariant': 81/81 = 1.000  (+4 enumerated debt, unscored)
+
+### M5 — escalation_locks / lock 2 — the dollar ceiling becomes a literal the operator cannot lower on a running deployment.
+  mutate src/sec10k/web/app.py: SERVER_MAX_USD = float(os.environ.get("SEC10K_ESCALATION_MAX_USD") or 5.00)
+       ->        SERVER_MAX_USD = 5.00
+  $ python3 -m evals.run --suite invariant   ; echo $? -> 1
+    [FAIL] ui-escalation-locks (adversarial, 0.0s)
+    [eval] suite 'invariant': 80/81 = 0.988  (+4 enumerated debt, unscored)
+    escalation_locks: `SERVER_MAX_USD` is not read from os.environ['SEC10K_ESCALATION_MAX_USD'] (got None) — a literal here is a ceiling the operator cannot lower
+  restored; re-run exit 0: [eval] suite 'invariant': 81/81 = 1.000  (+4 enumerated debt, unscored)
+
+### M6 — escalation_locks + WIRE_API / the call site orphans the off-switch — `escalate=True`. ESCALATION_ENABLED still reads the env and nothing reads it.
+  mutate src/sec10k/web/app.py: escalate=ESCALATION_ENABLED,
+       ->        escalate=True,
+  $ python3 -m evals.run --suite invariant   ; echo $? -> 1
+    [FAIL] ui-boilerplate-exclusion (adversarial, 0.53s)
+    [FAIL] ui-escalation-locks (adversarial, 0.0s)
+    [eval] suite 'invariant': 79/81 = 0.975  (+4 enumerated debt, unscored)
+    escalation_locks: `extract_items(escalate=...)` is not the constant ESCALATION_ENABLED — a literal here hard-wires paid work and orphans the operator's off-switch
+    boilerplate_plumbing: app.py: _run forwards the two display flags unmodified, and escalates on the deployment's own off-switch with the process-wide budget — expected exactly one `extract_items(path, exclude_boilerplate=exclude_boilerplate, blocks=markdown, escalate=ESCALATION_ENABLED, budget=server_budget() if ESCALATION_ENABLED else None)`, found 0. If this expression changed on purpose, update its pin AND re-check that the wire still carries the checkbox's value unmodified.
+  restored; re-run exit 0: [eval] suite 'invariant': 81/81 = 1.000  (+4 enumerated debt, unscored)
+
+### M7 — WIRE_API / the process budget stops reaching extract_items — every request falls back to llm.Budget's PER-DOCUMENT default.
+  mutate src/sec10k/web/app.py: budget=server_budget() if ESCALATION_ENABLED else None
+       ->        budget=None
+  $ python3 -m evals.run --suite invariant   ; echo $? -> 1
+    [FAIL] ui-boilerplate-exclusion (adversarial, 0.53s)
+    [FAIL] ui-escalation-locks (adversarial, 0.0s)
+    [eval] suite 'invariant': 79/81 = 0.975  (+4 enumerated debt, unscored)
+    escalation_locks: nothing calls `server_budget()` — the process budget is constructed and never passed, so nothing is bounded
+    boilerplate_plumbing: app.py: _run forwards the two display flags unmodified, and escalates on the deployment's own off-switch with the process-wide budget — expected exactly one `extract_items(path, exclude_boilerplate=exclude_boilerplate, blocks=markdown, escalate=ESCALATION_ENABLED, budget=server_budget() if ESCALATION_ENABLED else None)`, found 0. If this expression changed on purpose, update its pin AND re-check that the wire still carries the checkbox's value unmodified.
+  restored; re-run exit 0: [eval] suite 'invariant': 81/81 = 1.000  (+4 enumerated debt, unscored)
+
+### M8 — routing_provenance / the removed control creeps back onto one wire — a single `escalate: escalateOn()` on the fixture request.
+  mutate src/sec10k/web/static/index.html: body: JSON.stringify({fixture: $("#fx").value, exclude_boilerplate: excludeBp(), markdown: renderMd(
+       ->        body: JSON.stringify({fixture: $("#fx").value, exclude_boilerplate: excludeBp(), markdown: renderMd(
+  $ python3 -m evals.run --suite invariant   ; echo $? -> 1
+    [FAIL] ui-boilerplate-exclusion (adversarial, 0.53s)
+    [FAIL] ui-routing-provenance (adversarial, 0.0s)
+    [eval] suite 'invariant': 79/81 = 0.975  (+4 enumerated debt, unscored)
+    routing_provenance: index.html: ...so nothing reads a checkbox at request time — `escalateOn(` occurs 1 times, expected 0. The server decides whether to escalate (ADR-036 §h2, owner 2026-08-27); a page that carries this is taking that decision back.
+    routing_provenance: index.html: ...the fixture and url wires carry no escalate flag — `escalate:` occurs 1 times, expected 0. The server decides whether to escalate (ADR-036 §h2, owner 2026-08-27); a page that carries this is taking that decision back.
+    boilerplate_plumbing: index.html: the fixture mode puts the checkbox value on the wire — expected exactly one `JSON.stringify({fixture: $("#fx").value, exclude_boilerplate: excludeBp(), markdown: renderMd()})`, found 0. If this expression changed on purpose, update its pin AND re-check that the wire still carries the checkbox's value unmodified.
+  restored; re-run exit 0: [eval] suite 'invariant': 81/81 = 1.000  (+4 enumerated debt, unscored)
+
+### M9 — routing_provenance / a stray `&escalate=1` on the upload query string — the smallest possible creep-back, one token on one line.
+  mutate src/sec10k/web/static/index.html: (excludeBp() ? "&exclude_boilerplate=1" : "") + (renderMd() ? "&markdown=1" : ""),
+       ->        (excludeBp() ? "&exclude_boilerplate=1" : "") + (renderMd() ? "&markdown=1" : "") + "&escalate=1",
+  $ python3 -m evals.run --suite invariant   ; echo $? -> 1
+    [FAIL] ui-routing-provenance (adversarial, 0.0s)
+    [eval] suite 'invariant': 80/81 = 0.988  (+4 enumerated debt, unscored)
+    routing_provenance: index.html: ...nor does the upload query string — `escalate=1` occurs 1 times, expected 0. The server decides whether to escalate (ADR-036 §h2, owner 2026-08-27); a page that carries this is taking that decision back.
+  restored; re-run exit 0: [eval] suite 'invariant': 81/81 = 1.000  (+4 enumerated debt, unscored)
+
+### M10 — routing_provenance / the strip stops printing the money — the undisclosed-price failure, now that no control announces the tier in advance.
+  mutate src/sec10k/web/static/index.html: `$${Number(c.usd || 0).toFixed(4)} · ${c.llm_calls || 0} call${
+       ->        `${c.llm_calls || 0} call${
+  $ python3 -m evals.run --suite invariant   ; echo $? -> 1
+    [FAIL] ui-routing-provenance (adversarial, 0.0s)
+    [eval] suite 'invariant': 80/81 = 0.988  (+4 enumerated debt, unscored)
+    routing_provenance: index.html: the strip prints the money, not just the outcome — expected exactly one ``$${Number(c.usd || 0).toFixed(4)}`, found 0
+  restored; re-run exit 0: [eval] suite 'invariant': 81/81 = 1.000  (+4 enumerated debt, unscored)
+
+### Default-flag digests, this branch vs origin/main (d83b8a2)
+
+  $ python3 evals/snapshot.py <tree> out.json     # extract_items(path), default flags
+    origin/main   dev: 62 files  sha256=365da1ce8e9522df279dde64251f8fad5fb839115e4d37a3459700695d790f35
+    this branch   dev: 62 files  sha256=b1445057b025c8733ae11007aaaad0cf650dcc9fae57b5147296298578bf1ccb
+
+  The two corpus digests differ, and the per-entry comparison says why:
+
+    keys equal: True
+    differing entries: ['repo_hygiene/boilerplate-checkbox-default-on.html',
+                        'repo_hygiene/boilerplate-wire-values.html',
+                        'repo_hygiene/boilerplate-wire-values.py',
+                        'repo_hygiene/escalation-locks-evaded.py',
+                        'repo_hygiene/escalation-locks-removed.py',
+                        'repo_hygiene/routing-strip-missing.html']
+    non-repo_hygiene entries: 44   all identical: True
+
+  All 44 real filings are byte-identical. The six that moved are the
+  deliberately-broken CHECK fixtures this branch re-derived — source files for
+  the wire checks, not 10-K filings — which `snapshot.py` extracts because
+  `corpus()` walks every subdirectory of `evals/fixtures` and skips only
+  `.md`. That is an instrument defect, not a result: logged as TD-159.
+  Neither tree's `evals/heldout/` was read, run or copied — the comparison
+  trees carry `src`, `evals/fixtures` and `evals/snapshot.py` and nothing else,
+  so `corpus(root, "evals/heldout/fixtures")` returns {} on both (0 files,
+  the empty-JSON sha256 on both lines).
+
+### The deployed app, exercised end to end with no live call
+
+  SUPERSEDED IN PART by the PR #61 round-1 repair (R1): `intc-2025` is now
+  excluded from the deployment's listing AND its request-time resolution, so
+  the `POST fixture=intc-2025` line below returns HTTP 404 on the shipped
+  tree and no tier runs at all. The cache note at the end still holds. See
+  tasks/reviews/pr61-r1-red.txt for the after-state.
+
+  Real ASGI app through starlette's TestClient, on a scratch venv outside the
+  repo (fastapi is not a gate dependency, ADR-003), OPENROUTER_API_KEY UNSET and
+  OPENROUTER_BASE_URL=http://127.0.0.1:9 so any wire attempt would fail loudly.
+
+  default (nothing exported):
+    ESCALATION_ENABLED=True   /api/meta escalation_enabled=True
+    aapl-2025  success    routing present, trigger fired=false, no tier, $0.0000
+    intc-2025  ambiguous  routing present, trigger fired=true,
+                          llm_localize -> rejected  (cached:true, 0 calls, $0.0000)
+                          llm_extract  -> unavailable ("OPENROUTER_API_KEY is not
+                          set — the slow path refuses rather than degrading")
+    upload     200        routing present; no `escalation_disarmed` key anywhere
+
+  SEC10K_ESCALATION_ENABLED=0:
+    ESCALATION_ENABLED=False  /api/meta escalation_enabled=False
+    aapl-2025 / intc-2025 / upload: `routing: null` — the off-switch works.
+    (Corrected in the PR #61 round-1 repair, R6: this line first said "no
+    `routing` key at all". build_view always emits the key and sets it to
+    None when the envelope has no record (view.py), and the probe read
+    `.get("routing") is None`, which cannot tell the two apart.)
+
+  Zero live calls, zero dollars, on both runs. NOTE, and it was not anticipated:
+  rung 1 on intc-2025 answered from the COMMITTED response cache
+  (`cached: true`, `llm_calls: 0`), not from the wire. A cache hit costs $0 and
+  does not draw down the process budget, so the budget bounds cache MISSES —
+  which every upload is, and which the fixture dropdown is not.

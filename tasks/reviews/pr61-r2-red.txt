@@ -1,0 +1,244 @@
+PR #61 round 2 — the red-first and mutation record
+==================================================
+
+WHEN THIS FILE WAS WRITTEN, AND WHY THAT MATTERS. Four places committed in
+8c3bb78 cite this path — tasks/TODO.md (TD-158's closure),
+evals/adversarial/escalation-door.json ("PART 1"),
+evals/adversarial/deployed-exclusion-derived.json ("PART 3") and
+src/repo_hygiene/eval_adapter.py, twice. The file itself was never written:
+the implementer was killed mid-round and the citations shipped without it
+(PR #61 R20). It is reconstructed here by RE-RUNNING every measurement on the
+tree at 3964913 + this round's repairs, on 2026-08-28. Nothing below is
+recalled; every figure is the output of a command run to produce this file.
+
+Two consequences of that, stated rather than smoothed over:
+
+* The round-2 numbers are re-derived, not restored. Where a suite score is
+  quoted it is TODAY's — 85 invariant cases and 149 fast, not round 2's 84 and
+  148 — because round 3's own repairs added a case. The exit codes are what the
+  claims rest on and those are unchanged.
+* One round-2 mutation is NOT reproducible and is recorded as such rather than
+  invented: the original battery's N3 ("if False:" over the MIN_TOKEN_CHARS
+  test) came back GREEN, which is how the missing table row was found. That row
+  now exists, so the same edit reds today. The green run is a fact about a
+  check that no longer ships, and it cannot be re-observed without deleting the
+  fix. It is reported in PART 2 as N3a with its current, red result.
+
+No live API calls anywhere in this file. Where an outbound call had to be
+OBSERVED, OPENROUTER_BASE_URL points at a local socket on 127.0.0.1 and the key
+is the literal "probe-not-a-real-key"; the listener answers HTTP 503, so a
+connection to it is what "would have billed" looks like and nothing real is
+contacted. evals/heldout/ was not read, run or copied.
+
+Suites are read by EXIT CODE, unpiped. exit=1 is red, exit=0 is green.
+
+
+PART 1 — R10: the exploit, and the door that closes it
+======================================================
+
+### 1a. The check is RED against the pre-change tree
+
+`escalation_door` is not vacuous: run against app.py as it stood before the
+door existed, it fails. (`git show 3ed5f88:src/sec10k/web/app.py`.)
+
+escalation_door vs the PRE-change app.py (git show 3ed5f88:...): 3 failure(s)
+  * app.py@3ed5f88: 0 `paid_path_open(...)` call(s) inside `_run`, want exactly 1 — two doors are two policies, and the second one drifts
+  * app.py@3ed5f88: `_run` takes no `request`, so the door has no header to read and cannot be reached from any mode
+  * app.py@3ed5f88: `_run` does not bind the door's verdict to a name — `(may, why) = gate.paid_path_open(...)`; a verdict nothing holds is a verdict nothing can honour
+
+### 1b. The door, measured end to end on all three routes
+
+`tasks/reviews/pr61_door_probe.py` drives the real ASGI app over httpx and
+counts OUTBOUND CONNECTIONS to the stand-in listener. The envelope can lie; a
+TCP accept cannot. The url route's EDGAR fetch is served from the committed
+`intc-2025` filing through a patched `urlopen` — the bytes are the fixture's,
+only the transport is local, and nothing about `_run`, the door or the
+extractor is patched.
+
+header       route     HTTP  outbound    ran  routing  reason
+no token     fixture    200         0  False  False    no valid x-escalation-token header on this request — the deterministic
+no token     upload     200         0  False  False    no valid x-escalation-token header on this request — the deterministic
+no token     url        200         0  False  False    no valid x-escalation-token header on this request — the deterministic
+valid token  fixture    200         1   True  True     a valid x-escalation-token header was presented, so the model tier was
+valid token  upload     200         1   True  True     a valid x-escalation-token header was presented, so the model tier was
+valid token  url        200         1   True  True     a valid x-escalation-token header was presented, so the model tier was
+host unset   fixture    200         0  False  False    this deployment has no SEC10K_ESCALATION_TOKEN of at least 16 characte
+host unset   upload     200         0  False  False    this deployment has no SEC10K_ESCALATION_TOKEN of at least 16 characte
+host unset   url        200         0  False  False    this deployment has no SEC10K_ESCALATION_TOKEN of at least 16 characte
+
+OK — 3 routes x tokenless AND 3 routes x host-unset:
+        0 outbound, HTTP 200, full deterministic extraction, reason said
+   3 routes x valid token: >=1 outbound each
+   so the door is the only gate, and an unconfigured host is CLOSED
+
+Read the three bands together: the FREE tier is HTTP 200 and a full
+deterministic extraction in every row, and the paid tier is reachable in
+exactly one of the nine. `host unset` is the property four documents name —
+a deployment nobody configured is closed to everyone, including a caller who
+guessed the secret right.
+
+### 1c. R18 — the door called the way production calls it
+
+Round 2's decision table passed `token=` on every row, and `app.py` passes
+none. The branch every real request takes was exercised by nothing (PR #61
+R18). These rows call it with two positional arguments, moving the secret in
+the environment instead:
+
+R18 — the door called the way `_run` calls it: two positional args, no `token=`.
+      This is the ONLY branch production takes and no `token=` row reaches it.
+
+      SEC10K_ESCALATION_TOKEN        header   verdict
+      None                              set   closed
+      None                             none   closed
+      ''                                set   closed
+      set (16 chars)                   none   closed
+      set (16 chars)                    set   OPEN      <-- the one case that opens
+
+
+PART 2 — the mutation battery
+=============================
+
+One mutation per pinned property, applied to the shipped tree, gate run by
+exit code, file restored and re-hashed (sha256) before the next.
+
+### Round 3's findings
+
+  M3    R18  invariant exit=1  `token is None` (the ONLY production branch) returns True
+        [eval] suite 'invariant': 84/85 = 0.988  (+5 enumerated debt, unscored)
+  M4    R19  invariant exit=1  the header read gains the secret as its DEFAULT
+        [eval] suite 'invariant': 84/85 = 0.988  (+5 enumerated debt, unscored)
+  M6    R19  invariant exit=1  the off-switch operand becomes a literal True
+        [eval] suite 'invariant': 84/85 = 0.988  (+5 enumerated debt, unscored)
+
+### Round 2's findings, re-run
+
+  N1    R10  invariant exit=1  the door's verdict is discarded at the call site
+        [eval] suite 'invariant': 83/85 = 0.976  (+5 enumerated debt, unscored)
+  N2    R10  invariant exit=1  a second endpoint reaches extract_items around _run
+        [eval] suite 'invariant': 83/85 = 0.976  (+5 enumerated debt, unscored)
+  N3a   R10  invariant exit=1  the MIN_TOKEN_CHARS floor is deleted
+        [eval] suite 'invariant': 84/85 = 0.988  (+5 enumerated debt, unscored)
+  N3b   R10  invariant exit=1  an unconfigured secret waives the door instead of closing it
+        [eval] suite 'invariant': 84/85 = 0.988  (+5 enumerated debt, unscored)
+  N4    R10  invariant exit=1  the envelope stops publishing the door's decision
+        [eval] suite 'invariant': 84/85 = 0.988  (+5 enumerated debt, unscored)
+  N5    R11  invariant exit=1  `.strip().lower()` deleted — FALSE/Off/'0 ' re-arm
+        [eval] suite 'invariant': 84/85 = 0.988  (+5 enumerated debt, unscored)
+  N6    R12  invariant exit=1  server_budget() self-resets: same object, fresh counters
+        [eval] suite 'invariant': 84/85 = 0.988  (+5 enumerated debt, unscored)
+  N7    R13  invariant exit=1  a second endpoint resolves a fixture around the guard
+        [eval] suite 'invariant': 82/85 = 0.965  (+5 enumerated debt, unscored)
+  N10   R16  invariant exit=1  INDEX republishes the falsified $1.5675 ceiling
+        [eval] suite 'invariant': 84/85 = 0.988  (+5 enumerated debt, unscored)
+
+### R15's derivation, both directions
+
+  N8    R15  fast      exit=1  a hot fixture drops out of DEPLOY_EXCLUDED
+        [eval] suite 'fast': 147/149 = 0.987  (+5 enumerated debt, unscored)
+  N9    R15  fast      exit=1  a NEW collapsing fixture appears, DEPLOY_EXCLUDED untouched
+        [eval] suite 'fast': 148/149 = 0.993  (+5 enumerated debt, unscored)
+
+### R21's census, after round 3 bound it
+
+  N11   R21  fast      exit=1  the corrected census line goes stale again
+        [eval] suite 'fast': 148/149 = 0.993  (+5 enumerated debt, unscored)
+  N12   R21  fast      exit=1  README's real-filing rate reverts to the pre-exam corpus
+        [eval] suite 'fast': 148/149 = 0.993  (+5 enumerated debt, unscored)
+  N13   R21  fast      exit=1  escalate.py's quiet-case count reverts
+        [eval] suite 'fast': 148/149 = 0.993  (+5 enumerated debt, unscored)
+
+  N11 is the line R21 found. It was GREEN until this round: nothing bound the
+  census, so `extract.py`'s docstring could revert to "42 of 43 dev fixtures,
+  every real EDGAR filing in the set" with both suites clean. The denominator
+  pin in `deployed_exclusion_derived` is what makes it red, and N12/N13 show
+  the same pin covering the other two code sites.
+
+  The pin's own first revision was wrong in a way worth recording: it matched
+  `(\d+) of (\d+) (dev|real)` with a literal space, and N11 stayed GREEN
+  because the sentence wraps and a newline sat between "43" and "dev". Caught
+  by running the mutation rather than by reading the regex.
+
+TOTAL: 17 mutations, 17 red. Every restore verified by sha256 against the
+pre-mutation file.
+
+
+PART 3 — R15: the exclusion set, derived rather than maintained
+==============================================================
+
+TD-160 rejected deriving `DEPLOY_EXCLUDED` from the trigger because it costs a
+full sweep at process start. True of an IMPORT-time derivation in the web
+layer; never costed at EVAL time, which is the option R15 named. Measured:
+
+--- the derivation's own cost and result, timed ---
+failures=0  {'deployed_exclusion_scanned': 44, 'deployed_exclusion_fires': ['intc-2025', 'xref-index-collapse'], 'census_corpus': {'dev': 44, 'real': 29}}  wall=4.46s
+real 4.51
+user 4.46
+sys 0.03
+
+  4.46s against a 44s `fast` suite, 44 fixtures scanned, fires exactly the two
+  names in `DEPLOY_EXCLUDED`. `min_scanned: 40` is what stops a sweep that sees
+  nothing from agreeing with any set.
+
+Both directions of the equality are falsified in PART 2: N8 removes a hot
+fixture from the set (red), N9 adds a NEW collapsing fixture and touches the
+set at all (red) — which is the drift TD-160 described, with nobody editing
+anything.
+
+
+PART 4 — the properties, shown rather than asserted
+===================================================
+
+R11 — the shipped arming expression, EVALUATED, once per spelling, against
+      the same expression with `.strip().lower()` deleted.
+
+      SEC10K_ESCALATION_ENABLED        shipped  chain deleted
+      '0'                             disarmed       disarmed
+      'false'                         disarmed       disarmed
+      'no'                            disarmed       disarmed
+      'off'                           disarmed       disarmed
+      'FALSE'                         disarmed          ARMED   <-- re-ARMED
+      'Off'                           disarmed          ARMED   <-- re-ARMED
+      '0 '                            disarmed          ARMED   <-- re-ARMED
+      '  no'                          disarmed          ARMED   <-- re-ARMED
+      None                               ARMED          ARMED
+      ''                                 ARMED          ARMED
+      '1'                                ARMED          ARMED
+      'yes'                              ARMED          ARMED
+      'true'                             ARMED          ARMED
+      'banana'                           ARMED          ARMED
+
+      and the round-1 AST assertion cannot tell them apart:
+        _env_get(shipped) -> 'SEC10K_ESCALATION_ENABLED'
+        _env_get(mutated) -> 'SEC10K_ESCALATION_ENABLED'
+
+
+R12 — the process budget's COUNTERS, not its identity.
+
+      shipped            same object: True   calls after 3 takes: 3
+      3-line self-reset  same object: True   calls after 3 takes: 0   <-- every request gets a fresh 20 calls / $5.00
+
+
+R13 — a second endpoint resolves a fixture WITHOUT the membership guard.
+
+      the ROUND-1 pin (count of `if name not in deployed_fixtures():`) = 1  -> reports CLEAN
+      the ROUND-2 pin (dominance property)          -> 1 failure(s):
+        * app.py: `extract_fixture2` touches ['FIXTURES', 'fixture_file'] — only `_fixture_file` may, because it is the one function the membership guard dominates. A second resolver walks around the exclusion with every other pin green.
+
+
+PART 5 — what is NOT bound, said plainly
+========================================
+
+* R14 and R17's prose. The census FIGURES are bound by PART 2's N11-N13
+  (denominators, over five files). Their NUMERATORS are not: each site states a
+  different statistic — fires, stays quiet, refuses before any item — and
+  pinning each would mean re-deriving each. `src/repo_hygiene/eval_adapter.py`'s
+  own "18 of 43 dev documents" is deliberately outside the pinned set: it is
+  rung 1's window-offset statistic (PR #58 R17), which this sweep does not
+  re-derive. R17's `/api/meta` comment is a comment, and nothing binds a
+  comment to the constant it describes.
+* That FastAPI binds the routes. The standing `app.py` limitation: PART 1b
+  drives the real ASGI app, but the `fastapi` import means no eval case can.
+* That a token HOLDER cannot spend. That is the process `Budget`'s job — the
+  ceiling behind the door, not instead of it — and PART 4's R12 is its pin.
+* The FREE tier's cost. No rate limit, no request cap, 25 MB per document
+  (TD-162). PART 1b's tokenless rows show it open by design.

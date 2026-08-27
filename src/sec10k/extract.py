@@ -5,7 +5,7 @@ boundaries, status, label-free validation, confidence, assembly. Layer 10 — th
 model-based slow path ADR-020 ruled NOT JUSTIFIED in 2026-08-19 — now exists as
 a TRIGGERED tier behind `escalate=True` (ADR-036, which supersedes ADR-020).
 It is off by default, it runs only when the D8 document-level signal fires, and
-on a dev corpus where that signal fires on 0 of 28 real filings the default
+on a dev corpus where that signal fires on 1 of 29 real filings the default
 cost stays exactly $0.
 `success` is deliberately hard to earn — it requires the validator battery to
 find nothing at all.
@@ -157,10 +157,13 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
     flags above this one is NOT a pure annotation: when the trigger fires AND a
     tier's answer survives `escalate.verify`, the resolved items' spans,
     `method` and `heading_text` move, with the deterministic answer preserved
-    under `evidence.deterministic`. When the trigger does NOT fire — 42 of 43
-    dev fixtures, every real EDGAR filing in the set — nothing moves, nothing
-    is spent, and the only difference from a default run is the presence of the
-    `routing` key itself.
+    under `evidence.deterministic`. When the trigger does NOT fire — 42 of 44
+    dev fixtures, and 28 of the 29 real EDGAR filings among them — nothing
+    moves, nothing is spent, and the only difference from a default run is the
+    presence of the `routing` key itself. The exception is `intc-2025`, the
+    collapsed real filing the live exam burned to the dev side: this line said
+    "every real EDGAR filing in the set" until 2026-08-28 (PR #61 R21), eight
+    lines below a module header the same commit had already corrected.
 
     THE SLOW PATH REFUSES RATHER THAN DEGRADES. With no `OPENROUTER_API_KEY` in
     the environment, or with a spent `budget`, a fired trigger produces a

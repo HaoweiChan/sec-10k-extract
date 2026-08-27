@@ -149,14 +149,37 @@ Full rationale in `specs/decisions/` (18 ADRs). The ones that shaped the system:
 
 - **Deterministic first, and a model tier only on a measured trigger**
   (ADR-000/003, settled in ADR-020, **superseded 2026-08-26 by ADR-036, D11**).
-  No model is in the DEFAULT extraction path, and cost on that path is
-  structurally $0 — not "cheap", zero. ADR-036 adds an opt-in slow path
+  No model is in the DEFAULT extraction path of the LIBRARY, and cost on that
+  path is structurally $0 — not "cheap", zero. ADR-036 adds a slow path
   (`extract_items(path, escalate=True)`, via OpenRouter) that is entered only when D8's
-  document-level `low_item_coverage` fires — measured on **0 of 28 real dev
-  filings**, so the default stays free — and whose answers are discarded unless
+  document-level `low_item_coverage` fires — measured on **1 of 29 real dev
+  filings**, the collapsed `intc-2025` — and whose answers are discarded unless
   a deterministic re-check accepts their offsets. With no API credential it
-  refuses loudly rather than degrading, and as of this commit no live call has
-  ever been made: the held-out exam is UNRUN (ADR-036 §k). The paragraph below
+  refuses loudly rather than degrading.
+  `extract_items(path)` keeps `escalate=False`, which is what keeps the eval
+  gate and CI at $0 and offline. **The DEPLOYED inspector is different since
+  2026-08-27** (owner: "make it default on, remove the button"): it escalates
+  on every request, there is no checkbox and no request-level flag, and the
+  operator's off-switch is the host variable `SEC10K_ESCALATION_ENABLED`, set
+  to any of `0`, `false`, `no`, `off` (stripped and case-insensitive; unset or
+  empty means ON). **The paid tier is behind a door** (`web/gate.py`, since
+  2026-08-28): it runs only for a request presenting a valid
+  `X-Escalation-Token`, and with no `SEC10K_ESCALATION_TOKEN` configured it
+  runs for *nobody* — unset is closed, not open. **Deterministic extraction
+  stays open, free and unauthenticated on all three routes**; when the door
+  does not open the envelope says so (`escalation.reason`) and the page prints
+  it. Behind the door the spend is bounded by the process-wide budget (which a
+  redeploy refills) and, really, by the credit limit on the API key. Two
+  earlier claims here were false and are corrected rather than deleted: until
+  PR #61 R1 the two collapsing fixtures were in the dropdown, so one click —
+  or a `?fixture=…&run=1` link, with no click at all — was enough
+  (`fixtures.DEPLOY_EXCLUDED` closes the listing *and* request-time
+  resolution); and until PR #61 R10 this said an upload was the only route,
+  while `/api/extract/url` billed on any collapsing EDGAR Archives URL, which
+  no fixture exclusion could ever have fixed. What is still open is the FREE
+  tier: no rate limit, no request cap, a 25 MB ceiling (`TD-162`). The routing
+  strip reports what each request's tiers did and cost. ADR-036 §h2 states
+  this rather than softening it. The paragraph below
   is the 2026-08-19 ruling it supersedes, kept because its reasoning about
   *precision* failures is unchanged and still governs.
 - **Deterministic first, LLM ruled out** (ADR-000/003, settled in ADR-020). No

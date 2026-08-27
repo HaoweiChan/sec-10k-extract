@@ -22,9 +22,15 @@ deferred by design until residual-failure data existed; that data was measured
 [ADR-020](../../specs/decisions/ADR-020-fallback-not-justified.md)**. It is not
 pending. See §10 below for the reasoning. **Amended 2026-08-26 (D11,
 [ADR-036](../../specs/decisions/ADR-036-tiered-escalation.md)):** layer 10 now
-EXISTS as a triggered, opt-in tier in `escalate.py` + `llm.py`. It is off by
-default, unreachable unless D8's `low_item_coverage` fires, and no live call
-has been made — §10's own text below is amended in place.
+EXISTS as a triggered tier in `escalate.py` + `llm.py`, unreachable unless
+D8's `low_item_coverage` fires — §10's own text below is amended in place.
+**Corrected 2026-08-27 (PR #61 R8)**, because both of this paragraph's other
+claims went stale: four live calls HAVE been made ($3.025692 across two exam
+runs, ADR-036 §h4/§k), and the tier is no longer opt-in on the DEPLOYED
+inspector, which escalates on every request since the owner removed the
+control (ADR-036 §h2). `extract_items(path)` keeps `escalate=False`, so the
+LIBRARY default — and therefore the eval gate and CI — is still $0 and
+offline.
 
 ## Pipeline layers
 
@@ -255,7 +261,7 @@ text only) → llm_extract (anthropic/claude-opus-5, the document up to
 1,250,000 chars)`, via OpenRouter (ADR-036 §h1); both rungs' inputs are
 capped so one call's price is bounded on arbitrary input (§h2), behind
 `extract_items(path, escalate=True)`, entered only when `low_item_coverage`
-fires (0 of 28 real dev filings), with every returned offset re-derived by
+fires (1 of 29 real dev filings), with every returned offset re-derived by
 `escalate.verify` before use. Cache-by-content-hash, prompt-version keying and
 the budget cap below all survive into it. **No live call has been made and the
 held-out exam is UNRUN.** The 2026-08-19 reasoning follows unedited.

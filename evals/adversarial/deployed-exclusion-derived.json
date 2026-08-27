@@ -1,0 +1,21 @@
+{
+  "id": "deployed-exclusion-derived",
+  "task": "repo_hygiene",
+  "suites": ["fast"],
+  "input": {
+    "checks": ["deployed_exclusion_derived"],
+    "trigger": "low_item_coverage",
+    "min_scanned": 40,
+    "census_files": ["src/sec10k/extract.py", "src/sec10k/escalate.py",
+                     "README.md", "docs/architecture/overview.md",
+                     "specs/decisions/ADR-036-tiered-escalation.md"]
+  },
+  "expect": {},
+  "triage": {
+    "class": "cost-regression",
+    "note_r21": "PR #61 R21 folded the CENSUS binding into this case, because this sweep already derives the true corpus size and the R16 lesson applies unchanged: a measurement restated in six files rots in five. `extract.py`'s public docstring still said the trigger stays quiet on '42 of 43 dev fixtures, every real EDGAR filing in the set' after the corpus grew to 44 and the real-filing rate stopped being zero — eight lines below a module header the SAME commit corrected. Every `<n> of <m> dev|real` in `census_files` must now carry the denominator this sweep measures (44 dev, 29 real, the dev/real split read from `d11_trigger_scan.py`'s own SYNTHETIC roster rather than a second copy). DENOMINATORS only: the numerators are claims about different statistics per site (fires, stays quiet, refuses before any item), and pinning each would mean re-deriving each — the corpus size is the part that goes stale for everyone at once, which is what happened. `src/repo_hygiene/eval_adapter.py` is deliberately outside `census_files`: its one '18 of 43 dev documents' is rung 1's window-offset statistic (PR #58 R17), which this sweep does not re-derive, so pinning its denominator would be exactly the vacuity this PR is about.",
+    "note": "PR #61 R15 / TD-160, and it is a rejection re-argued rather than a debt row re-stated. TD-160 rejected deriving `DEPLOY_EXCLUDED` from the trigger because it 'means a full `extract_items` sweep of 44 filings at process start (seconds of CPU, and a hard dependency on the extractor from the LISTING path, which today is pure stdlib directory reading)'. Every word of that is true of an IMPORT-time derivation in the web layer, and R15's point is that an EVAL-time derivation was never costed: measured at 4.6s against a 44s `fast` suite, with no new import on any request path. So the sweep runs here. The deployment still reads a frozenset — the listing path stays pure stdlib — and this case is what keeps that frozenset honest. Equality in BOTH directions: a fixture that fires and is not excluded is R1's hole re-opening with nobody having edited anything, and a fixture excluded that does not fire is a demo entry withheld for no reason, which nothing else would catch. Re-derived here rather than cited: `low_item_coverage` fires 2/44 -> ['intc-2025', 'xref-index-collapse'].",
+    "note_negative_space": "FAST SUITE ONLY, deliberately. The PostToolUse hook runs `invariant` on every edit and 4.6s per edit-batch is a real tax; the pre-commit gate runs `fast`, so the property is enforced at every commit, which is the last moment a hand-maintained set can drift. It does not derive the set AT RUNTIME — `DEPLOY_EXCLUDED` is still what the deployment reads, and a tree edited and deployed without running the gate would still ship a stale set. And since TD-158's door, the exclusion is no longer what makes the spend bounded: it is the second layer, and this case keeps that layer from rotting rather than being the brake."
+  },
+  "provenance": "PR #61 round 2, created 2026-08-28. Red-first record — a synthetic collapsing fixture added with DEPLOY_EXCLUDED untouched, and a name removed from the set — in tasks/reviews/pr61-r2-red.txt PART 3."
+}

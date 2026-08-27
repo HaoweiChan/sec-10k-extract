@@ -1,14 +1,24 @@
 {
   "id": "ui-escalation-locks-evaded",
   "task": "repo_hygiene",
-  "suites": ["invariant", "fast"],
-  "input": {"checks": ["escalation_locks"],
-            "file": "evals/fixtures/repo_hygiene/escalation-locks-evaded.py"},
-  "expect": {"min_failures": 4, "max_failures": 4},
+  "suites": [
+    "invariant",
+    "fast"
+  ],
+  "input": {
+    "checks": [
+      "escalation_locks"
+    ],
+    "file": "evals/fixtures/repo_hygiene/escalation-locks-evaded.py"
+  },
+  "expect": {
+    "min_failures": 9,
+    "max_failures": 9
+  },
   "triage": {
     "class": "cost-regression",
-    "note": "PR #58 R18. Its sibling `ui-escalation-locks-regression` pins the locks being REMOVED; this one pins them being EVADED, which is the harder and likelier shape. Every name, every AST shape and every wire the round-2 check asserted is intact here, and three one-token edits defeat both locks anyway: `!= \"0\"` instead of `== \"1\"` is still a Compare over the right env var and evaluates True with SEC10K_ESCALATION_ENABLED UNSET — the state every host is in until someone sets it, and the exact defeat of Lock 1's stated property that a credential alone never arms paid work; and `or 10 ** 9` / `or 10.0 ** 9` defaults slipped past the name check because `_env_get` deliberately steps over the `or` operand. Three mutations, four failures, exact count: the arming edit fails on both the operator and the comparand, because either alone would be enough to re-arm.",
-    "note_negative_space": "It pins the arming SEMANTICS and the DEFAULT bounds. It still does not prove FastAPI binds the routes, that the deployment sets either variable, or that the operator chose a sensible ceiling — only that an unset environment cannot mean 'armed and unbounded'."
+    "note": "PR #58 R18. Its sibling `ui-escalation-locks-regression` pins the locks being REMOVED; this one pins them being EVADED, which is the harder and likelier shape. Every name, every AST shape and every wire the round-2 check asserted is intact here, and three one-token edits defeat both locks anyway: `!= \"0\"` instead of `== \"1\"` is still a Compare over the right env var and evaluates True with SEC10K_ESCALATION_ENABLED UNSET — the state every host is in until someone sets it, and the exact defeat of Lock 1's stated property that a credential alone never arms paid work; and `or 10 ** 9` / `or 10.0 ** 9` defaults slipped past the name check because `_env_get` deliberately steps over the `or` operand. Three mutations, four failures, exact count: the arming edit fails on both the operator and the comparand, because either alone would be enough to re-arm. **RE-PINNED 2026-08-27** on the owner's \"make it default on, remove the button\". R18's evasion — `!= \"0\"` where the ADR said `== \"1\"` — is now the CORRECT expression, so the case had to be re-derived rather than re-counted. Under the inversion the defeat runs the other way: keep the NotEq shape and change the comparand (`!= \"off\"`), so the `SEC10K_ESCALATION_ENABLED=0` the ADR and the deployment notes tell the operator to set evaluates True and stops nothing — a stop button wired to a comparand nobody documents, which is worse than no stop button because someone will believe it. Four mutations, four failures, exact count: the arming edit now trips ONE assertion (the comparand; the operator is correct), and the fourth mutation is the shape the inversion creates — `escalate=True` at the `extract_items` call site, which hard-wires paid work and leaves `ESCALATION_ENABLED` above it reading from the environment, looking like the switch, and read by nothing. The two unbounded-default evasions are unchanged. **RE-DERIVED AGAIN 2026-08-27 in the PR #61 round-1 repair; count 4 -> 7.** R3 found that `!= \"0\"` was itself the defect this fixture's own argument condemns — `false`, `off`, `FALSE` and `\"0 \"` all left it ARMED, and those are what an operator types into a Zeabur variable — so the switch now tests a named falsy SET and mutation 1 moved with it: keep the set, keep the `not in`, and hollow it out to `(\"0\",)`. Mutation 5 is new and is R2: `server_budget()` drops its memo and returns a fresh `Budget` built from the same two constants, so every name and wire survives and only the word \"process-wide\" stops being true — each request gets its own allowance, which is a ceiling on nothing when the caller is anonymous and unlimited. It costs THREE failures, not one, because the memo is three independent assertions (the `global`, the returned name, and the assignment) and a fresh-instance return defeats all three.",
+    "note_negative_space": "It pins the arming SEMANTICS and the DEFAULT bounds. It still does not prove FastAPI binds the routes, that the deployment sets either variable, or that the operator chose a sensible ceiling — only that an unset environment cannot mean 'armed and unbounded'. The semantics it pins are now the OFF semantics: an unset environment means ARMED by design (that is the owner's decision), and what must hold is that the documented off value really disarms."
   },
   "provenance": "PR #58 round 3, created 2026-08-27 from the orchestrator-verified evasion, before the semantics were pinned, per hard rule 2. The evasion's own red — arming True with the variable unset, check returning [], invariant 78/78 — is in tasks/reviews/pr58-r3-red.txt, as is the after-state showing this case red on the fixture and green on the real file."
 }
