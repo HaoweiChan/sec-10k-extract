@@ -1,0 +1,104 @@
+{
+  "pr": 60,
+  "round": 1,
+  "result": "REQUEST_CHANGES",
+  "counts": {
+    "HIGH": 0,
+    "MEDIUM": 4,
+    "LOW": 4
+  },
+  "reviewer": "groundwork:pr-reviewer, fresh context, falsification-only",
+  "blind_audit_chain_verified": [
+    "d13-auditor-input.txt and d13-span-dump.txt both regenerate BYTE-IDENTICALLY from the committed d13_span_dump.py",
+    "the auditor input carries only doc_status/coverage/warnings/status/confidence/review_required/method/offsets/span text \u2014 NO verdict, NO reasoning, NO ADR-019 or ADR-034 prior",
+    "the committed auditor output is 9/9 WRONG, i.e. it disagrees with the ruling on five items \u2014 the opposite of a laundered judge",
+    "every quotation ADR-038 \u00a7d1/\u00a7d3/\u00a7d5 attributes to the auditor is verbatim, including 'the most severe of the nine' and the weak/strong grading"
+  ],
+  "independently_re_derived": [
+    "cvx-2015 spans, coverage 0.2718, 304,016 chars outside; FS-60 = {item 15: 1, outside: 1 @127,200}; FS-61 = {item 1: 2, outside: 1}; FS-15/FS-35 = 0 inside / 2 and 1 outside; 'properties, plant and equipment' 0 inside / 22 outside",
+    "bac-2006 zero-outside on all three anchors AND on the tighter alternatives 'table 5', 'table xii', 'note 13'",
+    "jpm/xom all-inside-item-15/16; spatz single match at 48,815; ge-1994 275,043-char tail",
+    "mrk-1995 raw 322,618 with EX-13 at 145,400, normalized_text 81,842, document_selected 10-K405 \u2014 so R1 prong 3 excludes items 5/7 on a MEASURED fact and the calibration check PASSES",
+    "alternative anchors (five-year financial summary, financial and derivative instrument market risk, table i, supplemental information on oil and gas, table 5, table xii, litigation and regulatory matters) flip NO verdict in either direction",
+    "item_span_near_empty sweeps to {'7':7,'8':15,'1':2} over 44 dev + 6 held-out",
+    "git diff origin/main...HEAD over src/, evals/*.py, .eval-baseline.json, specs/000, specs/001 is EMPTY",
+    "evals/adversarial/cvx-2015-silent-pointer-items.json is genuinely red today (items 2/6/7A all review_required false)"
+  ],
+  "orchestrator_verified": [
+    "R1 reproduced: normalized_text[127172:127205] == 'Five-Year Financial Summary FS-60' (an index line), while the actual table is at 363,489"
+  ],
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-038 \u00a7c1 mis-identifies which offsets hold the pointed-at content on both cvx-2015 item 6 and item 2 \u2014 the offsets it names are lines in the FS section's own table of contents, i.e. the very cross-reference/content confusion \u00a7a says \u00a7c will adjudicate by hand.",
+      "evidence": "ADR-038:158-161 says the five-year table 'is the match at 127,200'. ORCHESTRATOR-VERIFIED: normalized_text[127172:127205] == 'Five-Year Financial Summary FS-60' \u2014 an FS-index line, another reference; the actual table is at 363,489 ('Five-Year Financial Summary\\n\\nUnaudited\\n\\nMillions of'). Same error at :142-145 for item 2 ('at 127,268: the tables themselves are in the tail') where [127207:127268] is 'Supplemental Information on Oil and Gas Producing Activities FS-61'; the real Table I is at 366,212. Both verdicts survive (the real content is also outside every span), so this is claim accuracy, not ruling error \u2014 but it is wrong on the flagship item of the whole disagreement.",
+      "repro": "python3 -c \"...extract_items('evals/fixtures/cvx-2015/filing.htm')['normalized_text'][127172:127205]\" -> 'Five-Year Financial Summary FS-60'",
+      "acceptance": "\u00a7c1 names 363,489 (or whatever offset actually holds the five-year table) as the content and 127,200 / 127,268 as further index references, or drops the offset-level content claim and rests the verdict on 'no match of any anchor for this target lies inside any span', which is what the measurement supports."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The amendment ADR-038 writes into ADR-034 \u00a7f claims the named reopener instrument was run over items that were never put to the blind auditor, and then declines to record the trip that ADR-038 itself asserts.",
+      "evidence": "ADR-034:586 \u2014 'ADR-038 ran the named instrument (an extraction-auditor pass over cvx-2015 6/7/8 plus the bac-2006 / spatz-2014 instances)'. The blind sample is cvx-2015 2/6/7A/8, bac-2006 3/6, spatz-2014 8, jpm-2024 7, mrk-1995 5: cvx-2015 item 7 and bac-2006 item 7A were NEVER adjudicated blind. cvx item 7 is precisely the item ADR-038:174 calls 'the sharpest concession the rule makes' and the item ADR-019 \u00a7e read WRONG; \u00a7d6's list of sample weaknesses does not mention its omission. Separately the same line hedges 'the threshold is met or not per ADR-038 \u00a7d' while ADR-038:6-7, :406 and :542 state TRIPPED/MET.",
+      "repro": "grep -n 'ITEM' tasks/reviews/d13-auditor-input.txt; sed -n '586p' specs/decisions/ADR-034-pointer-and-fanout-rulings.md",
+      "acceptance": "ADR-034:586 states which of the named items were actually put to the auditor (cvx 6/8, bac 3/6, spatz 8) and that cvx 7 / bac 7A were not, and records TRIPPED (or not) as the row's own finding rather than deferring; ADR-038 \u00a7d6 adds the cvx-7 omission to its list of how the comparison was run."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The xom-2021 readmission that moves the published census from 14/5 to 18/6 admits item 8 without showing it passes R1 prong 1, and \u00a7e3's quotation elides the exact sentence that bears on prong 1.",
+      "evidence": "ADR-038:596 quotes item 8 as 'Reference is made to the following in the Financial Section of this report: \u2026'. The full body ends: 'Financial Statement Schedules have been omitted because they are not applicable or the required information is shown in the consolidated financial statements or notes thereto.' \u2014 standalone substantive prose of the kind ADR-034 \u00a7b3 used to REJECT ba-2003 item 5 and intc-2002 item 5 under the prong-1 test ADR-038:57-59 adopts verbatim. \u00a7e3:588-590 blames the miss solely on the scan needing a digit, but d9_class_scan.py:41 sets BODY_MAX=700 and the xom item-8 span is 737 chars, so it was excluded for length too. If item 8 fails prong 1 the census is 17/6, and 14->18 is published in ADR-038's front matter, ADR-034:195-207, INDEX.md:46 and TD-149. The acceptance also asks each item's span text be quoted; xom 7A and 8 are the two elided.",
+      "repro": "sed -n '/xom-2021/,/mrk-1995/p' tasks/reviews/d13-span-dump.txt | grep -A2 'item 8'; grep -n 'BODY_MAX' tasks/reviews/d9_class_scan.py",
+      "acceptance": "\u00a7e3 quotes xom-2021 items 7A and 8 in full and adjudicates the schedules sentence against R1 prong 1 explicitly (in class, or out and the census is 17/6), and names BODY_MAX=700 as the second reason ADR-034's scan could not see item 8."
+    },
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "\u00a7d3 \u2014 the section whose whole job is to record the residual disagreement faithfully \u2014 contains two statements its own committed auditor output contradicts.",
+      "evidence": "ADR-038:467-468 'It would not concede the 0.95 group on the same ruling \u2014 and on the 0.95 group the two reads already agree.' The auditor's 0.95 group is its rows 1,2,3,5,6 (d13-auditor-verdicts.md:173), which by its own verdict table (:36-44) are cvx 2/6/7A AND bac 3/6 \u2014 and the two reads do NOT agree on bac 3/6, the entire subject of that bullet. ADR-038:470-471 'four of the five divergences reduce to bac-2006 3/6's confidence complaint': the five divergences per \u00a7d1 (:395-399) are cvx 8, bac 3, bac 6, spatz 8, jpm 7; granting ADR-004 concedes three (cvx 8, spatz 8, jpm 7) and leaves two. No reading yields four.",
+      "repro": "sed -n '390,400p;466,471p' specs/decisions/ADR-038-internal-pointer-adjudication.md; sed -n '34,46p;173p' tasks/reviews/d13-auditor-verdicts.md",
+      "acceptance": "The sentence reads 'on the cvx-2015 0.95 items the two reads already agree; on bac-2006 3/6, also 0.95, they do not' and the count reads 'three of the five divergences are conceded and the residue is bac-2006 3/6'."
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "\u00a7b never states how a target is adjudicated when its anchor matches both inside a span and outside every span, and \u00a7c2 resolves that case for ge-1994 item 8 without disclosing the outside count its own dump prints.",
+      "evidence": "d13-span-dump.txt (ge-1994 item 8) prints \"index under item 14={'14': 1}|out=5\". ADR-038:216-219 reports only the inside match at 78,112; every convicting item in \u00a7c1 prints its outside count. The inside match is itself an index line, so \u00a7c1's inside-match-is-a-reference reasoning would apply here too. Verdict robust either way (0.80 / review_required true), hence LOW.",
+      "repro": "see the finding's python one-liner over ge-1994",
+      "acceptance": "\u00a7b states the mixed-match rule, or \u00a7c2 prints out=5 and says the verdict rests on the one-hop target being the index itself plus the ADR-035 warning fallback."
+    },
+    {
+      "id": "R6",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "Two counts in ADR-038 are stale or wrong: '\u00a7f the eleven correct verdicts' is 15 after \u00a7e3's readmission, and '45 dev fixtures' is 44.",
+      "evidence": "ADR-038:645 'the eleven correct verdicts' \u2014 front matter (:12) already says eleven enumerated plus xom-2021's four, so the overturn row understates by four. ADR-038:495-496 'across all 45 dev fixtures'; ls evals/fixtures/*/filing.* is 44. The sweep itself is correct: {'7':7,'8':15,'1':2} reproduces over 44 dev + 6 held-out.",
+      "repro": "ls evals/fixtures/*/filing.* | wc -l; sed -n '495,497p;645p' ADR-038",
+      "acceptance": "'fifteen correct verdicts' at :645 and '44 dev fixtures' at :496, or the 45 flagged as the auditor's count, not the ADR's."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "\u00a7d6 states the auditor's verdicts 'have no variance estimate' while the one available variance datapoint \u2014 the same instrument's earlier run ruling cvx-2015 item 6 CORRECT \u2014 is the flip that trips the reopener, and is never reconciled as variance.",
+      "evidence": "ADR-038:526-529 'One run, not repeated ... no variance estimate.' docs/evals/audits/2026-08-19-t11-silent-failure-sample.md:66 row 21 is the same extraction-auditor on the same unchanged output returning CORRECT. \u00a7d2 declares convergence without saying the convergent read is a second run of an instrument whose first run said the opposite. The defensible reconciliation \u2014 ADR-035 shipped item_span_near_empty on item 8 in between, creating the decisive contrast \u2014 exists in the ADR-019 amendment but is not made in \u00a7d2/\u00a7d6.",
+      "repro": "sed -n '66p' docs/evals/audits/2026-08-19-t11-silent-failure-sample.md; sed -n '406,428p;526,529p' ADR-038",
+      "acceptance": "\u00a7d6 records the 2026-08-19 run as the prior read of the same item and states why the flip is a signal change rather than judge noise."
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "\u00a7g8 characterises the bac-2006 gap as an ordering of two questions, but the actual unstated move in R3 is a change of scope for the word 'output' between its two bullets, and \u00a7b never says which scope applies.",
+      "evidence": "ADR-038:85-98 \u2014 bullet 1 asks whether the target is 'inside some span' anywhere in the envelope; bullet 2 convicts because 'the output does not hold' its answer. For bac-2006 item 3 the envelope holds the answer and the item does not, so the verdict depends on reading 'the output' document-wide in bullet 1 and item-wide in bullet 2. specs/001-sec10k-contract.md:86-96 defines review_required as explicitly item-level, so the item-scoped reading is the contract's default and the ADR adopts the other without naming the switch.",
+      "repro": "sed -n '80,103p;710,715p' ADR-038; sed -n '84,96p' specs/001-sec10k-contract.md",
+      "acceptance": "\u00a7b R3 says in one sentence which scope 'the output does not contain the answer' is evaluated at, and \u00a7g8 names the scope choice, not just the ordering, as the thing not shown right."
+    }
+  ]
+}
