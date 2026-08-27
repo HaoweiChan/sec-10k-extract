@@ -219,8 +219,11 @@ only** — dev total **14 items across 5 filings → 17 across 6**, not 18. Item
 was also outside `d9_class_scan.py`'s `BODY_MAX = 700` at 737 chars, so the
 scan missed it twice over. §e3 also records that ADR-007's
 `IBR_REMAINDER_MAX = 300` does not reproduce this paragraph's three
-rejections — `intc-2002` item 5's standalone content is 110 chars — so prong 1
-is a test of kind, not of length.)*
+rejections — `intc-2002` item 5's standalone content is **111** chars, and
+that figure is a hand sub-split inside a 359-char splitter sentence, disclosed
+in §e3 — so prong 1 is a test of kind, not of length. Under the instrument's
+own segmentation a threshold in 177..190 WOULD sort these four; §e3 refuses it
+on band width and stability, not on impossibility.)*
 
 So the class is **14 items across 5 real dev filings** — 1.9% of 744 dev items
 — plus **13 items on one held-out filing**, 8.8% of 147 held-out items.

@@ -1,0 +1,72 @@
+sentences per contested body, split by `src.sec10k.segment._sentences`
+ADR-007 segment.IBR_REMAINDER_MAX = 300
+which sentences are POINTERS is adjudicated by hand (NON_POINTER below) and printed so it can be moved
+
+NON_POINTER = {('xom-2021', '8'): {'idx': [1]}, ('xom-2021', '7A'): {'idx': [1, 2]}, ('ba-2003', '5'): {'idx': [0, 1, 3]}, ('textron-2001', '5'): {'idx': [0, 1]}, ('intc-2002', '5'): {'idx': [1], 'sub': "As of February 21, 2003, there were approximately 240,000 registered holders of record of Intel's common stock."}}
+
+===== xom-2021 item 7  span=267  body=173  status=extracted
+   [0]  171 chars  'Reference is made to the section entitled “Management’s Discussion and Analysis of Financial Condition and Results of Operations” in the Financial Section of this report.'
+   [1]    1 chars  ''
+
+===== xom-2021 item 7A  span=413  body=345  status=extracted
+   [0]   98 chars  'Reference is made to the section entitled “Market Risks” in the Financial Section of this report.'
+   [1]  111 chars  'All statements, other than historical information incorporated in this Item 7A, are forward-looking statements.'
+   [2]  128 chars  'The actual impact of future market changes could differ materially due to, among other things, factors discussed in this report.'
+   [3]    5 chars  '31'
+   NON-POINTER sentences [1, 2] -> 239 chars  (instrument's own segmentation)
+
+===== xom-2021 item 8  span=737  body=685  status=extracted
+   [0]  506 chars  'Reference is made to the following in the Financial Section of this report:\n\n•Consolidated financial statements, together with the report thereon of PricewaterhouseCoopers LLP (PCAOB ID 238) dated February 23, 2022, beginning with the section entitled “Report of Independent Registered Public Accounting Firm” and continuing through “Note 19: Income and Other Taxes”;\n\n•“Supplemental Information on Oil and Gas Exploration and Production Activities” (unaudited); and\n\n•“Frequently Used Terms” (unaudited).'
+   [1]  176 chars  'Financial Statement Schedules have been omitted because they are not applicable or the required information is shown in the consolidated financial statements or notes thereto.'
+   [2]    1 chars  ''
+   NON-POINTER sentences [1] -> 176 chars  (instrument's own segmentation)
+
+===== xom-2021 item 15  span=209  body=160  status=extracted
+   [0]  101 chars  '(a)(1) and (2) Financial Statements:\n\nSee Table of Contents of the Financial Section of this report.'
+   [1]   56 chars  '(b)(3) Exhibits:\n\nSee Index to Exhibits of this report.'
+   [2]    1 chars  ''
+
+===== ba-2003 item 5  span=587  body=508  status=extracted
+   [0]   74 chars  'The principal market for our common stock is the New York Stock Exchange.'
+   [1]  145 chars  'It is also listed on the Amsterdam, Brussels, London, Swiss and Tokyo Exchanges as well as various regional stock exchanges in the United States.'
+   [2]  172 chars  'Additional information required by this item is incorporated by reference from the table captioned Quarterly Financial Data (Unaudited) on page 114 and Item 12 on page 122.'
+   [3]   89 chars  'The number of holders of common stock as of February 27, 2004, is approximately 135,640.'
+   [4]   24 chars  '11\n\nTable of Contents'
+   NON-POINTER sentences [0, 1, 3] -> 308 chars  (instrument's own segmentation)
+
+===== intc-2002 item 5  span=629  body=567  status=extracted
+   [0]  201 chars  'STOCKHOLDER MATTERS\n\nThe information regarding market, market price range and dividend information may be found in "Financial Information by Quarter (Unaudited)" in Item 8 on page 78 of this Form 10-K.'
+   [1]  359 chars  'Additional information concerning dividends may be found in the following sections of this Form 10-K: "Selected Financial Data" in Item 6 and "Consolidated Statements of Cash Flows" and "Consolidated Statements of Stockholders\' Equity" in Item 8. \nAs of February 21, 2003, there were approximately 240,000 registered holders of record of Intel\'s common stock.'
+   [2]    5 chars  '24'
+   NON-POINTER sentences [1] -> 359 chars  (instrument's own segmentation)
+   HAND SUB-SPLIT inside sentence [1]: 111 chars — "As of February 21, 2003, there were approximately 240,000 registered holders of record of Intel's common stock."
+   (the instrument does NOT split this; the total above carries a pointer clause with it)
+
+===== textron-2001 item 5  span=523  body=446  status=extracted
+   [0]  104 chars  'MATTERS\n\n     Our Common Stock is traded on the New York, Chicago and Pacific Stock\nExchanges.'
+   [1]   86 chars  'At December 29, 2001, there were approximately 21,000 holders of\nTextron Common Stock.'
+   [2]  252 chars  'The information on the price range of Textron\'s Common\nStock and dividends paid per share appearing under "Common Stock Information" on\npage 60 of our 2001 Annual Report to Shareholders is incorporated by reference\ninto this Annual Report on Form 10-K.'
+   [3]    1 chars  ''
+   NON-POINTER sentences [0, 1] -> 190 chars  (instrument's own segmentation)
+
+========================================================================
+DOES A LENGTH THRESHOLD SEPARATE THE SET?  (ADR-038 §e3)
+
+  under the instrument's own segmentation:
+     ADR-034 §b3 REJECTED  ba-2003        item 5    308
+     ADR-034 §b3 REJECTED  intc-2002      item 5    359
+     ADR-034 §b3 REJECTED  textron-2001   item 5    190
+     ADR-038 §e3  EJECTED  xom-2021       item 8    176
+     rejections span 190..359; candidate 176 BELOW all three
+     -> a length threshold EXISTS (any value in 177..190)
+
+  under the hand sub-split, as ADR-038 §e3 adjudicates:
+     ADR-034 §b3 REJECTED  ba-2003        item 5    308
+     ADR-034 §b3 REJECTED  intc-2002      item 5    111
+     ADR-034 §b3 REJECTED  textron-2001   item 5    190
+     ADR-038 §e3  EJECTED  xom-2021       item 8    176
+     rejections span 111..308; candidate 176 sits INSIDE that range
+     -> a length threshold CANNOT separate the set
+
+  The two readings DISAGREE, so the threshold question turns on the sub-split.
+  ADR-038 §e3 states this rather than claiming either reading settles it.

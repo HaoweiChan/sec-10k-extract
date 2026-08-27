@@ -587,8 +587,16 @@ was asked for.
   on it rests entirely on ADR-035's warning rather than on anything the
   auditor saw. Its sibling item 8 — same body shape, same 0.80, same warning —
   WAS adjudicated blind and came back a divergence, so the honest reading is
-  that cvx 7 would likely have diverged too. The sample does not say, and this
-  ADR does not claim it does.
+  that cvx 7 would likely have diverged too. **But that inferred divergence
+  would be a CONCEDED one, and §d6 must say so** (PR #60 R11): item 8 is one
+  of the three the auditor itself names as its weakest and offers to concede —
+  "If an ADR rules that an intra-document pointer stays `extracted` and that
+  item spans are heading-to-heading with no obligation to resolve internal
+  references, I would concede all three to RIGHT" — and that ruling is
+  ADR-004 shape 2, which §b R2 re-affirms. So the gap cvx 7 leaves is a gap in
+  the *conceded* bucket, not in the residue that §d3 leaves standing. A reader
+  of this bullet alone would over-read it. The sample still does not say, and
+  this ADR does not claim it does.
 - **The sample had no negative control.** All nine items handed to the auditor
   are pointer-bodied, so a uniform WRONG was available without discriminating
   anything, and the auditor says so itself. Its verdicts are usable only
@@ -681,16 +689,19 @@ ever find page-numbered pointers, and (b) capped the body at
 `d9_class_scan.py`'s `BODY_MAX = 700`. Under R1 prong 2 a titled section is a
 locatable position too, and `xom-2021` — a filing §b3 names only in its
 rejection list — carries four bodies its scan could not see. Items 7, 7A and
-15 were missed on the digit alone; item 8, at 737 chars, was missed on
-**both** (PR #60 R3). All four in full, no ellipsis:
+15 were missed on the digit alone; item 8, whose **span** is 737 chars, was
+missed on **both** — `d9_class_scan.py:82` gates on `len(span)` despite the
+constant's name (PR #60 R3). All four bodies in full, no ellipsis, labelled
+with BODY lengths since that is what is quoted; the span figure appears only
+where the `BODY_MAX` argument needs it (PR #60 R12):
 
-> item 7 (267 chars): `Reference is made to the section entitled "Management's Discussion and Analysis of Financial Condition and Results of Operations" in the Financial Section of this report.`
+> item 7 (body 173 chars): `Reference is made to the section entitled "Management's Discussion and Analysis of Financial Condition and Results of Operations" in the Financial Section of this report.`
 >
-> item 7A (413): `Reference is made to the section entitled "Market Risks" in the Financial Section of this report. All statements, other than historical information incorporated in this Item 7A, are forward-looking statements. The actual impact of future market changes could differ materially due to, among other things, factors discussed in this report.`
+> item 7A (body 345): `Reference is made to the section entitled "Market Risks" in the Financial Section of this report. All statements, other than historical information incorporated in this Item 7A, are forward-looking statements. The actual impact of future market changes could differ materially due to, among other things, factors discussed in this report.` / `31`   *(the trailing `31` is page chrome and is part of the 345; carried because "no ellipsis" has to mean it — PR #60 R14. Items 7, 8 and 15 differ from their bodies only by newlines markdown collapses.)*
 >
-> item 8 (737): `Reference is made to the following in the Financial Section of this report:` / `•Consolidated financial statements, together with the report thereon of PricewaterhouseCoopers LLP (PCAOB ID 238) dated February 23, 2022, beginning with the section entitled "Report of Independent Registered Public Accounting Firm" and continuing through "Note 19: Income and Other Taxes";` / `•"Supplemental Information on Oil and Gas Exploration and Production Activities" (unaudited); and` / `•"Frequently Used Terms" (unaudited).` / `Financial Statement Schedules have been omitted because they are not applicable or the required information is shown in the consolidated financial statements or notes thereto.`
+> item 8 (body 685, span 737): `Reference is made to the following in the Financial Section of this report:` / `•Consolidated financial statements, together with the report thereon of PricewaterhouseCoopers LLP (PCAOB ID 238) dated February 23, 2022, beginning with the section entitled "Report of Independent Registered Public Accounting Firm" and continuing through "Note 19: Income and Other Taxes";` / `•"Supplemental Information on Oil and Gas Exploration and Production Activities" (unaudited); and` / `•"Frequently Used Terms" (unaudited).` / `Financial Statement Schedules have been omitted because they are not applicable or the required information is shown in the consolidated financial statements or notes thereto.`
 >
-> item 15 (209): `(a)(1) and (2) Financial Statements:` / `See Table of Contents of the Financial Section of this report.` / `(b)(3) Exhibits:` / `See Index to Exhibits of this report.`
+> item 15 (body 160): `(a)(1) and (2) Financial Statements:` / `See Table of Contents of the Financial Section of this report.` / `(b)(3) Exhibits:` / `See Index to Exhibits of this report.`
 
 **Item 15's rejection is overturned; item 8 fails prong 1 and stays out.**
 §b3 rejected item 15 for "no page number at all" while admitting `ge-1994`
@@ -719,19 +730,62 @@ are about nothing. A sentence that only qualifies the pointer is not a
 standalone answer; a sentence that closes out a disclosure requirement is.
 Items 7 and 15 have no non-pointer sentence at all.
 
-**Prong 1 is not a length test, and this is where the first draft would have
-gone wrong twice.** ADR-007's `IBR_REMAINDER_MAX = 300` is the obvious
-candidate and it does **not** reproduce §b3: `intc-2002` item 5's only
-standalone content is `As of February 21, 2003, there were approximately
-240,000 registered holders of record of Intel's common stock.` — **110
-chars**, far under 300, and §b3 rejects it. Measured the same way, `ba-2003`
-item 5 carries 74 + 145 + 89 = 308 chars of standalone disclosure and
-`textron-2001` item 5 carries 104 + 86 = 190. The three §b3 rejections span
-110..308 chars, so no threshold separates them from `xom-2021` item 8's 176.
-The discriminator is kind, not size: **does the sentence dispose of any part
-of what the item requires, on its own, without the pointer?** Holder counts
-and exchange listings do; a safe-harbour disclaimer does not; a
-"schedules omitted, not applicable" sentence does.
+**Prong 1 is a test of kind, not of length — and the length reading is
+refused on a weaker ground than the first draft of this paragraph claimed.**
+Every figure **in this paragraph and the table below** — the sentence
+lengths, the non-pointer totals, the 111-char sub-split and the 177..190
+interval — is printed by `--prong1` and committed at
+`tasks/reviews/d13-prong1.txt`; the "13-char margin" below is that interval's
+width. None of them is retyped (PR #60 R10 — the first draft retyped one and
+it was wrong by one character). **The census figures later in this section are
+NOT from `--prong1`** and cannot be: it covers seven bodies, of which three
+are in class. Their per-item roster comes from `--table` /
+`tasks/reviews/d13-span-dump.txt`, listed two entries below in Verification,
+and the 14-items-across-5-filings base is ADR-034 §b3's own count (PR #60 R13
+— the first draft of this sentence was a universal wider than the instrument
+that produced it, which is the same defect this section exists to correct).
+
+ADR-007's `IBR_REMAINDER_MAX = 300` is the obvious candidate and it does not
+reproduce §b3 under either reading: `intc-2002` item 5 is rejected by §b3 with
+standalone content far under 300 on the sub-split reading, and `textron-2001`
+item 5 is rejected at 190. So the *committed* constant is out. The question is
+whether some **other** threshold would do, and the answer depends on a split
+this ADR must disclose rather than assume.
+
+**The disclosure.** `intc-2002` item 5's standalone content is
+`As of February 21, 2003, there were approximately 240,000 registered holders
+of record of Intel's common stock.` — **111 chars**. That is a **hand
+sub-split inside splitter sentence [1]**, which the instrument reports as a
+single 359-char unit carrying both a pointer clause and this holder sentence;
+`segment._sentences` does not split it. `ba-2003`'s 74 + 145 + 89 = 308 and
+`textron-2001`'s 104 + 86 = 190 **are** splitter sentences. So "measured the
+same way" was false for exactly the item carrying the load-bearing minimum,
+and the first draft did not say so.
+
+**What that costs, stated plainly.** The two readings give opposite answers:
+
+| reading | §b3's three rejections | `xom-2021` 8 | threshold? |
+|---|---|---|---|
+| instrument's own segmentation | 190 … 359 | 176 | **exists** — any value in 177..190 |
+| hand sub-split (this ADR's) | 111 … 308 | 176 | **none** — 176 sits inside the range |
+
+So "no threshold separates them" holds **only** under the sub-split, and the
+sub-split is a judgement about one sentence. The length reading is therefore
+not refuted; it is refused, on three grounds that do not depend on which split
+you take. **One**: a threshold in 177..190 is fitted to four bodies with a
+13-char margin, which is not a band — ADR-007's own comment refuses to move a
+constant "no case can distinguish", and ADR-030/ADR-035 pin both edges of a
+measured band before adopting one. **Two**: the number it would key on is
+unstable under the very question this paragraph is disclosing, and a
+discriminator that flips on a sub-sentence judgement is worse than no
+discriminator. **Three**: the kind test needs no constant, and the reviewer
+re-derived that it sorts all 17 in-class bodies consistently.
+
+The discriminator is therefore kind, not size: **does the sentence dispose of
+any part of what the item requires, on its own, without the pointer?** Holder
+counts and exchange listings do; a safe-harbour disclaimer does not; a
+"schedules omitted, not applicable" sentence does. §f carries the reopener,
+and it is now the sharper one: exhibit a body the kind test mis-sorts.
 
 **So the census moves to 17 items across 6 filings, not 18** — §b3's 14
 (`cvx-2015` 5, `jpm-2024` 4, `bac-2006` 3, `ge-1994` 1, `spatz-2014` 1) plus
@@ -775,7 +829,7 @@ Each names an instrument and a threshold.
 | `correct` on `bac-2006` 3/6/7A specifically (§c4, the weakest joint) | a consumer-visible harm from content being labelled under a neighbouring item's code, demonstrated on a filing rather than argued: an item whose named target is inside another span AND whose absence from its own span is shown to break a stated downstream use | a case, or an audit finding on a real filing | one instance |
 | `out-of-class` on `nvda-2024` 8 | R1 prong 2 is rewritten to admit "the answer is somewhere in this document" with no position named. That also readmits `xom-2021` 15 the other way, so the rewrite must handle both or it is not a rule | R1 as stated in §b | either |
 | `out-of-class` on `xom-2021` 8 (§e3) | prong 1's discriminator — "does the sentence dispose of any part of what the item requires, on its own, without the pointer" — is shown to mis-sort one of ADR-034 §b3's own three rejections, or to sort `xom-2021` 8 and 7A the same way. Either breaks the kind test and prong 1 needs a different one; the census returns to 18/6 if item 8 comes back | `--prong1` over §e3's seven bodies | one mis-sort |
-| the whole rule | an in-class item is found where R2 fails — a pointer-bodied item whose span is NOT the verbatim labelled text. The two-layer split assumes segmentation is sound on this shape; it is measured sound on all 18 here and asserted by the `verbatim` check on both `debt` cases | `evals/adversarial/cvx-2015-*.json` `verbatim` checks, or a new fixture | one instance |
+| the whole rule | an in-class item is found where R2 fails — a pointer-bodied item whose span is NOT the verbatim labelled text. The two-layer split assumes segmentation is sound on this shape; it is measured sound on all 17 in-class items here and asserted by the `verbatim` check on both `debt` cases | `evals/adversarial/cvx-2015-*.json` `verbatim` checks, or a new fixture | one instance |
 
 **Explicitly not sufficient**: a pointer body being short; a filing having low
 coverage; the `debt` cases still being red, which is what this ADR permits.
@@ -875,10 +929,13 @@ into a scratch directory rather than a second worktree.
 - `python3 -m evals.run --suite invariant` — score 1.000, baseline untouched.
 - `python3 -m evals.run --suite fast` — score 1.000, baseline untouched.
   Suite sizes deliberately not quoted, per ADR-034's Verification note.
-- `python3 tasks/reviews/d13_span_dump.py --table` and
-  `--auditor-input` — every span, figure and blind-audit input in §c and §d.
-  Committed output: `tasks/reviews/d13-span-dump.txt`,
-  `tasks/reviews/d13-auditor-input.txt`.
+- `python3 tasks/reviews/d13_span_dump.py --table`, `--auditor-input` and
+  `--prong1` — every span, figure, blind-audit input and prong-1 sentence
+  split in §c, §d and §e3. Committed output: `tasks/reviews/d13-span-dump.txt`,
+  `tasks/reviews/d13-auditor-input.txt`, `tasks/reviews/d13-prong1.txt`.
+  `--prong1` prints its hand-marked non-pointer sentence sets, the hand
+  sub-split it depends on, and the threshold comparison under BOTH readings,
+  so §e3's numbers are derived rather than retyped (PR #60 R10).
 - `python3 evals/snapshot.py --self-check` — passes; the two tree snapshots
   and their `cmp` are §h.
 - `evals/adversarial/cvx-2015-silent-pointer-items.json` — watched RED before

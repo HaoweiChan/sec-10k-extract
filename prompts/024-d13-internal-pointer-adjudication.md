@@ -62,8 +62,27 @@ one new `debt` case, and no line of `src/` touched.
   is ruled OUT on prong 1 under PR #60 R3, which is what makes the census 17
   and not 18. Prong 1 is a test of KIND, not of length: ADR-007's
   `IBR_REMAINDER_MAX = 300` was the obvious candidate and it fails the
-  calibration — `intc-2002` item 5's standalone content is 110 chars and
+  calibration — `intc-2002` item 5's standalone content is **111** chars and
   ADR-034 §b3 rejects it anyway.
+
+- **Assumed:** stating that "no threshold separates" the four prong-1 bodies
+  was a measurement, because the sentence lengths came from `--prong1`.
+- **Eval said:** PR #60 R10. The 110 was retyped and is 111; and `--prong1`
+  segments `intc-2002` item 5 as one 359-char sentence carrying both the
+  pointer clause and the holder sentence, so the load-bearing minimum was a
+  hand sub-split the ADR presented as instrument output. Under the
+  instrument's own segmentation the three rejections span 190..359 and a
+  threshold in 177..190 **does** separate them from `xom-2021` item 8's 176 —
+  the opposite of what was published.
+- **Corrected:** `--prong1` now prints its hand-marked non-pointer sets, the
+  sub-split, and the threshold comparison under BOTH readings; its output is
+  committed at `tasks/reviews/d13-prong1.txt` and listed in ADR-038's
+  Verification beside `--table` and `--auditor-input`. §e3 now says the length
+  reading is **refused, not refuted** — on band width (13 chars over four
+  bodies) and on the figure's instability — which is a weaker and true claim
+  in place of a stronger false one. Second retyped-number defect in one PR;
+  the rule that a figure carrying an argument must be derived by a committed
+  script now has a third instrument enforcing it.
 
 - **Assumed:** `cvx-2015` items 7 and 8 — the two the committed `debt` case
   actually asserts — are the defects, as ADR-019 §e read them.

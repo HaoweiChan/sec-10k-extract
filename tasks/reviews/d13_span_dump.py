@@ -109,6 +109,26 @@ PRONG1 = [
     ("evals/fixtures/textron-2001", ["5"]),
 ]
 
+# Which of those sentences are NON-pointer, i.e. candidate standalone answers.
+# Hand-marked and printed, exactly as the anchors are — a reader who disagrees
+# moves the index set and re-runs. `sub` is a hand SUB-SPLIT inside one splitter
+# sentence, disclosed because ADR-038 §e3's load-bearing minimum depends on it
+# and the first draft published it as if the instrument had produced it
+# (PR #60 R10).
+NON_POINTER = {
+    ("xom-2021", "8"):     {"idx": [1]},
+    ("xom-2021", "7A"):    {"idx": [1, 2]},
+    ("ba-2003", "5"):      {"idx": [0, 1, 3]},
+    ("textron-2001", "5"): {"idx": [0, 1]},
+    ("intc-2002", "5"):    {"idx": [1], "sub": "As of February 21, 2003, there "
+                            "were approximately 240,000 registered holders of "
+                            "record of Intel's common stock."},
+}
+# The four bodies ADR-038 §e3's threshold paragraph compares: three ADR-034 §b3
+# REJECTED, and the one it ejects.
+THRESHOLD_SET = [("ba-2003", "5"), ("intc-2002", "5"), ("textron-2001", "5")]
+THRESHOLD_CANDIDATE = ("xom-2021", "8")
+
 
 # The blind sample handed to the extraction-auditor: chosen to straddle every
 # distinction the ruling turns on WITHOUT naming any of them.
@@ -275,10 +295,15 @@ def auditor_input(rows):
 
 
 def prong1():
+    """§e3's prong-1 evidence: the sentence split, the non-pointer totals under
+    BOTH readings, and whether a length threshold separates the set."""
     from src.sec10k import segment
     print("sentences per contested body, split by `src.sec10k.segment._sentences`"
           f"\nADR-007 segment.IBR_REMAINDER_MAX = {segment.IBR_REMAINDER_MAX}"
-          "\nwhich sentences are POINTERS is adjudicated by hand in ADR-038 §e3\n")
+          "\nwhich sentences are POINTERS is adjudicated by hand (NON_POINTER "
+          "below) and printed so it can be moved\n")
+    print(f"NON_POINTER = {NON_POINTER}\n")
+    lit, hand = {}, {}
     for rel, codes in PRONG1:
         d = ROOT / rel
         res = extract_items(str(fixture_file(d)))
@@ -288,11 +313,50 @@ def prong1():
             it = by_code[code]
             span = text[it["start"]:it["end"]]
             body = span.split("\n", 1)[1] if "\n" in span else ""
+            sents = segment._sentences(body)
             print(f"===== {d.name} item {code}  span={it['end'] - it['start']}  "
                   f"body={len(body)}  status={it['status']}")
-            for k, sent in enumerate(segment._sentences(body)):
+            for k, sent in enumerate(sents):
                 print(f"   [{k}] {len(sent):>4} chars  {sent.strip()!r}")
+            mark = NON_POINTER.get((d.name, code))
+            if mark:
+                total = sum(len(sents[j]) for j in mark["idx"])
+                lit[(d.name, code)] = total
+                line = (f"   NON-POINTER sentences {mark['idx']} -> {total} chars"
+                        f"  (instrument's own segmentation)")
+                if "sub" in mark:
+                    assert mark["sub"] in body, f"{d.name} {code}: sub not in body"
+                    hand[(d.name, code)] = len(mark["sub"])
+                    line += (f"\n   HAND SUB-SPLIT inside sentence {mark['idx']}: "
+                             f"{len(mark['sub'])} chars — {mark['sub']!r}\n"
+                             f"   (the instrument does NOT split this; the total "
+                             f"above carries a pointer clause with it)")
+                else:
+                    hand[(d.name, code)] = total
+                print(line)
             print()
+
+    print("=" * 72)
+    print("DOES A LENGTH THRESHOLD SEPARATE THE SET?  (ADR-038 §e3)")
+    cand = THRESHOLD_CANDIDATE
+    for label, table in (("instrument's own segmentation", lit),
+                         ("hand sub-split, as ADR-038 §e3 adjudicates", hand)):
+        rej = [table[k] for k in THRESHOLD_SET]
+        c = table[cand]
+        lo, hi = min(rej), max(rej)
+        works = c < lo
+        print(f"\n  under the {label}:")
+        for k in THRESHOLD_SET:
+            print(f"     ADR-034 §b3 REJECTED  {k[0]:<14} item {k[1]:<3} {table[k]:>4}")
+        print(f"     ADR-038 §e3  EJECTED  {cand[0]:<14} item {cand[1]:<3} {c:>4}")
+        print(f"     rejections span {lo}..{hi}; candidate {c} "
+              f"{'BELOW all three' if works else 'sits INSIDE that range'}")
+        print(f"     -> a length threshold {'EXISTS (any value in '
+                                           f'{c + 1}..{lo})' if works
+                                           else 'CANNOT separate the set'}")
+    print("\n  The two readings DISAGREE, so the threshold question turns on the "
+          "sub-split.\n  ADR-038 §e3 states this rather than claiming either "
+          "reading settles it.")
 
 
 def main():
