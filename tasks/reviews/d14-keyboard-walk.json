@@ -1,0 +1,45 @@
+{
+ "base": "http://localhost:8014",
+ "fixture": "aapl-2025",
+ "item": "1A",
+ "steps": {
+  "plain": {
+   "mode": "plain",
+   "region_matches_by_name": 1,
+   "tabindex_live_dom": "0",
+   "text_chars": 40000,
+   "scrollable": true,
+   "active_after_tab": {
+    "cls": "text",
+    "aria": "Item 1A extracted text"
+   },
+   "tab_landed_on_region": true,
+   "scroll_tops": {
+    "start": 0,
+    "after_ArrowDown": 40,
+    "after_PageDown": 624
+   },
+   "shot": "d14-keyboard-walk/1-plain-region-scrolled.png"
+  },
+  "markdown": {
+   "mode": "markdown",
+   "region_matches_by_name": 1,
+   "tabindex_live_dom": "0",
+   "text_chars": 39860,
+   "scrollable": true,
+   "active_after_tab": {
+    "cls": "text md",
+    "aria": "Item 1A extracted text"
+   },
+   "tab_landed_on_region": true,
+   "scroll_tops": {
+    "start": 0,
+    "after_ArrowDown": 40,
+    "after_PageDown": 624
+   },
+   "shot": "d14-keyboard-walk/2-markdown-region-scrolled.png"
+  }
+ },
+ "failures": [],
+ "verdict": "KEYBOARD-SCROLLABLE: both named regions carry tabindex=0 in the live DOM, are reached by Tab, and ArrowDown/PageDown move scrollTop in both view modes"
+}
