@@ -1,0 +1,211 @@
+fixture      item  chars  conf     rrdoc_status                 cov tail_chars  anchor matches per target (by owning item | outside)
+------------------------------------------------------------------------------------------------------------------------------------
+cvx-2015        2    534  0.95  Falsesuccess_with_warning    0.2718     294291  page 3 under Item 1. Business={'1': 2}|out=1; Tables I–VII, pages FS-61..FS-={'1': 2}|out=1; Note 16, page FS-41={}|out=22
+cvx-2015        6    119  0.95  Falsesuccess_with_warning    0.2718     294291  page FS-60={'15': 1}|out=1
+cvx-2015        7    280   0.8   Truesuccess_with_warning    0.2718     294291  index on page FS-1={'15': 1}|out=18
+cvx-2015       7A    453  0.95  Falsesuccess_with_warning    0.2718     294291  page FS-15={}|out=2; page FS-35={}|out=1
+cvx-2015        8    189   0.8   Truesuccess_with_warning    0.2718     294291  index on page FS-1={'15': 1}|out=18
+ge-1994         8     86   0.8   Truesuccess_with_warning    0.2306     275043  index under item 14={'14': 1}|out=5
+jpm-2024       1C    172  0.75  Falseambiguous               0.9931       1564  pages 153–156, Operational Ris={'15': 7}|out=0
+jpm-2024        7    398  0.75   Trueambiguous               0.9931       1564  pages 52–167, MD&A={'15': 33}|out=0
+jpm-2024       7A    274  0.75  Falseambiguous               0.9931       1564  pages 141–149, Market Risk Man={'15': 19}|out=0
+jpm-2024        8    372  0.75   Trueambiguous               0.9931       1564  pages 169–321, financial state={'15': 33}|out=0
+bac-2006        3    229  0.95  Falsesuccess                 0.9285      41907  Note 13, page 137={'1A': 1, '8': 1}|out=0
+bac-2006        6    202  0.95  Falsesuccess                 0.9285      41907  Table 5 in the MD&A, page 21={'15': 1, '7': 5, '8': 13}|out=0
+bac-2006       7A    175  0.95  Falsesuccess                 0.9285      41907  Market Risk Management in the ={'1': 3, '1A': 1, '7': 6}|out=0
+spatz-2014      8    241   0.8   Truesuccess_with_warning    0.6632      17307  pages 15 through 22 of this re={}|out=1
+nvda-2024       8    209   0.8   Truesuccess_with_warning    0.9613       2803  our Consolidated Financial Sta={'15': 13, '7': 1}|out=0
+xom-2021        7    267  0.75   Trueambiguous               0.9799       2463  MD&A section of the Financial ={'16': 13}|out=0
+xom-2021       7A    413  0.75  Falseambiguous               0.9799       2463  “Market Risks” in the Financia={'16': 2}|out=0
+xom-2021        8    737  0.75   Trueambiguous               0.9799       2463  financial statements in the Fi={'16': 3}|out=0
+xom-2021       15    209  0.75  Falseambiguous               0.9799       2463  Table of Contents of the Finan={'16': 13}|out=0
+mrk-1995        5    231  0.95  Falsesuccess_with_warning    0.7593       8974  pages 37 and 51 of the 1995 An=EXTERNAL-DOCUMENT
+mrk-1995        7    247   0.8   Truesuccess_with_warning    0.7593       8974  pages 28 through 37 of the 199=EXTERNAL-DOCUMENT
+
+
+anchors are hand-chosen and movable; each names the CONTENT the item's body points at
+
+
+########## cvx-2015/filing.htm  doc_status=success_with_warning  warnings=[('unattributed_content', None), ('item_span_near_empty', '7'), ('item_span_near_empty', '8')]
+           norm_chars=417517  in_spans=113501  meta.coverage=0.2718  outside_every_span=304016
+           regions outside every span [start,end,chars]: [(0, 9725, 9725), (123226, 417517, 294291)]
+
+--- item 2  extracted  conf=0.95  review_required=False  span=[107079,107613) 534 chars
+    heading: 'Item 2. Properties'
+    body:    '\nThe location and character of the company’s crude oil and natural gas properties and its refining, marketing, transportation and chemicals facilities are described on page 3 under Item 1. Business. Information required by Subpart 1200 of Regulation S-K (“Disclosure by Registrants Engaged in Oil and Gas Producing Activities”) is also contained in Item 1 and in Tables I through VII on pages FS-61 through FS-71. Note 16, “Properties, Plant and Equipment,” to the company’s financial statements is on page FS-41.\n\n'
+    target 'page 3 under Item 1. Business' anchor='(?i)table i\\b'
+        matches=3  by owning item={'1': 2}  outside every span=1
+        offsets(<=20, excl. this item's own span)=[26113, 27410, 366212]
+    target 'Tables I–VII, pages FS-61..FS-71' anchor='FS-61\\b'
+        matches=4  by owning item={'1': 2}  outside every span=1
+        offsets(<=20, excl. this item's own span)=[26129, 27426, 127268]
+    target 'Note 16, page FS-41' anchor='(?i)properties, plant and equipment'
+        matches=23  by owning item={}  outside every span=22
+        offsets(<=20, excl. this item's own span)=[126662, 191859, 192390, 192655, 192742, 193750, 193839, 218117, 218255, 230483, 234630, 244859, 245645, 247829, 253420, 254802, 254940, 261942, 271823, 278405]
+
+--- item 6  extracted  conf=0.95  review_required=False  span=[112301,112420) 119 chars
+    heading: 'Item 6. Selected Financial Data'
+    body:    '\nThe selected financial data for years 2011 through 2015 are presented on page FS-60.\n\n'
+    target 'page FS-60' anchor='FS-60\\b'
+        matches=3  by owning item={'15': 1}  outside every span=1
+        offsets(<=20, excl. this item's own span)=[122087, 127200]
+
+--- item 7  extracted  conf=0.8  review_required=True  span=[112420,112700) 280 chars
+    heading: 'Item 7. Management’s Discussion and Analysis of Financial Condition and Results of Operations'
+    body:    '\nThe index to Management’s Discussion and Analysis of Financial Condition and Results of Operations, Consolidated Financial Statements and Supplementary Data is presented on page FS-1.\n\n'
+    target 'index on page FS-1' anchor='(?i)consolidated statement of income'
+        matches=19  by owning item={'15': 1}  outside every span=18
+        offsets(<=20, excl. this item's own span)=[121602, 124995, 125661, 155440, 197982, 203147, 214595, 238028, 238324, 239530, 240472, 240901, 252715, 258587, 259227, 272430, 276842, 312907, 360988]
+
+--- item 7A  extracted  conf=0.95  review_required=False  span=[112700,113153) 453 chars
+    heading: 'Item 7A. Quantitative and Qualitative Disclosures About Market Risk'
+    body:    '\nThe company’s discussion of interest rate, foreign currency and commodity price market risk is contained in Management’s Discussion and Analysis of Financial Condition and Results of Operations — “Financial and Derivative Instrument Market Risk,” on page FS-15 and in Note 10 to the Consolidated Financial Statements, “Financial and Derivative Instruments,” beginning on page FS-35.\n\n'
+    target 'page FS-15' anchor='FS-15\\b'
+        matches=3  by owning item={}  outside every span=2
+        offsets(<=20, excl. this item's own span)=[125276, 125317]
+    target 'page FS-35' anchor='FS-35\\b'
+        matches=2  by owning item={}  outside every span=1
+        offsets(<=20, excl. this item's own span)=[126455]
+
+--- item 8  extracted  conf=0.8  review_required=True  span=[113153,113342) 189 chars
+    heading: 'Item 8. Financial Statements and Supplementary Data'
+    body:    '\nThe index to Management’s Discussion and Analysis, Consolidated Financial Statements and Supplementary Data is presented on page FS-1.\n\n'
+    target 'index on page FS-1' anchor='(?i)consolidated statement of income'
+        matches=19  by owning item={'15': 1}  outside every span=18
+        offsets(<=20, excl. this item's own span)=[121602, 124995, 125661, 155440, 197982, 203147, 214595, 238028, 238324, 239530, 240472, 240901, 252715, 258587, 259227, 272430, 276842, 312907, 360988]
+
+########## ge-1994/filing.txt  doc_status=success_with_warning  warnings=[('unattributed_content', None), ('item_span_near_empty', '8')]
+           norm_chars=362717  in_spans=83654  meta.coverage=0.2306  outside_every_span=279063
+           regions outside every span [start,end,chars]: [(0, 4020, 4020), (87674, 362717, 275043)]
+
+--- item 8  extracted  conf=0.8  review_required=True  span=[71142,71228) 86 chars
+    heading: 'Item 8.  Financial Statements and Supplementary Data'
+    body:    '\n      See index under item 14.\n\n'
+    target 'index under item 14' anchor='(?i)statement of financial position'
+        matches=6  by owning item={'14': 1}  outside every span=5
+        offsets(<=20, excl. this item's own span)=[78112, 105330, 177027, 217872, 233792, 304471]
+
+########## jpm-2024/filing.htm  doc_status=ambiguous  warnings=[('last_item_dominates', '15'), ('item_span_near_empty', '7'), ('item_span_near_empty', '8')]
+           norm_chars=1213284  in_spans=1204938  meta.coverage=0.9931  outside_every_span=8346
+           regions outside every span [start,end,chars]: [(0, 6782, 6782), (1211720, 1213284, 1564)]
+
+--- item 1C  extracted  conf=0.75  review_required=False  span=[183811,183983) 172 chars
+    heading: 'Item 1C. Cybersecurity.'
+    body:    '\nRefer to the Operational Risk Management section of Management’s discussion and analysis on pages 153–156 for a discussion of cybersecurity risk.\n\n'
+    target 'pages 153–156, Operational Risk Management' anchor='(?i)operational risk management'
+        matches=8  by owning item={'15': 7}  outside every span=0
+        offsets(<=20, excl. this item's own span)=[217954, 561576, 562316, 562551, 569984, 577213, 578156]
+
+--- item 7  extracted  conf=0.75  review_required=True  span=[189096,189494) 398 chars
+    heading: 'Item 7. Management’s Discussion and Analysis of Financial Condition and Results of Operations.'
+    body:    '\nManagement’s discussion and analysis of financial condition and results of operations, entitled “Management’s discussion and analysis,” appears on pages 52–167. Such information should be read in conjunction with the Consolidated Financial Statements and Notes thereto, which appear on pages 172–321.\n\n'
+    target 'pages 52–167, MD&A' anchor='(?i)consolidated statements of income'
+        matches=33  by owning item={'15': 33}  outside every span=0
+        offsets(<=20, excl. this item's own span)=[216290, 617658, 626846, 639545, 660692, 750638, 793457, 794047, 801425, 833722, 835174, 841784, 842532, 852721, 853739, 854645, 863148, 863613, 867492, 872975]
+
+--- item 7A  extracted  conf=0.75  review_required=False  span=[189494,189768) 274 chars
+    heading: 'Item 7A. Quantitative and Qualitative Disclosures About Market Risk.'
+    body:    '\nRefer to the Market Risk Management section of Management’s discussion and analysis on pages 141–149 for a discussion of quantitative and qualitative disclosures about market risk.\n\n39\n\nParts II and III\n\n'
+    target 'pages 141–149, Market Risk Management' anchor='(?i)market risk management'
+        matches=20  by owning item={'15': 19}  outside every span=0
+        offsets(<=20, excl. this item's own span)=[217868, 230980, 284106, 340132, 508380, 511221, 511518, 511542, 511657, 511899, 512319, 512757, 512918, 513286, 513555, 513836, 513908, 514707, 533922]
+
+--- item 8  extracted  conf=0.75  review_required=True  span=[189768,190140) 372 chars
+    heading: 'Item 8. Financial Statements and Supplementary Data.'
+    body:    '\nThe Consolidated Financial Statements, together with the Notes thereto and the report thereon dated February 14, 2025, of PricewaterhouseCoopers LLP, the Firm’s independent registered public accounting firm (PCAOB ID 238), appear on pages 169–321.\n\nThe “Glossary of Terms and Acronyms’’ is included on pages 327–333.\n\n'
+    target 'pages 169–321, financial statements' anchor='(?i)consolidated statements of income'
+        matches=33  by owning item={'15': 33}  outside every span=0
+        offsets(<=20, excl. this item's own span)=[216290, 617658, 626846, 639545, 660692, 750638, 793457, 794047, 801425, 833722, 835174, 841784, 842532, 852721, 853739, 854645, 863148, 863613, 867492, 872975]
+
+########## bac-2006/filing.htm  doc_status=success  warnings=[]
+           norm_chars=705848  in_spans=655376  meta.coverage=0.9285  outside_every_span=50472
+           regions outside every span [start,end,chars]: [(0, 8565, 8565), (663941, 705848, 41907)]
+
+--- item 3  extracted  conf=0.95  review_required=False  span=[47045,47274) 229 chars
+    heading: 'Item 3. LEGAL PROCEEDINGS'
+    body:    '\nSee “Litigation and Regulatory Matters” in Note 13 of the Consolidated Financial Statements beginning on page 137 for Bank of America’s litigation disclosure which is incorporated herein by reference.\n\n'
+    target 'Note 13, page 137' anchor='Litigation and Regulatory Matters'
+        matches=3  by owning item={'1A': 1, '8': 1}  outside every span=0
+        offsets(<=20, excl. this item's own span)=[38045, 549832]
+
+--- item 6  extracted  conf=0.95  review_required=False  span=[54146,54348) 202 chars
+    heading: 'Item 6. Selected Financial Data'
+    body:    '\nSee Table 5 in the MD&A on page 21 and Table XII of the Statistical Financial Information on page 95 which are incorporated herein by reference.\n\n10\n\nTable of Contents\n\n'
+    target 'Table 5 in the MD&A, page 21' anchor='(?i)consolidated statement of income'
+        matches=19  by owning item={'15': 1, '7': 5, '8': 13}  outside every span=0
+        offsets(<=20, excl. this item's own span)=[172416, 288369, 318436, 325083, 329645, 391719, 396611, 417572, 429099, 444577, 472110, 483824, 484925, 485116, 485246, 500202, 607500, 651843, 663001]
+
+--- item 7A  extracted  conf=0.95  review_required=False  span=[388288,388463) 175 chars
+    heading: 'Item 7A. QUANTITATIVE AND QUALITATIVE DISCLOSURES ABOUT MARKET RISK'
+    body:    '\nSee “Market Risk Management” in the MD&A beginning on page 72 which is incorporated herein by reference.\n\n'
+    target 'Market Risk Management in the MD&A, page 72' anchor='Market Risk Management'
+        matches=11  by owning item={'1': 3, '1A': 1, '7': 6}  outside every span=0
+        offsets(<=20, excl. this item's own span)=[28992, 29078, 29121, 39625, 55200, 79751, 80543, 83639, 181936, 282394]
+
+########## spatz-2014/filing.htm  doc_status=success_with_warning  warnings=[('unattributed_content', None), ('item_span_near_empty', '8')]
+           norm_chars=65197  in_spans=43237  meta.coverage=0.6632  outside_every_span=21960
+           regions outside every span [start,end,chars]: [(0, 4653, 4653), (47890, 65197, 17307)]
+
+--- item 8  extracted  conf=0.8  review_required=True  span=[30680,30921) 241 chars
+    heading: 'Item 8.'
+    body:    "\nFinancial Statements and Supplementing Data\n\nThe financial statements of the Company and the related report of the Company's independent registered public accounting firm thereon are included in this report on pages 15 through 22.\n\n"
+    target 'pages 15 through 22 of this report' anchor='(?i)report of independent registered public accounting firm'
+        matches=1  by owning item={}  outside every span=1
+        offsets(<=20, excl. this item's own span)=[48815]
+
+########## nvda-2024/filing.htm  doc_status=success_with_warning  warnings=[('item_span_near_empty', '8')]
+           norm_chars=341155  in_spans=327968  meta.coverage=0.9613  outside_every_span=13187
+           regions outside every span [start,end,chars]: [(0, 10384, 10384), (338352, 341155, 2803)]
+
+--- item 8  extracted  conf=0.8  review_required=True  span=[221995,222204) 209 chars
+    heading: 'Item 8. Financial Statements and Supplementary Data'
+    body:    '\nThe information required by this Item is set forth in our Consolidated Financial Statements and Notes thereto included in this Annual Report on Form 10-K.\n\n'
+    target 'our Consolidated Financial Statements, in this Form 10-K' anchor='(?i)consolidated statements of income'
+        matches=14  by owning item={'15': 13, '7': 1}  outside every span=0
+        offsets(<=20, excl. this item's own span)=[202874, 230528, 231886, 240754, 260070, 263968, 264687, 274086, 275295, 275728, 279625, 294742, 295442, 321894]
+
+########## xom-2021/filing.htm  doc_status=ambiguous  warnings=[('expected_item_missing', '6'), ('last_item_dominates', '16'), ('item_span_near_empty', '7'), ('item_span_near_empty', '8')]
+           norm_chars=388848  in_spans=381035  meta.coverage=0.9799  outside_every_span=7813
+           regions outside every span [start,end,chars]: [(0, 5350, 5350), (386385, 388848, 2463)]
+
+--- item 7  extracted  conf=0.75  review_required=True  span=[103997,104264) 267 chars
+    heading: "ITEM 7. MANAGEMENT'S DISCUSSION AND ANALYSIS OF FINANCIAL CONDITION AND RESULTS OF OPERATIONS"
+    body:    '\nReference is made to the section entitled “Management’s Discussion and Analysis of Financial Condition and Results of Operations” in the Financial Section of this report.\n\n'
+    target 'MD&A section of the Financial Section' anchor='(?i)consolidated statement of income'
+        matches=13  by owning item={'16': 13}  outside every span=0
+        offsets(<=20, excl. this item's own span)=[123009, 127010, 196319, 242212, 253028, 256947, 275148, 277600, 284263, 284487, 288623, 304331, 305476]
+
+--- item 7A  extracted  conf=0.75  review_required=False  span=[104264,104677) 413 chars
+    heading: 'ITEM 7A. QUANTITATIVE AND QUALITATIVE DISCLOSURES ABOUT MARKET RISK'
+    body:    '\nReference is made to the section entitled “Market Risks” in the Financial Section of this report. All statements, other than historical information incorporated in this Item 7A, are forward-looking statements. The actual impact of future market changes could differ materially due to, among other things, factors discussed in this report.\n\n31\n\n'
+    target '“Market Risks” in the Financial Section' anchor='(?i)market risks'
+        matches=3  by owning item={'16': 2}  outside every span=0
+        offsets(<=20, excl. this item's own span)=[112170, 202521]
+
+--- item 8  extracted  conf=0.75  review_required=True  span=[104677,105414) 737 chars
+    heading: 'ITEM 8. FINANCIAL STATEMENTS AND SUPPLEMENTARY DATA'
+    body:    '\nReference is made to the following in the Financial Section of this report:\n\n•Consolidated financial statements, together with the report thereon of PricewaterhouseCoopers LLP (PCAOB ID 238) dated February 23, 2022, beginning with the section entitled “Report of Independent Registered Public Accounting Firm” and continuing through “Note 19: Income and Other Taxes”;\n\n•“Supplemental Information on Oil and Gas Exploration and Production Activities” (unaudited); and\n\n•“Frequently Used Terms” (unaudited).\n\nFinancial Statement Schedules have been omitted because they are not applicable or the required information is shown in the consolidated financial statements or notes thereto.\n\n'
+    target 'financial statements in the Financial Section' anchor='(?i)report of independent registered public accounting firm'
+        matches=4  by owning item={'16': 3}  outside every span=0
+        offsets(<=20, excl. this item's own span)=[112290, 232379, 237857]
+
+--- item 15  extracted  conf=0.75  review_required=False  span=[111521,111730) 209 chars
+    heading: 'ITEM 15. EXHIBITS, FINANCIAL STATEMENT SCHEDULES'
+    body:    '\n(a)(1) and (2) Financial Statements:\n\nSee Table of Contents of the Financial Section of this report.\n\n(b)(3) Exhibits:\n\nSee Index to Exhibits of this report.\n\n'
+    target 'Table of Contents of the Financial Section' anchor='(?i)consolidated statement of income'
+        matches=13  by owning item={'16': 13}  outside every span=0
+        offsets(<=20, excl. this item's own span)=[123009, 127010, 196319, 242212, 253028, 256947, 275148, 277600, 284263, 284487, 288623, 304331, 305476]
+
+########## mrk-1995/filing.txt  doc_status=success_with_warning  warnings=[('item_span_near_empty', '7'), ('item_span_near_empty', '8')]
+           norm_chars=81842  in_spans=62142  meta.coverage=0.7593  outside_every_span=19700
+           regions outside every span [start,end,chars]: [(0, 3248, 3248), (54466, 61944, 7478), (72868, 81842, 8974)]
+
+--- item 5  extracted  conf=0.95  review_required=False  span=[61944,62175) 231 chars
+    heading: "ITEM 5.  MARKET FOR THE REGISTRANT'S COMMON EQUITY AND RELATED STOCKHOLDER"
+    body:    "MATTERS.\n\n     The information required for this item is incorporated by reference to\npages 37 and 51 of the Company's 1995 Annual Report to stockholders.\n\n"
+    target 'pages 37 and 51 of the 1995 Annual Report to stockholders' -> NOT IN THIS DOCUMENT
+
+--- item 7  extracted  conf=0.8  review_required=True  span=[62500,62747) 247 chars
+    heading: "ITEM 7.  MANAGEMENT'S DISCUSSION AND ANALYSIS OF FINANCIAL CONDITION AND RESULTS"
+    body:    "OF OPERATIONS.\n\n     The information required for this item is incorporated by reference to\npages 28 through 37 of the Company's 1995 Annual Report to stockholders.\n\n"
+    target 'pages 28 through 37 of the 1995 Annual Report to stockholders' -> NOT IN THIS DOCUMENT

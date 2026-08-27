@@ -1,0 +1,70 @@
+{
+  "pr": 60,
+  "round": 2,
+  "result": "REQUEST_CHANGES",
+  "scope": "repair diff 3ed9003..HEAD plus standing round-1 findings",
+  "counts": {
+    "HIGH": 0,
+    "MEDIUM": 2,
+    "LOW": 2
+  },
+  "round1_verified_closed": [
+    "R1",
+    "R2",
+    "R3",
+    "R4",
+    "R5",
+    "R6",
+    "R7",
+    "R8"
+  ],
+  "verified": [
+    "Auditor artifacts unchanged AND regenerate: --auditor-input byte-identical, --table + default dump concatenated byte-identical to d13-span-dump.txt",
+    "No verdict other than xom-2021 item 8 moved between 3ed9003 and HEAD (\u00a7c1-\u00a7c7 headers and per-item verdict lines identical)",
+    "git diff origin/main...HEAD over src/, evals/*.py, .eval-baseline.json, specs/000, specs/001 is EMPTY",
+    "R3 fully met: all four xom bodies quoted, item 8 adjudicated out, BODY_MAX named \u2014 and d9_class_scan.py:82 really does gate on len(span), so 'missed twice over' holds",
+    "Prong 1's KIND test sorts all 17 in-class bodies consistently \u2014 none carries a non-pointer sentence that disposes of a requirement",
+    "Form 10-K Item 15(a)(2) attributes the schedules requirement to Item 8, so the item-8 ejection survives the obvious counter-reading"
+  ],
+  "orchestrator_verified": [
+    "R10 both limbs: the quoted string is 111 chars not 110; --prong1 segments intc-2002 item 5 as [0] 201 / [1] 359 / [2] 5 with the holder sentence INSIDE [1]"
+  ],
+  "findings": [
+    {
+      "id": "R9",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The repair's own census move (18 in-class -> 17) did not propagate to ADR-038 \u00a7f, which still says R2 was 'measured sound on all 18 here' \u2014 contradicting the front matter and the \u00a7f row directly above it, and falsifying the resolution's 'no stale census / count / roster claim survives anywhere' sweep claim.",
+      "evidence": "ADR-038:778 \u2014 'the two-layer split assumes segmentation is sound on this shape; it is measured sound on all 18 here'. The same file :12 says three defect + 'the other 14 in-class items correct' = 17 in-class, :736 says 'the census moves to 17 items across 6 filings, not 18', and :774 (the row immediately above) already reads 'the fourteen correct verdicts'. The line is byte-identical to 3ed9003 (pre-repair :648) \u2014 the pre-repair count left behind. pr60-r1-resolution.json's sweep greps only 'all 45 dev|18/6|18 items across 6|18 across 6|eleven `correct`|7/7A/8/15', none of which matches 'all 18 here', so the sweep reported clean on a surviving stale count.",
+      "repro": "grep -n 'all 18 here' specs/decisions/ADR-038-internal-pointer-adjudication.md -> :778, against :12/:736/:774 saying 17/14",
+      "acceptance": "ADR-038:778 reads 'all 17' (or names the set it means), and the propagation sweep is re-run with a pattern that matches a bare 'all 18'/'18 here', not only the '18/6' spellings."
+    },
+    {
+      "id": "R10",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The new 'prong 1 cannot be a length test' derivation publishes a wrong char count (110; it is 111) and claims all three \u00a7b3 rejections were 'measured the same way' as the xom bodies, when the intc-2002 figure is a hand sub-split INSIDE a sentence the named instrument does not split \u2014 and 'no threshold separates them from 176' only holds under that undisclosed split.",
+      "evidence": "ADR-038:730-735, re-published at ADR-034:227 and tasks/TODO.md:1002. ORCHESTRATOR-VERIFIED both limbs: (a) the quoted string is 111 chars, not 110. (b) d13_span_dump.py --prong1 segments intc-2002 item 5 as [0] 201, [1] 359, [2] 5 \u2014 sentence [1] is ONE splitter unit containing BOTH the pointer clause and the 111-char holder sentence; ba-2003's 74/145/89 and textron-2001's 104/86 ARE splitter sentences, so 'measured the same way' is false for exactly the item carrying the load-bearing minimum. (c) Under the instrument's own segmentation the three rejections span 190..359, so a threshold of ~180 WOULD reject all three while admitting xom-2021 item 8's 176 \u2014 'no threshold separates them' is true only under the sub-sentence split, which the ADR does not disclose. (d) --prong1's output is not committed and is absent from ADR-038's Verification list (:872-877 lists only --table and --auditor-input), which is why an off-by-one in a retyped figure survived \u2014 the exact failure mode the script's own docstring says it exists to prevent.",
+      "repro": "python3 tasks/reviews/d13_span_dump.py --prong1 | grep -A4 'intc-2002 item 5'; python3 -c \"print(len(...))\" -> 111",
+      "acceptance": "The figure reads 111 in all three surfaces; \u00a7e3 states that intc-2002's standalone content is a hand sub-split inside splitter sentence [1] (359 chars) rather than 'measured the same way'; and either the 'no threshold separates them' sentence is qualified with that dependence, or --prong1's output is committed (as --table/--auditor-input are) and listed in Verification so the numbers are derived rather than retyped."
+    },
+    {
+      "id": "R11",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "\u00a7d6's inference about the un-adjudicated cvx-2015 item 7 quotes the item-8 result as 'a divergence' without the qualifier its own \u00a7d3 attaches \u2014 that this divergence is one of the three the auditor concedes in its own words.",
+      "evidence": "ADR-038:588-591. The shape claim checks out (item 7 = 280 chars / 0.80 / review_required True / warning '7'; item 8 = 189 / 0.80 / True / '8'), and d13-auditor-verdicts.md row 4 is WRONG against the ruling's correct. But the same file \u00a74 lists cvx-2015 item 8 among 'my three weakest WRONGs' and says 'I would concede all three to RIGHT' under precisely the ruling \u00a7b R2 re-affirms \u2014 which ADR-038:511-517 records. So the extrapolated cvx-7 divergence would land in the conceded bucket, not the residue; \u00a7d6 omits that and a reader of \u00a7d6 alone over-reads the gap.",
+      "repro": "sed -n '585,592p' ADR-038; sed -n '/What I hold weakly/,+3p' tasks/reviews/d13-auditor-verdicts.md",
+      "acceptance": "\u00a7d6's bullet adds that item 8's divergence is one of the three the auditor concedes under ADR-004 shape 2, so the inferred cvx-7 divergence would be a conceded one \u2014 or drops the extrapolation and records only that cvx 7 has no independent read."
+    },
+    {
+      "id": "R12",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "\u00a7e3's 'All four in full, no ellipsis' block labels each quoted BODY with its SPAN char count, so every quoted string is shorter than the number next to it.",
+      "evidence": "ADR-038:692-698 quotes 'item 7 (267 chars)', '7A (413)', '8 (737)', '15 (209)' \u2014 span lengths including the heading line; the quoted text is body-only at 173/345/685/160. \u00a7c by contrast quotes heading + body under its span count, so the convention differs between sections. The 737 figure is correct for the BODY_MAX argument (d9_class_scan.py:82 gates on len(span) despite the constant's name), so no verdict moves.",
+      "repro": "python3 tasks/reviews/d13_span_dump.py --prong1 | grep 'xom-2021 item'",
+      "acceptance": "\u00a7e3 either quotes the heading line too (matching \u00a7c's convention) or labels the quotes with body lengths, keeping the span figure only where the BODY_MAX argument needs it."
+    }
+  ]
+}

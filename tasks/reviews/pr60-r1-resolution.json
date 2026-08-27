@@ -1,0 +1,113 @@
+{
+  "pr": 60,
+  "round": 1,
+  "role": "implementer",
+  "result": "ALL 8 ADDRESSED — 4 repaired, 4 corrected in place; no verdict re-adjudicated except the one PR #60 R3 required",
+  "red_first": "tasks/reviews/pr60-r1-red.txt — every finding's repro run against the committed tree at 4311fb1 and shown TRUE before any edit; the post-fix sweep is appended to the same file",
+  "constraints_held": [
+    "git diff origin/main -- src/ .eval-baseline.json specs/000-invariants.md specs/001-sec10k-contract.md is EMPTY; git status over the same paths plus evals/run.py and evals/snapshot.py is EMPTY",
+    "evals/snapshot.py . vs the origin/main tree: cmp exit 0, dev 365da1ce… and heldout 4d2a7128… unchanged",
+    "python3 -m evals.run --suite invariant -> exit 0, 81/81 = 1.000; --suite fast -> exit 0, 144/144 = 1.000; baseline never moved",
+    "no auditor re-run: tasks/reviews/d13-auditor-verdicts.md and d13-auditor-input.txt are byte-unchanged in this commit"
+  ],
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "disposition": "REPAIRED",
+      "verdict_moved": false,
+      "what": "ADR-038 §c1 named FS-index lines as the pointed-at CONTENT on cvx-2015 items 6 and 2 — the same reference-for-content conflation §c1 convicts the item-15 match of, on the flagship item of the whole disagreement.",
+      "fix": "§c1 item 6 now names 363,489 ('Five-Year Financial Summary\\n\\nUnaudited\\n\\nMillions of') as the table and 127,200 as a further FS-index line; §c1 item 2 names 366,212 ('Table I - Costs Incurred in Exploration…') and 127,268 as an index line. A dated note records the conflation as the reason §a has the script print a distribution rather than a verdict. §d6's anchor bullet now says the auditor's anchor (Five-Year Financial Summary -> 363,489) was the BETTER one and this ADR's named a reference.",
+      "verdict_impact": "none — every match of every anchor for both targets, index line and content alike, is outside every span, which is what the verdict rests on and all the measurement supports."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "disposition": "REPAIRED",
+      "verdict_moved": false,
+      "what": "The ADR-034 §f amendment credited the blind auditor with cvx-2015 item 7 and bac-2006 item 7A, neither of which was in the sample, and hedged 'met or not per ADR-038 §d' on a trip ADR-038 asserts three times.",
+      "fix": "ADR-034 §f row now reads TRIPPED as its own finding, names what the pass actually covered (cvx 6 and 8, bac 3 and 6, spatz 8, plus cvx 2/7A, jpm 7, mrk 5 which the row does not name) and states that cvx 7 and bac 7A were NOT put to the auditor. ADR-038 §d6 gains that omission as its first bullet, with the honest reading that cvx 7's sibling item 8 — same shape, same 0.80, same warning — WAS adjudicated and came back a divergence, so cvx 7 would likely have diverged too and the sample does not say. evals/adversarial/cvx-2015-internal-pointer.json's triage note records it too, because that case asserts item 7.",
+      "verdict_impact": "none — the decline's outcome and every §c verdict stand; what changes is what the amendment claims about coverage."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "disposition": "REPAIRED — AND IT MOVED THE CENSUS",
+      "verdict_moved": true,
+      "what": "xom-2021 item 8 was readmitted to the class without being tested against R1 prong 1, and §e3 elided the very sentence that bears on it. Census 14->18 was published in five places.",
+      "fix": "§e3 now quotes all four xom bodies in full, adjudicates item 8 explicitly and rules it OUT: its 176-char closing sentence ('Financial Statement Schedules have been omitted because they are not applicable…') disposes of part of what the item requires standing alone, without the pointer, which is ADR-034 §b3's own rejection ground. Item 7A survives the same test because its two non-pointer sentences are a forward-looking-statements safe-harbour qualifier that answers nothing without the pointer. BODY_MAX=700 is named as the second reason the scan missed item 8 (span 737).",
+      "prong1_is_not_a_length_test": "Derived, and it is the finding under the finding: ADR-007's IBR_REMAINDER_MAX=300 was the obvious candidate and does NOT reproduce §b3 — intc-2002 item 5's only standalone content is 'As of February 21, 2003, there were approximately 240,000 registered holders of record of Intel's common stock.' = 110 chars, well under 300, and §b3 rejects it. Measured the same way ba-2003 item 5 is 308 and textron-2001 item 5 is 190, so the three rejections span 110..308 and no threshold separates them from xom item 8's 176. The discriminator is KIND: does the sentence dispose of any part of what the item requires, on its own, without the pointer?",
+      "verdict_impact": "xom-2021 item 8 moves in-class-correct -> out-of-class. Census 18 items/6 filings -> 17/6. Propagated to ADR-038 front matter + §e3 + §f + §g1 + §g4, ADR-034 §b3 (two places), INDEX.md, tasks/TODO.md TD-149 and TD-12, and prompts/024.",
+      "new_reopener": "§f gains a row: prong 1's kind test is overturned if it mis-sorts one of §b3's three rejections or sorts xom 8 and 7A the same way — instrument `--prong1` over §e3's seven bodies, threshold one mis-sort. The census returns to 18/6 if item 8 comes back."
+    },
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "disposition": "REPAIRED",
+      "verdict_moved": false,
+      "what": "§d3 — the section whose only job is to preserve the disagreement — contained two statements the committed auditor output falsifies: that 'on the 0.95 group the two reads already agree' (the auditor's 0.95 group is rows 1,2,3,5,6 = cvx 2/6/7A AND bac 3/6, and on bac 3/6 they plainly do not agree), and 'four of the five divergences reduce to bac-2006 3/6' (three are conceded, two remain).",
+      "fix": "The bullet now names the auditor's 0.95 group by its own row numbers, says the two reads agree on the cvx three and DO NOT agree on bac 3/6 — 'those two are the entire subject of this bullet' — and reads 'three of the five divergences are conceded, leaving a residue of two'. Both corrections carry a dated PR #60 R4 note rather than being applied silently."
+    },
+    {
+      "id": "R5",
+      "severity": "LOW",
+      "disposition": "CORRECTED IN PLACE",
+      "verdict_moved": false,
+      "what": "§b stated no rule for an anchor that matches both inside a span and outside every span, and §c2 resolved that case for ge-1994 item 8 while reporting only the inside match, hiding out=5 that its own dump prints.",
+      "fix": "§b R3 gains an explicit 'Mixed matches' paragraph: a target counts as reached only if an inside match IS the content or position the body names, not a reference to it; adjudicated by hand in §c, which is why the script emits no boolean. §c2 now prints '1 match inside item 14, at 78,112, and 5 outside every span', says the first draft printed only the first, and adds that the verdict does not depend on it — item 8 is correct under R3's second bullet regardless, via ADR-035's warning."
+    },
+    {
+      "id": "R6",
+      "severity": "LOW",
+      "disposition": "CORRECTED IN PLACE",
+      "verdict_moved": false,
+      "what": "'the eleven correct verdicts' in §f and '45 dev fixtures' in §d5.",
+      "fix": "§f reads 'the fourteen correct verdicts' (17 in class minus 3 defects). §d5 re-derives the denominator: the auditor writes 'all 45 fixtures', ls evals/fixtures/*/filing.* is 44, the tally {'7':7,'8':15,'1':2} reproduces over 44 dev + 6 held-out, so only the denominator was misstated — corrected rather than quoted forward. The sweep then caught the same 45 in tasks/TODO.md TD-5, which no finding named."
+    },
+    {
+      "id": "R7",
+      "severity": "LOW",
+      "disposition": "CORRECTED IN PLACE",
+      "verdict_moved": false,
+      "what": "§d6 claimed 'no variance estimate' while the one available variance datapoint — the same instrument ruling cvx-2015 item 6 CORRECT on 2026-08-19 — is the flip that trips the reopener, and §d2 called the result convergence without saying so.",
+      "fix": "§d6's bullet is rewritten as 'One run here, but not the instrument's first run — and the one variance datapoint available is a FLIP', quoting audit row 21 verbatim. The reconciliation is stated and dated: the current auditor convicts item 6 by contrast with item 8 at 0.80/review_required true, and item 8 only acquired those when ADR-035 shipped item_span_near_empty on 2026-08-26, seven days after the first pass — both runs saw the same span, only the second saw a same-filing item of the same shape flagged. The alternative reading (the judge is unstable on this shape) is left open rather than argued away."
+    },
+    {
+      "id": "R8",
+      "severity": "LOW",
+      "disposition": "CORRECTED IN PLACE",
+      "verdict_moved": false,
+      "what": "§g8 called the bac-2006 gap an ORDERING of two questions; the actual unstated move is a change of SCOPE for 'the output' between R3's two bullets, and specs/001 makes item-level the contract's default for review_required.",
+      "fix": "§b R3 gains a 'Scope' paragraph: 'reached' is asked document-wide, the honesty half is item-level because review_required is item-level by the contract's own definition, and that asymmetry is the single move on which bac-2006 3/6/7A come out correct. §g8 now names the scope choice — quoting specs/001's 'It is **item-level**' — says an item-scoped reading of both halves would convict them, and states that naming the scope is not justifying it."
+    }
+  ],
+  "sweep": {
+    "surfaces": [
+      "specs/decisions/ADR-038",
+      "specs/decisions/ADR-034",
+      "specs/decisions/ADR-019",
+      "specs/decisions/INDEX.md",
+      "tasks/TODO.md",
+      "evals/adversarial/cvx-2015-internal-pointer.json",
+      "evals/adversarial/cvx-2015-silent-pointer-items.json",
+      "prompts/024-d13-internal-pointer-adjudication.md"
+    ],
+    "caught_that_no_finding_named": [
+      "ADR-038 §b coverage sentence: 'contribute eleven correct verdicts' -> ten (jpm 4 + xom 3 + bac 3, after item 8 leaves)",
+      "ADR-038 §e1: 'all eleven correct ones' -> fourteen",
+      "ADR-038 §b: '§e4 says what to do with the two out-of-class items' -> four items, failing three different prongs; only mrk 5/7 have a status wrong under another ADR",
+      "ADR-038 §g1: 'nvda-2024 8 and xom-2021 15 are correct if readmitted' -> xom 15 IS admitted by prong 2; only nvda 8 is hypothetical",
+      "ADR-038 §g4: 'found four more in-class items on xom-2021' -> three, by reading four bodies",
+      "tasks/TODO.md TD-5: 'all 45 dev fixtures' (same defect as R6, in a surface R6 did not name)",
+      "tasks/TODO.md TD-12: 'leave the eleven correct ones untouched' -> fourteen",
+      "ledger_line_refs rot from this round's own edits: ADR-034 :509->:523 and :561->:575, ADR-038 :585->:677 and :346->:396, plus TD-149's quoted sentence itself changed ('a mechanism' -> 'two mechanisms') and was re-quoted"
+    ],
+    "verified_clean_after": "grep for 'all 45 dev|18/6|18 items across 6|18 across 6|eleven `correct`|7/7A/8/15' across all eight surfaces exits 1"
+  },
+  "not_done_and_why": [
+    "No verdict was re-adjudicated other than xom-2021 item 8, which PR #60 R3's acceptance required.",
+    "The auditor was not re-run and its two artifacts are byte-unchanged — R2's gap (cvx 7 / bac 7A never adjudicated blind) is RECORDED in ADR-038 §d6, ADR-034 §f and the cvx debt case, not closed. Closing it means a second blind pass, which is a fresh sample, not a repair.",
+    "The eleven `correct` verdicts and the three `defect` verdicts are unchanged; R1 corrected which offsets hold the content, not whether the content is in a span.",
+    "No new TD row opened: all four LOW findings were corrected in place per the round brief, so there is no deferred work to carry."
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "pr": 60,
+  "round": 3,
+  "role": "implementer",
+  "result": "APPROVED at round 3 with 3 LOW; all three corrected in place. Bounded pass — nothing beyond R13-R15 moved.",
+  "amended_into": "7391a7c (repo rule 7: no fix-commit chasing the commit it patches; nothing is merged)",
+  "the_common_defect": "All three are the same shape and the reviewer named it: an artifact whose STATED COVERAGE is wider than the thing that produced it. R9's grep pattern, R13's provenance sentence, R15's sweep filter. In a PR whose whole subject is claim accuracy, that is the defect that had to go.",
+  "findings": [
+    {
+      "id": "R13",
+      "severity": "LOW",
+      "disposition": "CORRECTED IN PLACE",
+      "verdict_moved": false,
+      "what": "§e3's 'Every figure below is printed by --prong1 ... none is retyped' was a false universal. --prong1 covers 7 bodies of which 3 are in class, so it cannot and does not produce the census figures later in the same section (17, 6, 18, 14, the 5/4/3/1/1 split), nor the '13-char margin'.",
+      "fix": "The sentence is scoped to what --prong1 actually prints — 'Every figure in this paragraph and the table below: the sentence lengths, the non-pointer totals, the 111-char sub-split and the 177..190 interval' — and states that the 13-char margin is that interval's width (190-177), i.e. arithmetic on a printed figure. It then says in bold that the census figures are NOT from --prong1 and cannot be, cites --table / tasks/reviews/d13-span-dump.txt (already listed two entries below in Verification) as the per-item roster's source, and attributes the 14-items-across-5-filings base to ADR-034 §b3's own count.",
+      "second_surface": "TD-149 republished the same overclaim ('every figure is derived by --prong1 into d13-prong1.txt') and is scoped identically."
+    },
+    {
+      "id": "R14",
+      "severity": "LOW",
+      "disposition": "CORRECTED IN PLACE",
+      "verdict_moved": false,
+      "what": "The 'All four in full, no ellipsis' block dropped the trailing page-chrome sentence '31' from the xom-2021 item 7A quote, so 338 visible chars carried a 345 body label. Items 7/8/15 differ from their bodies only by newlines markdown collapses; 7A differed by real dropped text.",
+      "fix": "The 7A quote now carries ' / `31`' in the same slash convention items 8 and 15 already use, with a note that the trailing 31 is page chrome, is part of the 345, and is carried because 'no ellipsis' has to mean it — plus the newline explanation for the other three, so a reader can check each quote against its label."
+    },
+    {
+      "id": "R15",
+      "severity": "LOW",
+      "disposition": "CORRECTED IN PLACE",
+      "verdict_moved": false,
+      "what": "pr60-r2-red.txt recorded 'UNPIPED exit of the filter = 1' with no command beside it. The BARE pattern alone returns 35 hits over the nine surfaces; the exclusion filter that reduces it to zero was nowhere recorded, so the headline result was unreproducible. The reviewer hand-audited every hit and confirmed the SUBSTANCE is clean — only the check was unauditable.",
+      "fix": "The block now records both greps verbatim and copy-pasteable: the nine-file array, the BARE pattern, the raw grep, and the exclusion grep with its full token list, plus its UNPIPED exit. It enumerates what the filter drops and why that is not question-begging (every excluded token is a correct current figure, a year, an ADR/TD/review id, a page reference, or the real item code 'item 11' — none can hide a stale 18/45/110, since those literals survive the filter). The result is restated honestly as '35 raw hits, 0 surviving, and the reviewer hand-audited all 35'.",
+      "re_derived": "The recorded command was RUN as written before being recorded: 35 raw hits, filter exit 1, 0 surviving lines; and the pattern was re-checked for sensitivity against an injected 'measured sound on all 18 here', which it matches.",
+      "self_caught": "The first draft of this block recorded a BYTE size (39,715) for the raw grep output. That figure had already drifted to 40,024 by the time this round's own edits landed — a figure that cannot stay true. It is removed, with the reason stated in the block, and only the stable line count is recorded."
+    }
+  ],
+  "bound_respected": {
+    "files_touched": [
+      "specs/decisions/ADR-038-internal-pointer-adjudication.md (R13 sentence, R14 quote)",
+      "tasks/TODO.md (TD-149's copy of the R13 overclaim; three ADR-038 line refs re-derived, all unchanged this round)",
+      "tasks/reviews/pr60-r2-red.txt (R15 block)",
+      "tasks/reviews/pr60-r3-resolution.json (new, this file)"
+    ],
+    "not_touched": [
+      "no verdict re-adjudicated; the census stays 17 items across 6 filings",
+      "auditor NOT re-run; d13-auditor-verdicts.md and d13-auditor-input.txt byte-unchanged and still regenerating",
+      "d13-prong1.txt, d13-span-dump.txt and d13_span_dump.py byte-unchanged and still reproducing",
+      "no prose improved in passing, no new analysis added",
+      "src/, evals/*.py, .eval-baseline.json, specs/000-invariants.md, specs/001-sec10k-contract.md byte-identical to origin/main (0 files)",
+      "tasks/reviews/pr60-r3.json left untracked for the coordinator to commit"
+    ]
+  },
+  "gate": {
+    "invariant": "exit 0, 81/81 = 1.000",
+    "fast": "exit 0, 144/144 = 1.000",
+    "snapshot_cmp": "exit 0",
+    "baseline": "unmoved",
+    "note": "run after the final edit, unpiped exit codes, through the real pre-commit hook"
+  }
+}

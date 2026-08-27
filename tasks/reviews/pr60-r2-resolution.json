@@ -1,0 +1,84 @@
+{
+  "pr": 60,
+  "round": 2,
+  "role": "implementer",
+  "result": "ALL 4 ADDRESSED — 2 repaired, 2 corrected in place. No verdict re-adjudicated; the census stays 17/6.",
+  "note": "Round 3 of 3. Both blocking findings were in analysis the round-1 REPAIR introduced, and both are conceded in full: the threshold argument was overstated and one figure was retyped wrong.",
+  "red_first": "tasks/reviews/pr60-r2-red.txt — every repro run against d76a91c and shown TRUE before any edit; the widened sweep is appended to the same file with UNPIPED exit codes.",
+  "constraints_held": [
+    "git diff origin/main -- src/ .eval-baseline.json specs/000-invariants.md specs/001-sec10k-contract.md evals/run.py evals/snapshot.py evals/oracle.py evals/metrics.py evals/bench.py -> 0 files",
+    "auditor NOT re-run; d13-auditor-verdicts.md and d13-auditor-input.txt byte-unchanged, and --auditor-input still regenerates identically (cmp exit 0)",
+    "--table + default dump still regenerate d13-span-dump.txt identically (cmp exit 0)",
+    "python3 -m evals.run --suite invariant -> exit 0, 81/81 = 1.000; --suite fast -> exit 0, 144/144 = 1.000; baseline diff empty",
+    "evals/snapshot.py vs the origin/main tree: cmp exit 0"
+  ],
+  "findings": [
+    {
+      "id": "R9",
+      "severity": "MEDIUM",
+      "disposition": "REPAIRED",
+      "verdict_moved": false,
+      "what": "ADR-038 §f still read 'measured sound on all 18 here' — byte-identical to the pre-repair line at 3ed9003 — while :12, :736 and the row directly above said 17/14. Round 1's sweep pattern ('18/6|18 items across 6|18 across 6|...') could not match a bare 'all 18 here', so the resolution's 'no stale count survives anywhere' was reported clean over a surviving one.",
+      "fix": "The line now reads 'measured sound on all 17 in-class items here'. The sweep is re-run with a pattern that matches a BARE number adjacent to any census/count word in either order, over nine surfaces including the instrument script; it now reports its filter's UNPIPED exit code rather than a pipe's.",
+      "self_criticism": "A sweep whose pattern is narrower than its claim is the same defect class as a check that cannot fail. Round 1's sweep asserted a universal ('no stale claim survives anywhere') from a finite literal list — the assertion should have been scoped to what the pattern could see, or the pattern widened to match the assertion. The widened sweep then caught a FOURTH surface for R10 that R10 itself did not name (prompts/024:65)."
+    },
+    {
+      "id": "R10",
+      "severity": "MEDIUM",
+      "disposition": "REPAIRED — the argument is weakened to a true one",
+      "verdict_moved": false,
+      "what": "(a) The published intc-2002 figure was 110; it is 111 — a retyped number, wrong, in a section arguing figures must be derived, in the same PR where a retyped number was already wrong once. (b) 'Measured the same way' was false for exactly the load-bearing item: --prong1 segments intc-2002 item 5 as [0] 201 / [1] 359 / [2] 5, with the holder sentence INSIDE [1] together with a pointer clause, while ba-2003's 74/145/89 and textron-2001's 104/86 ARE splitter sentences. The 111 was an undisclosed hand sub-split. (c) Consequently 'no threshold separates them' held only under that split. (d) --prong1's output was neither committed nor listed in Verification, which is exactly why the off-by-one survived.",
+      "fix_instrument": "--prong1 now carries a printed NON_POINTER map (hand-marked, movable, same convention as the anchors), asserts its hand sub-split string is actually in the body, and prints the threshold comparison under BOTH readings. Its output is committed at tasks/reviews/d13-prong1.txt and listed in ADR-038's Verification beside --table and --auditor-input. Every figure R10 disputes — 111, 176, 190, 308, 359 and the 177..190 interval — is now derived by that script, not retyped.",
+      "fix_prose": "§e3's threshold paragraph is rewritten. It states the hand sub-split explicitly ('the instrument does NOT split this'), publishes BOTH readings in a table, and concedes that under the instrument's own segmentation the three rejections span 190..359 so a threshold in 177..190 DOES separate them from xom item 8's 176.",
+      "does_the_conclusion_survive": "YES, but on a weaker and true ground. The length reading is now REFUSED, not refuted, on three grounds independent of the split: (1) a threshold in 177..190 is fitted to four bodies with a 13-char margin, which is not a band — ADR-007's own comment refuses to move a constant no case can distinguish, and ADR-030/ADR-035 pin both edges of a measured band before adopting one; (2) the figure it would key on flips on a sub-sentence judgement (111 vs 359 for the same body), and a discriminator that unstable is worse than none; (3) the kind test needs no constant and the reviewer independently re-derived that it sorts all 17 in-class bodies consistently. §f's reopener is sharpened to 'exhibit a body the kind test mis-sorts'.",
+      "surfaces_corrected": [
+        "ADR-038 §e3 (figure + disclosure + both-readings table)",
+        "ADR-034 §b3 note",
+        "tasks/TODO.md TD-149",
+        "prompts/024 (caught by the widened sweep, NOT named by R10)"
+      ]
+    },
+    {
+      "id": "R11",
+      "severity": "LOW",
+      "disposition": "CORRECTED IN PLACE",
+      "verdict_moved": false,
+      "what": "§d6's cvx-7 extrapolation called item 8's result 'a divergence' without the qualifier §d3 attaches — item 8 is one of the three the auditor itself offers to concede under ADR-004 shape 2, the ruling §b R2 re-affirms. A reader of §d6 alone over-reads the gap.",
+      "fix": "The bullet now quotes the auditor's concession verbatim ('I would concede all three to RIGHT') and states that the inferred cvx-7 divergence would land in the CONCEDED bucket, not in the residue §d3 leaves standing. The 'the sample does not say' hedge is kept."
+    },
+    {
+      "id": "R12",
+      "severity": "LOW",
+      "disposition": "CORRECTED IN PLACE",
+      "verdict_moved": false,
+      "what": "§e3's 'all four in full' block labelled BODY quotes with SPAN counts, so every quoted string was shorter than the number beside it; §c uses the other convention (heading + body under the span count).",
+      "fix": "The four quotes are labelled with body lengths (173 / 345 / 685 / 160). The span figure is kept only where the BODY_MAX argument needs it — 'item 8 (body 685, span 737)' — and the surrounding sentence now says d9_class_scan.py:82 gates on len(span) despite the constant's name, which is what makes 'missed twice over' true."
+    }
+  ],
+  "widened_sweep": {
+    "why": "R9's real lesson: the round-1 pattern was a literal list and the claim was universal.",
+    "pattern": "(all|these|those|the|sound on|across|of)[^.]{0,40}\\b(18|45|11|eleven|110)\\b  OR  \\b(18|45|11|eleven|110)\\b[^.]{0,40}(in-class|items|filings|fixtures|correct|verdicts|chars|here)",
+    "surfaces": [
+      "ADR-038",
+      "ADR-034",
+      "ADR-019",
+      "INDEX.md",
+      "tasks/TODO.md",
+      "both cvx debt-case triage notes",
+      "prompts/024",
+      "tasks/reviews/d13_span_dump.py"
+    ],
+    "caught_that_no_finding_named": [
+      "prompts/024-d13-internal-pointer-adjudication.md:65 still carried the wrong 110 — a FOURTH surface; R10 named three",
+      "ledger_line_refs rot from this round's own inserts, again: ADR-034 :523->:526 and :575->:578, ADR-038 :677->:685. Third consecutive round in which this ADR's edits moved its own quoted lines; caught pre-commit each time.",
+      "the sweep script's own exit-code reporting was reading a pipe's status rather than the grep's — corrected to report UNPIPED exit codes, since that is the defect the red file exists to rule out"
+    ],
+    "result": "sweep A (bare stale number near a census word) and sweep B (the literal round-2 phrases) both exit 1 — no hit."
+  },
+  "not_done_and_why": [
+    "No verdict re-adjudicated. The census stays 17 items across 6 filings; xom-2021 item 8 stays out on prong 1's kind test, which the reviewer independently confirmed sorts all 17 in-class bodies consistently.",
+    "The auditor was not re-run. R2's standing gap — cvx-2015 item 7 and bac-2006 item 7A were never adjudicated blind — remains RECORDED (ADR-038 §d6, ADR-034 §f, the cvx debt case), now with R11's qualifier that the inferred cvx-7 divergence would be a conceded one.",
+    "The threshold question is not settled, deliberately: §e3 publishes both readings and says which one it takes and why, rather than asserting either settles it.",
+    "No new TD row opened — both LOW findings were corrected in place per the round brief, so nothing is deferred."
+  ]
+}

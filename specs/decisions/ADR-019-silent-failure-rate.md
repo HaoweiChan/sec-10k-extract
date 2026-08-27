@@ -7,7 +7,9 @@ the span-coverage validator as the live post-freeze candidate — marked in plac
 a standing disagreement over `cvx-2015` item 6). Ships the Executive-Officers
 boundary fix (`src/sec10k/segment.py`, `EXEC_OFFICERS_RE`). Amended by:
 ADR-030 (§d's successor built, noted in place 2026-08-23), ADR-035 (§e's
-item-level half built, noted in place 2026-08-26).
+item-level half built, noted in place 2026-08-26),
+[ADR-038](ADR-038-internal-pointer-adjudication.md) (§e's standing
+disagreement ADJUDICATED, noted in place 2026-08-27).
 
 **Ruling**: measure the silent-failure rate at 1/30 sampled (3.3%, CI [0.1%, 17.2%]) over the 447 confident-but-unchecked items; fix the Executive-Officers boundary bleed across 7 fixtures; retire the mis-specified span-coverage debt row; leave the internal-pointer-to-paginated-section class as recorded, unresolved debt.
 **Because**: metric 6 reads 0.0 by construction (the gate forces every declared check green), so the only way to see the real rate was to sample outside the checked population with an instrument the gate doesn't control.
@@ -214,6 +216,33 @@ the T8 freeze without its own ADR, not a defect in an existing layer.
 Enumerated as debt with a committed case
 (`evals/adversarial/cvx-2015-internal-pointer.json`, `debt` suite, permanently
 red).
+
+**Standing disagreement, ADJUDICATED 2026-08-27 (D13,
+[ADR-038](ADR-038-internal-pointer-adjudication.md)) — read the paragraph
+below as the record of what was disagreed, not as an open question.** ADR-038
+states a rule before applying it and adjudicates every enumerated item, with
+the extraction-auditor re-run blind on a nine-item sample. Its verdicts on
+this paragraph's three items: `cvx-2015` item 6 **`defect`**, items 7 and 8
+**`correct`**. That is the reverse of both readings recorded below on at least
+one item apiece, and it is reached at a different layer than either: the spans
+are verbatim-correct on all three (ADR-004 and ADR-005 are re-affirmed, not
+overturned), and the defect is that item 6 is reported at 0.95 with
+`review_required: false` while the selected financial data it points at lie in
+the 294,291-char region outside every span. Items 7 and 8 are correct because
+ADR-035 — built after this section was written — now carries them at 0.80 with
+`item_span_near_empty`. §b's 1/30 vs 2/30 sensitivity is therefore resolved to
+**2/30 = 6.7%**, and not by fiat: a fresh extraction-auditor pass, run blind
+on a nine-item sample with no sight of any ADR, independently ruled item 6
+WRONG on its own ground (item 6 at 119 chars publishes 0.95 /
+`review_required: false` while item 8 at 189 chars — longer — publishes 0.80 /
+true). Both reads now hold item 6 wrong, which is also the threshold ADR-034
+§f row 2 named to reopen its A2 decline. §b's published **1/30 point estimate
+is superseded**; its Clopper-Pearson interval is NOT re-derived — n is
+unchanged at 30 and re-deriving an interval is not what a decision row does.
+That re-audit disagrees with ADR-038 on five of its nine items; ADR-038 §d
+records every divergence rather than resolving it. This ADR's §e amendment note below also named
+`nvda-2024` item 8 as a fourth class member; ADR-038 §c6 rules it OUT of the
+class, because its body names no position to resolve.
 
 **Standing disagreement, recorded not resolved.** The auditor's blind sample
 adjudicated `cvx-2015` item 6 — the identical shape (§b) — CORRECT. Items 7

@@ -1,0 +1,55 @@
+{
+  "pr": 60,
+  "round": 3,
+  "result": "APPROVED",
+  "scope": "repair diff d76a91c..HEAD plus standing round-2 findings",
+  "counts": {
+    "HIGH": 0,
+    "MEDIUM": 0,
+    "LOW": 3
+  },
+  "round2_verified_closed": [
+    "R9",
+    "R10",
+    "R11",
+    "R12"
+  ],
+  "verified": [
+    "d13-prong1.txt regenerates byte-identically; --auditor-input and --table+default dump also",
+    "The sub-split assert GENUINELY FIRES: mutating 240,000 -> 250,000 in NON_POINTER gives 'AssertionError: intc-2002 5: sub not in body', exit 1",
+    "Ground (c) RE-DERIVED FROM SCRATCH over all 17 in-class bodies: only xom-2021 7A carries any non-pointer sentence, and it is the safe-harbour pair \u00a7e3 already adjudicates. NO MIS-SORT \u2014 so \u00a7f's reopener holds",
+    "Grounds (a) and (b) check out against the committed output",
+    "R9's widened pattern is genuinely sensitive: injecting 'measured sound on all 18 here' and 'is 110 chars in class' into a copy makes it match both",
+    "No verdict moved d76a91c..HEAD; src/, evals/*.py, .eval-baseline.json, specs/000, specs/001 empty against origin/main; auditor artifacts byte-unchanged"
+  ],
+  "orchestrator_note": "APPROVED with 3 LOW. All three are the same defect the reviewer names \u2014 a stated coverage wider than the thing that produced it, the third instance in this PR. Because this PR is specifically about claim accuracy, they were corrected in place in a bounded pass rather than logged, on the D12 precedent; no round-4 review ran and the human is told so.",
+  "findings": [
+    {
+      "id": "R13",
+      "severity": "LOW",
+      "route": "debt+corrected-in-place",
+      "claim": "\u00a7e3's new provenance sentence 'Every figure below is printed by --prong1 ... none is retyped' is a false universal \u2014 the census figures later in the same section (17, 6, 18, 14, 5/4/3/1/1) and the '13-char margin' are not in d13-prong1.txt and cannot be, since --prong1 covers 7 bodies of which only 3 are in-class.",
+      "evidence": "ADR-038:768-770 makes the claim; :773, :781 and the 13-char margin at :771 all fall under 'below'. grep of d13-prong1.txt for a bare 17 or 14 returns 0 hits. The same overclaim is republished at tasks/TODO.md TD-149. Same defect class as R9 \u2014 a provenance claim wider than the check that backs it. NO NUMBER IS WRONG: the census figures are correct and are derived by --table/d13-span-dump.txt, also committed and listed two entries later in the same Verification block.",
+      "repro": "grep -nE '\\b(17|14)\\b' tasks/reviews/d13-prong1.txt -> only 171/172/176/145/128 substrings",
+      "acceptance": "The sentence is scoped to what --prong1 actually prints, or the census sentence cites --table / d13-span-dump.txt as its source; TD-149's copy scoped the same way."
+    },
+    {
+      "id": "R14",
+      "severity": "LOW",
+      "route": "debt+corrected-in-place",
+      "claim": "\u00a7e3's 'All four in full, no ellipsis' block still drops content from the xom-2021 item 7A quote \u2014 the trailing page-number sentence '31' \u2014 so the quote is not in full and is 7 chars shorter than the body length labelling it.",
+      "evidence": "ADR-038:764 labels 7A '(body 345)'; the quoted text measures 338 visible chars. d13-prong1.txt shows xom-2021 7A body=345 with sentence [3] = '31'. R12's chosen acceptance limb is met, so this is residue, not a reopening: items 7/8/15 differ only by newlines markdown collapses, but 7A differs by real dropped text.",
+      "repro": "python3 tasks/reviews/d13_span_dump.py --prong1 | sed -n '/xom-2021 item 7A/,/^$/p' vs the \u00a7e3 blockquote",
+      "acceptance": "Either the 7A quote carries the trailing '31', or the block's 'no ellipsis' claim is qualified."
+    },
+    {
+      "id": "R15",
+      "severity": "LOW",
+      "route": "debt+corrected-in-place",
+      "claim": "The widened sweep's headline result ('UNPIPED exit of the filter = 1 \u2014 no surviving hit') is not reproducible from any committed artifact, because the pattern alone returns many hits and the exclusion filter that reduces it to zero is nowhere recorded.",
+      "evidence": "pr60-r2-red.txt records only 'UNPIPED exit of the filter = 1' with no command; the pattern is published only in pr60-r2-resolution.json. Running it verbatim over the nine named surfaces returns 38.8KB of hits, so 'exit 1' can only come from an undisclosed downstream filter. THE REVIEWER HAND-AUDITED EVERY HIT and confirmed none is a stale count \u2014 the substance is clean; only the check is unauditable. This is the third artifact in this PR whose stated coverage is wider than the thing that produced it (R9's pattern, R13's provenance sentence, this filter).",
+      "repro": "run the published pattern verbatim over the nine surfaces -> 38.8KB of hits",
+      "acceptance": "pr60-r2-red.txt records the full sweep command including the exclusion filter, or the result is restated as 'N hits, all hand-audited as legitimate' with the hit list."
+    }
+  ]
+}
