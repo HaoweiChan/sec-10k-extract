@@ -18,7 +18,7 @@ Self-check: python3 -m src.sec10k.validate
 """
 import re
 
-from src.sec10k.segment import HEADING_RE
+from src.sec10k.segment import EXTERNAL_DOC_RE, HEADING_RE
 
 # ADR-008, measured over 13 fixtures: clean modern filings leave 0.7-7.6% of
 # the document before the first span / after the last; IBR-heavy and
@@ -110,6 +110,39 @@ COVERAGE_MIN = 0.13
 AMBIGUOUS_CODES = {"toc_manifest_mismatch", "last_item_dominates",
                    "expected_items_mostly_missing", "item_dominates",
                    "low_item_coverage"}
+
+# ADR-039 (D16): the pointer-SHAPE escalation. ADR-038 rules cvx-2015 items
+# 2/6/7A `defect` at the escalation layer — internal page pointers published
+# clean at 0.95 while their targets sit in the 294,291-char region outside
+# every span — and no code above can carry them: `item_span_near_empty`
+# reaches items 1/7/8 only, and TD-5's measured counter-evidence forbids
+# widening its item set (items 1A/7A/1B/4/6/9/9B/9C/16 are legitimately one
+# sentence — ADR-027 §c's vacuous_coverage finding, closed, stays closed),
+# while length alone cannot discriminate (cvx item 7A's 453-char span is
+# longer than several correctly-flagged items). The trigger is the SHAPE
+# plus the unplaced mass — three prongs mirroring ADR-038 §b's own rule
+# (R1 class gate, R3 "already said it", R3 reached-or-not): the body is an
+# internal page/index pointer naming no external document (INTERNAL_PTR_RE
+# is d9_class_scan.py's PAGE_PTR verbatim; the external test reuses
+# segment.EXTERNAL_DOC_RE so this layer cannot drift from ADR-004's),
+# nothing has said it yet, and coverage says most of the document lies
+# outside every span, so an internal pointer's target is plausibly there.
+# Both constants measured 2026-08-28 over dev + held-out
+# (tasks/reviews/d16_census.py, output committed): body band (515 cvx-2015
+# item 2, 1,814 cvx-2015 item 5) WITHIN the sub-PTR_COVERAGE_MIN population
+# — corpus-wide the length populations OVERLAP (ba-2003 item 5's mixed body
+# is 508 chars, under cvx item 2's 515), so the cap separates only in
+# conjunction with the coverage prong, stated in ADR-039 §c2 rather than
+# smoothed; coverage band (0.2718 cvx-2015, 0.9285 bac-2006 — the filing
+# ADR-038 §c4 rules correct precisely because its pointers' targets land
+# inside other items' spans). Midpoints, two significant figures; both
+# edges of both bands pinned by committed cases (ADR-039 §g).
+PTR_BODY_MAX = 1200
+PTR_COVERAGE_MIN = 0.60
+INTERNAL_PTR_RE = re.compile(
+    r"(?i)\b(?:on\s+)?pages?\s+(?:FS-)?\d"   # "on page FS-1", "pages 37-51"
+    r"|\bFS-\d"                              # bare FS-page reference
+    r"|\bsee\s+index\b")                     # ge-1994: "See index under item 14."
 
 # H1: JNJ 2016 lost 18 of 21 items and still reported success_with_warning,
 # because `expected_item_missing` is per-item and is not an escalating code —
@@ -314,13 +347,44 @@ def validate(text, items, accepted, manifest):
     # hold. On a document whose spans collapsed onto index rows the two diverge
     # by nothing at all — but check 2 does not escalate by ADR-008's ruling and
     # must not start to, so the low end gets its own code and its own constant.
-    if items:
-        cov = coverage(text, items)
-        if cov < COVERAGE_MIN:
-            warn("low_item_coverage",
-                 f"only {cov:.1%} of the document lies inside an item span "
-                 f"({round(cov * n):,} of {n:,} chars) — the spans did not "
-                 "resolve to the filing's content")
+    cov = coverage(text, items) if items else None
+    if items and cov < COVERAGE_MIN:
+        warn("low_item_coverage",
+             f"only {cov:.1%} of the document lies inside an item span "
+             f"({round(cov * n):,} of {n:,} chars) — the spans did not "
+             "resolve to the filing's content")
+
+    # 9 (ADR-039 §b, D16). The pointer-shape escalation: an extracted item
+    # whose whole body is an internal page/index pointer, in a document most
+    # of which lies outside every span, is the shape ADR-038 convicts — the
+    # answer the body names is plausibly in the unplaced region, and before
+    # this check nothing could say so on an item outside SUBSTANCE_ITEMS.
+    # Runs LAST because prong 2 is ADR-038 R3's "already said it" bullet read
+    # off the warning list this function just built: an item some warning
+    # already carries has said it (cvx-2015 7/8, ge-1994 8, spatz-2014 8 —
+    # their 0.80 must not move to 0.65), and a document with an escalating
+    # code says it for every item via ADR-027 §a's 0.75 cap (jpm-2024,
+    # xom-2021, intc-2025). The external-document exclusion keeps ADR-004
+    # shape-1 territory out (proxy/ARS pointers — ge-1994 item 6 is the
+    # committed pin). No status change, and NOT in AMBIGUOUS_CODES: one
+    # pointer item is a fact about that item, not a verdict on the document
+    # (ADR-035 §c's argument, re-applied — item_span_near_empty is this
+    # code's exact peer).
+    if spans and cov is not None and cov < PTR_COVERAGE_MIN \
+            and not any(w["code"] in AMBIGUOUS_CODES for w in warns):
+        flagged = {w["item"] for w in warns if w.get("item")}
+        for code, (s, e) in spans.items():
+            if code in flagged:
+                continue
+            span = text[s:e]
+            ptr_body = span.split("\n", 1)[1] if "\n" in span else ""
+            if (len(ptr_body) <= PTR_BODY_MAX and INTERNAL_PTR_RE.search(ptr_body)
+                    and not EXTERNAL_DOC_RE.search(ptr_body)):
+                warn("internal_pointer_unreached",
+                     f"item {code}'s body is an internal page pointer and only "
+                     f"{cov:.1%} of the document lies inside item spans — the "
+                     "content it names is likely in the unplaced region, not "
+                     "in this span", item=code)
 
     return warns
 
@@ -542,6 +606,54 @@ def _demo():
     ibr_w = [x for x in validate(stub, ibr_only, {"1": {}}, [])
              if x["code"] == "low_item_coverage"]
     assert "0.2%" in ibr_w[0]["message"], ibr_w
+
+    # ADR-039 (D16): the pointer-shape check, all three prongs. A document
+    # placing ~40% of itself (inside [COVERAGE_MIN, PTR_COVERAGE_MIN)), with
+    # a substantive item 1 and an item-2 body that is an internal page
+    # pointer: fires on 2 and only 2, carrying the item code.
+    lo = ("Item 1. Business\n" + "We sell things. " * 250 +
+          "\nItem 2. Properties\nDescribed on page 3 under Item 1 above.\n" +
+          "Item 15. Exhibits\nexhibit index\n" + "tail text " * 600)
+    l2 = lo.index("Item 2.")
+    l15 = lo.index("Item 15.")
+    l_end = lo.index("exhibit index") + len("exhibit index")  # tail stays OUTSIDE
+    lo_items = [{"item": "1", "part": "I", "status": "extracted", "start": 0,
+                 "end": l2, "evidence": {}},
+                {"item": "2", "part": "I", "status": "extracted", "start": l2,
+                 "end": l15, "evidence": {}},
+                {"item": "15", "part": "IV", "status": "extracted", "start": l15,
+                 "end": l_end, "evidence": {}}]
+    lo_acc = {"1": {}, "2": {}, "15": {}}
+    assert COVERAGE_MIN < coverage(lo, lo_items) < PTR_COVERAGE_MIN, \
+        coverage(lo, lo_items)
+    lw = [x for x in validate(lo, lo_items, lo_acc, [])
+          if x["code"] == "internal_pointer_unreached"]
+    assert [x["item"] for x in lw] == ["2"], lw
+    assert "internal_pointer_unreached" not in AMBIGUOUS_CODES  # §b4: no escalation
+    # ...an EXTERNAL pointer of the same shape stays out (ADR-004 shape 1
+    # territory; ge-1994 item 6 is the committed fixture pin). Same-length
+    # replacement so every offset in lo_items still lands where it did.
+    old_body, new_body = ("Described on page 3 under Item 1 above.",
+                          "See page 3 of the proxy statement here.")
+    assert len(old_body) == len(new_body)
+    ext = lo.replace(old_body, new_body)
+    codes = [x["code"] for x in validate(ext, lo_items, lo_acc, [])]
+    assert "internal_pointer_unreached" not in codes, codes
+    # ...a document that places (nearly) everything stays out — the pointer's
+    # target is then necessarily inside some span (ADR-038 §c4's bac-2006
+    # ground; the committed pins are bac-2006-shallow's warning_absent ×3)
+    hi_items = [lo_items[0], lo_items[1], {**lo_items[2], "end": len(lo)}]
+    assert coverage(lo, hi_items) > PTR_COVERAGE_MIN
+    codes = [x["code"] for x in validate(lo, hi_items, lo_acc, [])]
+    assert "internal_pointer_unreached" not in codes, codes
+    # ...and an item another warning already carries has ALREADY SAID IT
+    # (ADR-038 R3's second bullet): the same pointer under item 8 catches
+    # item_span_near_empty (SPAN_FLOOR) and must NOT be double-penalised.
+    lo8 = lo.replace("Item 2. Properties", "Item 8. Financials")
+    lo8_items = [dict(i, item="8") if i["item"] == "2" else i for i in lo_items]
+    w8 = validate(lo8, lo8_items, {"1": {}, "8": {}, "15": {}}, [])
+    codes8 = [x["code"] for x in w8 if x.get("item") == "8"]
+    assert codes8 == ["item_span_near_empty"], w8
 
     # confidence: warnings on an item pull it down, others leave it alone
     it = {"item": "8", "status": "extracted", "evidence": {"title_similarity": 1.0}}

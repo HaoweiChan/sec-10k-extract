@@ -1,0 +1,174 @@
+constants under census: PTR_BODY_MAX=1200  PTR_COVERAGE_MIN=0.6
+INTERNAL_PTR_RE='(?i)\\b(?:on\\s+)?pages?\\s+(?:FS-)?\\d|\\bFS-\\d|\\bsee\\s+index\\b'
+EXTERNAL_DOC_RE='(?i)(proxy statement|information statement|annual report to (its )?(share|stock|security)[ ]?(holders|owners))'
+
+50 documents scanned (dev + held-out); 104 extracted spans have a body matching INTERNAL_PTR_RE
+
+set      fixture                  item    body     cov  ext  warned  doc_esc  verdict
+-------------------------------------------------------------------------------------
+dev      axp-2008                    1  173184  0.8077 True   False    False  no-fire: names an external document (prong 1)
+dev      axp-2008                   1A   59702  0.8077 True   False    False  no-fire: names an external document (prong 1)
+dev      axp-2008                    5    4394  0.8077 True   False    False  no-fire: names an external document (prong 1)
+dev      axp-2008                   9A    1387  0.8077 True   False    False  no-fire: names an external document (prong 1)
+dev      ba-2003                     1   18102  0.9849False   False    False  no-fire: body 18,102 > PTR_BODY_MAX (prong 1)
+dev      ba-2003                    15    9459  0.9849False   False    False  no-fire: body 9,459 > PTR_BODY_MAX (prong 1)
+dev      ba-2003                     5     508  0.9849False   False    False  no-fire: coverage 0.9849 >= PTR_COVERAGE_MIN (prong 3)
+dev      ba-2003                     7  169374  0.9849 True   False    False  no-fire: names an external document (prong 1)
+dev      ba-2003                     8  170912  0.9849 True   False    False  no-fire: names an external document (prong 1)
+dev      bac-2006                    1   20833  0.9285False   False    False  no-fire: body 20,833 > PTR_BODY_MAX (prong 1)
+dev      bac-2006                    3     203  0.9285False   False    False  no-fire: coverage 0.9285 >= PTR_COVERAGE_MIN (prong 3)
+dev      bac-2006                    5    1936  0.9285False   False    False  no-fire: body 1,936 > PTR_BODY_MAX (prong 1)
+dev      bac-2006                    6     170  0.9285False   False    False  no-fire: coverage 0.9285 >= PTR_COVERAGE_MIN (prong 3)
+dev      bac-2006                    7  333846  0.9285False   False    False  no-fire: body 333,846 > PTR_BODY_MAX (prong 1)
+dev      bac-2006                   7A     107  0.9285False   False    False  no-fire: coverage 0.9285 >= PTR_COVERAGE_MIN (prong 3)
+dev      bac-2006                   9A    1314  0.9285False   False    False  no-fire: body 1,314 > PTR_BODY_MAX (prong 1)
+dev      cat-2023                    7  100156   0.982False   False    False  no-fire: body 100,156 > PTR_BODY_MAX (prong 1)
+dev      cat-2023                    8  184080   0.982False   False    False  no-fire: body 184,080 > PTR_BODY_MAX (prong 1)
+dev      cat-2023                   9A    1506   0.982False   False    False  no-fire: body 1,506 > PTR_BODY_MAX (prong 1)
+dev      cvx-2015                    1   82890  0.2718False   False    False  no-fire: body 82,890 > PTR_BODY_MAX (prong 1)
+dev      cvx-2015                   15    1819  0.2718False   False    False  no-fire: body 1,819 > PTR_BODY_MAX (prong 1)
+dev      cvx-2015                   1A   14382  0.2718False   False    False  no-fire: body 14,382 > PTR_BODY_MAX (prong 1)
+dev      cvx-2015                    2     515  0.2718False   False    False  FIRE
+dev      cvx-2015                    3    2402  0.2718False   False    False  no-fire: body 2,402 > PTR_BODY_MAX (prong 1)
+dev      cvx-2015                    5    1814  0.2718False   False    False  no-fire: body 1,814 > PTR_BODY_MAX (prong 1)
+dev      cvx-2015                    6      87  0.2718False   False    False  FIRE
+dev      cvx-2015                    7     186  0.2718False    True    False  no-fire: item already warned (prong 2)
+dev      cvx-2015                   7A     385  0.2718False   False    False  FIRE
+dev      cvx-2015                    8     137  0.2718False    True    False  no-fire: item already warned (prong 2)
+dev      cvx-2015                   9A    1895  0.2718False   False    False  no-fire: body 1,895 > PTR_BODY_MAX (prong 1)
+dev      ge-1994                     1   46912  0.2306 True   False    False  no-fire: names an external document (prong 1)
+dev      ge-1994                     3   17186  0.2306False   False    False  no-fire: body 17,186 > PTR_BODY_MAX (prong 1)
+dev      ge-1994                     6     408  0.2306 True   False    False  no-fire: names an external document (prong 1)
+dev      ge-1994                     8      33  0.2306False    True    False  no-fire: item already warned (prong 2)
+dev      gs-2002                    10     526  0.9197 True   False    False  no-fire: names an external document (prong 1)
+dev      gs-2002                    15   22865  0.9197 True   False    False  no-fire: names an external document (prong 1)
+dev      gs-2002                     5    2424  0.9197 True   False    False  no-fire: names an external document (prong 1)
+dev      ibm-1997                    1    9703  0.4692False   False    False  no-fire: body 9,703 > PTR_BODY_MAX (prong 1)
+dev      ibm-1997                   12     386  0.4692 True   False    False  no-fire: names an external document (prong 1)
+dev      ibm-1997                   14    7704  0.4692 True   False    False  no-fire: names an external document (prong 1)
+dev      ibm-1997                    2    1126  0.4692 True   False    False  no-fire: names an external document (prong 1)
+dev      ibm-1997                    5     731  0.4692 True   False    False  no-fire: names an external document (prong 1)
+dev      ibr-pointer-first           1   46912  0.2306 True   False    False  no-fire: names an external document (prong 1)
+dev      ibr-pointer-first           3   17186  0.2306False   False    False  no-fire: body 17,186 > PTR_BODY_MAX (prong 1)
+dev      ibr-pointer-first           6     408  0.2306 True   False    False  no-fire: names an external document (prong 1)
+dev      ibr-pointer-first           8      33  0.2306False    True    False  no-fire: item already warned (prong 2)
+dev      ibr-security-holders        1    9703  0.4692False   False    False  no-fire: body 9,703 > PTR_BODY_MAX (prong 1)
+dev      ibr-security-holders       12     386  0.4692 True   False    False  no-fire: names an external document (prong 1)
+dev      ibr-security-holders       14    7704  0.4692 True   False    False  no-fire: names an external document (prong 1)
+dev      ibr-security-holders        2    1126  0.4692 True   False    False  no-fire: names an external document (prong 1)
+dev      ibr-security-holders        5     731  0.4692 True   False    False  no-fire: names an external document (prong 1)
+dev      intc-2002                   1   89630  0.9545False   False    False  no-fire: body 89,630 > PTR_BODY_MAX (prong 1)
+dev      intc-2002                  15    4400  0.9545 True   False    False  no-fire: names an external document (prong 1)
+dev      intc-2002                   5     567  0.9545False   False    False  no-fire: coverage 0.9545 >= PTR_COVERAGE_MIN (prong 3)
+dev      intc-2025                   1     129  0.0033False    True     True  no-fire: document escalates (prong 2)
+dev      intc-2025                  10      13  0.0033False   False     True  no-fire: document escalates (prong 2)
+dev      intc-2025                  15      23  0.0033False   False     True  no-fire: document escalates (prong 2)
+dev      intc-2025                  1A      13  0.0033False   False     True  no-fire: document escalates (prong 2)
+dev      intc-2025                  1C      25  0.0033False   False     True  no-fire: document escalates (prong 2)
+dev      intc-2025                   2      14  0.0033False   False     True  no-fire: document escalates (prong 2)
+dev      intc-2025                   3      15  0.0033False   False     True  no-fire: document escalates (prong 2)
+dev      intc-2025                   5     120  0.0033False   False     True  no-fire: document escalates (prong 2)
+dev      intc-2025                   7     131  0.0033False    True     True  no-fire: document escalates (prong 2)
+dev      intc-2025                  7A      10  0.0033False   False     True  no-fire: document escalates (prong 2)
+dev      intc-2025                   8      14  0.0033False    True     True  no-fire: document escalates (prong 2)
+dev      intc-2025                  9A      10  0.0033False   False     True  no-fire: document escalates (prong 2)
+dev      intc-2025                  9B      87  0.0033False   False     True  no-fire: document escalates (prong 2)
+dev      jpm-2024                    1   40551  0.9931False   False     True  no-fire: document escalates (prong 2)
+dev      jpm-2024                   10    4735  0.9931 True   False     True  no-fire: document escalates (prong 2)
+dev      jpm-2024                   15 1010372  0.9931 True    True     True  no-fire: document escalates (prong 2)
+dev      jpm-2024                   1C     148  0.9931False   False     True  no-fire: document escalates (prong 2)
+dev      jpm-2024                    2    2080  0.9931False   False     True  no-fire: document escalates (prong 2)
+dev      jpm-2024                    5    2716  0.9931False   False     True  no-fire: document escalates (prong 2)
+dev      jpm-2024                    7     303  0.9931False    True     True  no-fire: document escalates (prong 2)
+dev      jpm-2024                   7A     205  0.9931False   False     True  no-fire: document escalates (prong 2)
+dev      jpm-2024                    8     319  0.9931False    True     True  no-fire: document escalates (prong 2)
+dev      jpm-2024                   9A    2200  0.9931False   False     True  no-fire: document escalates (prong 2)
+dev      ko-1997                     1   41299   0.734 True   False    False  no-fire: names an external document (prong 1)
+dev      ko-1997                    14   11505   0.734 True   False    False  no-fire: names an external document (prong 1)
+dev      ko-1997                     8     876   0.734 True    True    False  no-fire: item already warned (prong 2)
+dev      nike-2006                   1   27701  0.9415False   False    False  no-fire: body 27,701 > PTR_BODY_MAX (prong 1)
+dev      nike-2006                   2    2197  0.9415False   False    False  no-fire: body 2,197 > PTR_BODY_MAX (prong 1)
+dev      nike-2006                  9A    1799  0.9415False   False    False  no-fire: body 1,799 > PTR_BODY_MAX (prong 1)
+dev      spatz-2014                  8     233  0.6632False    True    False  no-fire: item already warned (prong 2)
+dev      textron-2001                1   26465  0.6686 True   False    False  no-fire: names an external document (prong 1)
+dev      textron-2001               14   13054  0.6686 True   False    False  no-fire: names an external document (prong 1)
+dev      textron-2001                5     446  0.6686 True   False    False  no-fire: names an external document (prong 1)
+dev      tgt-2002                    1    2076   0.561 True   False    False  no-fire: names an external document (prong 1)
+dev      tgt-2002                   12    1216   0.561 True   False    False  no-fire: names an external document (prong 1)
+dev      tgt-2002                   15    5595   0.561 True   False    False  no-fire: names an external document (prong 1)
+dev      wfc-2008                    1   41794  0.6668 True   False    False  no-fire: names an external document (prong 1)
+dev      wfc-2008                   15    1266  0.6668 True   False    False  no-fire: names an external document (prong 1)
+dev      wfc-2008                    2    2450  0.6668 True   False    False  no-fire: names an external document (prong 1)
+dev      wfc-2008                    5    1769  0.6668 True   False    False  no-fire: names an external document (prong 1)
+dev      xom-2021                   15     160  0.9799False   False     True  no-fire: document escalates (prong 2)
+held-out csco-2016                  15    1296  0.9604False   False    False  no-fire: body 1,296 > PTR_BODY_MAX (prong 1)
+held-out csco-2016                   5    4576  0.9604False   False    False  no-fire: body 4,576 > PTR_BODY_MAX (prong 1)
+held-out csco-2016                  9A    1591  0.9604False   False    False  no-fire: body 1,591 > PTR_BODY_MAX (prong 1)
+held-out mrk-1995                    1   43147  0.7593False   False    False  no-fire: body 43,147 > PTR_BODY_MAX (prong 1)
+held-out mrk-1995                   14    7661  0.7593 True   False    False  no-fire: names an external document (prong 1)
+held-out mrk-1995                    5     156  0.7593 True   False    False  no-fire: names an external document (prong 1)
+held-out mrk-1995                    7     166  0.7593 True    True    False  no-fire: item already warned (prong 2)
+held-out mrk-1995                    8     684  0.7593 True    True    False  no-fire: item already warned (prong 2)
+held-out pgr-2023                   15   14715  0.8587 True   False    False  no-fire: names an external document (prong 1)
+
+FIRES (3):
+  dev cvx-2015 item 2  body=515  cov=0.2718
+  dev cvx-2015 item 6  body=87  cov=0.2718
+  dev cvx-2015 item 7A  body=385  cov=0.2718
+
+exclusion tallies:
+     3  FIRE
+     1  no-fire: body 1,296 > PTR_BODY_MAX
+     1  no-fire: body 1,314 > PTR_BODY_MAX
+     1  no-fire: body 1,506 > PTR_BODY_MAX
+     1  no-fire: body 1,591 > PTR_BODY_MAX
+     1  no-fire: body 1,799 > PTR_BODY_MAX
+     1  no-fire: body 1,814 > PTR_BODY_MAX
+     1  no-fire: body 1,819 > PTR_BODY_MAX
+     1  no-fire: body 1,895 > PTR_BODY_MAX
+     1  no-fire: body 1,936 > PTR_BODY_MAX
+     1  no-fire: body 100,156 > PTR_BODY_MAX
+     1  no-fire: body 14,382 > PTR_BODY_MAX
+     2  no-fire: body 17,186 > PTR_BODY_MAX
+     1  no-fire: body 18,102 > PTR_BODY_MAX
+     1  no-fire: body 184,080 > PTR_BODY_MAX
+     1  no-fire: body 2,197 > PTR_BODY_MAX
+     1  no-fire: body 2,402 > PTR_BODY_MAX
+     1  no-fire: body 20,833 > PTR_BODY_MAX
+     1  no-fire: body 27,701 > PTR_BODY_MAX
+     1  no-fire: body 333,846 > PTR_BODY_MAX
+     1  no-fire: body 4,576 > PTR_BODY_MAX
+     1  no-fire: body 43,147 > PTR_BODY_MAX
+     1  no-fire: body 82,890 > PTR_BODY_MAX
+     1  no-fire: body 89,630 > PTR_BODY_MAX
+     1  no-fire: body 9,459 > PTR_BODY_MAX
+     2  no-fire: body 9,703 > PTR_BODY_MAX
+     3  no-fire: coverage 0.9285 >= PTR_COVERAGE_MIN
+     1  no-fire: coverage 0.9545 >= PTR_COVERAGE_MIN
+     1  no-fire: coverage 0.9849 >= PTR_COVERAGE_MIN
+    24  no-fire: document escalates
+     8  no-fire: item already warned
+    37  no-fire: names an external document
+
+PTR_BODY_MAX band — items passing every prong but the body cap
+        87  cvx-2015             item 6    FIRE side
+       385  cvx-2015             item 7A   FIRE side
+       515  cvx-2015             item 2    FIRE side
+     1,814  cvx-2015             item 5    no-fire side
+     1,819  cvx-2015             item 15   no-fire side
+     1,895  cvx-2015             item 9A   no-fire side
+     2,402  cvx-2015             item 3    no-fire side
+     9,703  ibm-1997             item 1    no-fire side
+     9,703  ibr-security-holders item 1    no-fire side
+    14,382  cvx-2015             item 1A   no-fire side
+    17,186  ge-1994              item 3    no-fire side
+    17,186  ibr-pointer-first    item 3    no-fire side
+    82,890  cvx-2015             item 1    no-fire side
+  empty band (515, 1814); midpoint 1164.5 -> 1200
+
+PTR_COVERAGE_MIN band — documents with a prong-1+2-passing item
+    0.2718  dev       cvx-2015             items 2,6,7A       FIRE side
+    0.9285  dev       bac-2006             items 3,6,7A       no-fire side
+    0.9545  dev       intc-2002            items 5            no-fire side
+    0.9849  dev       ba-2003              items 5            no-fire side
+  empty band (0.2718, 0.9285); midpoint 0.6001 -> 0.6
