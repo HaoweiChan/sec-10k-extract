@@ -1,0 +1,96 @@
+D17 — the intc-2025 measurement the D11 burn left unrun (ADR-036 §k hole 2).
+Tree: task/D17 at 03a3075. Date: 2026-08-28. Runner:
+tasks/reviews/d17_intc_measurement.py (committed). Fixture:
+evals/fixtures/intc-2025/filing.htm — the one real collapsed filing this repo
+owns, burned to the dev side 2026-08-27 by the exam that exposed the §h4
+client bug, and never re-run against the FIXED ladder until now.
+
+OPENROUTER_API_KEY: ABSENT (verified by the runner at run time, and
+independently by printenv before it). Per the task spec and repo rule 4 the
+run proceeds and records the loud refusal as the outcome — no key was hunted
+for, no output fabricated.
+
+=== the hard cap, enforced BEFORE each call ===
+Cap: $5.00 cumulative for the whole task. Mechanism: `llm.call` wrapped with a
+pre-call gate (Budget.take alone is post-hoc — ADR-036 §d3): on a cache MISS
+the gate projects the call's worst case from the committed records and raises
+BEFORE the socket if cumulative_actual + projected > $5.00. Belt-and-braces:
+an explicit Budget(max_calls=4, max_usd=5.00) passed into extract_items.
+
+Projection inputs (all committed, nothing hand-typed):
+  prices  tasks/reviews/2026-08-27-openrouter-models.json via llm.price():
+          gpt-5-mini $0.25/$2.00 per MTok, opus-5 $5.00/$25.00 per MTok
+  proxy   tasks/reviews/2026-08-27-token-ratio.json published minima
+          (the conservative end — fewer chars/token means MORE tokens):
+          gpt-5-mini 4.2, opus-5 2.7 chars/token
+  output  the full allowance the client sends: rung 1 MAX_TOKENS=2048,
+          rung 2 MAX_TOKENS+REASONING_TOKENS=6144
+
+The arithmetic, as the gate computed it:
+  rung 1  61,007 prompt chars / 4.2 = 14,526 tok x $0.25/MTok = $0.003632
+          + 2,048 out x $2.00/MTok                            = $0.004096
+          projected worst case                                = $0.007728
+          (not consulted in this run — the request hit the cache, $0)
+  rung 2  518,984 prompt chars / 2.7 = 192,217 tok x $5.00/MTok = $0.961085
+          + 6,144 out x $25.00/MTok                             = $0.153600
+          projected worst case                                  = $1.114685
+          pre-call check: $0.000000 spent + $1.114685 <= $5.00 -> ALLOWED
+  whole ladder, both rungs uncached, worst case: $1.122413 — under the cap,
+  and close to ADR-036 §d's ~$2.47 ceiling only because intc-2025 (517,976
+  chars) is far below EXTRACT_WINDOW.
+Gate self-check (runs first, $0 by construction): with spent forced to $4.99
+and an uncached 100,000-char prompt (projected $0.338790), the gate raised
+HardCapAbort BEFORE budget or credential were consulted. The abort path is
+proven, not assumed.
+
+=== per-tier table (from the run's own records and usage fields) ===
+tier          model                    cached  in tok   out tok  usd       outcome
+llm_localize  openai/gpt-5-mini        YES     11,257   842      0.000000  rejected
+llm_extract   anthropic/claude-opus-5  —       —        —        0.000000  unavailable
+retries: none (a missing credential is not a transient transport failure;
+the one-bounded-retry rule was armed but never triggered)
+cumulative actual spend: $0.000000    budget after: 1 call taken, $0.00
+
+Rung 1, read precisely, because it IS a measurement:
+* its request hit the exam's committed cache (evals/cache/llm/) — the cache
+  key is a content hash of (PROMPT_VERSION, model, system, user, max_tokens),
+  so the HIT is itself evidence that the §h4 fix changed NOTHING about rung
+  1's request: same prompt, same window, same 2,048 allowance. Labeled
+  cached, $0, exactly as the honesty rule requires — a replay of the real
+  billed response, not a fresh call.
+* the replayed REAL answer is {"1": null, "7": null, "8": null}: gpt-5-mini,
+  shown the largest unattributed region (offset 0, 60,000 of 517,976 chars),
+  still cannot localize items 1/7/8. Outcome `rejected` ("no rung returned a
+  locatable span"). So the post-fix ladder's rung 1 does NOT resolve
+  intc-2025, measured against the model's own real response.
+
+Rung 2, the question the §h4 fix exists to answer:
+* post-fix the request carries max_tokens 6144 + reasoning 4096 — a
+  DIFFERENT cache key from the exam's 2048 — so it cannot be served from
+  cache: this half needs a live call.
+* the gate ALLOWED it ($1.114685 projected, cap clear); Budget.take took the
+  call slot; then the credential check refused: "OPENROUTER_API_KEY is not
+  set — the slow path refuses rather than degrading." Outcome `unavailable`,
+  warning `escalation_unavailable`, $0, no socket opened.
+
+=== what the envelope changed ===
+Nothing. meta.coverage 0.0033 -> 0.0033, no item's span or method moved,
+resolved: []. The deterministic answer stands untouched, with the loud
+`escalation_unavailable` warning published — which is exactly the §f/§b
+contract for a ladder that could not run.
+
+=== verdict, plainly ===
+UNRUNNABLE-CREDENTIAL-ABSENT, with one real sub-measurement banked:
+
+* MEASURED: rung 1 of the FIXED ladder does not resolve intc-2025 — its
+  request is byte-identical to the exam's (proven by the cache hit) and the
+  real model's answer localizes nothing in the 60,000-char window.
+* UNMEASURED, still: whether the fixed rung 2 — opus-5 with room to answer
+  after thinking — resolves the one real collapsed filing the repo owns.
+  The rung-2 question remains unmeasured: credential absent in the delivery
+  environment, refused loudly, $0.00 spent, recorded here as the outcome.
+
+Whenever a credential exists, re-running is one command
+(python3 tasks/reviews/d17_intc_measurement.py): rung 1 replays free from
+cache, rung 2 costs at most the $1.114685 the gate projects, and the same
+gate enforces the same $5.00 cap before the socket.
