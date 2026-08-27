@@ -55,9 +55,15 @@ one new `debt` case, and no line of `src/` touched.
   index under item 14."), which has no page number either.
 - **Corrected:** R1 prong 2 is "a locatable position", not "a page number",
   §b3's rejection of `xom-2021` item 15 is overturned in place, and the
-  adjudicated dev census moves 14 items/5 filings → 18/6 (TD-149 widened).
-  The uncomfortable half is taken too: `nvda-2024` item 8, which ADR-019 §e's
-  own amendment called a fourth class member, is ruled OUT on the same prong.
+  adjudicated dev census moves 14 items/5 filings → **17/6** (TD-149 widened).
+  The uncomfortable half is taken twice: `nvda-2024` item 8, which ADR-019
+  §e's own amendment called a fourth class member, is ruled OUT on prong 2 —
+  and `xom-2021` item **8**, which the first draft readmitted along with 7/7A/15,
+  is ruled OUT on prong 1 under PR #60 R3, which is what makes the census 17
+  and not 18. Prong 1 is a test of KIND, not of length: ADR-007's
+  `IBR_REMAINDER_MAX = 300` was the obvious candidate and it fails the
+  calibration — `intc-2002` item 5's standalone content is 110 chars and
+  ADR-034 §b3 rejects it anyway.
 
 - **Assumed:** `cvx-2015` items 7 and 8 — the two the committed `debt` case
   actually asserts — are the defects, as ADR-019 §e read them.

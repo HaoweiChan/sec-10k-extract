@@ -11,6 +11,7 @@ cost figure was wrong twice from retyped inputs).
     python3 tasks/reviews/d13_span_dump.py --json           # machine dump
     python3 tasks/reviews/d13_span_dump.py --table          # verdict inputs
     python3 tasks/reviews/d13_span_dump.py --auditor-input  # blind sample
+    python3 tasks/reviews/d13_span_dump.py --prong1         # R1 prong-1 split
 
 Per item it reports, from one DEFAULT-FLAG `extract_items` run per filing:
 
@@ -92,6 +93,22 @@ TARGETS = {
         "7":  [("pages 28 through 37 of the 1995 Annual Report to stockholders", None)],
     },
 }
+
+# R1 prong-1 evidence (PR #60 R3): bodies where "is this pointer-only?" is
+# CONTESTED — the four `xom-2021` items ADR-038 §e3 readmits, and the three
+# ADR-034 §b3 REJECTED for carrying substantive standalone prose, which are the
+# calibration. Split with `segment._sentences`, the pipeline's own splitter, so
+# the lengths are comparable with ADR-007's `IBR_REMAINDER_MAX`. The script
+# prints every sentence and its length; WHICH sentences are pointers and which
+# are standalone answers is adjudicated by hand in ADR-038 §e3, exactly as the
+# anchors are.
+PRONG1 = [
+    ("evals/fixtures/xom-2021", ["7", "7A", "8", "15"]),
+    ("evals/fixtures/ba-2003", ["5"]),
+    ("evals/fixtures/intc-2002", ["5"]),
+    ("evals/fixtures/textron-2001", ["5"]),
+]
+
 
 # The blind sample handed to the extraction-auditor: chosen to straddle every
 # distinction the ruling turns on WITHOUT naming any of them.
@@ -257,6 +274,27 @@ def auditor_input(rows):
         print()
 
 
+def prong1():
+    from src.sec10k import segment
+    print("sentences per contested body, split by `src.sec10k.segment._sentences`"
+          f"\nADR-007 segment.IBR_REMAINDER_MAX = {segment.IBR_REMAINDER_MAX}"
+          "\nwhich sentences are POINTERS is adjudicated by hand in ADR-038 §e3\n")
+    for rel, codes in PRONG1:
+        d = ROOT / rel
+        res = extract_items(str(fixture_file(d)))
+        text = res["normalized_text"]
+        by_code = {i["item"]: i for i in res["items"]}
+        for code in codes:
+            it = by_code[code]
+            span = text[it["start"]:it["end"]]
+            body = span.split("\n", 1)[1] if "\n" in span else ""
+            print(f"===== {d.name} item {code}  span={it['end'] - it['start']}  "
+                  f"body={len(body)}  status={it['status']}")
+            for k, sent in enumerate(segment._sentences(body)):
+                print(f"   [{k}] {len(sent):>4} chars  {sent.strip()!r}")
+            print()
+
+
 def main():
     rows = collect()
     if "--json" in sys.argv:
@@ -265,6 +303,8 @@ def main():
         table(rows)
     elif "--auditor-input" in sys.argv:
         auditor_input(rows)
+    elif "--prong1" in sys.argv:
+        prong1()
     else:
         dump(rows)
 

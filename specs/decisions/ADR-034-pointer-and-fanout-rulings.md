@@ -202,11 +202,25 @@ under item 14.") has no page number either and is admitted two rows above.
 Under ADR-038's R1 a titled section or an index is a locatable position, which
 puts `xom-2021` items 7, 7A, 8 **and** 15 in class — four items this scan could
 not see, because `PAGE_PTR` required a digit. The dev total below moves from 14
-items across 5 filings to 18 across 6. The other rejections in this paragraph
+items across 5 filings to 17 across 6 (corrected from 18 the same day; see the
+note below). The other rejections in this paragraph
 stand on prong 3, the external-document test, unchanged. Conversely ADR-019
 §e's amendment named `nvda-2024` item 8 a class member; ADR-038 §c6 rules it
 OUT on the same ground this paragraph rejected `xom-2021` item 15 on, so the
 two ADRs stop using two different class tests.)*
+
+*(2026-08-27, same day, PR #60 R3 — **this note's own figure is corrected
+before it was ever relied on.** `xom-2021` item **8** does NOT join the class:
+its body closes with "Financial Statement Schedules have been omitted because
+they are not applicable…", a sentence that disposes of part of what the item
+requires without the pointer, which is this paragraph's OWN prong-1 rejection
+ground. ADR-038 §e3 adjudicates it and the readmission is **items 7, 7A and 15
+only** — dev total **14 items across 5 filings → 17 across 6**, not 18. Item 8
+was also outside `d9_class_scan.py`'s `BODY_MAX = 700` at 737 chars, so the
+scan missed it twice over. §e3 also records that ADR-007's
+`IBR_REMAINDER_MAX = 300` does not reproduce this paragraph's three
+rejections — `intc-2002` item 5's standalone content is 110 chars — so prong 1
+is a test of kind, not of length.)*
 
 So the class is **14 items across 5 real dev filings** — 1.9% of 744 dev items
 — plus **13 items on one held-out filing**, 8.8% of 147 held-out items.
@@ -583,7 +597,7 @@ rather than re-argue it.
 | **A1 subsumed** | D11's ADR declines the model tier, or D8's ADR adopts no item-level span floor. Either leaves A1 without an owner and it must be re-ruled standalone | the D8 and D11 ADRs when written | either one |
 | **A2 declined** | the `cvx-2015` item-6 disagreement is adjudicated as WRONG by both reads; or the plain-text stratum gets the independent cross-check ADR-019 §c/§g still says it lacks, and finds the shape where the pointer target is demonstrably unreachable | an extraction-auditor pass over `cvx-2015` items 6, 7, 8 and the `bac-2006` / `spatz-2014` instances this ADR adds | **one** instance both reads agree is wrong |
 | **A2 declined** | the D8 trigger, once built, fires on any of the five A2 filings — then A2 *is* reachable by D11 and "declined" becomes "subsumed" | re-run §d1's table against D8's shipped trigger | **one** fire |
-| **A2 declined** — ↑ **SETTLED 2026-08-27** at D13: [ADR-038](ADR-038-internal-pointer-adjudication.md) ran the named instrument (an extraction-auditor pass over `cvx-2015` 6/7/8 plus the `bac-2006` / `spatz-2014` instances) and adjudicated every enumerated item. The threshold — one instance both reads agree is wrong — is met or not per ADR-038 §d; the decline's outcome stands either way, because the adjudicated defect is an escalation-layer one that a capability milestone would not fix | — | — |
+| **A2 declined** — ↑ **TRIPPED 2026-08-27** at D13. [ADR-038](ADR-038-internal-pointer-adjudication.md) ran the named instrument and **the threshold is MET**: `cvx-2015` item 6 is adjudicated WRONG by both reads (ADR-038 §d2). Stated as this row's own finding, not deferred — an amendment that says "met or not, see elsewhere" is the amendment failing to do its job (PR #60 R2). **What the blind pass actually covered**, against the four instances this row names: `cvx-2015` **6** and **8**, `bac-2006` **3** and **6**, `spatz-2014` **8** — plus `cvx-2015` 2 and 7A, `jpm-2024` 7 and `mrk-1995` 5, which this row does not name. `cvx-2015` item **7** and `bac-2006` item **7A** were NOT put to the auditor, and cvx 7 is the item ADR-019 §e read WRONG and ADR-038 §c1 calls "the sharpest concession the rule makes"; ADR-038 §d6 records the omission. **The decline's OUTCOME still stands**: the adjudicated defect is an escalation-layer one (ADR-038 §e1) that a capability milestone would not fix | — | — |
 | **A2 declined** — ↑ **TRIPPED 2026-08-26** at the PR #57 (D8) merge: the shipped `item_span_near_empty` fires on 4 of the 5 (`cvx-2015`, `jpm-2024`, `ge-1994`, `spatz-2014`), threshold was one. §e2 reason 2 carries the measurement; the ruling is left standing for D9 to re-read | — | — |
 | **B subsumed** | a second real EDGAR filing whose **body** heading names several item codes and loses items to it — the class stops being a single instance | `tasks/reviews/d9_class_scan.py`'s multi-code hits, adjudicated by hand as §c1 does | **one** filing |
 | **B subsumed** | D11's ADR declines to escalate on `expected_item_missing`, leaving `axp-2008` with no owner; the fan-out then returns as the only route and must be costed again against §c2's real scope | the D11 ADR when written | that decision |

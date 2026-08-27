@@ -9,7 +9,7 @@ both are re-affirmed below, against the reading that would have overturned
 them. No extractor behaviour changes — `extract_items` is byte-identical to
 `origin/main` (§h).
 
-**Ruling**: a pointer body is judged at two layers, not one — the SPAN is correct on every in-class item (ADR-004 shape 2 stands), and the DEFECT, where there is one, is the envelope reporting such an item clean: `cvx-2015` items 2, 6 and 7A are `defect`, the other 11 enumerated in-class items `correct` (plus `xom-2021`'s 4, readmitted in §e3, also `correct`), and `mrk-1995` 5/7 + `nvda-2024` 8 `out-of-class`.
+**Ruling**: a pointer body is judged at two layers, not one — the SPAN is correct on every in-class item (ADR-004 shape 2 stands), and the DEFECT, where there is one, is the envelope reporting such an item clean: `cvx-2015` items 2, 6 and 7A are `defect`, the other 14 in-class items `correct` (11 enumerated plus `xom-2021` 7/7A/15, readmitted in §e3), and `mrk-1995` 5/7 + `nvda-2024` 8 + `xom-2021` 8 `out-of-class`.
 **Because**: the only thing `extracted` claims is INV-S2 (`normalized_text[start:end]` is the item's text verbatim), which holds everywhere here; what the contract can be dishonest about is content the output does not contain, and that is measurable — the three defects are exactly the in-class items whose named target lies outside every span AND whose `review_required` is `false` at 0.95.
 **Enforced by**: `evals/adversarial/cvx-2015-silent-pointer-items.json` (`debt`, watched red), `evals/adversarial/cvx-2015-internal-pointer.json` (`debt`, amended note), `evals/adversarial/ledger-line-refs.json` (floor 11 → 14), `tasks/reviews/d13_span_dump.py`, `tasks/reviews/d13-span-dump.txt`
 
@@ -66,8 +66,10 @@ three hold:
    belongs to ADR-004 shape 1, whose question is `status`, not span.
 
 **Out-of-class is not a synonym for correct.** It means this ADR is not the
-document that rules on the item. §e4 says what to do with the two out-of-class
-items whose status looks wrong under a different ADR.
+document that rules on the item. Four items come out here: `mrk-1995` 5 and 7
+fail prong 3 and §e4 says what to do with them, `nvda-2024` 8 fails prong 2
+(§c6) and `xom-2021` 8 fails prong 1 (§e3). Only the first two have a status
+that looks wrong under a different ADR.
 
 **R2 — span fidelity, the segmentation layer.** Does
 `normalized_text[start:end]` equal the text the filing placed under that
@@ -80,7 +82,30 @@ the segmentation layer.
 **R3 — envelope honesty, the escalation layer.** With R2 passing, resolve the
 target the item's own body names — **one hop only**; chasing a target's own
 targets is unbounded and, on this corpus, walks straight out of the document
-(§c, `ge-1994`). Then:
+(§c, `ge-1994`).
+
+**Two things this test needs stated, because §c relies on both.**
+
+*Scope.* "Reached" is asked **document-wide** — is the named content inside
+*some* span anywhere in this envelope — while the honesty half of the second
+bullet is **item-level**, because `review_required` is item-level by the
+contract's own definition. That asymmetry is a deliberate choice and it is the
+single move on which `bac-2006` 3/6/7A come out `correct`: for those items the
+envelope holds the answer and the item does not. An item-scoped reading of
+"reached" is available, is the contract's default scope for the honesty field,
+and would convict them. §g8 records that this ADR has not shown the
+document-wide scope to be the right one (PR #60 R8).
+
+*Mixed matches.* An anchor routinely matches both inside a span and outside
+every span, because filings cross-reference their own content. A target counts
+as **reached** only if an inside match *is* the content or position the body
+names — not a reference to it. That is a hand adjudication, printed with its
+distribution and made item by item in §c; the script deliberately emits no
+boolean for exactly this reason (§a). §c1 convicts `cvx-2015` item 6 on it and
+§c2 acquits `ge-1994` item 8 on it, and both show their outside counts
+(PR #60 R5).
+
+Then:
 
 - **target inside some span** — the responsive content is in the output,
   under another item's code. Nothing the filing contains is absent from the
@@ -107,7 +132,7 @@ it is a pointer" — phrasing does no work anywhere in §c. It is not "a short
 span is wrong" — `ge-1994` item 8, at 86 chars the shortest item here, is
 `correct`. And it is not a coverage threshold — the three
 highest-coverage filings in the class (`jpm-2024` 0.9931, `xom-2021` 0.9799,
-`bac-2006` 0.9285) contribute eleven `correct` verdicts and nothing else,
+`bac-2006` 0.9285) contribute ten `correct` verdicts and nothing else,
 while all three defects come from `cvx-2015` at 0.2718; but §c reaches every
 one of those from the per-target measurement, and `ge-1994` at 0.2306 — lower
 than `cvx-2015` — is `correct`.
@@ -139,11 +164,14 @@ R1: pointer-only, three locatable positions, all inside this document → in
 class. R2: passes. R3: three targets. "page 3 under Item 1. Business" is
 item 1's span, 82,907 chars → reached. "Tables I through VII on pages FS-61
 through FS-71" — anchor `FS-61\b`, 2 matches inside item 1 (item 1's own
-prose referring to the tables) and **1 outside every span**, at 127,268: the
-tables themselves are in the tail. "Note 16 … page FS-41" — anchor
-`(?i)properties, plant and equipment`, **0 matches inside any span and 22
-outside**. Two of three targets unreached, and the envelope reports the item
-clean at 0.95. → `defect`.
+prose referring to the tables) and **1 outside every span**, at 127,268.
+*That* match is `Supplemental Information on Oil and Gas Producing Activities
+FS-61` — a line in the FS section's own contents, i.e. another reference; the
+tables themselves begin at **366,212** (`Table I - Costs Incurred in
+Exploration, Property Acquisitions and Dev…`), also outside every span.
+"Note 16 … page FS-41" — anchor `(?i)properties, plant and equipment`,
+**0 matches inside any span and 22 outside**. Two of three targets unreached,
+and the envelope reports the item clean at 0.95. → `defect`.
 
 **Item 6 — `defect`.** This is the item the whole disagreement is about. Span
 119 chars, `extracted`, **0.95**, `review_required` **false**.
@@ -154,11 +182,24 @@ clean at 0.95. → `defect`.
 
 R1: in class. R2: passes — the span is exactly what the filing put under that
 heading, and on this the auditor's ADR-019 read was right. R3: anchor
-`FS-60\b` gives 1 match inside item 15 and **1 outside every span**. The
-item-15 match is at 122,087, inside the 1,868-char exhibit index, and is a
-*reference* to page FS-60, not the five-year table; the table is the match at
-127,200, in the 294,291-char tail. The selected financial data are in no
-span, and the envelope reports the item clean at 0.95. → `defect`.
+`FS-60\b` gives 1 match inside item 15 and **1 outside every span**. Neither
+match is the content. The item-15 match at 122,087 sits inside the 1,868-char
+exhibit index; the outside match at 127,200 is `Five-Year Financial Summary
+FS-60`, a line in the FS section's own contents. **The five-year table itself
+is at 363,489** (`Five-Year Financial Summary\n\nUnaudited\n\nMillions of`),
+outside every span, in the 294,291-char tail.
+
+*(Corrected 2026-08-27 under PR #60 R1, and the correction is the reason §a
+says this script prints a distribution rather than a verdict. The first draft
+of this paragraph named 127,200 as "the table" — making, on the flagship item
+of the whole disagreement, exactly the reference-for-content conflation it
+convicts the item-15 match of. The verdict does not move: every match of
+every anchor for this target, index line and table alike, is outside every
+span, which is what the measurement supports and all it needs to support.
+Same correction applied to item 2 above.)*
+
+The selected financial data are in no span, and the envelope reports the item
+clean at 0.95. → `defect`.
 
 **Item 7 — `correct`.** Span 280 chars, `extracted`, **0.80**,
 `review_required` **true** (`item_span_near_empty`, ADR-035).
@@ -214,9 +255,18 @@ Same measurement as item 7, same verdict, same reason.
 R1: pointer-only; "index under item 14" is a locatable position inside this
 document → in class (prong 2 is satisfied by an index, not only by a page
 number; §g1 records what that costs). R2: passes. R3, one hop: the target is
-item 14's index, and item 14 is `extracted` with a 10,377-char span — anchor
-`(?i)statement of financial position` matches at 78,112, inside item 14. The
-named target is reached. → `correct`.
+item 14's index — not the financial statements, *the index* — and item 14 is
+`extracted` with a 10,377-char span. Anchor `(?i)statement of financial
+position` gives **1 match inside item 14, at 78,112, and 5 outside every
+span**. Both counts matter and the first draft printed only the first
+(PR #60 R5). Under R3's mixed-match rule the inside match at 78,112 IS the
+named target — it is a line of item 14's index, which is what the body sends
+the reader to — so the target is reached; the 5 outside matches are the
+financial statements themselves, one hop further on and out of this class
+(next paragraph). → `correct`. The verdict does not depend on this: item 8
+carries `item_span_near_empty` at 0.80 with `review_required: true`, so it is
+`correct` under the second bullet even if a reader resolves the target the
+other way.
 
 The one-hop rule earns its keep here. Item 14's index resolves onward to "the
 GE Annual Report to Share Owners for the fiscal year ended December 31,
@@ -464,11 +514,18 @@ was filed under a neighbouring code. In its words: "no consumer reading
   spans are heading-to-heading with no obligation to resolve internal
   references, I would concede all three to RIGHT." That ruling is ADR-004
   shape 2, which predates both reads and which §b R2 re-affirms. It would
-  **not** concede the 0.95 group on the same ruling — and on the 0.95 group
-  the two reads already agree. So the residue is: the auditor holds a
-  status-layer objection to ADR-004 that this row has no mandate to settle,
-  and once ADR-004 is granted, four of the five divergences reduce to
-  `bac-2006` 3/6's confidence complaint.
+  **not** concede what it calls the 0.95 group, which by its own verdict table
+  is rows 1, 2, 3, 5 and 6 — `cvx-2015` 2/6/7A **and `bac-2006` 3/6**. On the
+  `cvx-2015` three the two reads already agree; **on `bac-2006` 3/6, also
+  0.95, they do not**, and those two are the entire subject of this bullet.
+  (Corrected under PR #60 R4: the first draft read "on the 0.95 group the two
+  reads already agree", which the committed auditor output sitting next to it
+  contradicts.) So the residue is: the auditor holds a status-layer objection
+  to ADR-004 that this row has no mandate to settle, and once ADR-004 is
+  granted **three of the five divergences are conceded by the auditor's own
+  words** — `cvx-2015` 8, `spatz-2014` 8, `jpm-2024` 7 — **leaving a residue
+  of two, `bac-2006` 3 and 6**. ("Four of the five" in the first draft was
+  arithmetic no reading of §d1 supports.)
 
 ### d4) `mrk-1995` item 5 — an answer to TD-150, not a disagreement with §c7
 
@@ -492,8 +549,11 @@ Recorded because it is evidence this ruling did not produce, not because it
 was asked for.
 
 1. **The escalation layer's item set, measured corpus-wide.**
-   `item_span_near_empty` is emitted for exactly three item codes across all
-   45 dev fixtures plus the held-out set: `{'7': 7, '8': 15, '1': 2}`.
+   `item_span_near_empty` is emitted for exactly three item codes across the
+   whole corpus: `{'7': 7, '8': 15, '1': 2}`. (The auditor writes "all 45
+   fixtures"; `ls evals/fixtures/*/filing.*` is **44**. The sweep reproduces
+   over 44 dev + 6 held-out, so the tally is right and only its denominator
+   was misstated — corrected here rather than quoted forward, PR #60 R6.)
    Therefore `review_required` is "structurally incapable of firing on a
    near-empty Item 2, 3, 5, 6, 7A or 9" — "a discriminator that cannot
    discriminate". That is independent, quantified corroboration of §f's
@@ -517,23 +577,55 @@ was asked for.
 
 ### d6) Weaknesses in how this comparison was run
 
+- **Two of the instances ADR-034 §f row 2 names were never put to the
+  auditor.** The reopener's instrument is "an extraction-auditor pass over
+  `cvx-2015` items 6, 7, 8 and the `bac-2006` / `spatz-2014` instances". The
+  sample covered `cvx-2015` 6 and 8, `bac-2006` 3 and 6, and `spatz-2014` 8 —
+  **`cvx-2015` item 7 and `bac-2006` item 7A were omitted** (PR #60 R2).
+  cvx 7 is the worse omission by far: §c1 calls it "the sharpest concession
+  the rule makes", ADR-019 §e read it WRONG, and this ADR's `correct` verdict
+  on it rests entirely on ADR-035's warning rather than on anything the
+  auditor saw. Its sibling item 8 — same body shape, same 0.80, same warning —
+  WAS adjudicated blind and came back a divergence, so the honest reading is
+  that cvx 7 would likely have diverged too. The sample does not say, and this
+  ADR does not claim it does.
 - **The sample had no negative control.** All nine items handed to the auditor
   are pointer-bodied, so a uniform WRONG was available without discriminating
   anything, and the auditor says so itself. Its verdicts are usable only
   because it supplied its own controls (§d5.2) and its own weak/strong
   grading. A sample designed by this row should have carried two or three
   non-pointer items; it did not.
-- **One run, not repeated.** The auditor was invoked once and its answer taken
-  as given. Re-running it would be tuning a judge, so the alternative was not
-  available — but the consequence is that its verdicts have no variance
-  estimate, exactly as ADR-019 §b's n=30 had none.
-- **Anchors differ between the two reads and the agreement survives it.** For
-  `cvx-2015` item 6 this ADR resolves "page FS-60" with the anchor `FS-60\b`
-  (match at 127,200, outside every span); the auditor used
-  `Five-Year Financial Summary` (offset 363,489, also outside every span).
-  Different anchors, same conclusion — which is the strongest thing that can
-  be said for §c's anchor method, and is said here rather than in §g3 because
-  it is the auditor's evidence, not this ADR's.
+- **One run here, but not the instrument's first run — and the one variance
+  datapoint available is a FLIP.** The auditor was invoked once for this ADR
+  and its answer taken as given; re-running it would be tuning a judge, so no
+  second sample was drawn. But this is the same instrument that adjudicated
+  `cvx-2015` item 6 on 2026-08-19 and returned **CORRECT**
+  (`docs/evals/audits/2026-08-19-t11-silent-failure-sample.md`, row 21:
+  `| 21 | cvx-2015-shallow | 6 | extracted | 0.95 | CORRECT |`), against
+  **WRONG** now — on output that has not changed. §d2 calls that convergence
+  and it is fair to ask whether it is instead judge noise (PR #60 R7).
+  **The reconciliation is a signal change, and it is datable**: on 2026-08-19
+  the contrast the current auditor reasons from did not exist. It convicts
+  item 6 by comparing it with item 8 — 119 chars at 0.95/`false` against 189
+  chars at 0.80/`true` — and item 8 only acquired that 0.80 and that
+  `review_required` when ADR-035 shipped `item_span_near_empty` on
+  2026-08-26, seven days after the first pass. Both runs saw the same span;
+  only the second saw a same-filing item of the same shape flagged. That is
+  not proof the flip is signal rather than noise — one flip on one item is not
+  a variance estimate however it is explained — but it is a stated, checkable
+  mechanism, and the alternative reading (the judge is unstable on this shape)
+  is left open here rather than argued away.
+- **Anchors differ between the two reads, the agreement survives it, and the
+  auditor's anchor was the better one.** For `cvx-2015` item 6 this ADR
+  resolves "page FS-60" with `FS-60\b`, whose only outside match (127,200) is
+  an FS-index line; the auditor used `Five-Year Financial Summary` and landed
+  on **363,489, the table itself**. Both anchors put the target outside every
+  span, so the conclusion is the same — but the auditor's choice named the
+  content and this ADR's named a reference to it, which is the conflation
+  PR #60 R1 caught in §c1 and which is corrected there. Two independent
+  anchors reaching one conclusion is the strongest thing that can be said for
+  §c's anchor method; that one of them was chosen better is the honest
+  qualification on it.
 
 ## e) What this does to each Debt row
 
@@ -554,8 +646,8 @@ makes `cvx-2015` items 7 and 8 correct today is a warning carrying their code
 (ADR-035), not the FS pages being pulled into their spans, and the same
 instrument is what items 2, 6 and 7A lack. A milestone that resolved `page
 FS-60` would close the three defects as a side effect of building something
-much larger, and would leave every other in-class item — all eleven `correct`
-ones — untouched. So the A2 **outcome** stands, its **reason 1 is superseded**,
+much larger, and would leave every other in-class item — all fourteen
+`correct` ones — untouched. So the A2 **outcome** stands, its **reason 1 is superseded**,
 and TD-12's next move is TD-5's trigger design, not TD-12's own capability.
 
 What the row gains: the adjudicated verdict per item; the fact that the
@@ -582,33 +674,70 @@ does not govern is decoration, not coverage.
 
 ### e3) TD-149 — the row and ADR-019 §e understate their own class: **widened, still open**
 
-The census is understated by more than TD-149 records, and by a mechanism
-TD-149 does not name. ADR-034 §b3's scan required a digit
+The census is understated by more than TD-149 records, and by two mechanisms
+TD-149 does not name. ADR-034 §b3's scan (a) required a digit
 (`pages?\s+(?:FS-)?\d`, `FS-\d`, or the literal `see index`), so it could only
-ever find page-numbered pointers. Under R1 prong 2 a titled section is a
+ever find page-numbered pointers, and (b) capped the body at
+`d9_class_scan.py`'s `BODY_MAX = 700`. Under R1 prong 2 a titled section is a
 locatable position too, and `xom-2021` — a filing §b3 names only in its
-rejection list — carries **four** in-class items its scan could not see:
+rejection list — carries four bodies its scan could not see. Items 7, 7A and
+15 were missed on the digit alone; item 8, at 737 chars, was missed on
+**both** (PR #60 R3). All four in full, no ellipsis:
 
 > item 7 (267 chars): `Reference is made to the section entitled "Management's Discussion and Analysis of Financial Condition and Results of Operations" in the Financial Section of this report.`
 >
-> item 7A (413): `Reference is made to the section entitled "Market Risks" in the Financial Section of this report. …`
+> item 7A (413): `Reference is made to the section entitled "Market Risks" in the Financial Section of this report. All statements, other than historical information incorporated in this Item 7A, are forward-looking statements. The actual impact of future market changes could differ materially due to, among other things, factors discussed in this report.`
 >
-> item 8 (737): `Reference is made to the following in the Financial Section of this report: …`
+> item 8 (737): `Reference is made to the following in the Financial Section of this report:` / `•Consolidated financial statements, together with the report thereon of PricewaterhouseCoopers LLP (PCAOB ID 238) dated February 23, 2022, beginning with the section entitled "Report of Independent Registered Public Accounting Firm" and continuing through "Note 19: Income and Other Taxes";` / `•"Supplemental Information on Oil and Gas Exploration and Production Activities" (unaudited); and` / `•"Frequently Used Terms" (unaudited).` / `Financial Statement Schedules have been omitted because they are not applicable or the required information is shown in the consolidated financial statements or notes thereto.`
 >
 > item 15 (209): `(a)(1) and (2) Financial Statements:` / `See Table of Contents of the Financial Section of this report.` / `(b)(3) Exhibits:` / `See Index to Exhibits of this report.`
 
-All four are `correct` under R3 — every target's anchor lands inside item 16's
-span with **zero matches outside any span**, and `doc_status` is `ambiguous`
-so all four are capped at 0.75. But `xom-2021` item 15 was *rejected out of
-the class* by ADR-034 §b3 for having "no page number at all", while
-`ge-1994` item 8 — `See index under item 14.`, also with no page number — was
-*admitted*. That inconsistency was the scan regex's shape, not a rule, and
-this ADR overturns the rejection: **`xom-2021` items 7, 7A, 8 and 15 are
-in class and correct.** The adjudicated dev total moves from ADR-034 §b3's
-**14 items across 5 filings to 18 across 6** — §b3's 14 (`cvx-2015` 5,
-`jpm-2024` 4, `bac-2006` 3, `ge-1994` 1, `spatz-2014` 1) plus `xom-2021`'s 4.
-`nvda-2024` item 8 does not enter and leaves the count unchanged: §b3's 14
-never contained it — it was ADR-019 §e's own addition — and §c6 rules it out.
+**Item 15's rejection is overturned; item 8 fails prong 1 and stays out.**
+§b3 rejected item 15 for "no page number at all" while admitting `ge-1994`
+item 8 (`See index under item 14.`), which has no page number either — that
+was the scan regex's shape, not a rule, and prong 2 admits an index or a table
+of contents. Item 8 is a different matter, and the first draft of this section
+readmitted it without testing it (PR #60 R3).
+
+**Prong 1, adjudicated on the sentence split (`--prong1`, which uses
+`segment._sentences`, the pipeline's own splitter).** Item 8's body is two
+sentences: a 506-char pointer block, and a 176-char sentence that is not a
+pointer — `Financial Statement Schedules have been omitted because they are
+not applicable or the required information is shown in the consolidated
+financial statements or notes thereto.` That sentence **disposes of part of
+what the item requires, standing alone, without the pointer**: the schedules
+requirement is answered completely and finally by it, and under ADR-005 a
+non-applicability statement is a complete and correct answer, not an absence.
+So the pointer is an addition to a real answer, which is precisely ADR-034
+§b3's rejection ground. **`xom-2021` item 8 is `out-of-class`.**
+
+Item 7A survives the same test and the distinction is the whole of prong 1.
+Its two non-pointer sentences (111 + 128 chars) are a forward-looking-statements
+safe-harbour qualifier on the material the pointer names. They disclose no
+market-risk fact and answer nothing on their own — delete the pointer and they
+are about nothing. A sentence that only qualifies the pointer is not a
+standalone answer; a sentence that closes out a disclosure requirement is.
+Items 7 and 15 have no non-pointer sentence at all.
+
+**Prong 1 is not a length test, and this is where the first draft would have
+gone wrong twice.** ADR-007's `IBR_REMAINDER_MAX = 300` is the obvious
+candidate and it does **not** reproduce §b3: `intc-2002` item 5's only
+standalone content is `As of February 21, 2003, there were approximately
+240,000 registered holders of record of Intel's common stock.` — **110
+chars**, far under 300, and §b3 rejects it. Measured the same way, `ba-2003`
+item 5 carries 74 + 145 + 89 = 308 chars of standalone disclosure and
+`textron-2001` item 5 carries 104 + 86 = 190. The three §b3 rejections span
+110..308 chars, so no threshold separates them from `xom-2021` item 8's 176.
+The discriminator is kind, not size: **does the sentence dispose of any part
+of what the item requires, on its own, without the pointer?** Holder counts
+and exchange listings do; a safe-harbour disclaimer does not; a
+"schedules omitted, not applicable" sentence does.
+
+**So the census moves to 17 items across 6 filings, not 18** — §b3's 14
+(`cvx-2015` 5, `jpm-2024` 4, `bac-2006` 3, `ge-1994` 1, `spatz-2014` 1) plus
+`xom-2021` 7, 7A and 15. `nvda-2024` item 8 does not enter and leaves the
+count unchanged: §b3's 14 never contained it — it was ADR-019 §e's own
+addition — and §c6 rules it out on prong 2.
 
 Two further findings for the row, neither ruled on here: `spatz-2014` items 8
 and 15 point at each other with the financial statements in neither span
@@ -642,9 +771,10 @@ Each names an instrument and a threshold.
 | what is overturned | what overturns it | instrument | threshold |
 |---|---|---|---|
 | the three `defect` verdicts (`cvx-2015` 2/6/7A) | the escalation layer starts carrying those items — a warning naming their code, or an `ambiguous` document verdict. Then R3's second bullet no longer applies and they become `correct` without anything being "fixed" in the sense TD-12 means | `evals/adversarial/cvx-2015-silent-pointer-items.json` going green | all three |
-| the eleven `correct` verdicts | the contract gains a clause, or a case gains an assertion, that a span must hold the substance responsive to its item and not merely the labelled text. R2's premise — that INV-S2 is all `extracted` claims — is then false and every in-class item is a defect | `specs/001-sec10k-contract.md` + the golden set | one clause |
+| the fourteen `correct` verdicts | the contract gains a clause, or a case gains an assertion, that a span must hold the substance responsive to its item and not merely the labelled text. R2's premise — that INV-S2 is all `extracted` claims — is then false and every in-class item is a defect | `specs/001-sec10k-contract.md` + the golden set | one clause |
 | `correct` on `bac-2006` 3/6/7A specifically (§c4, the weakest joint) | a consumer-visible harm from content being labelled under a neighbouring item's code, demonstrated on a filing rather than argued: an item whose named target is inside another span AND whose absence from its own span is shown to break a stated downstream use | a case, or an audit finding on a real filing | one instance |
-| `out-of-class` on `nvda-2024` 8 and `xom-2021` 15 under the old rule | R1 prong 2 is rewritten to admit "the answer is somewhere in this document" with no position named. That also readmits `xom-2021` 15 the other way, so the rewrite must handle both or it is not a rule | R1 as stated in §b | either |
+| `out-of-class` on `nvda-2024` 8 | R1 prong 2 is rewritten to admit "the answer is somewhere in this document" with no position named. That also readmits `xom-2021` 15 the other way, so the rewrite must handle both or it is not a rule | R1 as stated in §b | either |
+| `out-of-class` on `xom-2021` 8 (§e3) | prong 1's discriminator — "does the sentence dispose of any part of what the item requires, on its own, without the pointer" — is shown to mis-sort one of ADR-034 §b3's own three rejections, or to sort `xom-2021` 8 and 7A the same way. Either breaks the kind test and prong 1 needs a different one; the census returns to 18/6 if item 8 comes back | `--prong1` over §e3's seven bodies | one mis-sort |
 | the whole rule | an in-class item is found where R2 fails — a pointer-bodied item whose span is NOT the verbatim labelled text. The two-layer split assumes segmentation is sound on this shape; it is measured sound on all 18 here and asserted by the `verbatim` check on both `debt` cases | `evals/adversarial/cvx-2015-*.json` `verbatim` checks, or a new fixture | one instance |
 
 **Explicitly not sufficient**: a pointer body being short; a filing having low
@@ -669,9 +799,10 @@ freeze exception.
    in this Annual Report on Form 10-K`. The line is real — the first two name
    a thing a reader turns to, the third names only the answer's existence —
    but it is a line drawn in prose and two of the corpus's items sit close to
-   it. The ruling is unchanged either way for both (`nvda-2024` 8 and
-   `xom-2021` 15 are `correct` under R3 if readmitted), so nothing here
-   turns on it; a case that did would need the prong made executable first.
+   it. The ruling is unchanged either way for both: `xom-2021` 15 is admitted
+   by the prong and is `correct`, and `nvda-2024` 8 would be `correct` under
+   R3 if the prong were widened to admit it. So nothing here turns on the
+   line; a case that did would need the prong made executable first.
 2. **`cvx-2015` item 2 flips under the lenient variant of R3's third bullet.**
    Its principal target — the properties description at "page 3 under Item 1.
    Business" — *is* reached; only the Reg S-K Subpart 1200 tables and Note 16
@@ -689,9 +820,10 @@ freeze exception.
    where the two diverged it would be the wrong anchor.
 4. **Only `cvx-2015` was adjudicated at document level.** The three defects
    are all in one filing. Whether the silent-at-0.95 shape occurs elsewhere
-   was not censused — TD-149's widening (§e3) found four more in-class items
-   on `xom-2021` by reading four bodies, not by a corpus scan, and no scan
-   for the *silent* sub-shape has ever been run.
+   was not censused — TD-149's widening (§e3) found three more in-class items
+   on `xom-2021` by reading four bodies (the fourth, item 8, came out on
+   prong 1), and it found them by reading, not by a corpus scan. No scan for
+   the *silent* sub-shape has ever been run.
 5. **No held-out filing was adjudicated in class.** `mrk-1995` is held out
    and is out of class; the in-class corpus here is entirely dev-side. The
    ruling's generality to unseen filings is asserted, not measured.
@@ -707,12 +839,20 @@ freeze exception.
    quote (floor raised 11 → 14). A figure inside §c that no ledger row quotes
    can go stale silently; the mitigation is that
    `tasks/reviews/d13_span_dump.py` regenerates all of them in one command.
-8. **The auditor's confidence objection to `bac-2006` is unanswered, not
-   answered.** §d3 says so plainly. This ADR rules those three `correct` on a
-   rule fixed before the sample was run, and it does not claim the auditor's
-   ordering of the two questions was shown wrong — only that R3 asks them in
-   the order §b states and was applied uniformly. A reviewer who thinks the
-   other order is right should read §d3 and §f's third row, not §c4 alone.
+8. **The `bac-2006` verdicts turn on a SCOPE choice this ADR has not shown
+   right.** The first draft of this item called it an ordering of two
+   questions; that understated it (PR #60 R8). The actual move is that R3
+   evaluates "is the target reached" **document-wide** while the honesty half
+   evaluates **item-level** — and `specs/001-sec10k-contract.md` defines
+   `review_required` as item-level explicitly ("It is **item-level**: a
+   document-level warning does not set it"), so the item-scoped reading is
+   the contract's own default for that field and is what the auditor takes.
+   Read `the output` item-wide in both halves and `bac-2006` 3/6/7A are
+   defects. §b now names the scope; naming it is not the same as justifying
+   it, and this ADR does not claim to have shown the document-wide scope
+   correct — only that it is the scope §b fixed before the sample was drawn
+   and that §c applied it uniformly. A reviewer who thinks the item scope is
+   right should read §d3 and §f's third row, not §c4 alone.
 
 ## h) Byte-identity
 
