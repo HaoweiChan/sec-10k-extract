@@ -243,9 +243,10 @@ them all); the example once showed `lenient_match`, which nothing emits.
   listed code is one a path produces) and `low_item_coverage` (ADR-035 —
   `meta.coverage` below `COVERAGE_MIN`; produced end to end on
   `evals/adversarial/xref-index-collapse.json`). Every other warning code is
-  non-escalating — including `item_span_near_empty` (ADR-035 §c), which
-  carries an item code, moves that item's `confidence` and sets its
-  `review_required`, and says nothing about the document.
+  non-escalating — including `item_span_near_empty` (ADR-035 §c) and
+  `internal_pointer_unreached` (ADR-039 §b), which carry an item code, move
+  that item's `confidence` and set its `review_required`, and say nothing
+  about the document.
 - `unsupported`/`failed` mean the pipeline **refused** — it must never emit a
   best-effort `items` parse of a document it could not identify as a 10-K.
 - `warnings` is present (possibly empty); `doc_status: success` requires it to

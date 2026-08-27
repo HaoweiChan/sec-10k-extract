@@ -1,0 +1,63 @@
+D16 red-first record — ADR-039's fire-side case watched red BEFORE the
+validator existed.
+
+Tree: 5537e33e60780e833415fdfff101fff7955b05de (branch task/D16) with the
+following uncommitted eval-side edits and NO src/ change of any kind
+(`git status --short` at the time of the runs):
+
+ M evals/adversarial/cvx-2015-silent-pointer-items.json   (promoted debt -> fast+invariant; +8 checks)
+ M evals/adversarial/ge-1994-oldformat.json               (+1 warning_absent, external-exclusion pin)
+ M evals/golden/bac-2006-shallow.json                     (+3 warning_absent, coverage-band edge pins)
+ M specs/decisions/INDEX.md                               (ADR-039 row)
+?? specs/decisions/ADR-039-pointer-shape-escalation.md
+?? tasks/reviews/d16_census.py
+
+src/sec10k/validate.py, src/sec10k/extract.py: untouched (pipeline identical
+to origin/main b04068a — D13 proved that tree byte-identical).
+
+-------------------------------------------------------------------------
+suite runs (evals/report/history.jsonl lines 20260828-015211 / -015256):
+
+  python3 -m evals.run --suite invariant
+    [FAIL] cvx-2015-silent-pointer-items (adversarial)
+    [eval] suite 'invariant': 81/82 = 0.988  (+4 enumerated debt, unscored)
+    [eval] INVARIANT VIOLATION: invariants are absolute, 100% required
+
+  python3 -m evals.run --suite fast
+    [FAIL] cvx-2015-silent-pointer-items (adversarial)
+    [eval] suite 'fast': 144/145 = 0.993  (+4 enumerated debt, unscored)
+
+(The three earlier 80/82 invariant lines at 20260828-0150xx are the same red
+plus adr-header-and-index, red only because the ADR-039 INDEX row had not
+been written yet; the row was added and the re-run above is the clean red.)
+
+-------------------------------------------------------------------------
+per-check detail (src.sec10k.eval_adapter.eval_check over the case's checks,
+extract_items with default flags on evals/fixtures/cvx-2015/filing.htm):
+
+[pass] {'type': 'no_empty_success'}
+[pass] {'type': 'no_overlap_ordered'}
+[pass] {'type': 'verbatim'}
+[pass] {'type': 'item_present', 'item': '2', 'status': 'extracted'}
+[pass] {'type': 'item_present', 'item': '6', 'status': 'extracted'}
+[pass] {'type': 'item_present', 'item': '7A', 'status': 'extracted'}
+[FAIL] {'type': 'item_field', 'item': '2', 'field': 'review_required', 'value': True}  -> item 2 review_required False != True
+[FAIL] {'type': 'item_field', 'item': '6', 'field': 'review_required', 'value': True}  -> item 6 review_required False != True
+[FAIL] {'type': 'item_field', 'item': '7A', 'field': 'review_required', 'value': True}  -> item 7A review_required False != True
+[FAIL] {'type': 'warning_present', 'code': 'internal_pointer_unreached', 'item': '2'}  -> expected warning 'internal_pointer_unreached', got ['item_span_near_empty', 'unattributed_content']
+[FAIL] {'type': 'warning_present', 'code': 'internal_pointer_unreached', 'item': '6'}  -> expected warning 'internal_pointer_unreached', got ['item_span_near_empty', 'unattributed_content']
+[FAIL] {'type': 'warning_present', 'code': 'internal_pointer_unreached', 'item': '7A'}  -> expected warning 'internal_pointer_unreached', got ['item_span_near_empty', 'unattributed_content']
+[FAIL] {'type': 'confidence', 'item': '2', 'value': 0.8}  -> item 2 confidence 0.95 != 0.8
+[FAIL] {'type': 'confidence', 'item': '6', 'value': 0.8}  -> item 6 confidence 0.95 != 0.8
+[FAIL] {'type': 'confidence', 'item': '7A', 'value': 0.8}  -> item 7A confidence 0.95 != 0.8
+[pass] {'type': 'warning_absent', 'code': 'internal_pointer_unreached', 'item': '5'}
+[pass] {'type': 'warning_absent', 'code': 'internal_pointer_unreached', 'item': '1'}
+
+9 of 17 checks failing
+
+The case is red for the promoted reason and only that reason: the three
+item_field, three warning_present and three confidence assertions fail;
+every hygiene, item_present and warning_absent check passes. The
+warning_absent pins on items 5 and 1, and the bac-2006 / ge-1994 pins, are
+green on both sides by design — their red line is the threshold-mutation
+transcript (tasks/reviews/d16-threshold-mutations.txt), not this record.

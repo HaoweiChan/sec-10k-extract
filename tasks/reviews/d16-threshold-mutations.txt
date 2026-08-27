@@ -1,0 +1,74 @@
+D16 threshold-mutation transcript (ADR-039 §g) — each of the six mutations
+applied to src/sec10k/validate.py in turn, the named pin cases re-judged
+under it, and the file restored before the next. The judge is
+src.sec10k.eval_adapter.eval_check over each case's own committed checks
+(extract_items with the case's own input flags) — the same code path the
+suite runs, minus the runner, so mutation runs leave no history.jsonl noise.
+"GREEN" rows are the deliberate controls: the case a mutation must NOT
+touch, shown untouched. The clean-tree spot check at the end shows all four
+pin cases green with the constants restored. Driver preserved in the ADR's
+own §g table; grep lines show the mutated constant in place.
+
+=== mutation 1: PTR_COVERAGE_MIN 0.60 -> 0.25 (below the fire edge 0.2718)
+141:PTR_COVERAGE_MIN = 0.25
+cvx-2015-silent-pointer-items: 9 checks RED
+  [FAIL] {'type': 'item_field', 'item': '2', 'field': 'review_required', 'value': True}  -> item 2 review_required False != True
+  [FAIL] {'type': 'item_field', 'item': '6', 'field': 'review_required', 'value': True}  -> item 6 review_required False != True
+  [FAIL] {'type': 'item_field', 'item': '7A', 'field': 'review_required', 'value': True}  -> item 7A review_required False != True
+  [FAIL] {'type': 'warning_present', 'code': 'internal_pointer_unreached', 'item': '2'}  -> expected warning 'internal_pointer_unreached', got ['item_span_near_empty', 'unattributed_content']
+  [FAIL] {'type': 'warning_present', 'code': 'internal_pointer_unreached', 'item': '6'}  -> expected warning 'internal_pointer_unreached', got ['item_span_near_empty', 'unattributed_content']
+  [FAIL] {'type': 'warning_present', 'code': 'internal_pointer_unreached', 'item': '7A'}  -> expected warning 'internal_pointer_unreached', got ['item_span_near_empty', 'unattributed_content']
+  [FAIL] {'type': 'confidence', 'item': '2', 'value': 0.8}  -> item 2 confidence 0.95 != 0.8
+  [FAIL] {'type': 'confidence', 'item': '6', 'value': 0.8}  -> item 6 confidence 0.95 != 0.8
+  [FAIL] {'type': 'confidence', 'item': '7A', 'value': 0.8}  -> item 7A confidence 0.95 != 0.8
+bac-2006-shallow: GREEN
+
+=== mutation 2: PTR_COVERAGE_MIN 0.60 -> 0.95 (above the no-fire edge 0.9285)
+141:PTR_COVERAGE_MIN = 0.95
+bac-2006-shallow: 3 checks RED
+  [FAIL] {'type': 'warning_absent', 'code': 'internal_pointer_unreached', 'item': '3'}  -> unexpected warning 'internal_pointer_unreached': item 3's body is an internal page pointer and only 92.8% of the document lies inside item spans — the content it names is likely in the unplaced region, not in this span
+  [FAIL] {'type': 'warning_absent', 'code': 'internal_pointer_unreached', 'item': '6'}  -> unexpected warning 'internal_pointer_unreached': item 6's body is an internal page pointer and only 92.8% of the document lies inside item spans — the content it names is likely in the unplaced region, not in this span
+  [FAIL] {'type': 'warning_absent', 'code': 'internal_pointer_unreached', 'item': '7A'}  -> unexpected warning 'internal_pointer_unreached': item 7A's body is an internal page pointer and only 92.8% of the document lies inside item spans — the content it names is likely in the unplaced region, not in this span
+bac-2006-images: 1 checks RED
+  [FAIL] {'type': 'doc_status', 'value': 'success'}  -> doc_status 'success_with_warning' != 'success'
+cvx-2015-silent-pointer-items: GREEN
+
+=== mutation 3: PTR_BODY_MAX 1200 -> 500 (below the fire edge 515)
+140:PTR_BODY_MAX = 500
+cvx-2015-silent-pointer-items: 3 checks RED
+  [FAIL] {'type': 'item_field', 'item': '2', 'field': 'review_required', 'value': True}  -> item 2 review_required False != True
+  [FAIL] {'type': 'warning_present', 'code': 'internal_pointer_unreached', 'item': '2'}  -> expected warning 'internal_pointer_unreached', got ['internal_pointer_unreached', 'item_span_near_empty', 'unattributed_content']
+  [FAIL] {'type': 'confidence', 'item': '2', 'value': 0.8}  -> item 2 confidence 0.95 != 0.8
+
+=== mutation 4: PTR_BODY_MAX 1200 -> 1900 (above the no-fire edge 1814)
+140:PTR_BODY_MAX = 1900
+cvx-2015-silent-pointer-items: 1 checks RED
+  [FAIL] {'type': 'warning_absent', 'code': 'internal_pointer_unreached', 'item': '5'}  -> unexpected warning 'internal_pointer_unreached': item 5's body is an internal page pointer and only 27.2% of the document lies inside item spans — the content it names is likely in the unplaced region, not in this span
+cvx-2015-shallow: GREEN
+
+=== mutation 5: internal_pointer_unreached joins AMBIGUOUS_CODES
+112:                   "low_item_coverage", "internal_pointer_unreached"}
+cvx-2015-shallow: 1 checks RED
+  [FAIL] {'type': 'doc_status', 'in': ['success', 'success_with_warning']}  -> doc_status 'ambiguous' not in ['success', 'success_with_warning']
+cvx-2015-silent-pointer-items: 3 checks RED
+  [FAIL] {'type': 'confidence', 'item': '2', 'value': 0.8}  -> item 2 confidence 0.75 != 0.8
+  [FAIL] {'type': 'confidence', 'item': '6', 'value': 0.8}  -> item 6 confidence 0.75 != 0.8
+  [FAIL] {'type': 'confidence', 'item': '7A', 'value': 0.8}  -> item 7A confidence 0.75 != 0.8
+--- and the layer echo:
+  File "/Users/willy/Documents/sec-10k-extract/.claude/worktrees/agent-a4ba0150189277838/src/sec10k/validate.py", line 632, in _demo
+    assert "internal_pointer_unreached" not in AMBIGUOUS_CODES  # §b4: no escalation
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+
+=== mutation 6: the EXTERNAL_DOC_RE exclusion clause deleted
+381:            if (len(ptr_body) <= PTR_BODY_MAX and INTERNAL_PTR_RE.search(ptr_body)
+ge-1994-oldformat: 1 checks RED
+  [FAIL] {'type': 'warning_absent', 'code': 'internal_pointer_unreached', 'item': '6'}  -> unexpected warning 'internal_pointer_unreached': item 6's body is an internal page pointer and only 23.1% of the document lies inside item spans — the content it names is likely in the unplaced region, not in this span
+ibm-1997-shallow: 1 checks RED
+  [FAIL] {'type': 'confidence', 'item': '12', 'value': 0.95}  -> item 12 confidence 0.8 != 0.95
+
+=== restored; clean-tree spot check
+cvx-2015-silent-pointer-items: GREEN
+bac-2006-shallow: GREEN
+ge-1994-oldformat: GREEN
+ibm-1997-shallow: GREEN
