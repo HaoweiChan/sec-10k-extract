@@ -1,0 +1,16 @@
+{
+  "pr": 65,
+  "round": 1,
+  "resolutions": [
+    {
+      "id": "R1",
+      "resolution": "fixed",
+      "covered_by": "free-tier-limit / check_free_tier_limit singleton pin (exact `type(LIMITER) is Limiter` + drain-to-refusal of the real singleton via reset()), mirrored in limiter.py::_demo; mutants N1 (always-allow subclass, the reviewer's) and N1b (instance-level allow override, exact type kept — caught only by the behavior drain) both watched RED, transcripts in tasks/reviews/pr-d15-red.txt APPENDIX PARTS A/B"
+    },
+    {
+      "id": "R2",
+      "resolution": "fixed",
+      "covered_by": "free-tier-limit / check_free_tier_limit per-route 429 assertion `_err code == \"rate_limited\"` (ADR-040 §d); mutant N2 (`oops_typo`) watched RED on all three routes, transcript in tasks/reviews/pr-d15-red.txt APPENDIX PARTS A/B"
+    }
+  ]
+}

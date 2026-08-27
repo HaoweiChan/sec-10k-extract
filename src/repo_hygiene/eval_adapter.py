@@ -3907,10 +3907,34 @@ def check_free_tier_limit(case):
                            f"want ({want_burst}, {want_rate}) — env parsing "
                            f"must clamp toward a working limit, never toward "
                            f"infinity or zero")
-        if not isinstance(getattr(lim_mod, "LIMITER", None), lim_mod.Limiter):
-            bad.append("limiter.LIMITER is not a Limiter instance — the "
-                       "process-wide singleton the middleware consults does "
-                       "not exist")
+        # PR #65 R1. The singleton is pinned by BEHAVIOR, not by type alone:
+        # `isinstance` accepted an always-allow subclass assigned to LIMITER
+        # (measured: production admitted 1000/1000 while the gate stayed
+        # green), because every other row here exercises fresh Limiter(...)
+        # instances and part 2 swaps its own in — the one object production
+        # consults was exempt. So: exact type, then drain the REAL singleton
+        # to refusal through its documented reset() seam and restore it.
+        sing = getattr(lim_mod, "LIMITER", None)
+        if type(sing) is not lim_mod.Limiter:
+            bad.append(f"limiter.LIMITER is {type(sing).__name__}, not exactly "
+                       f"Limiter — a subclass here is how an always-allow "
+                       f"override ships while every Limiter(...) row stays "
+                       f"green (PR #65 R1)")
+        else:
+            try:
+                sing.reset()
+                # +1 slack: the real monotonic clock refills ~microtokens
+                # during the loop; it cannot legitimately admit more than that
+                admitted = sum(1 for _ in range(sing.burst + 3)
+                               if sing.allow()[0])
+                if admitted > sing.burst + 1:
+                    bad.append(f"the PRODUCTION singleton limiter.LIMITER "
+                               f"admitted {admitted} of {sing.burst + 3} rapid "
+                               f"requests (burst {sing.burst}) and never "
+                               f"refused — the object the middleware actually "
+                               f"consults enforces nothing (PR #65 R1)")
+            finally:
+                sing.reset()
 
     # ---- 2: execute app.py's middleware out of the real tree.
     mws = []
@@ -3994,6 +4018,13 @@ def check_free_tier_limit(case):
                            f"want the 429 envelope via _err — an inverted or "
                            f"absent refusal branch")
                 continue
+            # PR #65 R2: the envelope code is the contract ADR-040 §d names
+            # and the UI renders; an unpinned string is a contract in prose
+            if got.code != "rate_limited":
+                bad.append(f"{api_file}: the 429's envelope code is "
+                           f"{got.code!r}, want 'rate_limited' — ADR-040 §d's "
+                           f"refusal contract, rendered by the UI without a "
+                           f"special case (PR #65 R2)")
             retry = got.headers.get("Retry-After")
             if not (retry and str(retry).isdigit() and int(retry) >= 1):
                 bad.append(f"{api_file}: the 429 carries Retry-After="

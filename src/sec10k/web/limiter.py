@@ -150,7 +150,14 @@ def _demo():
     assert 1 <= DEFAULT_PER_MINUTE <= MAX_PER_MINUTE
     for route in ("fixture", "upload", "url"):
         assert f"/api/extract/{route}".startswith(LIMITED_PREFIX)
-    assert isinstance(LIMITER, Limiter)
+    # PR #65 R1: the PRODUCTION singleton, by behavior and exact type — an
+    # isinstance pin accepted an always-allow subclass that admitted
+    # 1000/1000 while this self-check printed ok
+    assert type(LIMITER) is Limiter
+    LIMITER.reset()
+    admitted = sum(1 for _ in range(LIMITER.burst + 3) if LIMITER.allow()[0])
+    assert admitted <= LIMITER.burst + 1, admitted   # it must actually refuse
+    LIMITER.reset()
     print("limiter: ok")
 
 
