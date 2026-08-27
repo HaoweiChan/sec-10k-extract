@@ -3474,7 +3474,10 @@ def check_escalation_door(case):
     holder of the secret cannot spend — that is the process `Budget`'s job, and
     it is the ceiling BEHIND the door, not instead of it. It also does not rate
     limit: the token is the brake, and a per-IP bucket behind Zeabur's proxy
-    was rejected as unmeasurable here (TD-158).
+    was rejected as unmeasurable here (TD-158). Since 2026-08-28 (D15,
+    ADR-040) the FREE tier's global limiter additionally fronts every
+    /api/extract/* request, token or not — bound by `check_free_tier_limit`,
+    not here.
     """
     inp = case.get("input", {})
     api_file = inp.get("file", API_FILE)
@@ -3739,6 +3742,291 @@ def check_escalation_door(case):
     return bad
 
 
+LIMITER_MODULE = "src.sec10k.web.limiter"
+
+
+def check_free_tier_limit(case):
+    """TD-162 / D15. The FREE deterministic tier has a bound, and the bound
+    binds.
+
+    The door (TD-158) closed the PAID path and deliberately left extraction
+    open — which left everything the free path costs unbounded: no rate limit,
+    no request cap, no concurrency bound on the three `/api/extract/*` routes,
+    only `MAX_BYTES` per document. A caller could post 25 MB filings in a loop,
+    and `/api/extract/url` spent an attributable outbound EDGAR fetch each
+    time. This check binds the fix the same way `escalation_door` binds the
+    door, because the recurring defect class in this repo is a safety mechanism
+    nobody bound.
+
+    Two halves, and only the registration line is a shape read:
+
+    1. **The limiter is RUN, not read.** `src/sec10k/web/limiter.py` is stdlib
+       only and imports no fastapi precisely so this check can import it and
+       exercise the real decision path with an injected clock: the burst
+       admits, the burst+1th refuses with a positive retry-after and a usable
+       reason, elapsed time refills at the configured rate and never past the
+       burst, `reset()` restores service, and the env-var config is BOUNDED —
+       garbage parses to the default and any value clamps into [1, max], so
+       there is no spelling of the variables that means "no limit". PR #58
+       R18, PR #61 R2 and PR #61 R11 are why executing beats shape-reading.
+    2. **`app.py`'s middleware is EXECUTED, not pattern-matched.** The one
+       `@app.middleware("http")` function that consults `.allow()` is compiled
+       out of the real tree (`_module_ns`'s argument: fastapi is not
+       importable here, but the function body does not need it) and CALLED
+       with a controlled `limiter.LIMITER`: under the limit it must reach
+       `call_next`; over the limit it must return the 429 envelope with a
+       `Retry-After` header and must NOT call `call_next` — on ALL THREE
+       extract paths, so a narrowed prefix reds regardless of how it is
+       spelled — and a non-extract path (`/api/meta`) must pass through
+       without consuming a token, so the limit never touches the pages and
+       metadata a viewer loads around a run. An inverted test, an ignored
+       verdict and a deleted middleware all red here functionally, not
+       textually.
+
+    What it does NOT prove: that fastapi binds the middleware into the ASGI
+    stack (the standing `app.py` limitation, TD-38 — the decorator is pinned
+    by AST and the live uvicorn measurement in `tasks/reviews/pr-d15-red.txt`
+    is the end-to-end evidence), that the limit is per-caller (it is global
+    per process, deliberately — Zeabur's proxy makes forwarded-for headers
+    untestable offline, TD-158's reasoning), or that a request under the limit
+    is cheap — the cost of one 25 MB request is a measured figure in the same
+    record, not an assertion here.
+    """
+    import asyncio
+    import types
+
+    inp = case.get("input", {})
+    api_file = inp.get("file", API_FILE)
+    bad = []
+    try:
+        tree = ast.parse((ROOT / api_file).read_text())
+    except SyntaxError as e:
+        return [f"{api_file} does not parse: {e}"]
+
+    try:
+        lim_mod = importlib.import_module(
+            inp.get("limiter_module", LIMITER_MODULE))
+    except ImportError as e:
+        bad.append(f"cannot import {LIMITER_MODULE} ({e}) — there is no "
+                   f"limiter for the free tier to consult")
+        lim_mod = None
+
+    # ---- 1: run the limiter's own decision path. Real module only: a
+    # known-bad app.py fixture substitutes THIS file and has no say over
+    # limiter.py (the escalation_door precedent).
+    if lim_mod is not None and "file" not in inp:
+        floor_burst = inp.get("min_default_burst", 5)
+        floor_rate = inp.get("min_default_per_minute", 10)
+        ceiling = inp.get("max_config", 10_000)
+        for name in ("DEFAULT_BURST", "DEFAULT_PER_MINUTE", "MAX_BURST",
+                     "MAX_PER_MINUTE", "LIMITED_PREFIX", "BURST_VAR",
+                     "RATE_VAR"):
+            if not hasattr(lim_mod, name):
+                bad.append(f"limiter has no {name} — the config surface the "
+                           f"docs and this check name does not exist")
+        if bad:
+            return bad
+        if not (floor_burst <= lim_mod.DEFAULT_BURST <= lim_mod.MAX_BURST
+                <= ceiling):
+            bad.append(f"DEFAULT_BURST {lim_mod.DEFAULT_BURST} / MAX_BURST "
+                       f"{lim_mod.MAX_BURST} outside [{floor_burst}, "
+                       f"{ceiling}] — a burst a demo viewer notices, or a "
+                       f"cap that is no cap")
+        if not (floor_rate <= lim_mod.DEFAULT_PER_MINUTE
+                <= lim_mod.MAX_PER_MINUTE <= ceiling):
+            bad.append(f"DEFAULT_PER_MINUTE {lim_mod.DEFAULT_PER_MINUTE} / "
+                       f"MAX_PER_MINUTE {lim_mod.MAX_PER_MINUTE} outside "
+                       f"[{floor_rate}, {ceiling}]")
+        for route in ("fixture", "upload", "url"):
+            if not f"/api/extract/{route}".startswith(lim_mod.LIMITED_PREFIX):
+                bad.append(f"LIMITED_PREFIX {lim_mod.LIMITED_PREFIX!r} does "
+                           f"not cover /api/extract/{route} — a limit on two "
+                           f"of three routes is the R13 defect again")
+
+        frozen = [0.0]
+        lim = lim_mod.Limiter(burst=3, per_minute=60, clock=lambda: frozen[0])
+        verdicts = [lim.allow() for _ in range(4)]
+        if not all(v[0] for v in verdicts[:3]):
+            bad.append("a fresh limiter refuses inside its own burst — the "
+                       "demo viewer this limit must never touch is throttled")
+        ok, wait, why = verdicts[3]
+        if ok:
+            bad.append("the burst+1th request on a frozen clock is ALLOWED — "
+                       "the cap does not bind (deleted or inverted)")
+        else:
+            if not wait > 0:
+                bad.append(f"an over-limit refusal advertises retry-after "
+                           f"{wait!r}, want > 0 — a refusal with no horizon "
+                           f"reads as an outage")
+            if not why or len(why) < 30:
+                bad.append(f"a refusal with no usable reason ({why!r}) — the "
+                           f"envelope publishes this string and a viewer told "
+                           f"nothing assumes the service is broken")
+        frozen[0] += 1.0            # 60/min == 1 token per second
+        if not lim.allow()[0]:
+            bad.append("one second at 60/min refills nothing — a rate limit "
+                       "that never recovers is a one-shot lockout")
+        if lim.allow()[0]:
+            bad.append("refill exceeds elapsed-time x rate — the sustained "
+                       "rate does not bind")
+        frozen[0] += 10_000.0       # a long idle must not bank requests
+        admitted = sum(1 for _ in range(6) if lim.allow()[0])
+        if admitted != 3:
+            bad.append(f"after a long idle the bucket admits {admitted}, want "
+                       f"the burst of 3 — an unbounded accumulator is an "
+                       f"unbounded burst")
+        lim.reset()
+        if not lim.allow()[0]:
+            bad.append("reset() does not restore a full burst — the "
+                       "documented test seam is broken")
+
+        # bounded config: no spelling of the env vars means "no limit"
+        env_rows = [
+            ({lim_mod.BURST_VAR: None, lim_mod.RATE_VAR: None},
+             lim_mod.DEFAULT_BURST, lim_mod.DEFAULT_PER_MINUTE, "unset"),
+            ({lim_mod.BURST_VAR: "banana", lim_mod.RATE_VAR: ""},
+             lim_mod.DEFAULT_BURST, lim_mod.DEFAULT_PER_MINUTE, "garbage"),
+            ({lim_mod.BURST_VAR: "999999999", lim_mod.RATE_VAR: "999999999"},
+             lim_mod.MAX_BURST, lim_mod.MAX_PER_MINUTE, "huge"),
+            ({lim_mod.BURST_VAR: "0", lim_mod.RATE_VAR: "-7"},
+             1, 1, "zero-or-negative"),
+        ]
+        for env, want_burst, want_rate, label in env_rows:
+            with _patched_env(**env):
+                try:
+                    probe = lim_mod.Limiter(clock=lambda: 0.0)
+                except Exception as e:
+                    bad.append(f"Limiter() under {label} env raised "
+                               f"{type(e).__name__}: {e} — a limiter that "
+                               f"crashes on config is a limiter the operator "
+                               f"turns off")
+                    continue
+            if (probe.burst, probe.per_minute) != (want_burst, want_rate):
+                bad.append(f"Limiter() under {label} env is burst="
+                           f"{probe.burst}, per_minute={probe.per_minute}, "
+                           f"want ({want_burst}, {want_rate}) — env parsing "
+                           f"must clamp toward a working limit, never toward "
+                           f"infinity or zero")
+        if not isinstance(getattr(lim_mod, "LIMITER", None), lim_mod.Limiter):
+            bad.append("limiter.LIMITER is not a Limiter instance — the "
+                       "process-wide singleton the middleware consults does "
+                       "not exist")
+
+    # ---- 2: execute app.py's middleware out of the real tree.
+    mws = []
+    for n in ast.walk(tree):
+        if not isinstance(n, ast.AsyncFunctionDef):
+            continue
+        decorated = any(
+            isinstance(d, ast.Call) and isinstance(d.func, ast.Attribute)
+            and d.func.attr == "middleware" and d.args
+            and isinstance(d.args[0], ast.Constant) and d.args[0].value == "http"
+            for d in n.decorator_list)
+        consults = any(
+            isinstance(c, ast.Call) and isinstance(c.func, ast.Attribute)
+            and c.func.attr == "allow" for c in ast.walk(n))
+        if decorated and consults:
+            mws.append(n)
+    if len(mws) != 1:
+        bad.append(f"{api_file}: {len(mws)} `@app.middleware(\"http\")` "
+                   f"function(s) consulting a limiter `.allow()`, want exactly "
+                   f"1 — the free tier must be limited at one choke point that "
+                   f"runs before every /api/extract/* route, or the next "
+                   f"endpoint walks around it (PR #61 R13)")
+        return bad
+    if lim_mod is None:
+        return bad
+    node = mws[0]
+    node.decorator_list = []        # references `app`, which needs fastapi
+    for a in node.args.args:        # `Request` annotation, same reason
+        a.annotation = None
+    node.returns = None
+
+    made = []
+
+    def _fake_err(status, code, message, doc_status="failed", **extra):
+        r = types.SimpleNamespace(status_code=status, code=code,
+                                  message=message, headers={})
+        made.append(r)
+        return r
+
+    ns = {"limiter": lim_mod, "_err": _fake_err}
+    try:
+        exec(compile(ast.Module(body=[node], type_ignores=[]),  # noqa: S102
+                     "<free-tier-pin>", "exec"), ns)
+    except Exception as e:
+        return bad + [f"{api_file}: the limiter middleware does not compile "
+                      f"standalone ({type(e).__name__}: {e})"]
+    mw = ns[node.name]
+
+    passed_through = object()
+
+    async def call_next(request):
+        call_next.calls += 1
+        return passed_through
+    call_next.calls = 0
+
+    def req(path):
+        return types.SimpleNamespace(url=types.SimpleNamespace(path=path))
+
+    real = lim_mod.LIMITER
+    frozen = [0.0]
+    try:
+        lim_mod.LIMITER = lim_mod.Limiter(burst=2, per_minute=60,
+                                          clock=lambda: frozen[0])
+        got = asyncio.run(mw(req("/api/extract/fixture"), call_next))
+        if got is not passed_through:
+            bad.append(f"{api_file}: an under-limit extract request does not "
+                       f"reach call_next — the limiter throttles the demo "
+                       f"viewer it exists to protect")
+        asyncio.run(mw(req("/api/extract/fixture"), call_next))  # spend burst
+        for route in ("fixture", "upload", "url"):
+            before = call_next.calls
+            got = asyncio.run(mw(req(f"/api/extract/{route}"), call_next))
+            if call_next.calls != before:
+                bad.append(f"{api_file}: an OVER-limit /api/extract/{route} "
+                           f"request still reaches call_next — the verdict is "
+                           f"consulted and ignored, so the route (and for "
+                           f"/url the outbound EDGAR fetch) runs anyway")
+            if getattr(got, "status_code", None) != 429:
+                bad.append(f"{api_file}: over-limit /api/extract/{route} "
+                           f"returns {getattr(got, 'status_code', got)!r}, "
+                           f"want the 429 envelope via _err — an inverted or "
+                           f"absent refusal branch")
+                continue
+            retry = got.headers.get("Retry-After")
+            if not (retry and str(retry).isdigit() and int(retry) >= 1):
+                bad.append(f"{api_file}: the 429 carries Retry-After="
+                           f"{retry!r}, want an integer >= 1 — a refusal with "
+                           f"no horizon reads as an outage")
+            if not got.message or len(got.message) < 30:
+                bad.append(f"{api_file}: the 429 reason is {got.message!r} — "
+                           f"the envelope publishes this string")
+        tokens_before = lim_mod.LIMITER._tokens
+        before = call_next.calls
+        got = asyncio.run(mw(req("/api/meta"), call_next))
+        if got is not passed_through or call_next.calls != before + 1:
+            bad.append(f"{api_file}: /api/meta does not pass through the "
+                       f"middleware — the limit must bound extraction, not "
+                       f"the page and metadata around it")
+        if lim_mod.LIMITER._tokens != tokens_before:
+            bad.append(f"{api_file}: a non-extract request consumes a token — "
+                       f"page loads would spend the budget extraction needs")
+        frozen[0] += 120.0
+        got = asyncio.run(mw(req("/api/extract/fixture"), call_next))
+        if got is not passed_through:
+            bad.append(f"{api_file}: service does not recover after the "
+                       f"window elapses — the middleware holds its own state "
+                       f"instead of asking the limiter")
+    except Exception as e:
+        bad.append(f"{api_file}: executing the limiter middleware raised "
+                   f"{type(e).__name__}: {e} — a refusal path that throws is "
+                   f"a 500, not a 429")
+    finally:
+        lim_mod.LIMITER = real
+    return bad
+
+
 TOKEN_RATIO_FILE = "tasks/reviews/2026-08-27-token-ratio.json"
 SWEEP_SCRIPT = "tasks/reviews/d11_sweep_cost.py"
 
@@ -3841,6 +4129,7 @@ CHECKS = {
     "routing_provenance": check_routing_provenance,
     "escalation_locks": check_escalation_locks,
     "escalation_door": check_escalation_door,
+    "free_tier_limit": check_free_tier_limit,
     "token_proxy_bound": check_token_proxy_bound,
 }
 

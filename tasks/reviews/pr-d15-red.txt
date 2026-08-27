@@ -1,0 +1,180 @@
+D15 / TD-162 red-first record — the FREE tier's global request limit
+====================================================================
+Created 2026-08-28. Case: evals/adversarial/free-tier-limit.json
+(check: src/repo_hygiene/eval_adapter.py::check_free_tier_limit).
+Everything below was run on the D15 branch worktree; the pre-change tree is
+main 06be77f plus ONLY the case + check (no limiter.py, no middleware), which
+is the tree hard rule 2 requires the case to fail against.
+
+Environment for every figure: Apple M-series dev machine, Homebrew Python
+3.14.6, offline (no SEC10K_* variables, no OPENROUTER_API_KEY). Zeabur's host
+is smaller; the CPU/RSS numbers are the optimistic edge.
+
+PART 1a — RED: the case against the pre-change tree
+---------------------------------------------------
+run_case(free-tier-limit) passed: False
+ - cannot import src.sec10k.web.limiter (No module named
+   'src.sec10k.web.limiter') — there is no limiter for the free tier to
+   consult
+ - src/sec10k/web/app.py: 0 `@app.middleware("http")` function(s) consulting
+   a limiter `.allow()`, want exactly 1 — the free tier must be limited at
+   one choke point that runs before every /api/extract/* route, or the next
+   endpoint walks around it (PR #61 R13)
+Runner line: [FAIL] free-tier-limit (adversarial, 0.01s)
+Suite line:  [eval] suite 'invariant': 86/87 = 0.989  (+4 enumerated debt, unscored)
+(Both halves of the check red for their own reasons: the module half because
+nothing implements the limit, the middleware half because nothing consults
+one.)
+
+PART 1b — THE MEASURED FIGURE TD-162 did not have: one large request's cost
+---------------------------------------------------------------------------
+extract_items (the exact call `_run` makes, escalate=False), each in a fresh
+subprocess so peak RSS is attributable to that one extraction; macOS
+ru_maxrss reported in bytes, shown as MB. Synthetic 25 MB document = jpm-2024
+filing.htm with its <BODY> tiled 2x into one well-formed HTML file,
+25,697,079 bytes — just under the MAX_BYTES cap of 26,214,400.
+
+  jpm-2024 as committed (12,849,180 bytes):
+    import_cpu_s 0.012, extract_cpu_s 0.591, extract_wall_s 0.591,
+    peak_rss_mb 82.1, doc_status ambiguous, normalized_chars 1,213,284,
+    items 23
+  synthetic ~25 MB (2x jpm-2024 body, 25,697,079 bytes):
+    import_cpu_s 0.012, extract_cpu_s 1.131, extract_wall_s 1.132,
+    peak_rss_mb 137.9, doc_status success_with_warning,
+    normalized_chars 2,426,570, items 23
+
+So one maximum-size free request ~= 1.13 s CPU and ~138 MB peak RSS. At the
+shipped defaults (burst 20, 30/minute sustained) the worst sustained load a
+single hammering client can impose is ~34 CPU-seconds/minute plus transient
+memory, and each /api/extract/url request it is REFUSED on costs zero
+outbound EDGAR fetches. Sizing rationale in ADR-040 §c.
+Instrument: scratchpad d15_measure.py (session artifact, not committed —
+the figures above are the record).
+
+PART 2 — MUTATION BATTERY: 10/10 red
+------------------------------------
+Each mutation applied to the REAL file in the worktree, the real check run
+via run_case, the file then restored byte-identical from a pre-mutation
+snapshot; clean tree verified green before and after the battery.
+
+clean tree: passed=True (0 failures)
+
+M1 middleware deleted: app.py free_tier_limit removed entirely
+  -> RED, 1 failure(s)
+     - src/sec10k/web/app.py: 0 `@app.middleware("http")` function(s) consulting a limiter `.allow()`, want exactly 1 — the free tier must be limited at one choke point that runs before every /api/extract/* route, or the next endpoint walks around it (PR #61 R13)
+
+M2 refusal inverted: app.py `if not ok:` -> `if ok:`
+  -> RED, 8 failure(s)
+     - src/sec10k/web/app.py: an under-limit extract request does not reach call_next — the limiter throttles the demo viewer it exists to protect
+     - src/sec10k/web/app.py: an OVER-limit /api/extract/fixture request still reaches call_next — the verdict is consulted and ignored, so the route (and for /url the outbound EDGAR fetch) runs anyway
+     - src/sec10k/web/app.py: over-limit /api/extract/fixture returns <object object at 0x104b35300>, want the 429 envelope via _err — an inverted or absent refusal branch
+
+M3 verdict ignored: app.py `if not ok:` -> `if False:` (allow() consulted, result dropped)
+  -> RED, 6 failure(s)
+     - src/sec10k/web/app.py: an OVER-limit /api/extract/fixture request still reaches call_next — the verdict is consulted and ignored, so the route (and for /url the outbound EDGAR fetch) runs anyway
+     - src/sec10k/web/app.py: over-limit /api/extract/fixture returns <object object at 0x102ec9300>, want the 429 envelope via _err — an inverted or absent refusal branch
+     - src/sec10k/web/app.py: an OVER-limit /api/extract/upload request still reaches call_next — the verdict is consulted and ignored, so the route (and for /url the outbound EDGAR fetch) runs anyway
+
+M4 env clamp removed: limiter.py `_bounded_int` returns the raw parse (huge env value becomes the limit)
+  -> RED, 2 failure(s)
+     - Limiter() under huge env is burst=999999999, per_minute=999999999, want (500, 3000) — env parsing must clamp toward a working limit, never toward infinity or zero
+     - Limiter() under zero-or-negative env is burst=0, per_minute=-7, want (1, 1) — env parsing must clamp toward a working limit, never toward infinity or zero
+
+M5 admission inverted: limiter.py `if self._tokens >= 1.0` -> `< 1.0`
+  -> RED, 10 failure(s)
+     - a fresh limiter refuses inside its own burst — the demo viewer this limit must never touch is throttled
+     - an over-limit refusal advertises retry-after -2.0, want > 0 — a refusal with no horizon reads as an outage
+     - one second at 60/min refills nothing — a rate limit that never recovers is a one-shot lockout
+
+M6 refill deleted: limiter.py never adds elapsed x rate back
+  -> RED, 3 failure(s)
+     - one second at 60/min refills nothing — a rate limit that never recovers is a one-shot lockout
+     - after a long idle the bucket admits 0, want the burst of 3 — an unbounded accumulator is an unbounded burst
+     - src/sec10k/web/app.py: service does not recover after the window elapses — the middleware holds its own state instead of asking the limiter
+
+M6b refill unbounded: limiter.py refill drops the burst ceiling (idle banks requests)
+  -> RED, 1 failure(s)
+     - after a long idle the bucket admits 6, want the burst of 3 — an unbounded accumulator is an unbounded burst
+
+M7 prefix narrowed: limiter.py LIMITED_PREFIX = "/api/extract/url"
+  -> RED, 8 failure(s)
+     - LIMITED_PREFIX '/api/extract/url' does not cover /api/extract/fixture — a limit on two of three routes is the R13 defect again
+     - LIMITED_PREFIX '/api/extract/url' does not cover /api/extract/upload — a limit on two of three routes is the R13 defect again
+     - src/sec10k/web/app.py: an OVER-limit /api/extract/fixture request still reaches call_next — the verdict is consulted and ignored, so the route (and for /url the outbound EDGAR fetch) runs anyway
+
+M8 Retry-After dropped: app.py refusal returns the 429 with no header
+  -> RED, 3 failure(s)
+     - src/sec10k/web/app.py: the 429 carries Retry-After=None, want an integer >= 1 — a refusal with no horizon reads as an outage
+     - src/sec10k/web/app.py: the 429 carries Retry-After=None, want an integer >= 1 — a refusal with no horizon reads as an outage
+     - src/sec10k/web/app.py: the 429 carries Retry-After=None, want an integer >= 1 — a refusal with no horizon reads as an outage
+
+M9 status laundered: app.py `_err(429, ...)` -> `_err(200, ...)`
+  -> RED, 3 failure(s)
+     - src/sec10k/web/app.py: over-limit /api/extract/fixture returns 200, want the 429 envelope via _err — an inverted or absent refusal branch
+     - src/sec10k/web/app.py: over-limit /api/extract/upload returns 200, want the 429 envelope via _err — an inverted or absent refusal branch
+     - src/sec10k/web/app.py: over-limit /api/extract/url returns 200, want the 429 envelope via _err — an inverted or absent refusal branch
+
+restored tree: passed=True
+
+10/10 mutations red
+
+
+PART 3 — LIVE: the limiter end-to-end through uvicorn (hard rule: measure it)
+-----------------------------------------------------------------------------
+Real app via `uvicorn src.sec10k.web.app:app` (scratchpad venv: fastapi
+0.141.1, uvicorn 0.52.4), offline mode, DEFAULT limiter config, real HTTP
+requests via urllib. Instrument: scratchpad d15_live.py.
+
+server up at http://127.0.0.1:8765, offline mode (no SEC10K_* vars), default limiter config
+1 real extraction: POST /api/extract/fixture aapl-2025 -> 200, doc_status=success, items=23, 0.08s wall
+2 loop: request #21 is the first refusal after 20 admitted (0.03s of hammering; default burst 20 + refill 0.5/s)
+  429 body: doc_status=failed, warnings[0].code=rate_limited
+  Retry-After: None
+  reason: 'free-tier limit: this deployment serves at most 20 extractions in a burst and 30 per minute, shared by ALL callers — wait about 2s and retry. The deterministic tier stays free and open; this is a load ceiling, not a paywall'
+3 over-limit real fixture: 429 in 0.4ms (vs the real extraction's baseline above) — extract_items never ran
+4 over-limit /api/extract/url: 429 rate_limited in 0.4ms — no outbound fetch (a fetch attempt would surface as 502 edgar_fetch_failed)
+5 over-limit /api/extract/upload: 429 in 0.4ms
+6 /api/meta while over limit: 200 (never limited)
+7 after a 4.5s wait: 200, doc_status=success — service restored
+server stopped
+
+
+PART 3b — the Retry-After header on the wire, and env config live
+-----------------------------------------------------------------
+Part 3's "Retry-After: None" on line 2 is an artifact of that script reading
+headers through a case-sensitive dict; uvicorn emits the header lowercased.
+Re-measured with a case-insensitive read AND with SEC10K_FREE_BURST=2 to
+prove the env config is live (refusal at request 3, not 21):
+
+1 404 Retry-After = None | raw header lines: []
+2 404 Retry-After = None | raw header lines: []
+3 429 Retry-After = '2' | raw header lines: ['retry-after: 2']
+4 429 Retry-After = '2' | raw header lines: ['retry-after: 2']
+
+
+Interpretation of Part 3, line by line:
+  1  a real extraction succeeds under the limit (aapl-2025, 23 items, 0.08 s
+     wall — the baseline a refusal must beat).
+  2  the first refusal is request #21 after 20 admitted, i.e. exactly the
+     default burst; 0.03 s of hammering is far inside one 2 s refill period.
+     The 429 body is the standard _err envelope (doc_status failed,
+     warnings[0].code rate_limited) and the reason names the shared limit,
+     the wait, and that the tier stays free.
+  3  an over-limit request for a REAL fixture is refused in 0.4 ms vs 80 ms
+     for the real extraction — extract_items never ran.
+  4  an over-limit /api/extract/url is refused in 0.4 ms with 429
+     rate_limited; offline, an attempted EDGAR fetch would have surfaced as
+     502 edgar_fetch_failed, so the 429 proves the middleware refused before
+     any outbound connection.
+  5  an over-limit upload is refused in 0.4 ms — before the body is
+     processed.
+  6  /api/meta stays 200 while the extract routes are over limit — the limit
+     never touches the page or metadata.
+  7  a 4.5 s wait restores service at the sustained rate (30/min = one
+     token per 2 s) — the refusal is a window, not a lockout.
+Server stopped after the run.
+
+GATE at the implemented tree (the same runs the pre-commit hook makes):
+  python3 -m evals.run --suite invariant : 87/87 = 1.000
+  python3 -m evals.run --suite fast      : 151/151 = 1.000 (baseline 1.0)
+  python3 -m src.sec10k.web.limiter      : limiter: ok
