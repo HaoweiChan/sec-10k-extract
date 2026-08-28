@@ -80,7 +80,7 @@ scope widenings were added 2026-08-26 from the two interviewers' written
 feedback, mapped point-by-point in postmortem §8 — which also records the
 mechanisms that feedback praised but that do NOT exist in this codebase.
 
-### D19 — Verify the escalation key before extraction [status: in-progress]
+### D19 — Verify the escalation key before extraction [status: pr]
 Origin: owner request, 2026-08-28
 Spec: Shorten the inspector's boilerplate, Markdown, and escalation-key help
 text. Let a visitor verify the escalation key before extraction and show a
