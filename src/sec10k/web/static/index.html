@@ -336,6 +336,17 @@ footer a{color:var(--accent)}
     tables derived from the filing's block structure instead of the flat text
     run. Display only: the offsets and character count stay those of the raw
     slice, which the compare pane still shows (ADR-032).</span></label>
+  <!-- ADR-042. The door of ADR-036 lock 4 shipped with no way for this page
+       to open it and was deleted for that reason (ADR-041). This field is the
+       missing half. Hidden until /api/meta says a secret is configured: a box
+       that cannot open anything only tells a stranger something is being
+       withheld. The value is remembered in localStorage so it is typed once. -->
+  <label class="opt" id="esc-key-row" hidden>escalation key
+    <input type="password" id="esc-key" autocomplete="off" spellcheck="false"
+           placeholder="paste the key to enable the model tier">
+    <span class="hint">— the deterministic extraction above is complete and
+    free without this. The key only unlocks the paid model tier, which runs
+    only when the coverage trigger fires. Remembered in this browser.</span></label>
 </fieldset>
 
 <!-- D10: the page's ONE status region. JS rewrites it after every extraction
@@ -407,6 +418,19 @@ async function boot(){
   try{
     const m = await (await fetch("/api/meta")).json();
     $("#sha").textContent = "build " + m.git_sha;
+    // ADR-042. Reveal the key field only where a secret is configured; the
+    // server publishes WHETHER one is, never the secret. `false` means the
+    // paid tier is closed to everyone, so the box would be a dead control.
+    // Deliberately ABOVE the `#fx` line: `ui-deep-link` pins one contiguous
+    // span from that assignment through the catch arm to `deepLink();`, which
+    // is how it proves the deep link runs on boot()'s straight-line tail after
+    // the option list exists. Inserting anything inside that span breaks a pin
+    // that took three review rounds to state correctly (PR #55 R1/R9/R10).
+    if(m.escalation_token_required){
+      $("#esc-key-row").hidden = false;
+      $("#esc-key").value = storedKey();
+      $("#esc-key").addEventListener("input", e => rememberKey(e.target.value.trim()));
+    }
     $("#fx").innerHTML = m.fixtures.map(f => `<option>${esc(f)}</option>`).join("");
   }catch(e){ $("#sha").textContent = "meta unavailable"; }
   deepLink();
@@ -835,7 +859,22 @@ function busy(on, msg){
   if(on){ $("#banner").className = "s-idle"; $("#banner").textContent = msg || "Extracting…"; }
 }
 
+// ADR-042. The escalation key rides EVERY extract request, injected here in
+// the one helper all three modes funnel through rather than at the three call
+// sites. That is not tidiness: `_run` is the server's single door and this is
+// the client's, so a mode cannot forget the header the way ADR-036 lock 4's
+// page forgot it entirely. localStorage is wrapped because it throws outright
+// in some privacy modes, and a page that cannot remember a key must still send
+// one that was just typed.
+const KEY_STORE = "sec10k.escalation-key";
+function storedKey(){ try{ return localStorage.getItem(KEY_STORE) || ""; }catch(e){ return ""; } }
+function rememberKey(v){ try{ v ? localStorage.setItem(KEY_STORE, v)
+                                : localStorage.removeItem(KEY_STORE); }catch(e){} }
+function escalationKey(){ const f = $("#esc-key"); return ((f && f.value) || "").trim(); }
+
 async function call(url, opts){
+  const k = escalationKey();
+  if(k) opts = {...opts, headers: {...(opts.headers || {}), "X-Escalation-Token": k}};
   busy(true);
   try{
     const r = await fetch(url, opts);

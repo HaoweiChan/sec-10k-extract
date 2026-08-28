@@ -162,20 +162,23 @@ Full rationale in `specs/decisions/` (18 ADRs). The ones that shaped the system:
   on every request, there is no checkbox and no request-level flag, and the
   operator's off-switch is the host variable `SEC10K_ESCALATION_ENABLED`, set
   to any of `0`, `false`, `no`, `off` (stripped and case-insensitive; unset or
-  empty means ON). **The paid tier is OPEN to every request** (ADR-041, 2026-08-28): there is no
-  token, no header and no field to type one into. A door built the previous
-  day (`web/gate.py`, TD-158) was deleted because the page's own `fetch` calls
-  never sent its header, so it was closed to every human who would actually
-  open the link. **Deterministic extraction is likewise open, free and
+  empty means ON). **The paid tier is behind a key** (ADR-042, 2026-08-28) — and unlike the door
+  it replaces, the page can present it: paste the key into the `escalation key`
+  field and it rides every extraction as `X-Escalation-Token`, remembered in
+  the browser so it is typed once. With no `SEC10K_ESCALATION_TOKEN` on the
+  host the tier runs for *nobody* — unset is closed, not open — and the field
+  stays hidden, because a box that cannot open anything is worse than none.
+  ADR-041 had deleted an earlier door for a real defect (its header was sent by
+  nothing on the page, so it was shut to every human including the owner); the
+  defect was the missing client half, not the door, and `SENDS_TOKEN_UI` is now
+  the check that would have caught it. **Deterministic extraction is likewise open, free and
   unauthenticated on all three routes**; the envelope always says what the
-  tier did (`escalation.reason`) and the page prints it. The spend is bounded
-  by the process-wide budget alone — `SEC10K_ESCALATION_MAX_USD`, default
-  $10.00, **refilled by every redeploy**, which ADR-041 records as an accepted
-  recurring cost and explicitly not a bound — plus the free-tier rate limit,
-  the 25 MB cap and both rungs' input caps, and ultimately by the credit limit
-  on the API key. `SEC10K_ESCALATION_ENABLED=0` is the operator's stop. The
-  consequence is stated rather than softened: an anonymous caller can reach
-  the paid tier through `/api/extract/url` on any collapsing EDGAR filing.
+  tier did (`escalation.reason`) and the page prints it. Behind the key the spend is
+  bounded by the process-wide budget — `SEC10K_ESCALATION_MAX_USD`, default
+  $10.00, **refilled by every redeploy** (an accepted recurring cost, not a
+  bound) — plus the free-tier rate limit, the 25 MB cap and both rungs' input
+  caps, and ultimately by the credit limit on the API key.
+  `SEC10K_ESCALATION_ENABLED=0` is the operator's stop.
   One earlier claim here was false and is corrected rather than deleted: until
   PR #61 R1 the two collapsing fixtures were in the dropdown, so one click —
   or a `?fixture=…&run=1` link, with no click at all — was enough
