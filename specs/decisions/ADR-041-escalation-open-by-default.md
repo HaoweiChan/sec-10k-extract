@@ -1,6 +1,6 @@
 # ADR-041 — the paid tier is OPEN to every request; the token door is removed
 
-Date: 2026-08-28. Status: accepted. **Supersedes the door half of
+Date: 2026-08-28. Status: **SUPERSEDED the same day by [ADR-043](ADR-043-escalation-key-with-a-way-to-present-it.md)** — the door is restored WITH the client half it was missing, which is the thing this ADR correctly identified as absent (§b) and incorrectly concluded could only be fixed by deletion. Its analysis stands; its remedy did not. Originally: accepted. **Supersedes the door half of
 [ADR-036](ADR-036-tiered-escalation.md) §h2 lock 4** (TD-158, PR #61 R10),
 which shipped on 2026-08-28 and is removed here the same day. Not a freeze
 exception: this removes a deployment control, it adds no extraction

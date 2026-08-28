@@ -30,7 +30,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 
 from src.sec10k.extract import extract_items
 from src.sec10k.web import capabilities as capabilities_mod
-from src.sec10k.web import limiter
+from src.sec10k.web import gate, limiter
 from src.sec10k.web.build_id import git_sha
 from src.sec10k.web.fixtures import (FIXTURES, ROOT, deployed_fixtures,
                                      fixture_file)
@@ -260,7 +260,8 @@ def _cache_source(raw: bytes, suffix: str, normalized: str) -> str:
 
 
 def _run(path: str, source: dict, raw: bytes = None,
-         exclude_boilerplate: bool = False, markdown: bool = False):
+         exclude_boilerplate: bool = False, markdown: bool = False,
+         request: Request = None):
     """Extract and shape for the UI. Never leaks a traceback to the browser.
 
     `raw` is the original bytes already in hand for upload/URL; the fixture
@@ -291,15 +292,13 @@ def _run(path: str, source: dict, raw: bytes = None,
     # ceiling there is. That is why `escalate=` and `budget=` are the same
     # name: a request must never be able to escalate on one condition and bill
     # against another.
-    why = ("the model tier is open to every request on this deployment; it "
-           "still runs only when the coverage trigger fires"
-           if ESCALATION_ENABLED else
-           "the operator disarmed this deployment "
-           "(SEC10K_ESCALATION_ENABLED) — no model tier can run")
+    escalate, why = gate.paid_path_open(
+        request.headers.get(gate.HEADER) if request is not None else None,
+        ESCALATION_ENABLED)
     try:
         result = extract_items(path, exclude_boilerplate=exclude_boilerplate,
-                               blocks=markdown, escalate=ESCALATION_ENABLED,
-                               budget=server_budget() if ESCALATION_ENABLED else None)
+                               blocks=markdown, escalate=escalate,
+                               budget=server_budget() if escalate else None)
     except Exception as e:                       # refuse loudly, hard rule 4
         return _err(500, "extractor_exception", f"{type(e).__name__}: {e}",
                     source=source)
@@ -307,7 +306,7 @@ def _run(path: str, source: dict, raw: bytes = None,
     # Said, not implied. `routing: null` alone cannot distinguish "the paid
     # tier was never offered to you" from "it ran and stayed quiet", and a
     # viewer who is told nothing assumes the second.
-    view["escalation"] = {"ran": ESCALATION_ENABLED, "reason": why}
+    view["escalation"] = {"ran": escalate, "reason": why}
     body = raw
     if body is None:
         try:
@@ -351,11 +350,15 @@ def api_meta():
             #
             # This does not publish the budget's remaining balance — that is a
             # fact about other people's requests.
-            "escalation_enabled": ESCALATION_ENABLED}
+            "escalation_enabled": ESCALATION_ENABLED,
+            # ADR-043. The page shows its key field only when a secret is
+            # configured — a field that cannot open anything is worse than
+            # none. False means CLOSED TO ALL, not open to all.
+            "escalation_token_required": bool(gate.configured_token())}
 
 
 @app.post("/api/extract/fixture")
-def extract_fixture(body: dict):
+def extract_fixture(body: dict, request: Request):
     name = (body or {}).get("fixture", "")
     try:
         f = _fixture_file(name)
@@ -363,7 +366,7 @@ def extract_fixture(body: dict):
         return _err(404, "bad_input", str(e))
     return _run(str(f), {"mode": "fixture", "name": name, "file": f.name},
                 exclude_boilerplate=bool((body or {}).get("exclude_boilerplate")),
-                markdown=bool((body or {}).get("markdown")))
+                markdown=bool((body or {}).get("markdown")), request=request)
 
 
 @app.post("/api/extract/upload")
@@ -390,11 +393,12 @@ async def extract_upload(request: Request):
                     # is the filing itself, so the flag has nowhere else to ride
                     exclude_boilerplate=request.query_params.get(
                         "exclude_boilerplate") == "1",
-                    markdown=request.query_params.get("markdown") == "1")
+                    markdown=request.query_params.get("markdown") == "1",
+                    request=request)
 
 
 @app.post("/api/extract/url")
-def extract_url(body: dict):
+def extract_url(body: dict, request: Request):
     url = ((body or {}).get("url") or "").strip()
     if not url.startswith("https://www.sec.gov/Archives/"):
         return _err(400, "bad_input",
@@ -422,7 +426,7 @@ def extract_url(body: dict):
         return _run(str(p), {"mode": "url", "name": url, "bytes": len(raw),
                              "sha256": hashlib.sha256(raw).hexdigest()[:16]}, raw=raw,
                     exclude_boilerplate=bool((body or {}).get("exclude_boilerplate")),
-                    markdown=bool((body or {}).get("markdown")))
+                    markdown=bool((body or {}).get("markdown")), request=request)
 
 
 @app.get("/api/source/{token}")

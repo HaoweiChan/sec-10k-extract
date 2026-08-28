@@ -863,6 +863,31 @@ def _live(src, lang):
         "", JS_BLOCK_COMMENT_RE.sub("", HTML_COMMENT_RE.sub("", src)))
 
 
+def _fn_body(src, signature):
+    """The `{...}` body of one JS function, by brace matching from `signature`.
+
+    Text pins can say a string is in the file; they cannot say WHICH function
+    holds it, and for the escalation header that distinction is the whole
+    property — in `call()` it covers all three extract modes, at a call site it
+    covers one. Returns None when the signature is absent or unbalanced.
+    """
+    i = src.find(signature)
+    if i < 0:
+        return None
+    i = src.find("{", i + len(signature) - 1)
+    if i < 0:
+        return None
+    depth = 0
+    for j in range(i, len(src)):
+        if src[j] == "{":
+            depth += 1
+        elif src[j] == "}":
+            depth -= 1
+            if depth == 0:
+                return src[i:j + 1]
+    return None
+
+
 def _squash(s):
     """Whitespace-free form. Same argument as `anchor.py`'s `core_of`: how a
     line happens to be wrapped or indented carries no information about what
@@ -958,18 +983,18 @@ WIRE_API = [
     # `extract_items` unmodified, and escalation reaches it through a decision
     # and never as a constant.
     #
-    # PR #61 R10 moved that decision to a token door; ADR-041 removed the door
-    # again the next day, so `escalate=` is back to the operator's off-switch
-    # NAME and the budget rides that same name — the call still cannot escalate
-    # on one condition and bill against another, which matters more now that
-    # the budget is the ONLY bound. `escalation_locks` pins the AST half (the
-    # argument is a name, never a literal) and `escalation_choke_point` pins
-    # that it is the off-switch specifically; this pins the text.
+    # PR #61 R10 moved that decision to a token door, ADR-041 removed the door
+    # the next day, and ADR-043 restored it WITH the page half it had been
+    # missing — so `escalate=` carries the door's verdict again and the budget
+    # rides that same name; the call cannot escalate on one condition and bill
+    # against another. `escalation_locks` pins the AST half (the argument is a
+    # name, never a literal) and `escalation_choke_point` pins where that name
+    # comes from; this pins the text.
     ("_run forwards the two display flags unmodified, and escalates and bills "
      "on the same single decision",
      "extract_items(path, exclude_boilerplate=exclude_boilerplate, "
-     "blocks=markdown, escalate=ESCALATION_ENABLED, "
-     "budget=server_budget() if ESCALATION_ENABLED else None)"),
+     "blocks=markdown, escalate=escalate, "
+     "budget=server_budget() if escalate else None)"),
     # PR #61 R4. The page stopped reading this when the control went away, and
     # `routing_provenance`'s pin on the reader went with it — so deleting the
     # key reddened nothing, while ADR-036 §h2 had just started claiming it is
@@ -3430,6 +3455,27 @@ def check_escalation_locks(case):
 
 
 
+GATE_MODULE = "src.sec10k.web.gate"
+# ADR-043's whole reason for existing. The door of ADR-036 §h2 lock 4 was
+# correct server-side and shipped with NO WAY FOR THE PAGE TO OPEN IT: four
+# `fetch()` calls, two headers, both `Content-Type`, and no field. It was shut
+# to every human visitor including the owner, and ADR-041 deleted it. These
+# pins are the half nothing checked. `SENDS_TOKEN_UI` is not decoration — a
+# door whose client cannot present a credential is not a door, it is an outage.
+SENDS_TOKEN_UI = [
+    ("the page has a field to type the key into", 'id="esc-key"'),
+    ("...and names the header the server reads", '"X-Escalation-Token"'),
+    ("...and injects it in the ONE helper all three modes go through",
+     "async function call(url, opts)"),
+    # A CROSS-REPO CONTRACT, which is why it is pinned rather than left as an
+    # implementation detail. D10's deep link (`?fixture=…&run=1`) extracts
+    # during boot, BEFORE any agent can type into `#esc-key` — so the only way
+    # a browser agent escalates on that path is to seed this exact key into
+    # localStorage before navigating. Rename it and the agent silently drops to
+    # the free tier with everything green on both sides (ADR-043 §d).
+    ("...under the storage key the browser agent seeds",
+     'const KEY_STORE = "sec10k.escalation-key"'),
+]
 ESCALATION_UI = [
     ("the page declares the strip", "function escalationStrip(e)"),
     ("...and the banner calls it", "escalationStrip(v.escalation)"),
@@ -3515,24 +3561,39 @@ def check_escalation_choke_point(case):
     if run_fn is None:
         bad.append(f"{api_file}: no `def {runner}` — nothing converges")
 
-    # ---- 2: escalating and billing are the same name.
+    # ---- 2: escalating and billing carry the DOOR's verdict, and the same one.
+    # ADR-043 restored the door, so `escalate=` names the verdict again rather
+    # than the bare off-switch (which the door folds in). The budget must ride
+    # that SAME name: escalating on one condition and billing against another
+    # is the process ceiling bypassed in one token (PR #61 R19).
+    verdict = None
+    for n in (ast.walk(run_fn) if run_fn else []):
+        if isinstance(n, ast.Assign) and isinstance(n.value, ast.Call) \
+                and isinstance(n.value.func, ast.Attribute) \
+                and n.value.func.attr == "paid_path_open" \
+                and isinstance(n.targets[0], ast.Tuple):
+            first = n.targets[0].elts[0]
+            verdict = first.id if isinstance(first, ast.Name) else None
+    if run_fn is not None and verdict is None:
+        bad.append(f"{api_file}: `{runner}` does not bind the door's verdict to "
+                   f"a name — `(may, why) = gate.paid_path_open(...)`; a "
+                   f"verdict nothing holds is a verdict nothing can honour")
     for c in [c for c in ex if id(c) in inside]:
         kw = {k.arg: k.value for k in c.keywords}
         v = kw.get("escalate")
-        if not (isinstance(v, ast.Name) and v.id == off_const):
+        if verdict is None or not (isinstance(v, ast.Name) and v.id == verdict):
             bad.append(f"{api_file}: `extract_items(escalate=...)` is "
                        f"{ast.dump(v)[:40] if v is not None else 'absent'}, not "
-                       f"the module constant `{off_const}` — a literal here "
-                       f"defeats the operator's runaway stop while /api/meta "
-                       f"goes on publishing it")
+                       f"the door's verdict — a literal or the raw off-switch "
+                       f"here means the decision is taken and then discarded, "
+                       f"which is the shape PR #61 R13 found and R10 paid for")
         b = kw.get("budget")
         names = {n.id for n in ast.walk(b) if isinstance(n, ast.Name)} if b else set()
-        if off_const not in names:
+        if verdict is not None and verdict not in names:
             bad.append(f"{api_file}: `extract_items(budget=...)` is not "
-                       f"conditioned on `{off_const}` — escalating on one "
+                       f"conditioned on `{verdict}` — escalating on one "
                        f"condition and billing against another is how the "
-                       f"process ceiling gets bypassed, and since ADR-041 that "
-                       f"ceiling is the only bound left")
+                       f"process ceiling gets bypassed")
 
     # ---- 3: the envelope says what was decided, and the page prints it.
     published = [n for n in (ast.walk(run_fn) if run_fn else [])
@@ -3544,15 +3605,43 @@ def check_escalation_choke_point(case):
         bad.append(f"{api_file}: `{runner}` never sets `view['escalation']` — "
                    f"an envelope that says nothing lets a viewer believe the "
                    f"paid path ran and found nothing worth doing")
-    elif not all(off_const in {n.id for n in ast.walk(p.value)
-                               if isinstance(n, ast.Name)} for p in published):
+    elif verdict is not None and not all(
+            verdict in {n.id for n in ast.walk(p.value) if isinstance(n, ast.Name)}
+            for p in published):
         bad.append(f"{api_file}: `view['escalation']` is not built from "
-                   f"`{off_const}` — the envelope would be free to disagree "
+                   f"`{verdict}` — the envelope would be free to disagree "
                    f"with what actually ran")
 
     ui = inp.get("ui_file", None if "file" in inp else UI_STYLESHEET)
     if ui:
         live = _live((ROOT / ui).read_text(), "js")
+
+        # ---- 5: THE PAGE CAN ACTUALLY OPEN THE DOOR. The assertion whose
+        # absence cost ADR-041. Each pin must occur exactly once: zero means
+        # the door is shut to every human (the original defect), and more than
+        # one means a second, drifting copy.
+        for label, expr in SENDS_TOKEN_UI:
+            n = _squash(live).count(_squash(expr))
+            if n != 1:
+                bad.append(f"index.html: {label} — expected exactly one "
+                           f"`{expr}`, found {n}. A door the client cannot "
+                           f"present a credential to is not a door, it is an "
+                           f"outage (ADR-041 deleted the last one for this)")
+        # ...and it must be injected in the SHARED helper, not at one of the
+        # three call sites. A count of 1 alone cannot tell those apart, and the
+        # per-call-site version silently leaves two of three modes unable to
+        # escalate — the same class of defect, one third as visible.
+        body = _fn_body(live, "async function call(url, opts)")
+        if body is None:
+            bad.append("index.html: no `async function call(url, opts)` body "
+                       "to read — the frontend choke point is gone, so each "
+                       "mode is free to forget the header")
+        elif "X-Escalation-Token" not in body:
+            bad.append("index.html: the `X-Escalation-Token` header is set "
+                       "OUTSIDE `call()` — every extract mode funnels through "
+                       "that helper, and a header attached at one call site "
+                       "leaves the other two modes unable to escalate")
+
         for label, expr in ESCALATION_UI:
             n = _squash(live).count(_squash(expr))
             if n != 1:
@@ -3564,6 +3653,85 @@ def check_escalation_choke_point(case):
     # say over llm.py, and charging it for a module it cannot influence is the
     # bound `escalation_locks` already learned the hard way.
     if "file" not in inp:
+        # ---- 6: RUN the door's decision table. Not a shape read: `gate.py` is
+        # stdlib-only and imports no fastapi precisely so this can import it
+        # and exercise every row. PR #58 R18, PR #61 R2 and PR #61 R11 were
+        # three separate evasions that each satisfied a shape and broke the
+        # property; a table that is EXECUTED cannot be satisfied that way.
+        gate = importlib.import_module(inp.get("gate_module", GATE_MODULE))
+        floor = inp.get("min_token_chars", 10)
+        if gate.MIN_TOKEN_CHARS < floor:
+            bad.append(f"gate.MIN_TOKEN_CHARS is {gate.MIN_TOKEN_CHARS}, under "
+                       f"{floor} — a secret short enough to guess is a door "
+                       f"that is closed only in the docs")
+        good = "k" * max(gate.MIN_TOKEN_CHARS, floor)
+        for (presented, armed, configured), want in [
+                ((good, True, ""), False),          # UNSET IS CLOSED
+                ((None, True, ""), False),
+                ((good, True, good[:gate.MIN_TOKEN_CHARS - 1]), False),
+                # a SHORT secret the caller gets exactly right: without this row
+                # the MIN_TOKEN_CHARS floor is unbound, because a mismatched
+                # token fails the compare anyway (PR #61 R2 mutation N3)
+                (("abc", True, "abc"), False),
+                ((None, True, good), False),        # no header
+                (("", True, good), False),          # empty header
+                (("w" * len(good), True, good), False),                # wrong
+                ((good, False, good), False),       # operator's off-switch wins
+                ((good, True, good), True)]:        # the one case that opens
+            try:
+                got, why = gate.paid_path_open(presented, armed, token=configured)
+            except Exception as e:
+                bad.append(f"gate.paid_path_open raised {type(e).__name__}: {e} "
+                           f"— a door that throws is a door whose behaviour "
+                           f"nobody knows")
+                continue
+            if bool(got) is not want:
+                bad.append(
+                    f"gate.paid_path_open(header="
+                    f"{'set' if presented else presented!r}, armed={armed}, "
+                    f"secret={len(configured)} chars) is {got!r}, want {want!r}"
+                    + (" — an unconfigured or misconfigured deployment must be "
+                       "CLOSED to everyone, not open to everyone"
+                       if not configured or len(configured) < gate.MIN_TOKEN_CHARS
+                       else ""))
+            elif not got and (not why or len(why) < 30):
+                bad.append(f"a refusal with no usable reason ({why!r}) — the "
+                           f"envelope publishes this string and a viewer who "
+                           f"is told nothing assumes the tier ran")
+            elif not got and configured and configured in (why or ""):
+                bad.append("the refusal reason contains the secret itself")
+
+        # PR #61 R18. Every row above passes `token=`, and NOTHING in production
+        # does — `app.py` calls `paid_path_open(header, ESCALATION_ENABLED)`, so
+        # the `token is None` branch was the only one a request ever took and
+        # was exercised by no row. These call it exactly as `_run` does.
+        for env_secret, presented, want in ((None, good, False),
+                                            (None, None, False),
+                                            ("", good, False),
+                                            (good, None, False),
+                                            (good, good, True)):
+            with _patched_env(**{gate.TOKEN_VAR: env_secret}):
+                try:
+                    got, _ = gate.paid_path_open(presented, True)
+                except Exception as e:
+                    bad.append(f"the PRODUCTION call gate.paid_path_open("
+                               f"presented, armed) raised {type(e).__name__}: {e}")
+                    continue
+            if bool(got) is not want:
+                bad.append(
+                    f"the PRODUCTION call with {gate.TOKEN_VAR}={env_secret!r} "
+                    f"and header={'set' if presented else presented!r} is "
+                    f"{got!r}, want {want!r}"
+                    + ("" if env_secret else " — an UNCONFIGURED deployment "
+                       "must be closed to everyone; this is the one branch "
+                       "app.py takes and no `token=` row reaches"))
+        with _patched_env(**{gate.TOKEN_VAR: "  " + good + "  "}):
+            if gate.configured_token() != good:
+                bad.append(f"gate.configured_token() does not read "
+                           f"{gate.TOKEN_VAR} out of the environment (stripped) "
+                           f"— the secret must be host configuration, never a "
+                           f"literal in the tree")
+
         # `app.py` imports fastapi, which is NOT a dependency of the eval
         # environment — that is why every money pin in this file reads it with
         # `ast`. So the ceiling's VALUE is read from the tree and the ceiling's
