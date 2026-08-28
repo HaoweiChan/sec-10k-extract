@@ -740,7 +740,17 @@ for a new-transport request.
 > paragraph was the thing that went stale.** The FREE tier is still open to
 > anyone: no rate limit, no request cap, a 25 MB upload ceiling, and a large
 > filing costs real CPU and memory. That is a denial-of-service and
-> hosting-cost surface, not a billing one, and it is `TD-162`. Behind the door,
+> hosting-cost surface, not a billing one, and it is `TD-162`. *[Dated note,
+> 2026-08-28 (D15, ADR-040): TD-162 was promoted and closed the same day —
+> the free tier now has a GLOBAL per-process request limit (token bucket,
+> burst 20 / 30 per minute by default, bounded env config) at one
+> `@app.middleware("http")` choke point, refusing over-limit requests with
+> 429 + `Retry-After` before any endpoint body runs; the measured cost that
+> sized it: one ~25 MB request ≈ 1.13 s CPU / 138 MB peak RSS. "Open to
+> anyone" still holds — the limit bounds RATE, not access, and the door
+> itself still deliberately carries no rate limit of its own: the token is
+> that path's brake, and since D15 the shared free-tier limiter additionally
+> sits in front of every extract request, token or not.]* Behind the door,
 > the process `Budget` still bounds a token holder and still **resets on every
 > redeploy**, so "spent" is a state a push undoes; the credit limit on the
 > OpenRouter key remains the only ceiling that survives one, and should be set
@@ -831,7 +841,14 @@ the point: a bound that only guarded the deployment would not bound a sweep, and
 rate limit on the deployment, so an anonymous caller can still consume the
 process budget — denying the capability to everyone else — and can still cost
 CPU. The locks bound *spend*, which is the irreversible resource; availability
-is not bounded and is a debt row. **Widened 2026-08-27 by the owner note at
+is not bounded and is a debt row. *[Dated note, 2026-08-28 (D15, ADR-040):
+that debt row, `TD-162`, is now closed — a global per-process token bucket on
+every `/api/extract/*` request bounds the arrival rate (and with it CPU and,
+behind the door, how fast a token holder can consume the process budget);
+"no authentication" still holds, and one hammering client can still exhaust
+the SHARED bucket for everyone on the instance until the window refills —
+that ceiling is recorded, with the sizing and the per-IP rejection, in
+ADR-040 §b.]* **Widened 2026-08-27 by the owner note at
 the top of this section**: with the opt-in removed, that caller no longer has
 to find or tick anything, and the process budget they consume refills on every
 redeploy. **Narrowed the same day (PR #61 R1)**: they must now bring their own

@@ -1,0 +1,31 @@
+{
+  "pr": 65,
+  "round": 2,
+  "result": "REQUEST_CHANGES",
+  "standing_closures": {
+    "R1": "closed — independently reproduced: N1 always-allow subclass reds the exact-type pin (case RED, self-check exit 1); N1b instance-level allow override with exact type kept reds the drain ('admitted 23 of 23', AssertionError: 23)",
+    "R2": "closed — independently reproduced: _err code mutated to 'oops_typo' reds the case with three failures, one per route probe of the single call site at src/sec10k/web/app.py:220"
+  },
+  "reviewer_verification": "Clean tree invariant 87/87, fast 151/151, limiter self-check ok. pr-d15-red.txt appendix (lines 183-238) matches independent reruns line-for-line. No state pollution: drain is reset()-before/reset()-in-finally in eval_adapter, part 2 saves/restores lim_mod.LIMITER; +1 slack cannot flake (an extra token needs 2 s of wall time inside a ~ms loop). Constructor config-extreme Limiter(burst=10**9, per_minute=10**9) is clamped by _bounded_int to 500/3000 — green legitimately.",
+  "findings": [
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The R1 drain binds the singleton only to its own configuration: burst inflation via attribute assignment (bypassing _bounded_int) leaves the gate and the self-check green while the production singleton admits 10^6 rapid requests — the singleton's behavior is still not bound against the config-inflation arm of the N1b neutering class.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:3925-3937 — the loop bound and the threshold are both `sing.burst`, and no assertion ties sing.burst/sing.per_minute to MAX_BURST/MAX_PER_MINUTE (the env-row clamp pins only fresh Limiter() construction). Mutant: replace limiter.py:127 with `LIMITER = Limiter()\\nLIMITER.burst = 10**6\\nLIMITER._tokens = float(10**6)` -> run_case(free-tier-limit) passed=True, 0 failures (0.25s); `python3 -m src.sec10k.web.limiter` prints 'limiter: ok'. Same mechanism (instance attribute assignment on the singleton) as N1b, which the repair treats as in-scope.",
+      "repro": "In the worktree: apply the three-line mutant at src/sec10k/web/limiter.py:127, then run the free-tier-limit case (or `python3 -m evals.run --suite invariant`) and `python3 -m src.sec10k.web.limiter`; both stay green. Revert with `git checkout -- src/sec10k/web/limiter.py`.",
+      "acceptance": "The singleton pin also bounds config: assert `sing.burst <= lim_mod.MAX_BURST and sing.per_minute <= lim_mod.MAX_PER_MINUTE` (or drain against min(sing.burst, MAX_BURST)) in both check_free_tier_limit and _demo; the burst-inflation mutant joins the battery and is watched red in the pr-d15-red.txt record."
+    },
+    {
+      "id": "R4",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "limiter._demo's drain is not exception-safe: if the admitted assert fires, LIMITER is left drained (no finally), unlike the eval_adapter twin which resets in finally.",
+      "evidence": "src/sec10k/web/limiter.py:157-160 — bare `LIMITER.reset(); ...; assert ...; LIMITER.reset()`. Harmless in practice because _demo runs only under __main__ and the process exits, but the two twins now differ in the property the commit message says they share.",
+      "repro": "Read src/sec10k/web/limiter.py:153-160 vs src/repo_hygiene/eval_adapter.py:3922-3937.",
+      "acceptance": "try/finally around the drain in _demo, or an explicit note that _demo is process-terminal."
+    }
+  ],
+  "route_note": "R4 is LOW and non-blocking, but it is a two-line in-scope fix on code this PR introduced, and this run's ledger policy mints no new TD ids — routed into the same repair."
+}

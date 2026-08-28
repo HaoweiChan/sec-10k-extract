@@ -4,7 +4,8 @@ Three input modes, all converging on extract_items(path) — acquisition lives
 here, never in the extractor (task2-problem-definition.md):
 
   fixture  zero-friction demo path
-  upload   the guaranteed path: no network, no SEC dependency, no rate limit.
+  upload   the guaranteed path: no network, no SEC dependency, no EDGAR rate
+           limit (the free tier's own global limit, D15, applies to all three).
            Evaluators test with their own filings, so this one must never break.
   url      EDGAR fetch, best-effort — EDGAR sometimes blocks datacenter IPs, so
            failures are surfaced loudly rather than silently degraded.
@@ -30,6 +31,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from src.sec10k.extract import extract_items
 from src.sec10k.web import capabilities as capabilities_mod
 from src.sec10k.web import gate
+from src.sec10k.web import limiter
 from src.sec10k.web.build_id import git_sha
 from src.sec10k.web.fixtures import (FIXTURES, ROOT, deployed_fixtures,
                                      fixture_file)
@@ -191,6 +193,34 @@ def _err(status: int, code: str, message: str, doc_status: str = "failed", **ext
     return JSONResponse(status_code=status, content={
         "doc_status": doc_status, "items": [], "counts": {}, "trace": [], "meta": {},
         "warnings": [{"code": code, "item": None, "message": message}], **extra})
+
+
+@app.middleware("http")
+async def free_tier_limit(request: Request, call_next):
+    """TD-162 / D15: the FREE tier's global request limit, at one choke point.
+
+    The door (`gate.py`) bounds the PAID path; this bounds what the free path
+    costs — measured at ~1.1 s CPU and ~138 MB peak RSS for one ~25 MB request
+    (`tasks/reviews/pr-d15-red.txt`). Middleware rather than a guard in each
+    endpoint, for the same reason the door lives in `_run` (PR #61 R13): every
+    current and future `/api/extract/*` route is covered by construction, and
+    the refusal happens BEFORE the endpoint body — before the upload is read,
+    before any outbound EDGAR fetch, before `extract_items`. Non-extract
+    paths (the page, `/api/meta`, source/normalized downloads) pass through
+    untouched and consume nothing.
+
+    The refusal is loud and honest: 429 in the same `_err` envelope every
+    other refusal uses, `Retry-After` in whole seconds, and a reason that
+    names the shared global limit rather than implying a per-caller fairness
+    the deployment does not have (`limiter.py` on why global-not-per-IP).
+    """
+    if request.url.path.startswith(limiter.LIMITED_PREFIX):
+        ok, wait, why = limiter.LIMITER.allow()
+        if not ok:
+            resp = _err(429, "rate_limited", why)
+            resp.headers["Retry-After"] = str(int(wait) + 1)
+            return resp
+    return await call_next(request)
 
 
 def _cache_source(raw: bytes, suffix: str, normalized: str) -> str:

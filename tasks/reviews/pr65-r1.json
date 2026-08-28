@@ -1,0 +1,26 @@
+{
+  "pr": 65,
+  "round": 1,
+  "result": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The gate never exercises the production singleton limiter.LIMITER, so a mutation that neuters the limiter in production (an always-allow Limiter subclass assigned to LIMITER) survives the entire gate green — violating the acceptance criterion that every limit guard is mutation-proved red.",
+      "evidence": "src/sec10k/web/limiter.py:127 (LIMITER = Limiter()) is bound only by an isinstance pin: src/repo_hygiene/eval_adapter.py:3910 checks isinstance(LIMITER, lim_mod.Limiter), which a subclass satisfies; part 1 tests only fresh Limiter(...) instances, and part 2 (eval_adapter.py:3975) swaps lim_mod.LIMITER for its own controlled instance before calling the middleware, so the singleton's allow() is never run. limiter.py's _demo has the same isinstance-only pin (limiter.py:153). Measured with the mutant `class _Open(Limiter): def allow(self): return True, 0.0, \"within the free-tier limit\"` / `LIMITER = _Open()`: production LIMITER admits 1000/1000 rapid requests (limit fully off), while `python3 -m src.sec10k.web.limiter` prints ok, run_case(free-tier-limit) returns passed=True with 0 failures, and `--suite invariant` stays 87/87 = 1.000. The 10/10 battery in tasks/reviews/pr-d15-red.txt never mutates the singleton, so this mutant class was untested; ADR-040's 'Enforced by' line and the check's own docstring claim the decision path is run for real, but the one object the middleware actually consults in production is exempt.",
+      "repro": "In a scratch copy of the task/D15 tree: replace `LIMITER = Limiter()` in src/sec10k/web/limiter.py with the _Open subclass above, then run `python3 -m src.sec10k.web.limiter` (ok), `python3 -c \"from src.sec10k.web import limiter; print(sum(1 for _ in range(1000) if limiter.LIMITER.allow()[0]))\"` (1000), and `python3 -m evals.run --suite invariant` (87/87 green).",
+      "acceptance": "check_free_tier_limit binds the singleton's behavior, not just its type — e.g. pin `type(lim_mod.LIMITER) is lim_mod.Limiter` (and/or drain the real LIMITER to exhaustion under a saved/restored state, asserting it actually refuses, using its documented reset() seam) — and the always-allow-subclass mutant is added to the pr-d15-red.txt battery, watched red."
+    },
+    {
+      "id": "R2",
+      "severity": "LOW",
+      "route": "repair",
+      "claim": "The refusal-envelope warning code 'rate_limited' — named as the refusal contract in ADR-040 §d — is not pinned by the check, so a mutated code string survives the gate.",
+      "evidence": "src/sec10k/web/app.py:220 passes \"rate_limited\" to _err; check_free_tier_limit's fake _err captures `code` but no assertion reads it (only status_code, Retry-After, and message length are pinned). Mutating the call to `_err(429, \"oops_typo\", why)` yields run_case passed=True, 0 failures, while ADR-040 §d states `warnings[0].code: rate_limited` as the contract the UI renders without a special case. Not blocking: the acceptance items actually named (429 status, Retry-After, reason) are bound, and §d's claim is backed by the live-wire record in tasks/reviews/pr-d15-red.txt PART 3.",
+      "repro": "In a scratch copy of the task/D15 tree: change app.py:220's code argument to any other string and run the free-tier-limit case via src.repo_hygiene.eval_adapter.run_case — it stays green.",
+      "acceptance": "One assertion in part 2 that the captured _err code equals \"rate_limited\", watched red against the mutated call."
+    }
+  ],
+  "route_note": "R2 is LOW and non-blocking under the scope boundary, but it is in-scope (the refusal contract this task ships) and a one-assertion fix, and this run's ledger policy is to mint no new TD ids — so it is routed into the same repair rather than debt."
+}

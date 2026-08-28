@@ -176,8 +176,12 @@ Full rationale in `specs/decisions/` (18 ADRs). The ones that shaped the system:
   (`fixtures.DEPLOY_EXCLUDED` closes the listing *and* request-time
   resolution); and until PR #61 R10 this said an upload was the only route,
   while `/api/extract/url` billed on any collapsing EDGAR Archives URL, which
-  no fixture exclusion could ever have fixed. What is still open is the FREE
-  tier: no rate limit, no request cap, a 25 MB ceiling (`TD-162`). The routing
+  no fixture exclusion could ever have fixed. The FREE tier stays open to
+  anyone, and since 2026-08-28 (D15, ADR-040) its rate is bounded: a global
+  per-process token bucket (burst 20, 30/minute by default, bounded env
+  config) refuses over-limit `/api/extract/*` requests with 429 +
+  `Retry-After` before any extraction or EDGAR fetch runs — a load ceiling,
+  not a paywall; the 25 MB per-document cap stands. The routing
   strip reports what each request's tiers did and cost. ADR-036 §h2 states
   this rather than softening it. The paragraph below
   is the 2026-08-19 ruling it supersedes, kept because its reasoning about

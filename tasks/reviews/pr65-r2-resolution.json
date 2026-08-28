@@ -1,0 +1,16 @@
+{
+  "pr": 65,
+  "round": 2,
+  "resolutions": [
+    {
+      "id": "R3",
+      "resolution": "fixed",
+      "covered_by": "free-tier-limit / check_free_tier_limit singleton config bound (`sing.burst <= MAX_BURST and sing.per_minute <= MAX_PER_MINUTE`, checked BEFORE the drain so the drain loop is never attacker-sized), mirrored as two asserts in limiter.py::_demo; mutant N3 (burst inflated to 10**6 via attribute assignment, reviewer's repro verbatim) watched GREEN pre-repair and RED post-repair in both twins — transcript tasks/reviews/pr-d15-red.txt APPENDIX round 2 PARTS A/B"
+    },
+    {
+      "id": "R4",
+      "resolution": "fixed",
+      "covered_by": "limiter.py::_demo drain wrapped in try/finally with reset() in the finally, matching the eval_adapter twin; exercised by every self-check run (python3 -m src.sec10k.web.limiter in the gate record PART C)"
+    }
+  ]
+}
