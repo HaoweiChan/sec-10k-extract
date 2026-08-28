@@ -1,0 +1,23 @@
+{
+  "pr": 76,
+  "round": 2,
+  "mode": "verify",
+  "result": "APPROVED",
+  "date": "2026-08-29",
+  "review_calls_used": 2,
+  "verifications": [
+    {
+      "id": "R1",
+      "status": "VERIFIED",
+      "confidence": 0.99,
+      "evidence": "src/sec10k/web/static/index.html:434-437 invalidates the request generation, verified value, storage, and green status on every edit; :892-908 captures a per-request generation and ignores any response unless both generation and current field value still match. evals/probes/escalation_key_ui_behavior.js:128-154 executes both edited-value and same-value superseded-response races, and the probe passes on 73c1df1 after the recorded stale-response red at 8d933d0."
+    },
+    {
+      "id": "R2",
+      "status": "VERIFIED",
+      "confidence": 0.99,
+      "evidence": "evals/probes/escalation_key_ui_behavior.js:94-154 executes the shipped boot(), verifyKey(), verifiedKey(), and call() paths for wrong, valid, edited, reload, verified-only header, stale edited-value, and superseded same-value states; src/repo_hygiene/eval_adapter.py:3827-3837 and :4270 wire that executable probe into the committed invariant/fast case. tasks/reviews/pr76-r1-red.txt records red-first stale behavior plus red results for all four acceptance mutations; post-repair gates are invariant 90/90 and fast 160/160 with baseline untouched."
+    }
+  ],
+  "new_findings": []
+}
