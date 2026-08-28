@@ -242,7 +242,17 @@ def _normalize(payload, text, choice, model, max_tokens):
     return {
         "text": text,
         "usage": {"input_tokens": u.get("prompt_tokens", 0),
-                  "output_tokens": u.get("completion_tokens", 0)},
+                  "output_tokens": u.get("completion_tokens", 0),
+                  # TD-165. `output_tokens` counts thinking AND answer, so an
+                  # empty completion at finish_reason `length` has two readings
+                  # it cannot separate: the reasoning cap was not enforced and
+                  # thinking ate the whole allowance, or it was enforced and the
+                  # answer itself was truncated. This field separates them, and
+                  # its absence is what made the 2026-08-28 run cost $0.997760
+                  # and still not explain itself. None when the provider omits
+                  # it — never 0, which would read as "measured, no reasoning".
+                  "reasoning_tokens": (u.get("completion_tokens_details") or {}
+                                       ).get("reasoning_tokens")},
         "usd": usd(model, u.get("prompt_tokens", 0), u.get("completion_tokens", 0)),
         "model": model,
         # OpenRouter normalizes this to one of tool_calls / stop / length /
@@ -338,6 +348,19 @@ def _demo():
     assert rec["max_tokens"] == 2048 and rec["usage"]["output_tokens"] == 2048
     assert rec["text"] == "" and rec["usd"] == usd(RUNGS[1][1], 10, 2048)
     assert {"text", "usage", "usd", "model", "finish_reason", "max_tokens"} <= set(rec)
+    # TD-165: `reasoning_tokens` is the field that separates "the reasoning cap
+    # was not enforced" from "it was, and the ANSWER was truncated" — the two
+    # readings of the 2026-08-28 run, which finish_reason alone cannot tell
+    # apart because both surface as `length` with empty content. Asserted for
+    # the same reason finish_reason is: a diagnostic nothing asserts is one
+    # that quietly stops being written. Recorded as None when the provider
+    # omits it, never defaulted to a number that would read as measured.
+    assert "reasoning_tokens" in rec["usage"], rec
+    assert rec["usage"]["reasoning_tokens"] is None, "absent must stay absent"
+    deep = _normalize({"usage": {"prompt_tokens": 10, "completion_tokens": 6144,
+                                 "completion_tokens_details": {"reasoning_tokens": 6144}}},
+                      "", {"finish_reason": "length"}, RUNGS[1][1], 6144)
+    assert deep["usage"]["reasoning_tokens"] == 6144, deep
 
     b = _body("m", "sys", "usr", 7)
     assert set(b) == {"model", "max_tokens", "messages"}, sorted(b)
