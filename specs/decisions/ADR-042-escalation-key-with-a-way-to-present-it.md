@@ -57,7 +57,46 @@ the key gates the spend, never the product.
 - ADR-041's §b analysis of why the first door failed is not withdrawn. It is
   the reason this one has a field.
 
-## d) The ledger
+## d) How a non-human client escalates, and the one trap in it
+
+Three routes, all working today with no further code. Measured against a live
+uvicorn, not asserted:
+
+**1. Plain HTTP — the right answer when the agent wants RESULTS, not the UI.**
+No DOM, no browser, nothing to break:
+
+```
+curl -X POST https://…/api/extract/url \
+  -H 'Content-Type: application/json' \
+  -H 'X-Escalation-Token: <key>' \
+  -d '{"url":"https://www.sec.gov/Archives/…"}'
+```
+
+**2. Driving the page — type into `#esc-key`, then click Extract.** The field
+is revealed by `/api/meta`, so the agent must wait for boot before filling it.
+Works exactly as a human's does.
+
+**3. The deep link, `?fixture=…&run=1` — and this is the trap.** That link
+extracts during `boot()`, BEFORE any agent can type anything, so a fresh
+browser context escalates on it NEVER. Measured: fresh context + deep link
+gives `escalation.ran: false`. The fix is one call before navigating —
+
+```js
+localStorage.setItem("sec10k.escalation-key", "<key>")
+```
+
+— after which the same link gives `ran: true` with the routing strip. This is
+why `KEY_STORE`'s literal value is pinned in `SENDS_TOKEN_UI` rather than left
+as an implementation detail: an out-of-repo consumer depends on that exact
+string, and renaming it would drop the agent to the free tier with every check
+green on both sides of the boundary.
+
+A `?k=` URL parameter was NOT added for this. It would put the secret in
+browser history and referrer headers — the reason the owner chose a field over
+a link in the first place — and route 1 already covers every case where the
+caller is not a browser.
+
+## e) The ledger
 
 TD-158 returns to `superseded` pointing here rather than at ADR-041 — the
 original finding stands, and this is its second and better fix.

@@ -3453,6 +3453,14 @@ SENDS_TOKEN_UI = [
     ("...and names the header the server reads", '"X-Escalation-Token"'),
     ("...and injects it in the ONE helper all three modes go through",
      "async function call(url, opts)"),
+    # A CROSS-REPO CONTRACT, which is why it is pinned rather than left as an
+    # implementation detail. D10's deep link (`?fixture=…&run=1`) extracts
+    # during boot, BEFORE any agent can type into `#esc-key` — so the only way
+    # a browser agent escalates on that path is to seed this exact key into
+    # localStorage before navigating. Rename it and the agent silently drops to
+    # the free tier with everything green on both sides (ADR-042 §e).
+    ("...under the storage key the browser agent seeds",
+     'const KEY_STORE = "sec10k.escalation-key"'),
 ]
 ESCALATION_UI = [
     ("the page declares the strip", "function escalationStrip(e)"),
