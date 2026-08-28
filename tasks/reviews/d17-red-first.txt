@@ -1,0 +1,129 @@
+D17 — verify's adversarial battery: red-first record.
+Tree: task/D17 at fa0fcea (base main 06be77f). Date: 2026-08-28. $0 — no live
+call, no credential, no network; every input below is a crafted fixture input
+handed to the REAL `escalate.verify` / `escalate.route` (transport stubbed to
+return the case's declared text, per the _demo / PR #58 R19 precedent).
+
+=== the probe pass (evidence first, findings second) ===
+Every crafted-bad-answer class in the D17 spec was probed against the
+then-current verify/route before any case was authored. Behaviour was CORRECT
+for: out-of-bounds offsets (negative, end>len, start==end, start>end — all
+"outside normalized_text"), sub-SPAN_FLOOR spans, wrong-region offsets (item 1
+proposed at item 7's real content — title similarity 0.139 < 0.37), offsets
+landing mid-paragraph in real prose (similarity 0.078), a proposed span
+overlapping an EXISTING sibling's span (INV-S1), two sibling proposals
+overlapping / enclosing / duplicating each other (INV-S1 or similarity — the
+adjacent-pair scan catches every non-ascending sequence, probed all three
+shapes), mixed good+bad proposals (all-or-nothing discard), float / string /
+dict / scalar / 3-tuple shapes ("not an [int, int] offset pair"), truncated
+JSON and non-dict top-level JSON through route's parse path ("unparseable"),
+and the item list was byte-untouched after every rejection.
+
+The two probes the task named, adjudicated on the evidence:
+
+1. JSON BOOLEANS — GENUINE GAP, a crafted answer ACCEPTED that should be
+   rejected. `isinstance(True, int)` is True, so `[true, N]` passed verify's
+   shape check. Demonstrated acceptance (direct verify, constructed document
+   whose real body starts at offset 1, so [True, N] IS the verifying span
+   once coerced):
+       verify(text, items, {"1": [True, 1+len(body)]})
+       -> accepted ['1'], merged span {'start': True, ...}
+   `apply` would have published `"start": true` in the envelope — a non-int
+   offset in a contract field. Through route() the laundering is separate and
+   WORSE-hidden: `int(v[0]) + offset` turns JSON `true` into the plausible
+   integer offset 1+offset BEFORE verify ever sees it, so a verify-side guard
+   alone cannot close the route path. VERDICT: real defect at the trust
+   boundary, both entry points fixed (below).
+
+2. A sibling proposal that duplicates / encloses ANOTHER item's proposed span
+   in the same proposal — BENIGN, no finding manufactured. Probed all three
+   shapes: overlap rejected (similarity or INV-S1), enclosure rejected
+   (INV-S1: "[36, 7748) then [4254, 7748)"), exact duplicate rejected
+   (similarity first, INV-S1's s2<e1 behind it). The adjacent-pair ordering
+   scan is sufficient: any overlap or descent in the substituted list shows
+   between some adjacent pair. Pinned anyway by the battery's two INV-S1
+   sub-cases and the duplicate-sibling sub-case.
+
+   Float/string coercion in route (int(100.7)=100, int("5350")=5350) —
+   BENIGN by ruling, recorded not fixed: truncation moves an offset by under
+   one character and digit strings parse to the number the model evidently
+   meant; the coerced value then faces every verify check like any answer.
+   Pinned as current behaviour in escalation-route-parse (floats: coerced
+   then rejected by bounds on that fixture, nothing applied).
+
+=== the new cases, run against the PRE-FIX tree (fa0fcea + cases, no src fix) ===
+  python3 -m evals.run --suite invariant
+    [FAIL] escalation-route-parse (adversarial)
+    [FAIL] escalation-verify-battery (adversarial)
+    [eval] suite 'invariant': 86/88 = 0.977  (+4 enumerated debt, unscored)
+    [eval] INVARIANT VIOLATION: invariants are absolute, 100% required
+  python3 -m evals.run --suite fast
+    [eval] suite 'fast': 150/152 = 0.987  (+4 enumerated debt, unscored)
+
+  Red for exactly the gap and nothing else — per-check reasons:
+  escalation-verify-battery:
+    shape: JSON booleans are not offsets (isinstance(True, int) is True):
+    rejected, but for the wrong reason — no rejection contains 'not an
+    [int, int] offset pair': ["item 1: span opens '021', title similarity
+    0.0 < SIM_FLOOR 0.37"]
+    (on xom-2021 the bool span is caught only by the ACCIDENTAL neighbouring
+    similarity check — the same trap escalation-verify-guards' provenance
+    documents for R1; the acceptance itself is the offset-1 construction
+    above, now pinned in escalate._demo)
+  escalation-route-parse:
+    tier outcomes ['rejected', 'rejected'] != ['unparseable', 'unparseable']
+    (the bool was silently coerced to offset 1 and competed as a real answer)
+  All 15 other battery sub-cases and 5 other route-parse checks were green
+  pre-fix: probes X/Y behaved correctly, and those sub-cases pin behaviour
+  rather than fix it. Their red-ability is proven by mutation below.
+
+=== the fix (minimal, both entry points) ===
+  src/sec10k/escalate.py
+  1. verify's shape check: `isinstance(v, int) and not isinstance(v, bool)`
+  2. route's parse path: JSON true/false in an offset pair raises TypeError
+     ("JSON true/false is not a character offset") -> outcome `unparseable`,
+     BEFORE int() can launder it.
+  3. _demo pins the sharp construction: the honest int twin [1, N] must
+     verify (or the probe is vacuous), [True, N] and [False, N] are rejected
+     as "not an [int, int] offset pair".
+  -> invariant 88/88 = 1.000, fast 152/152 = 1.000, both _demos ok.
+
+=== AFTER: the mutation matrix on the repaired tree ===
+(scratchpad runner: text-mutate escalate.py, run invariant suite + _demo,
+restore; one mutation at a time)
+
+MUTATE  M1 the bounds check removed (0 <= s < e <= len)
+  invariant: 87/88 = 0.989  FAIL=['escalation-verify-battery']  _demo: ok
+  VERDICT : RED   (bounds coverage is NEW — no pre-D17 case caught this)
+MUTATE  M2 the SPAN_FLOOR check removed
+  invariant: 86/88 = 0.977  FAIL=['escalation-verify-battery', 'escalation-verify-guards']  _demo: RED
+  VERDICT : RED
+MUTATE  M3 the title-similarity check removed
+  invariant: 86/88 = 0.977  FAIL=['escalation-verify-battery', 'escalation-verify-guards']  _demo: RED
+  VERDICT : RED
+MUTATE  M4 the INV-S1 ordering check removed
+  invariant: 87/88 = 0.989  FAIL=['escalation-verify-battery']  _demo: RED
+  VERDICT : RED   (eval-side INV-S1 coverage is NEW — only _demo had it)
+MUTATE  M5 the pre-R2 `continue` behaviour restored (all-or-nothing dropped)
+  invariant: 86/88 = 0.977  FAIL=['escalation-verify-battery', 'escalation-verify-guards']  _demo: RED
+  VERDICT : RED
+MUTATE  M6 the verify-side bool guard removed (the D17 fix, reverted)
+  invariant: 87/88 = 0.989  FAIL=['escalation-verify-battery']  _demo: RED
+  VERDICT : RED   (the fix's own mutation proof, verify side)
+MUTATE  M7 the route-side bool guard removed (the D17 fix, reverted)
+  invariant: 87/88 = 0.989  FAIL=['escalation-route-parse']  _demo: ok
+  VERDICT : RED   (the fix's own mutation proof, route side — note _demo
+                   stays ok: only the eval case binds this path)
+MUTATE  M8 verify made impure (writes the span onto the item in place)
+  invariant: 87/88 = 0.989  FAIL=['escalation-verify-battery']  _demo: RED
+  VERDICT : RED   (red reason confirmed to be the new comparator itself:
+                   "verify MUTATED the deterministic item list — it must be
+                   a pure checker", firing on the grow sub-case, whose
+                   written offsets differ from the item's own)
+RESTORE -> invariant: 88/88 = 1.000  (+4 enumerated debt, unscored)
+
+All eight RED, restore GREEN. Route-path untouchedness for parse junk is
+additionally asserted by `untouched: true` on all six route-parse checks; its
+comparator's sensitivity is demonstrated by M8 on the verify side (parse
+failures structurally never reach `apply`, so no realistic route-side mutation
+exists that moves the list without first passing verify).

@@ -1,0 +1,31 @@
+{
+  "pr": 66,
+  "round": 1,
+  "result": "APPROVED",
+  "reviewer": "pr-loop fresh-context subagent (falsification-only, full branch diff 06be77f..9b4e9ce)",
+  "date": "2026-08-28",
+  "gate_at_review": "invariant 88/88 = 1.000, fast 152/152 = 1.000, baseline 1.0 untouched",
+  "reviewer_verification": "gate re-run green at HEAD; snapshot digests byte-identical base vs HEAD (dev de61a971, heldout 4d2a7128, cmp exit 0); OPENROUTER_API_KEY confirmed absent; (b) runner re-run at $0 reproduced the artifact line-for-line (rung-1 cache hit verified verbatim in evals/cache/llm/f927e260*.json, rung-2 projection $1.114685 arithmetic checked, pre-call gate self-check tripped, loud credential refusal, coverage 0.0033 unchanged); HardCapAbort propagation confirmed; pre-fix red state and matrix mutations M1/M8 independently reproduced in a scratchpad copy; no baseline edit, no new TD ids, src changes confined to escalate.py + eval_adapter.py; ADR-036 §k note, TODO D17 Status and the measurement artifact make identical, correctly-hedged claims",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "LOW",
+      "claim": "The 8-mutation red-first matrix is not independently re-runnable from the committed artifact alone — the mutation runner is described only as a 'scratchpad runner' (tasks/reviews/d17-red-first.txt:92) and was never committed.",
+      "evidence": "tasks/reviews/d17-red-first.txt:91-123 describes M1-M8 prose-only. Mitigation verified by the reviewer: the committed evals/report/20260828-0532*..0536* reports and history.jsonl lines (sha=fa0fcea, dirty=True) match the matrix's per-mutation scores exactly (M1=87/88, M2=86, M3=86, M4=87, M5=86, M6=87, M7=87, M8=87, restore 88), and the reviewer independently reproduced the pre-fix state (86/88, exactly the two D17 cases red), M1 (87/88) and M8 (87/88) in a scratchpad copy — all matched the recorded verdicts.",
+      "repro": "In a scratchpad copy of HEAD: revert both bool guards in src/sec10k/escalate.py, run python3 -m evals.run --suite invariant -> 86/88 with the two D17 cases red; remove the bounds check -> 87/88 battery red.",
+      "acceptance": "Optional hygiene only: commit the mutation runner or note in d17-red-first.txt that the matrix is corroborated by the committed dirty-flagged reports. No behavior change required.",
+      "route": "debt",
+      "route_note": "non-blocking LOW; routed to the PR body's residuals list per the D17 task spec (no new TD ids)"
+    },
+    {
+      "id": "R2",
+      "severity": "LOW",
+      "claim": "Within the malformed-shape class, the float/string/dict/3-tuple sub-cases have no individual mutation proof — only the bool member of the class was proven red (found gap + M6/M7).",
+      "evidence": "tasks/reviews/d17-red-first.txt:95-122 — no mutation removes the general [int,int] shape check. The spec's acceptance reads per-class, and every class does carry a proof: bounds=M1, SPAN_FLOOR=M2, similarity/wrong-region=M3, INV-S1=M4, all-or-nothing=M5, shape=found gap+M6/M7, purity=M8, route-parse=its own mutations. The remaining shape sub-cases additionally bind via why_contains pinning the exact rejection reason, so they cannot pass on a neighbouring check.",
+      "repro": "Read tasks/reviews/d17-red-first.txt M1-M8 against the 17 sub-cases in evals/adversarial/escalation-verify-battery.json.",
+      "acceptance": "No fix required under the per-class reading; noted so the class/sub-case distinction is on the record.",
+      "route": "debt",
+      "route_note": "non-blocking LOW; routed to the PR body's residuals list per the D17 task spec (no new TD ids)"
+    }
+  ]
+}
