@@ -1,0 +1,27 @@
+D18 red-first evidence — 2026-08-28
+
+Before the candidate-filter correction, the direct synthetic repro in
+src/sec10k/segment.py asserted that `_toc_runs` must drop TOC indices 0-4 and
+retain index 5, the first real Item 1 heading followed by later running headers.
+It failed with:
+
+  AssertionError: ({0, 1, 2, 3, 4, 5}, ['1', '1A', '1B', '2', '3', '1'])
+
+The burned AIG fixture independently showed the same mechanism: titled
+candidates 0-22 at offsets 4411-6357 were the front TOC, candidate 23 at 6459
+was the real Item 1 heading, and the old filter dropped it because later page
+headers repeat Item 1. This records the pre-fix failure without altering any
+frozen label.
+
+Audit repair — before narrowing the predicate, a direct counterexample had an
+earlier dense run ending in Item 3 and a separate later dense index run ending
+in Item 1. The broad guard incorrectly retained the later run's final index
+candidate merely because Item 1 appeared in the earlier run:
+
+  broad= [5, 6, 7, 8] expected= [5, 6, 7, 8, 9]
+  AssertionError: ({8, 5, 6, 7}, {5, 6, 7, 8, 9})
+
+This was watched against the broad `cands[:run[-1]]` predicate. The repaired
+leading-dense-chain predicate drops an independent later index after a
+standalone heading while retaining only the front-matter chain's trailing real
+heading.

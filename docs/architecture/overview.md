@@ -261,7 +261,7 @@ text only) → llm_extract (anthropic/claude-opus-5, the document up to
 1,250,000 chars)`, via OpenRouter (ADR-036 §h1); both rungs' inputs are
 capped so one call's price is bounded on arbitrary input (§h2), behind
 `extract_items(path, escalate=True)`, entered only when `low_item_coverage`
-fires (2 of 35 real dev filings), with every returned offset re-derived by
+fires (2 of 36 real dev filings), with every returned offset re-derived by
 `escalate.verify` before use. Cache-by-content-hash, prompt-version keying and
 the budget cap below all survive into it. **No live call has been made and the
 held-out exam is UNRUN.** The 2026-08-19 reasoning follows unedited.

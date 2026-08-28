@@ -77,6 +77,17 @@ the strength of it — no threshold, no fixture, no code, no case authored from
 it — which the 2026-08-26 amendment below makes explicitly not influence. That
 is the second time this set has caught a silent failure unprompted.
 
+## D18 burn, 2026-08-28
+
+**`aig-2025-heldout` is burned and moved, not copied** to
+`evals/adversarial/aig-2025-running-header-burned.json`; its fixture moved to
+`evals/fixtures/aig-2025/`. The frozen item-1 outcome directly informed the
+candidate-filter correction recorded in ADR-044, so it is influence by the
+ordinary burn rule. Its original labels and provenance stay intact in the
+moved case, with dated triage appended. The held-out inventory is now **five**
+cases. **One fresh replacement is owed** at the next held-out expansion; it
+must be independently labeled before the pipeline sees it.
+
 ## Burn rule
 
 A case is burned the moment its labeled outcome influences implementation — a

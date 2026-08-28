@@ -59,6 +59,13 @@ high-quality prompt records." No active blocks today.
 runs. The T8 walk S1 was waiting on has now run (11/11 green). No active
 blocks today.
 
+### D18 — Running-header candidate filtering: preserve the first real item page [status: pr]
+Origin: PR #74 `aig-2025-heldout` — the frozen held-out run lost item 1's first page while reporting `success`, confidence 0.95 and no item-level warning
+Priority: P1
+Spec: Burn AIG into the adversarial set and fix the root candidate-selection defect: a dense front-matter TOC immediately followed by a real item heading must not cause `_toc_runs` to discard that first body heading merely because later running headers repeat it. Keep the rule structural and corpus-measured; do not special-case AIG, its offsets, or its text. Record the post-freeze exception and the held-out replacement debt explicitly.
+Reviewer evidence: Demonstrates that a frozen, real-filing silent-partial-loss finding becomes a reproducible red-first case and a bounded pipeline correction, with blast radius measured across the corpus.
+Acceptance: (1) the burned AIG case is in `evals/adversarial/` with `triage.class = input-variant` and its original frozen labels intact; (2) the AIG item-1 anchor passes and the complete adversarial case is green; (3) a minimal synthetic running-header repro is watched red before the fix and pins the structural discriminator; (4) invariant then fast gates pass at or above baseline without a manual baseline edit; (5) all pre-existing filing outputs are compared against `origin/main`, with every change named and justified; (6) `evals/heldout/README.md` records the burn and that one fresh replacement is owed; (7) an ADR records the sanctioned freeze exception, alternatives, measurements, and falsifier.
+
 **Demo-remediation track** — opened 2026-08-25 after the 2026-08-24 live demo
 ran recent Intel (INTC) and Citigroup (C) 10-Ks — neither in any eval set —
 and both extracted wrong while the side panel showed per-item conf 0.95. The
