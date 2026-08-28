@@ -1,0 +1,22 @@
+PR #76 repair round 1 — fail-before evidence
+Observed 2026-08-29 on task/D19 at 8d933d0, before the repair.
+
+Command: direct evals.run.run_case execution of
+evals/adversarial/escalation-key-ui-behavior.json
+Exit: 1
+Result: FAIL
+Failure: index.html escalation-key behavior: stale response re-enabled edited input
+
+Classification: invariant-gap. The prior invariant read source tokens but did
+not execute the credential state transitions, so a late accepted response for
+key A could overwrite the input listener's invalidation after an edit to B.
+
+Post-repair, the same case passed (exit 0). Four isolated mutations were then
+run against copies of the repaired page; each exited 1 with the named failure:
+
+- input invalidation removed: `editing did not clear enabled state`
+- verifiedKey() returns the raw field: `wrong/raw field was sent to extraction`
+- every response treated as accepted: `wrong key did not stay invalid`
+- stale-response guard removed: `stale response re-enabled edited input`
+
+The repaired tree then passed invariant 90/90 and fast 160/160, both 1.000.

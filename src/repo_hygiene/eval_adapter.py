@@ -3824,6 +3824,19 @@ def check_escalation_choke_point(case):
     return bad
 
 
+def check_escalation_key_ui_behavior(case):
+    """Run the escalation credential state machine from the shipped page."""
+    ui = ROOT / case.get("input", {}).get("ui_file", UI_STYLESHEET)
+    probe = ROOT / "evals/probes/escalation_key_ui_behavior.js"
+    got = subprocess.run(["node", str(probe), str(ui)], cwd=ROOT,
+                         capture_output=True, text=True, timeout=10)
+    if got.returncode:
+        detail = (got.stderr or got.stdout).strip().splitlines()
+        return ["index.html escalation-key behavior: " +
+                (detail[-1] if detail else f"node exited {got.returncode}")]
+    return []
+
+
 LIMITER_MODULE = "src.sec10k.web.limiter"
 
 
@@ -4254,6 +4267,7 @@ CHECKS = {
     "routing_provenance": check_routing_provenance,
     "escalation_locks": check_escalation_locks,
     "escalation_choke_point": check_escalation_choke_point,
+    "escalation_key_ui_behavior": check_escalation_key_ui_behavior,
     "free_tier_limit": check_free_tier_limit,
     "token_proxy_bound": check_token_proxy_bound,
 }
