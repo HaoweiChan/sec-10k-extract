@@ -351,7 +351,7 @@ def api_meta():
             # This does not publish the budget's remaining balance — that is a
             # fact about other people's requests.
             "escalation_enabled": ESCALATION_ENABLED,
-            # ADR-042. The page shows its key field only when a secret is
+            # ADR-043. The page shows its key field only when a secret is
             # configured — a field that cannot open anything is worse than
             # none. False means CLOSED TO ALL, not open to all.
             "escalation_token_required": bool(gate.configured_token())}

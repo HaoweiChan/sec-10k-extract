@@ -1,6 +1,16 @@
-# ADR-042 — the paid tier goes back behind a key, and this time the page can present it
+# ADR-043 — the paid tier goes back behind a key, and this time the page can present it
 
-Date: 2026-08-28. Status: accepted. **Supersedes
+Date: 2026-08-28. Status: accepted. **Numbered 043, not 042**: written into
+the 042 slot and renumbered at merge time, because PR #73 took that slot on a
+branch while this one was open. Neither tree could see the other — a decision
+file on an unmerged branch is absent from `specs/decisions/` and from
+`INDEX.md`, so `adr-header-and-index` reported the slot free on both sides and
+both were right. Same evening, the sibling browser-agent repo hit the identical
+class and its own file moved 037 -> 038; that made seven instances between the
+two repos in one day, all of the form "a number is free in my tree and taken in
+yours". The in-tree half is guarded; the cross-branch half is not, and no
+briefing fixes it — the collision is invisible to the party that has to avoid
+it. **Supersedes
 [ADR-041](ADR-041-escalation-open-by-default.md)**, which deleted the door of
 [ADR-036](ADR-036-tiered-escalation.md) §h2 lock 4 the day it shipped. Not a
 freeze exception: this is a deployment control, not an extraction capability —

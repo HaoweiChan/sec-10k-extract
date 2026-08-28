@@ -984,7 +984,7 @@ WIRE_API = [
     # and never as a constant.
     #
     # PR #61 R10 moved that decision to a token door, ADR-041 removed the door
-    # the next day, and ADR-042 restored it WITH the page half it had been
+    # the next day, and ADR-043 restored it WITH the page half it had been
     # missing — so `escalate=` carries the door's verdict again and the budget
     # rides that same name; the call cannot escalate on one condition and bill
     # against another. `escalation_locks` pins the AST half (the argument is a
@@ -3456,7 +3456,7 @@ def check_escalation_locks(case):
 
 
 GATE_MODULE = "src.sec10k.web.gate"
-# ADR-042's whole reason for existing. The door of ADR-036 §h2 lock 4 was
+# ADR-043's whole reason for existing. The door of ADR-036 §h2 lock 4 was
 # correct server-side and shipped with NO WAY FOR THE PAGE TO OPEN IT: four
 # `fetch()` calls, two headers, both `Content-Type`, and no field. It was shut
 # to every human visitor including the owner, and ADR-041 deleted it. These
@@ -3472,7 +3472,7 @@ SENDS_TOKEN_UI = [
     # during boot, BEFORE any agent can type into `#esc-key` — so the only way
     # a browser agent escalates on that path is to seed this exact key into
     # localStorage before navigating. Rename it and the agent silently drops to
-    # the free tier with everything green on both sides (ADR-042 §e).
+    # the free tier with everything green on both sides (ADR-043 §d).
     ("...under the storage key the browser agent seeds",
      'const KEY_STORE = "sec10k.escalation-key"'),
 ]
@@ -3562,7 +3562,7 @@ def check_escalation_choke_point(case):
         bad.append(f"{api_file}: no `def {runner}` — nothing converges")
 
     # ---- 2: escalating and billing carry the DOOR's verdict, and the same one.
-    # ADR-042 restored the door, so `escalate=` names the verdict again rather
+    # ADR-043 restored the door, so `escalate=` names the verdict again rather
     # than the bare off-switch (which the door folds in). The budget must ride
     # that SAME name: escalating on one condition and billing against another
     # is the process ceiling bypassed in one token (PR #61 R19).

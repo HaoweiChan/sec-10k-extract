@@ -162,7 +162,7 @@ Full rationale in `specs/decisions/` (18 ADRs). The ones that shaped the system:
   on every request, there is no checkbox and no request-level flag, and the
   operator's off-switch is the host variable `SEC10K_ESCALATION_ENABLED`, set
   to any of `0`, `false`, `no`, `off` (stripped and case-insensitive; unset or
-  empty means ON). **The paid tier is behind a key** (ADR-042, 2026-08-28) — and unlike the door
+  empty means ON). **The paid tier is behind a key** (ADR-043, 2026-08-28) — and unlike the door
   it replaces, the page can present it: paste the key into the `escalation key`
   field and it rides every extraction as `X-Escalation-Token`, remembered in
   the browser so it is typed once. With no `SEC10K_ESCALATION_TOKEN` on the

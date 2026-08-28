@@ -1,7 +1,7 @@
 # 027 — Put the paid tier back behind a key, with a field the page can send it from
 
 Date: 2026-08-28. Outcome:
-[ADR-042](../specs/decisions/ADR-042-escalation-key-with-a-way-to-present-it.md),
+[ADR-043](../specs/decisions/ADR-043-escalation-key-with-a-way-to-present-it.md),
 `gate.py` restored, `#esc-key` field added, `SENDS_TOKEN_UI` + `_fn_body` pins.
 
 ## The prompt

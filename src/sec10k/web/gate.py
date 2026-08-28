@@ -46,7 +46,7 @@ HEADER = "x-escalation-token"
 TOKEN_VAR = "SEC10K_ESCALATION_TOKEN"
 # A floor on the secret, not a policy about its shape: it exists so a secret
 # configured BY ACCIDENT ("x", "test") is refused in the same words an absent
-# one is. Lowered 16 -> 10 on 2026-08-28 (ADR-042 §e).
+# one is. Lowered 16 -> 10 on 2026-08-28 (ADR-043 §e).
 #
 # The secret is MEANT to be memorable, and that is a requirement rather than a
 # concession: it is read out loud or typed from a phone by the person the demo

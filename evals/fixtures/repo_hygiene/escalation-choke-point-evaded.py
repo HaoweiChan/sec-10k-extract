@@ -1,4 +1,4 @@
-"""ADR-042 regression fixture — the DOOR and the CHOKE POINT, walked around.
+"""ADR-043 regression fixture — the DOOR and the CHOKE POINT, walked around.
 
 `escalation-locks-*.py` cover the process ceiling's own shape. This one covers
 what neither it nor the ceiling can see: the paid path being reachable without
