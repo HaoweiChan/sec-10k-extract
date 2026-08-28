@@ -1,0 +1,42 @@
+{
+  "pr": 61,
+  "round": "4 (verification pass on the bounded round)",
+  "result": "REQUEST_CHANGES",
+  "verified_closed": [
+    "R18",
+    "R20",
+    "R21",
+    "R22"
+  ],
+  "partly_met": [
+    "R19 \u2014 closed against M4/M6, evaded by R23's one-token variant"
+  ],
+  "counts": {
+    "HIGH": 0,
+    "MEDIUM": 1,
+    "LOW": 1
+  },
+  "findings": [
+    {
+      "id": "R23",
+      "severity": "MEDIUM",
+      "route": "escalate",
+      "claim": "R19's argument pin binds headers.get's arity but not the expression around it, so the exact exploit R19 names survives as a one-token variant with all four assertions satisfied and both suites byte-identical to clean.",
+      "evidence": "eval_adapter.py walks c.args[0] only for <x>.headers.get(...) and asserts len(gets)==1, obj is Name 'request', len(g.args)==1, arg is .HEADER \u2014 never constraining what wraps the call. `(request.headers.get(gate.HEADER) or gate.configured_token())` satisfies all four.",
+      "repro": "apply that edit -> invariant 86/86 (perfect, identical to clean); paid_path_open(None or configured_token(), True) -> (True, 'a valid x-escalation-token header was presented...')",
+      "acceptance": "The first-operand check constrains the whole expression, not just the headers.get node \u2014 or the ceiling is named as debt.",
+      "orchestrator_verified": "REPRODUCED: gate 86/86 with the paid path open to an anonymous request and a false envelope message."
+    },
+    {
+      "id": "R24",
+      "severity": "LOW",
+      "route": "debt",
+      "claim": "R21's exclusion of eval_adapter.py's '18 of 43 dev documents' is argued on a ground that does not distinguish it from the five pinned files, and the excluded line carries exactly the stale denominator R21 exists to catch.",
+      "evidence": "eval_adapter.py:1629-1633 excludes the file because its numerator cannot be checked \u2014 but the pin is denominators-only by design, so no pinned site's numerator is checked either. Meanwhile :2879 and :1631 publish '18 of 43 dev documents' while the sweep measures 44.",
+      "repro": "grep -rnE '[0-9]+ of (the )?[0-9]+ (dev|real)' src/repo_hygiene/eval_adapter.py",
+      "acceptance": "The two sites carry a dated vintage, or the exclusion note states the real distinguishing reason."
+    }
+  ],
+  "door_verified_correct": "Driven against a counting listener: no header -> 0 outbound on all three routes; valid header -> 1; secret unset -> 0; free tier byte-identical; fails closed on exception. R23 is a gap in the CHECK, not the shipped door.",
+  "structural_note": "Fifth consecutive round of one defect class, each evasion one token narrower. app.py imports fastapi and cannot be imported by the no-install CI jobs (ADR-003), so its call site can only be pinned by AST shape \u2014 and an AST shape pin is always one token evadable in principle. Tightening closes the variant, not the class."
+}

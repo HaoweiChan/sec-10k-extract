@@ -720,6 +720,22 @@ for a new-transport request.
 > a guard counted as one literal in one function is a guard the next endpoint
 > walks around.
 >
+> **Dated note, 2026-08-28 (PR #61 R23, `tasks/reviews/pr61-r4.json`).** That
+> sentence is true of the choke point and NOT of the call's arguments. The
+> first-operand check binds `headers.get`'s arity, its object and its name, but
+> not the expression around it: `(request.headers.get(gate.HEADER) or
+> gate.configured_token())` satisfies all four assertions and hands an
+> anonymous request the deployment secret, with invariant at a perfect 86/86.
+> **The ceiling, stated rather than implied: these pins catch accidental
+> regression, not a deliberate edit by someone with commit access, and no AST
+> pin over `app.py` can — it imports fastapi and cannot be imported by the
+> no-install CI jobs (ADR-003), so its call site is reachable only by shape.**
+> The shipped door is correct and was driven against a counting listener four
+> times; this is a gap in the check, not a live exposure. Carried as TD-163,
+> whose upgrade path is the only thing that closes the class for real:
+> exercising the call site with real calls in the CI `unit-tests` job, where
+> dependencies are installable.
+>
 > **What the door does NOT close, stated because the previous version of this
 > paragraph was the thing that went stale.** The FREE tier is still open to
 > anyone: no rate limit, no request cap, a 25 MB upload ceiling, and a large
