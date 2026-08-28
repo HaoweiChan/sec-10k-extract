@@ -1019,6 +1019,12 @@ function routingStrip(r){
     ${esc(money)}</span>`;
 }
 
+function flowStrip(r){
+  if(!r || !Array.isArray(r.stages)) return "";
+  const stages = r.stages.map(s => `${esc(s.stage)}: <b>${esc(s.status)}</b> — ${esc(s.reason || s.skipped || "")}`).join("; ");
+  return ` <span class="src" id="agentic-flow">agentic flow: ${stages}</span>`;
+}
+
 // ADR-041. The paid tier is open to every request now (the token door of
 // TD-158 lasted one day), so this strip is the DISARMED case only — and "did
 // not run" must still be SAID, not left as an absent strip. `v.escalation.reason` is the server's own sentence,
@@ -1044,7 +1050,8 @@ function render(v){
     (src ? ` <span class="src">${esc(src)}</span>` : "") +
     coverageStrip(w) +
     escalationStrip(v.escalation) +
-    routingStrip(v.routing);
+    routingStrip(v.routing) +
+    flowStrip(v.routing);
 
   $("#warnings").innerHTML = w.length
     ? w.map(x => `<div class="warn"><code>${esc(x.code)}</code>${

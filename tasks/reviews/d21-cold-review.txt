@@ -1,0 +1,17 @@
+1. **A normal omitted item diverts a collapsed filing away from repairing its bad primary spans.**  
+   **Input:** a low-coverage filing with at least one deterministic `item_span_near_empty` pointer/stub and any legitimately `omitted` item (common for optional 10-K items).  
+   **Mishandled at:** `src/sec10k/escalate.py:174-185`, then `:477-478`.  
+   **Actual output:** `classify()` puts both `missing` and `omitted` items into `missing`; because that list is non-empty it selects `alternative_evidence` and targets only those null-span items. The paid rung is never asked to repair the flagged existing stub/pointer span, so the envelope retains the known-wrong primary extraction while reporting a successful escalation path for unrelated null items.  
+   **Correct output:** a legally omitted item must not suppress repair of the low-coverage primary spans. It should remain omitted; the flagged spanned items should be the primary-repair targets (or the result should explicitly support both target classes without dropping either).
+
+2. **An alternative-region answer can attach unrelated text to any item merely by quoting a common word.**  
+   **Input:** an ambiguous filing where the model returns, for missing Item 7, a region from unrelated Item 1 prose with `{"reference": "the"}` (or another ordinary token contained in that prose).  
+   **Mishandled at:** `src/sec10k/escalate.py:248-255`, `:258-275`, and `:567-579`.  
+   **Actual output:** `_region()` accepts any nonempty `reference` found verbatim anywhere in the proposed slice; `verify_alternatives()` does not require the reference to identify the target item or require a matching Item 7 title. `apply()` then publishes that Item 1 prose under Item 7 as `"verified alternative evidence"`, while the route records a resolved tier.  
+   **Correct output:** unrelated prose must be rejected; an alternative annotation needs evidence that binds the region to its target item, not merely a model-selected substring that appears inside it.
+
+3. **A primary-repair classification still accepts alternative-only output for an already-spanned item.**  
+   **Input:** a low-coverage pointer-collapse filing with no null-span items, where the model returns `{"7":{"regions":[...]}}` rather than a replacement `[start,end]` for existing stub Item 7.  
+   **Mishandled at:** `src/sec10k/escalate.py:258-275`, `:567-579`, especially the absence of any `tr["route"]` / item-status gate before `verify_alternatives()`.  
+   **Actual output:** the alternative is accepted for an `extracted` item, `entry.outcome` becomes `"resolved"`, and the inspector appends alternative text; the bad pointer/stub primary offsets remain unchanged. This silently presents a successful escalation even though the selected `replace_primary` route did not repair its primary result.  
+   **Correct output:** `replace_primary` work must accept only verified primary deltas for its spanned targets; alternative evidence belongs only to the alternative-evidence classification and must not turn an unrepaired primary collapse into a successful resolution.

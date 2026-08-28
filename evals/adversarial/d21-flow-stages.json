@@ -1,0 +1,1 @@
+{"id":"d21-flow-stages","task":"sec10k","suites":["fast","invariant"],"input":{"path":"evals/fixtures/xom-2021/filing.htm"},"expect":{"checks":[{"type":"d21_verify","scenario":"flow"}]},"provenance":"D21 red-first: fixed backend flow includes visible skipped stages; UI consumes routing.stages verbatim."}

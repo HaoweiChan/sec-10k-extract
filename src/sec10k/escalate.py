@@ -167,7 +167,27 @@ SYSTEM = (
 )
 
 
-def trigger(warnings):
+def classify(warnings, items):
+    """Name the deterministic failure shape before any paid rung is considered."""
+    hits = [w for w in warnings if w.get("code") in TRIGGER_CODES]
+    xref = any(w.get("code") == "cross_reference_index" for w in warnings)
+    missing = sorted(i["item"] for i in items if i["status"] == "missing")
+    stubs = sorted({w["item"] for w in warnings
+                    if w.get("code") == "item_span_near_empty" and w.get("item")})
+    if hits and xref:
+        return {"class": "deterministic_resolved", "route": "suppressed",
+                "reason": "cross_reference_index", "items": [], "calls_paid": False}
+    if hits and missing:
+        return {"class": "alternative_evidence", "route": "alternative_regions",
+                "reason": "missing primary spans", "items": missing, "calls_paid": True}
+    if hits:
+        return {"class": "replace_primary", "route": "contiguous_span_repair",
+                "reason": "low_item_coverage", "items": stubs, "calls_paid": True}
+    return {"class": "quiet", "route": "none", "reason": "no trigger", "items": [],
+            "calls_paid": False}
+
+
+def trigger(warnings, items=()):
     """The router's sensor. Reads the warnings the layer-8 battery already
     produced — it re-derives nothing and owns no threshold of its own, so the
     trigger cannot drift away from the validator that defines it."""
@@ -180,10 +200,10 @@ def trigger(warnings):
     # second time, `empty_completion` both times, zero items resolved
     # (ADR-036 §k). Suppressing the trigger here rather than withholding the
     # warning keeps the sensor reading the battery it is defined by.
-    resolved = any(w.get("code") == "cross_reference_index" for w in warnings)
+    classification = classify(warnings, items)
     return {
-        "fired": bool(hits) and not resolved,
-        "suppressed_by": "cross_reference_index" if (hits and resolved) else None,
+        "fired": bool(hits) and classification["route"] != "suppressed",
+        "suppressed_by": "cross_reference_index" if classification["route"] == "suppressed" else None,
         "codes": sorted({w["code"] for w in hits}),
         # the per-item hint the rungs are pointed at: every item D8 flagged as
         # a stub or a pointer. Non-escalating on its own (ADR-035 §c) — it says
@@ -191,6 +211,9 @@ def trigger(warnings):
         "items": sorted({w["item"] for w in warnings
                          if w.get("code") == "item_span_near_empty" and w.get("item")}),
         "message": "; ".join(w["message"] for w in hits),
+        "class": classification["class"], "route": classification["route"],
+        "reason": classification["reason"], "target_items": classification["items"],
+        "calls_paid": classification["calls_paid"],
     }
 
 
@@ -213,6 +236,47 @@ def _windows(text, items):
     return sorted(free, key=lambda w: w[1] - w[0], reverse=True)
 
 
+def _region(text, code, region):
+    """Validate a non-primary, verbatim-anchored evidence region."""
+    if not isinstance(region, dict) or set(region) - {"start", "end", "title", "reference"}:
+        return None, "region is not a declared object"
+    s, e = region.get("start"), region.get("end")
+    if not (isinstance(s, int) and isinstance(e, int) and not isinstance(s, bool)
+            and not isinstance(e, bool) and 0 <= s < e <= len(text)):
+        return None, "region bounds are outside normalized_text"
+    slice_ = text[s:e]
+    title, reference = region.get("title"), region.get("reference")
+    if isinstance(title, str) and title and title in slice_:
+        head = slice_.strip().splitlines()[0] if slice_.strip() else ""
+        if title_similarity(code, head) >= SIM_FLOOR:
+            return {"start": s, "end": e, "title": title}, None
+    if (isinstance(reference, str) and reference.startswith(f"Item {code}")
+            and reference in slice_):
+        return {"start": s, "end": e, "reference": reference}, None
+    return None, "region lacks title-or-reference evidence anchored to its verbatim slice"
+
+
+def verify_alternatives(text, items, proposal, asked=None):
+    """Verify item-scoped regions without changing primary INV-S1 spans."""
+    by_code, accepted, why = {i["item"]: i for i in items}, {}, []
+    for code, value in sorted(proposal.items()):
+        if not isinstance(value, dict) or set(value) != {"regions"}:
+            continue
+        if (code not in by_code or by_code[code]["status"] != "missing"
+                or (asked is not None and code not in asked)):
+            why.append(f"item {code}: not an admissible alternative target")
+            continue
+        regions, rejects = [], []
+        for region in value["regions"] if isinstance(value["regions"], list) else []:
+            good, bad = _region(text, code, region)
+            (regions if good else rejects).append(good or bad)
+        if not regions or rejects:
+            why.extend(f"item {code}: {x}" for x in rejects or ["no regions"])
+        else:
+            accepted[code] = regions
+    return accepted, why
+
+
 def verify(text, items, proposal, asked=None):
     """Deterministically re-check a rung's answer. Returns (accepted, why_not).
 
@@ -220,19 +284,10 @@ def verify(text, items, proposal, asked=None):
     the rung was actually given; when omitted, every item of the document is
     admissible (which is what `route` never does).
 
-    **ALL-OR-NOTHING, and now actually so.** If ANY non-null proposed span
-    fails ANY check, nothing is applied — `({}, why)`. Until PR #58 R2 the
-    docstring and ADR-036 §b both claimed this while the loop `continue`d past
-    failures and returned the survivors; the reviewer's mixed proposal is
-    recorded in `tasks/reviews/pr58-r1-red.txt` and pinned by
-    `evals/adversarial/escalation-verify-guards.json`. The claim was kept and
-    the code was changed to match it, on the ADR's own stated rationale: the
-    invariants at stake (INV-S1 ordering, INV-S2 offsets) are properties of the
-    item list as a WHOLE, so partial application leaves ordering holding by
-    accident. A null answer is NOT a failure — "I could not locate item 8" is
-    the honest answer the prompt asks for, and it neither applies nor discards.
-    # ponytail: all-or-nothing; go per-item only once a live run shows mixed
-    # answers are common AND the ordering check is re-derived per item.
+    ADR-046 accepts a primary delta per item.  Each survivor is first tested
+    against the complete deterministic list for INV-S1, so a rejected sibling
+    cannot erase an independent repair and cannot make an overlap acceptable.
+    A null answer is not a failure.
 
     The checks, in order, and why each one is here:
 
@@ -271,6 +326,8 @@ def verify(text, items, proposal, asked=None):
             why.append(f"item {code}: not among the items this tier was asked "
                        f"about ({sorted(asked)})")
             continue
+        if isinstance(span, dict) and set(span) == {"regions"}:
+            continue
         if it["status"] not in SPAN_STATUSES:
             why.append(f"item {code}: status {it['status']!r} carries no span — "
                        f"only {list(SPAN_STATUSES)} may be resolved, and writing "
@@ -304,26 +361,25 @@ def verify(text, items, proposal, asked=None):
             continue
         merged[code] = {"start": s, "end": e, "title_similarity": sim}
 
-    # ALL-OR-NOTHING (R2): one rejected sibling discards the whole proposal.
-    if why:
-        return {}, why
     if not merged:
-        return {}, ["no rung returned a locatable span"]
+        return {}, why or ["no rung returned a locatable span"]
 
-    # 6. ordering and disjointness over the list AS IT WOULD BE
-    after = [(merged[i["item"]]["start"], merged[i["item"]]["end"], i["item"])
-             if i["item"] in merged
-             else (i["start"], i["end"], i["item"])
-             for i in items if i.get("start") is not None or i["item"] in merged]
-    for (s1, e1, a), (s2, e2, b) in zip(after, after[1:]):
-        if s2 < e1:
-            why.append(f"items {a} and {b} would overlap or fall out of order "
-                       f"([{s1}, {e1}) then [{s2}, {e2})) — INV-S1")
-            return {}, why
+    # 6. First accept the complete compatible delta; otherwise re-derive each
+    # candidate alone so one bad sibling cannot erase an independent repair.
+    def ordered(candidates):
+        after = [(candidates[i["item"]]["start"], candidates[i["item"]]["end"])
+                 if i["item"] in candidates else (i["start"], i["end"])
+                 for i in items if i.get("start") is not None or i["item"] in candidates]
+        return not any(s2 < e1 for (s1, e1), (s2, e2) in zip(after, after[1:]))
+    if not ordered(merged):
+        for code in list(merged):
+            if not ordered({code: merged[code]}):
+                merged.pop(code)
+                why.append(f"item {code}: INV-S1 against deterministic siblings")
     return merged, why
 
 
-def apply(items, accepted, method):
+def apply(items, accepted, method, alternative=None):
     """Substitute verified spans into the item list, in place, honestly.
 
     The deterministic answer is never destroyed: it moves to
@@ -356,9 +412,49 @@ def apply(items, accepted, method):
         it["start"], it["end"] = got["start"], got["end"]
         it["heading_text"] = None
         it["method"] = method
+    for it in items:
+        if alternative and it["item"] in alternative:
+            it.setdefault("evidence", {})["alternative_regions"] = alternative[it["item"]]
 
 
-def route(text, items, warnings, budget=None):
+VISION_CAP = 2
+
+
+def vision_verify(images, alternatives, cached=None):
+    """Bounded cached vision seam; it can only gate already-anchored evidence.
+
+    Fixture annotations have relative `src` values, not image bytes or absolute
+    URLs (ADR-033), so live acquisition deliberately lives outside this seam.
+    """
+    related = [im for im in images or [] if any(
+        any(r["start"] <= im.get("offset", -1) < r["end"] for r in regions)
+        for regions in alternatives.values())][:VISION_CAP]
+    base = {"model": "openai/gpt-5-mini", "cap": VISION_CAP,
+            "images": [im.get("src") for im in related],
+            "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0}}
+    if not related:
+        return {**base, "status": "skipped", "reason": "no eligible image annotations"}
+    if cached not in ("confirm", "reject", None):
+        return {**base, "status": "failed", "reason": "invalid cached vision verdict"}
+    return {**base, "status": "skipped" if cached is None else "verified",
+            "reason": "no cached vision verdict" if cached is None else cached,
+            "verdict": cached}
+
+
+def _stages(tr, record, vision=None):
+    """The sole routing-flow source consumed verbatim by the inspector."""
+    targets, zero = list(tr["target_items"]), {"llm_calls": 0, "tokens": 0, "usd": 0.0}
+    fired = tr["fired"]
+    return [
+        {"stage": "classify", "status": "done", "reason": tr["reason"], "targets": targets, "cost": zero, "skipped": None},
+        {"stage": "plan", "status": "done" if fired else "skipped", "reason": tr["route"], "targets": targets, "cost": zero, "skipped": None if fired else "trigger quiet or deterministically resolved"},
+        {"stage": "route", "status": "done" if fired else "skipped", "reason": tr["route"], "targets": targets, "cost": zero, "skipped": None if fired else tr["reason"]},
+        {"stage": "verify", "status": "done" if record["resolved"] or record.get("alternative") else ("failed" if fired and record["tiers"] else "skipped"), "reason": (vision or {}).get("reason", "no verified proposal"), "targets": targets, "cost": zero, "skipped": None if fired else tr["reason"], "vision": vision or {"status": "skipped", "reason": "no alternative evidence", "cost": zero}},
+        {"stage": "decide", "status": "done", "reason": "accepted verified evidence" if record["resolved"] or record.get("alternative") else "deterministic result retained", "targets": record["resolved"] + record.get("alternative", []), "cost": dict(record["cost"]), "skipped": None},
+    ]
+
+
+def route(text, items, warnings, budget=None, images=None, vision_cached=None):
     """Run the ladder. Returns (routing_record, extra_warnings).
 
     `items` is mutated in place when — and only when — a rung's answer
@@ -369,19 +465,20 @@ def route(text, items, warnings, budget=None):
     from src.sec10k.llm import Budget, EscalationUnavailable, call  # noqa: E402
     import json
 
-    tr = trigger(warnings)
+    tr = trigger(warnings, items)
     record = {"trigger": tr, "tiers": [], "resolved": [],
               "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0}}
     if not tr["fired"]:
         # THE COMMON CASE, and the one the cost budget lives on: 47 of 50 dev
         # documents land here, spend nothing, and are byte-identical to a run
         # with the flag off.
+        record["stages"] = _stages(tr, record)
         return record, []
 
     budget = budget if budget is not None else Budget()
-    codes = tr["items"] or [i["item"] for i in items
+    codes = tr["target_items"] or tr["items"] or [i["item"] for i in items
                             if i.get("start") is not None]
-    extra = []
+    extra, vision = [], None
     for rung, model, think in RUNGS:
         free = _windows(text, items)
         if rung == "llm_localize":
@@ -458,19 +555,30 @@ def route(text, items, warnings, budget=None):
             if any(isinstance(x, bool) for v in proposal.values()
                    if isinstance(v, (list, tuple)) for x in v):
                 raise TypeError("JSON true/false is not a character offset")
-            proposal = {k: (None if v is None else [int(v[0]) + offset,
-                                                   int(v[1]) + offset])
+            proposal = {k: (None if v is None else
+                            {"regions": [{**r, "start": int(r["start"]) + offset,
+                                          "end": int(r["end"]) + offset}
+                                         for r in v["regions"]]}
+                            if isinstance(v, dict) and set(v) == {"regions"} else
+                            [int(v[0]) + offset, int(v[1]) + offset])
                         for k, v in proposal.items()}
         except (ValueError, TypeError, IndexError, KeyError, AttributeError) as e:
             entry.update(outcome="unparseable", error=f"{type(e).__name__}: {e}")
             record["tiers"].append(entry)
             continue
         accepted, why = verify(text, items, proposal, asked=set(codes))
-        entry["rejections"] = why
-        if accepted:
-            apply(items, accepted, rung)
+        alternative, alternative_why = verify_alternatives(
+            text, items, proposal, asked=set(codes) if tr["route"] == "alternative_regions" else set())
+        vision = vision_verify(images, alternative, vision_cached)
+        if vision.get("verdict") == "reject":
+            alternative_why.append("vision rejected candidate alternative evidence")
+            alternative = {}
+        entry["rejections"] = why + alternative_why
+        if accepted or alternative:
+            apply(items, accepted, rung, alternative)
             entry.update(outcome="resolved", resolved=sorted(accepted))
             record["resolved"] = sorted(accepted)
+            record["alternative"] = sorted(alternative)
             record["tiers"].append(entry)
             break
         entry["outcome"] = "rejected"
@@ -485,6 +593,10 @@ def route(text, items, warnings, budget=None):
     for t in record["tiers"]:
         for k in record["cost"]:
             record["cost"][k] = round(record["cost"][k] + t["cost"][k], 6)
+    if vision is None:
+        vision = vision_verify(images, {i["item"]: (i.get("evidence") or {}).get("alternative_regions", [])
+                                        for i in items if (i.get("evidence") or {}).get("alternative_regions")}, vision_cached)
+    record["stages"] = _stages(tr, record, vision)
     return record, extra
 
 
@@ -635,7 +747,7 @@ def _demo():
     bad, why = verify(trans, items,
                       {"7": [trans.index(body7), trans.index(body7) + len(body7)],
                        "1": [trans.index(body), trans.index(body) + len(body)]})
-    assert bad == {} and any("INV-S1" in w for w in why), why
+    assert set(bad) == {"7"} and any("INV-S1" in w for w in why), why
     # null answers are not failures, they are "could not locate"
     assert verify(text, items, {"1": None})[0] == {}
 
@@ -663,14 +775,14 @@ def _demo():
     assert bad == {} and "not among the items this tier was asked about" in why[0], why
     assert verify(text, items, {"7": [at7, at7 + len(body7)]}, asked={"1", "7"})[0]
 
-    # --- PR #58 R2: ALL-OR-NOTHING, on a mixed proposal that does NOT trip
+    # --- D21: per-item acceptance, on a mixed proposal that does NOT trip
     #     INV-S1 as a side effect (which is how _demo missed this before).
     #     Item 7's real body verifies on its own; item 1's 40-char stub does not.
     solo, _ = verify(text, items, {"7": [at7, at7 + len(body7)]})
     assert set(solo) == {"7"}, solo
     mixed, why = verify(text, items, {"7": [at7, at7 + len(body7)], "1": [0, 40]})
-    assert mixed == {}, ("one rejected sibling must discard the whole "
-                         "proposal — ADR-036 §b", mixed)
+    assert set(mixed) == {"7"}, ("one rejected sibling must not erase an "
+                                  "independently verified repair", mixed)
     assert any("SPAN_FLOOR" in w for w in why), why
     # a null sibling is NOT a rejection and must not discard the survivor
     with_null, why = verify(text, items, {"7": [at7, at7 + len(body7)], "1": None})

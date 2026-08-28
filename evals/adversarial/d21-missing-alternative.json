@@ -1,0 +1,1 @@
+{"id":"d21-missing-alternative","task":"sec10k","suites":["fast","invariant"],"input":{"path":"evals/fixtures/xom-2021/filing.htm"},"expect":{"checks":[{"type":"d21_verify","scenario":"missing_alternative"}]},"provenance":"D21 red-first direct verifier case; alternative regions never rewrite null primary offsets."}

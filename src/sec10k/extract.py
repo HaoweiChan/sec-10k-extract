@@ -394,7 +394,7 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
         from src.sec10k.escalate import route   # NOT at module scope: keeping
         # the import here is what makes `python3 -m evals.run` load no network
         # module at all (ADR-036 §h, pinned by repo_hygiene's escalation_seam)
-        routing, extra = route(text, items, warnings, budget=budget)
+        routing, extra = route(text, items, warnings, budget=budget, images=imgs)
         warnings += extra
         trace.append({"layer": "escalate", "trigger": routing["trigger"]["fired"],
                       "tiers": [f"{t['tier']}:{t['outcome']}" for t in routing["tiers"]],

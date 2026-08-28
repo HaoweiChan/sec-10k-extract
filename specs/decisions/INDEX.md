@@ -56,3 +56,6 @@ index only cross-references it for scanning.
   `low_item_coverage` a published warning rather than an `ambiguous` verdict;
   spans stay unmoved and paid escalation stays suppressed — enforced by
   `evals/adversarial/intc-2025-cross-reference-index.json`.
+- ADR-046 — systematic escalation classifies contiguous repair, alternative
+  evidence, and deterministic suppression; alternative regions are verbatim
+  item-scoped annotations and never weaken INV-S1 — enforced by `d21-*.json`.

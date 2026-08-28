@@ -593,6 +593,67 @@ def eval_check(result, chk, path=None):
             return f"a quiet trigger reported a cost: {on['cost']}"
         if "routing" not in on or "routing" in off:
             return "the routing key must appear with the flag and only with it"
+    elif t == "d21_verify":
+        # D21's direct, synthetic verifier battery: no model transport and no
+        # live call can make these contract decisions pass by accident.
+        from src.sec10k.escalate import classify, verify, verify_alternatives, vision_verify, VISION_CAP
+        from src.sec10k.segment import item_label
+        title = item_label("1", None)[1]
+        body = f"Item 1. {title}\n" + "evidence " * 400
+        alt_body = "Item 7. Alternative evidence\n" + "evidence " * 400
+        text = "stub\n" + body + alt_body + "tail " * 400
+        start = text.index(body)
+        alt_start = text.index(alt_body)
+        items = [{"item": "1", "start": 0, "end": 5, "status": "extracted",
+                  "method": "heading_strict", "heading_text": "stub"},
+                 {"item": "7", "start": None, "end": None, "status": "missing",
+                  "method": "status_keyword", "heading_text": None}]
+        scenario = chk["scenario"]
+        if scenario == "contiguous":
+            got, why = verify(text, items, {"1": [start, start + len(body)]})
+            if set(got) != {"1"} or why:
+                return f"contiguous repair rejected: {why}"
+        elif scenario == "missing_alternative":
+            got, why = verify_alternatives(text, items, {"7": {"regions": [
+                {"start": alt_start, "end": alt_start + len(alt_body), "reference": "Item 7"}]}})
+            if set(got) != {"7"} or items[1]["start"] is not None or why:
+                return f"missing alternative rejected or rewrote primary: {why}"
+        elif scenario == "overlap":
+            got, why = verify_alternatives(text, items, {"7": {"regions": [
+                {"start": alt_start, "end": alt_start + 1800, "reference": "Item 7"},
+                {"start": alt_start, "end": alt_start + 1900, "reference": "Item 7"}]}})
+            if len(got.get("7", ())) != 2 or why:
+                return f"overlapping regions rejected: {why}"
+        elif scenario == "partial":
+            got, why = verify(text, items, {"1": [start, start + len(body)], "99": [start, start + len(body)]})
+            if set(got) != {"1"} or not why:
+                return f"valid delta was erased by sibling: {got}, {why}"
+        elif scenario == "invalid":
+            got, why = verify_alternatives(text, items, {"7": {"regions": [
+                {"start": start, "end": start + 1800}]}})
+            if got or not why:
+                return "invalid in-bounds region was accepted"
+        elif scenario == "suppressed":
+            c = classify([{"code": "low_item_coverage"}, {"code": "cross_reference_index"}], items)
+            if c["route"] != "suppressed" or c["calls_paid"]:
+                return f"xref route not suppressed: {c}"
+        elif scenario == "vision":
+            alternatives = {"7": [{"start": alt_start, "end": alt_start + 1800, "reference": "Item 7"}]}
+            images = [{"src": f"relevant-{n}.png", "offset": alt_start + n} for n in range(VISION_CAP + 1)]
+            yes = vision_verify(images, alternatives, "confirm")
+            no = vision_verify(images, alternatives, "reject")
+            null = vision_verify(images, alternatives)
+            skip = vision_verify([], alternatives, "confirm")
+            if yes["status"] != "verified" or no.get("verdict") != "reject" or null["status"] != "skipped" or skip["reason"] != "no eligible image annotations" or len(yes["images"]) != VISION_CAP:
+                return f"vision bounded cached decisions wrong: {yes}, {no}, {null}, {skip}"
+        elif scenario == "flow":
+            from src.sec10k.escalate import _stages
+            tr = {"fired": False, "reason": "no trigger", "route": "none", "target_items": []}
+            stages = _stages(tr, {"resolved": [], "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0}})
+            if [s["stage"] for s in stages] != ["classify", "plan", "route", "verify", "decide"] or not any(s["status"] == "skipped" for s in stages):
+                return f"flow stages not fixed/visible: {stages}"
+        else:
+            return f"unknown d21 scenario {scenario!r}"
     elif t == "deterministic":
         from src.sec10k.extract import extract_items
         r2 = extract_items(path)
@@ -958,7 +1019,7 @@ def _routing_shape(result):
       the fabricated-output failure repo rule 4 forbids.
     """
     r = result["routing"]
-    if not isinstance(r, dict) or not {"trigger", "tiers", "resolved", "cost"} <= set(r):
+    if not isinstance(r, dict) or not {"trigger", "tiers", "resolved", "cost", "stages"} <= set(r):
         return f"keys {sorted(r) if isinstance(r, dict) else type(r).__name__}"
     t = r["trigger"]
     if not isinstance(t, dict) or not {"fired", "codes", "items"} <= set(t):
@@ -967,6 +1028,16 @@ def _routing_shape(result):
         return f"trigger.fired {t['fired']!r} is not a bool"
     if not t["fired"] and r["tiers"]:
         return "a trigger that did not fire may not report attempted tiers"
+    stages = r["stages"]
+    if not isinstance(stages, list) or [s.get("stage") for s in stages if isinstance(s, dict)] != ["classify", "plan", "route", "verify", "decide"]:
+        return "routing.stages is not the fixed classify/plan/route/verify/decide flow"
+    for stage in stages:
+        if not isinstance(stage, dict) or not {"stage", "status", "reason", "targets", "cost", "skipped"} <= set(stage):
+            return f"flow stage malformed: {stage!r}"
+        if stage["status"] not in {"done", "skipped", "failed"} or not isinstance(stage["targets"], list):
+            return f"flow stage invalid status/targets: {stage!r}"
+        if not COST_KEYS <= set(stage["cost"]):
+            return f"flow stage cost missing keys: {stage!r}"
     total = {k: 0 for k in COST_KEYS}
     for tier in r["tiers"]:
         # PR #58 R17/R19: `offset` joins the required set, and the three are

@@ -1,0 +1,1 @@
+{"id":"d21-invalid-region-rejection","task":"sec10k","suites":["fast","invariant"],"input":{"path":"evals/fixtures/xom-2021/filing.htm"},"expect":{"checks":[{"type":"d21_verify","scenario":"invalid"}]},"provenance":"D21 red-first direct verifier case; in-bounds unsupported regions reject loudly."}
