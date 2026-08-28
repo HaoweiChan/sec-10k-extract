@@ -1,0 +1,34 @@
+{
+  "id": "aig-2025-heldout",
+  "task": "sec10k",
+  "suites": ["fast"],
+  "input": {"path": "evals/heldout/fixtures/aig-2025/filing.htm"},
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "known_items_only"},
+      {"type": "expected_set_complete", "items": ["1","1A","1B","1C","2","3","4","5","6","7","7A","8","9","9A","9B","9C","10","11","12","13","14","15","16"]},
+      {"type": "only_items", "items": ["1","1A","1B","1C","2","3","4","5","6","7","7A","8","9","9A","9B","9C","10","11","12","13","14","15","16"]},
+      {"type": "item_present", "item": "1", "status": "extracted"},
+      {"type": "item_present", "item": "1A", "status": "extracted"},
+      {"type": "item_present", "item": "7", "status": "extracted"},
+      {"type": "item_present", "item": "8", "status": "extracted"},
+      {"type": "item_present", "item": "10", "status": "extracted"},
+      {"type": "text_contains", "item": "1", "value": "is a leading global insurance organization"},
+      {"type": "text_contains", "item": "1A", "value": "Investing in AIG involves risk"},
+      {"type": "text_contains", "item": "7", "value": "Cautionary Statement Regarding Forward-Looking Information"},
+      {"type": "text_contains", "item": "8", "value": "REFERENCE TO FINANCIAL STATEMENTS AND SCHEDULES"},
+      {"type": "text_not_contains", "item": "1", "value": "Investing in AIG involves risk"},
+      {"type": "text_not_contains", "item": "1A", "value": "REFERENCE TO FINANCIAL STATEMENTS AND SCHEDULES"},
+      {"type": "text_not_contains", "item": "7", "value": "REFERENCE TO FINANCIAL STATEMENTS AND SCHEDULES"},
+      {"type": "min_chars", "item": "1", "value": 20000},
+      {"type": "min_chars", "item": "1A", "value": 60000},
+      {"type": "min_chars", "item": "7", "value": 100000},
+      {"type": "min_chars", "item": "8", "value": 200000},
+      {"type": "max_chars", "item": "16", "value": 2000}
+    ]
+  },
+  "provenance": "HELD-OUT, FROZEN AT AUTHORING 2026-08-28 — labels written and committed BEFORE the filing was ever put through this repo's pipeline, per evals/heldout/README.md. One of the TWO REPLACEMENTS owed after ADR-042 §h burned c-2025 and spg-2019. American International Group, Inc. FY2024 10-K, sec.gov/Archives/edgar/data/5272/000000527225000012/aig-20241231.htm, accession 0000005272-25-000012, period end 2024-12-31, 12,307,024 bytes, iXBRL. WHY THIS FILING, and it is not the size: AIG is a RUNNING-HEADER filing. Every page of an item repeats that item's name as page furniture, in the exact form `TABLE OF CONTENTS / ITEM 1A | Risk Factors`, so the blind scan counts `Item 7` 52 times and `Item 8` 95 times in one document — against 2 apiece for a conventional filer like Super Micro. Nothing in the committed corpus has this shape: `spaced-letter-heading` breaks a heading's characters, `toc-titled` puts one competing block of item names in the front matter, but AIG puts a competing copy of the heading at the top of EVERY page of the section it belongs to. A heading picker that takes the first match, the last match, or the most-similar match can each land on a page header rather than on the section start, and the failure would look like a plausible span rather than like an error. Item 1's body opens at a different place from its page header, which is what the item-1 anchor tests. SECOND SHAPE, recorded because it is a live prediction and not an aside: AIG carries BOTH per-item Part III headings AND a collective pointer — `ITEM 10 | Directors, Executive Officers and Corporate Governance` is followed by real content and by the sentence `Other information required by Items 10, 11, 12, 13 and 14 of this Form 10-K but not included herein is incorporated by reference from the definitive proxy statement`, while items 11-14 have headings whose entire body is `See Item 10 herein.` (4 occurrences). ADR-042 §c's collective_pointer reads only codes segmentation left UNASSIGNED, so it must NOT fire here; whether items 11-14 land as `extracted` over a four-word internal pointer, or are caught by INTERNAL_REF_RE / item_span_near_empty, is deliberately NOT asserted by this case — the author does not know, and guessing would convert a measurement into a label. ANCHORS, verified by the independent blind reader `tasks/reviews/heldout_blind_scan.py` (imports nothing from src/, so this filing has still never met the pipeline), counts raw/stripped: 'is a leading global insurance organization' 2/2, 'Investing in AIG involves risk' 1/1, 'Cautionary Statement Regarding Forward-Looking Information' 2/2, 'REFERENCE TO FINANCIAL STATEMENTS AND SCHEDULES' 1/1. The 2-hit anchors are the TOC-plus-body pattern the case-authoring skill names as acceptable, and they make those checks TOC-trap tripwires as well as boundary ones. LENGTH BANDS are deliberately loose (the item's page range in the filing's own TOC implies item 1 ~ pages 2-11, 1A ~ 12-30, 7 ~ 35-90, 8 ~ 91-190) because a band tight enough to be interesting would be a guess about normalization, which the author cannot make blind."
+}
