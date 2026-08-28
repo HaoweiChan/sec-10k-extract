@@ -75,9 +75,30 @@ them all); the example once showed `lenient_match`, which nothing emits.
   `normalized_text` are published at `evidence.footnote = {"start", "end"}`
   (offsets only — no second copy of the text). The key is absent on every
   other item.
+  A SECOND shape puts the pointer outside the item and shares it with several
+  items at once (ADR-042 §c): a Part addressed by ONE sentence naming three or
+  more items — Berkshire Hathaway FY2024's whole of Part III is "information
+  required by this Part (Items 10, 11, 12, 13 and 14) is incorporated by
+  reference to the definitive proxy statement". There the item's own
+  `start`/`end` are **null** and the sentence's offsets are published at
+  `evidence.collective_reference = {"start", "end"}`. This is the ONLY
+  sanctioned null pair on a span-carrying status, and it exists because
+  INV-S1 forbids five items sharing one range while slicing the sentence five
+  ways would publish spans whose text is "10, " and "11, ".
+- A third `evidence` key, `cross_reference`, is a pure ANNOTATION and moves
+  nothing (ADR-042 §a): a list of `{"pages", "start", "end"}` regions naming
+  where a *cross-reference index* says an item is answered, present only on a
+  filing that carries one. The regions may OVERLAP and NEST — Intel FY2024's
+  item 3 is pages 102-105, inside item 8's 56-108 — which is exactly why they
+  are not the item's span. An item whose span the index's own row supplied
+  (a filing that writes no `Item N` heading at all) carries
+  `method: "cross_reference_index"`; those rows partition the index region, so
+  they satisfy INV-S1 like any other span.
 - For `status: missing` / `omitted`: `start`/`end` are null — there is no span.
   Conversely a span-carrying status (`extracted`, `incorporated_by_reference`)
-  must have both. **Enforced by `envelope_shape` since 2026-08-27** (PR #58 R1);
+  must have both, the one exception being the collective pointer above —
+  enforced as a conjunction (null pair AND `evidence.collective_reference`),
+  never as a status exemption. **Enforced by `envelope_shape` since 2026-08-27** (PR #58 R1);
   before that this rule was documented and unchecked, and ADR-036's escalation
   tier could write offsets onto a `missing` item — which also inflated
   `meta.coverage`, since that figure sums every item with a non-null `start`.

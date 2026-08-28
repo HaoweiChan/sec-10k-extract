@@ -1026,6 +1026,11 @@ function show(i){
   document.querySelectorAll(".it").forEach(b =>
     b.setAttribute("aria-current", String(+b.dataset.i === i)));
   const body = it.status === "extracted" || it.status === "incorporated_by_reference";
+  // ADR-042 §f: with `elsewhere` the render string is the span PLUS the
+  // regions the filing points at, so "first N of M" must count both or it
+  // reports 40,000 of 226.
+  const renderableChars = (x) => (x.chars ?? 0) +
+    (x.elsewhere || []).reduce((n, e) => n + (e.end - e.start), 0);
   // The header line and the evidence panel are the same item metadata S4
   // used to stack above pre.text; they still exist, just moved. The header
   // is now a `.src-hdr` band, matching #source's own, so the two panes'
@@ -1073,7 +1078,15 @@ function show(i){
       : `<div class="none" style="padding:12px">Status <b>${esc(it.status)}</b> carries no span: the item is reported as absent rather than silently dropped (INV-S4).</div>`}
     <details class="pane-meta"><summary>where this text came from</summary>
       <dl class="ev">
-        ${it.truncated ? `<dt>shown</dt><dd>first ${(it.display_text ?? it.text).length.toLocaleString()} of ${it.chars.toLocaleString()} characters</dd>` : ""}
+        ${it.truncated ? `<dt>shown</dt><dd>first ${(it.display_text ?? it.text).length.toLocaleString()} of ${renderableChars(it).toLocaleString()} characters</dd>` : ""}
+        ${it.elsewhere ? `<dt>content elsewhere</dt><dd>this item's own span is
+          ${it.chars == null ? "null — the filing states this Part's pointer once, for every item it names" : `${it.chars.toLocaleString()} characters`},
+          so the text above continues past it into the ${it.elsewhere.length}
+          region${it.elsewhere.length === 1 ? "" : "s"} the filing points at:
+          ${it.elsewhere.map(e => `${esc(e.label)} [${e.start.toLocaleString()}, ${e.end.toLocaleString()})`).join("; ")}.
+          The offsets above describe the SPAN only; these regions are published
+          separately under <code>evidence</code> because they overlap and nest,
+          which INV-S1 forbids a span from doing (ADR-042)</dd>` : ""}
         ${VIEW.boilerplate_excluded ? `<dt>boilerplate</dt><dd>detected chrome is hidden from the text above; the offsets and character count below are still those of the full span (ADR-026)</dd>` : ""}
         ${VIEW.markdown ? `<dt>markdown</dt><dd>rendered from the filing's block structure (headings, paragraphs, tables) as Markdown; the raw slice is what the offsets and character count describe, and what the compare pane shows (ADR-032)</dd>` : ""}
         ${it.evidence && it.evidence.deterministic ? `<dt>tier</dt><dd>this span was

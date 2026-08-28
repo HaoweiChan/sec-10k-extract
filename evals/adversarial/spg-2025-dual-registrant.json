@@ -1,0 +1,20 @@
+{
+  "id": "spg-2025-dual-registrant",
+  "task": "sec10k",
+  "suites": ["fast", "all"],
+  "input": {"path": "evals/fixtures/spg-2025/filing.htm"},
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "item_present", "item": "8", "status": "extracted"},
+      {"type": "min_chars", "item": "8", "value": 100000},
+      {"type": "item_present", "item": "16", "status": "extracted"},
+      {"type": "max_chars", "item": "16", "value": 500},
+      {"type": "text_not_contains", "item": "16", "value": "EXHIBIT INDEX"}
+    ]
+  },
+  "triage": {"class": "trailing-annex-swallowed-by-last-item", "note": "Simon Property Group FY2024 -- one 10-K filed by TWO registrants, SPG Inc. and SPG L.P., 11.2 MB. GPT predicted duplicate cover pages and transposed/duplicated item spans; that prediction was WRONG. The dual registrant is handled: doc_status `success`, 92.2% coverage, all 23 items, spans ordered and non-overlapping, item 8 at 227,849 chars covering both registrants' financial statements. THE REAL DEFECT is at the other end of the document. Item 16 (`Form 10-K Summary`) has a body of exactly four characters -- 'None.' -- and then its span runs 23,401 chars to the signature block, swallowing the entire EXHIBIT INDEX that the filing typesets AFTER Item 16. So the envelope attributes 23 KB of exhibit list to an item whose whole content is the word 'None.', at confidence 0.95 with no warning: a silent over-attribution, and the exact mirror of `item_span_near_empty`, which can only see a span that is too SMALL. `assign_boundaries` gives the last item everything up to TAIL_RE (the signature block); nothing clips a trailing annex the filing places after the final item. Same defect, independently confirmed on MetLife FY2024 (item 16 = 38,153 chars, swallowing the Glossary and the exhibit index) -- so it is a class, not one filer's typesetting. The exhibit index is Item 15's subject matter, not Item 16's; this case asserts only that Item 16 stops at its own body, which is the part that is unambiguous. Where the annex then belongs is left to `unattributed_content` to report rather than guessed at."},
+  "provenance": "Authored 2026-08-28 from GPT's curated hard-filing list (rank 2), against https://www.sec.gov/Archives/edgar/data/1063761/000155837025001271/spg-20241231x10k.htm (11,195,959 bytes). Pre-fix run: item 16 span [574534,597935) of a 632,497-char normalized_text, opening 'Item 16. Form 10-K Summary\\n\\nNone.' and closing on the last exhibit's footnote. The min_chars floor on item 8 is a bookkeeping check so a fix to item 16 cannot silently damage the dual-registrant financial statements it currently gets right. Watched red before the fix."
+}

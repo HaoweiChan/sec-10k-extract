@@ -5,21 +5,23 @@ boundaries, status, label-free validation, confidence, assembly. Layer 10 — th
 model-based slow path ADR-020 ruled NOT JUSTIFIED in 2026-08-19 — now exists as
 a TRIGGERED tier behind `escalate=True` (ADR-036, which supersedes ADR-020).
 It is off by default, it runs only when the D8 document-level signal fires, and
-on a dev corpus where that signal fires on 1 of 29 real filings the default
+on a dev corpus where that signal fires on 2 of 34 real filings the default
 cost stays exactly $0.
 `success` is deliberately hard to earn — it requires the validator battery to
 find nothing at all.
 """
 import hashlib
+import re
 import time
 from pathlib import Path
 
 from src.sec10k.boilerplate import find_chrome
 from src.sec10k.normalize import ACCEPTED_FORMS, COLLAPSE_FLOOR, select_and_normalize
 from src.sec10k.segment import (
-    assign_boundaries, classify, expected_items, filter_candidates, footnote_pointer,
-    item_label, find_candidates,
+    assign_boundaries, classify, collective_pointer, expected_items,
+    filter_candidates, footnote_pointer, item_label, find_candidates,
 )
+from src.sec10k import xref
 from src.sec10k.validate import AMBIGUOUS_CODES, STRICT_SIM, coverage, score, validate
 
 # 0.9 and not 0.8.1: ADR-035 (D8) adds a REQUIRED item field
@@ -34,6 +36,11 @@ from src.sec10k.validate import AMBIGUOUS_CODES, STRICT_SIM, coverage, score, va
 # moves; `evals/snapshot.py`, whose FIELDS predate D11, reports every other
 # field identical (ADR-036 §f).
 VERSION = "0.9.1-d11"  # meta.extractor_version — audits compare across runs
+
+# ADR-042 §b. General Instruction J is the ABS instruction and nothing else is
+# phrased this way; the phrase does not occur in any of the 46 other fixtures.
+ABS_INSTRUCTION_J_RE = re.compile(
+    r"(?i)general\s+instruction\s+J\s+(to|of)\s+form\s*10-?K")
 
 
 def _item(code, cand, status, period_end=None, footnote=None):
@@ -157,8 +164,8 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
     flags above this one is NOT a pure annotation: when the trigger fires AND a
     tier's answer survives `escalate.verify`, the resolved items' spans,
     `method` and `heading_text` move, with the deterministic answer preserved
-    under `evidence.deterministic`. When the trigger does NOT fire — 42 of 44
-    dev fixtures, and 28 of the 29 real EDGAR filings among them — nothing
+    under `evidence.deterministic`. When the trigger does NOT fire — 46 of 49
+    dev fixtures, and 31 of the 34 real EDGAR filings among them — nothing
     moves, nothing is spent, and the only difference from a default run is the
     presence of the `routing` key itself. The exception is `intc-2025`, the
     collapsed real filing the live exam burned to the dev side: this line said
@@ -210,6 +217,29 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
                          trace=trace, t0=t0, boilerplate=chrome, tables=tabs,
                          blocks=blks, images=imgs)
 
+    # ADR-042 §b: an asset-backed issuer's annual report. Legally a 10-K, and
+    # `sniff_form` correctly says so — but General Instruction J to Form 10-K
+    # REPLACES Items 1-16 of Regulation S-K with Items 1112(b)/1114/1117/1119/
+    # 1122/1123 of Regulation AB, a taxonomy this pipeline does not model. Left
+    # to the ordinary path, Bridgecrest Trust 2024-1 returned
+    # `success_with_warning` over 18 `extracted` items, including a 96-char
+    # "Item 7 MD&A" at 0.80 — a plausible-looking item set over a document we
+    # cannot identify, which is the one thing the README promises never
+    # happens. The document names the instruction itself, twice, so this reads
+    # the filing's own words rather than inferring from the filer's name.
+    # Tested BEFORE the form check for the same reason collapse is: "this is
+    # not the kind of 10-K we read" is a different diagnosis from "this is not
+    # a 10-K", and only the first is true here.
+    if ABS_INSTRUCTION_J_RE.search(text):
+        warnings.append({
+            "code": "abs_general_instruction_j", "item": None,
+            "message": "asset-backed issuer report under General Instruction J "
+                       "to Form 10-K — its items are Regulation AB 1112-1123, "
+                       "not Regulation S-K Items 1-16"})
+        return _envelope("unsupported", text, meta=meta, warnings=warnings,
+                         trace=trace, t0=t0, boilerplate=chrome, tables=tabs,
+                         blocks=blks, images=imgs)
+
     if meta["form_type"] not in ACCEPTED_FORMS:
         # refusal, not a best-effort parse (contract v2 envelope rules)
         found = meta["form_type"] or "none"
@@ -232,6 +262,15 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
                   "rejected": [{"item": r["item"], "start": r["start"],
                                 "why": r["why"]} for r in rejected]})
 
+    # ADR-042 §c: a Part addressed collectively, with no per-item heading.
+    # Read BEFORE statuses are assigned, off the codes segmentation left
+    # unassigned, so it can only ever upgrade a `missing` — it cannot displace
+    # a heading the filing actually carries.
+    collective = collective_pointer(text, [c for c in expected if c not in accepted])
+    if collective:
+        trace.append({"layer": "collective_pointer",
+                      "items": sorted(collective), "at": min(collective.values())[0]})
+
     items = []
     for code in expected:
         c = accepted.get(code)
@@ -244,7 +283,14 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
             foot = footnote_pointer(code, c["heading_text"], body, text)
             if foot:
                 status = "incorporated_by_reference"
-        items.append(_item(code, c, status, meta.get("period_end"), footnote=foot))
+        it = _item(code, c, status, meta.get("period_end"), footnote=foot)
+        if c is None and code in collective:
+            # null offsets stay null — INV-S1 forbids five items sharing the
+            # pointer sentence's range, so the sentence travels as evidence
+            it["status"] = "incorporated_by_reference"
+            lo, hi = collective[code]
+            it["evidence"]["collective_reference"] = {"start": lo, "end": hi}
+        items.append(it)
     trace.append({"layer": "status",
                   "counts": {s: sum(1 for i in items if i["status"] == s)
                              for s in {i["status"] for i in items}}})
@@ -272,6 +318,71 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
     warnings += findings
     trace.append({"layer": "validate",
                   "checks_fired": [w["code"] for w in findings]})
+
+    # ADR-042 §d: the cross-reference index. Entered on the SAME document-level
+    # signals ADR-036's paid tier uses, and deliberately before it: on the one
+    # filing where that tier was ever measured (intc-2025, $0.997760, ADR-036
+    # §k) it resolved nothing, and this resolves the same filing
+    # deterministically at $0 by reading the index's own page references
+    # against the filing's own pagination.
+    #
+    # Spans do NOT move for an item that already has one — Intel's page ranges
+    # overlap and nest, so no assignment of them can satisfy INV-S1, and what
+    # the index points at travels as evidence instead (the shape ADR-031 chose
+    # for the footnote case). The ONE exception is a filing where segmentation
+    # found no heading at ALL (Citi FY2025: 1,163,303 chars, coverage 0.0000,
+    # 23 items `missing`, because its index writes `1. Business` with no
+    # "Item"). There the index's own rows become the spans: rows partition the
+    # index region, so they are ordered and disjoint by construction, which is
+    # exactly what INV-S1 asks of them, and the result is the same shape Intel
+    # already produces rather than a second kind of answer.
+    COLLAPSE_CODES = ("low_item_coverage", "expected_items_mostly_missing")
+    promoted = set()
+    if any(w["code"] in COLLAPSE_CODES for w in findings):
+        ix, entries, refs = xref.resolve(text, expected)
+        if refs:
+            total_collapse = all(i["start"] is None for i in items)
+            for i in items:
+                code = i["item"]
+                if code in refs:
+                    i["evidence"]["cross_reference"] = refs[code]
+                if total_collapse and code in entries and code in refs:
+                    a, b = entries[code]
+                    head = text[a:b].strip().split("\n")[0].strip()
+                    i.update(start=a, end=b, status="extracted",
+                             heading_text=head, method="cross_reference_index")
+                    promoted.add(code)
+            reached = sum(r["end"] - r["start"]
+                          for rs in refs.values() for r in rs)
+            warnings.append({
+                "code": "cross_reference_index", "item": None,
+                "message": f"the filing answers its items through a "
+                           f"cross-reference index at {ix[0]}; "
+                           f"{len(refs)} items' page references resolved to "
+                           f"{reached:,} chars of content published under "
+                           f"evidence.cross_reference"
+                           + (f", and {len(promoted)} items whose heading the "
+                              f"filing never writes take that index's own rows "
+                              f"as their spans" if promoted else "")})
+            trace.append({"layer": "cross_reference", "index": list(ix),
+                          "resolved": sorted(refs), "promoted": sorted(promoted),
+                          "chars": reached})
+    if promoted:
+        # spans moved, so everything derived from them is stale — the same
+        # re-derivation the escalation tier does below, and for the same reason
+        warnings = [w for w in warnings
+                    if not (w["code"] == "expected_item_missing"
+                            and w["item"] in promoted)]
+        accepted = {**accepted,
+                    **{c: {"heading_end": next(i["start"] + len(i["heading_text"])
+                                               for i in items if i["item"] == c)}
+                       for c in promoted}}
+        meta["coverage"] = round(coverage(text, items), 4)
+        findings = validate(text, items, accepted, manifest)
+        warnings = [w for w in warnings if w not in prior_findings] + findings
+        prior_findings = findings
+        trace.append({"layer": "validate", "after": "cross_reference",
+                      "checks_fired": [w["code"] for w in findings]})
 
     # layer 10 (ADR-036, D11): the tiered slow path. Opt-in, and even then it
     # reads the warnings layer 8 just produced and returns immediately unless

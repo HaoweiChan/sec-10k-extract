@@ -15,6 +15,36 @@ Why this is structural and not honour-system:
 - Reports are committed **before** any fix, so run-before-fix ordering is
   provable from history rather than asserted.
 
+## Burns taken
+
+**2026-08-28 — TWO cases burned in one sweep** (ADR-042 §h), during a directed
+run of a curated list of eight deliberately hard recent filings. Both burns
+are influence, both are declared, and the moved case files carry the full
+record plus every provenance claim they had.
+
+1. **`c-2025-heldout` → `evals/adversarial/c-2025-cross-reference-index.json`.**
+   Measured pre-fix: `doc_status ambiguous`, `meta.coverage 0.0000`, all 23
+   items `missing`, ZERO candidates in 1,163,303 chars — because Citi's
+   cross-reference index writes `1. Business 4–36` with neither the word Item
+   nor the word Page. That outcome drove the Citi extension of
+   `src/sec10k/xref.py`, which is influence by any reading. Ordering stated
+   rather than implied: the measurement preceded the fix, but this was a
+   directed sweep and not a milestone run, so no report was committed between
+   the two. The frozen item-1A anchor written on 2026-08-26 lands inside the
+   resolved region, which is the case's own strongest evidence and the reason
+   it is worth keeping as debt.
+2. **`spg-2019-heldout` → `evals/adversarial/spg-2019-item16-annex.json`.** The
+   rarer route: the FIX made a FROZEN LABEL WRONG. `min_chars: 16 >= 100`,
+   authored 2026-08-17 and never run, was being cleared only because the
+   trailing-annex bug inflated item 16's span with 23 KB of exhibit index.
+   SPG FY2019's item 16 body is the word "None." — no floor above ~35 is
+   satisfiable. Adjudicated in the open: the pipeline is right and the label
+   is wrong. Changing the label is influence, so the case cannot stay here.
+
+**The set is now four cases** (cost-2022, csco-2016, mrk-1995, pgr-2023) and
+**two replacement filings are owed** at the next expansion, per the budget
+rule below.
+
 ## Burn rule
 
 A case is burned the moment its labeled outcome influences implementation — a
