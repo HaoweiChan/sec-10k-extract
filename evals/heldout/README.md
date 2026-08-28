@@ -64,6 +64,19 @@ occurrence count is recorded in the case's `provenance`.
 The set is six cases again (aig-2025, cost-2022, csco-2016, mrk-1995,
 pgr-2023, smci-2025).
 
+**First run of the restored set, 2026-08-28 — 5/6 = 0.833**, run locally AND
+against the deployed inspector, verdicts identical case for case, $0.000000
+spent. Full record: `tasks/reviews/heldout-2026-08-28-deployed-run.md`.
+`aig-2025` FAILED on the shape its own provenance predicted before it had ever
+met the pipeline: AIG's running headers reprint `ITEM 1 | Business` on every
+page of item 1, the segmenter took the page-2 header instead of the section
+start, and ~2,360 chars of item 1's opening page are dropped at `doc_status:
+success`, coverage 0.9689, confidence 0.95, with no warning carrying item 1's
+code. **It is NOT fixed and the case is NOT burned**: nothing was changed on
+the strength of it — no threshold, no fixture, no code, no case authored from
+it — which the 2026-08-26 amendment below makes explicitly not influence. That
+is the second time this set has caught a silent failure unprompted.
+
 ## Burn rule
 
 A case is burned the moment its labeled outcome influences implementation — a
