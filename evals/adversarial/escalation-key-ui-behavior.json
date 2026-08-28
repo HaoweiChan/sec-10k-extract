@@ -1,0 +1,12 @@
+{
+  "id": "escalation-key-ui-behavior",
+  "task": "repo_hygiene",
+  "suites": ["invariant", "fast"],
+  "input": {"checks": ["escalation_key_ui_behavior"]},
+  "expect": {},
+  "triage": {
+    "class": "invariant-gap",
+    "note": "PR #76 R1/R2: the existing escalation-choke-point case pins source tokens but does not run the browser credential state machine. A delayed successful response for key A can therefore enable and store A after the visitor has edited the field to B, and mutations that remove edit invalidation or send the raw field stay green. This case executes the shipped JavaScript with a minimal DOM/fetch harness and covers wrong, valid, edited, reloaded, verified-only extraction-header, and stale-response flows."
+  },
+  "provenance": "Added for PR #76 repair round 1. Red-first evidence is recorded in tasks/reviews/pr76-r1-red.txt."
+}

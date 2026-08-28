@@ -1,0 +1,21 @@
+{
+  "pr": 76,
+  "round": 1,
+  "responds_to": "tasks/reviews/pr76-r1.json",
+  "result": "REPAIRED",
+  "gate": "invariant 90/90 = 1.000; fast 160/160 = 1.000",
+  "resolutions": [
+    {
+      "id": "R1",
+      "resolution": "fixed",
+      "covered_by": "escalation-key-ui-behavior",
+      "evidence": "verifyKey() now captures a monotonically increasing request generation and ignores results unless both the generation and current field value still match. The input listener advances the generation, clears in-memory and stored verification, restores Not verified, and re-enables Verify. The committed behavior case failed before on the stale A response after an edit to B, then passed; tasks/reviews/pr76-r1-red.txt records both states."
+    },
+    {
+      "id": "R2",
+      "resolution": "fixed",
+      "covered_by": "escalation-key-ui-behavior",
+      "evidence": "The committed Node/VM behavior case executes the shipped boot(), verifyKey(), verifiedKey(), and call() functions with a minimal DOM and fetch harness. It passes wrong, valid, edited, reloaded, verified-only extraction-header, edited-input stale-response, and same-value superseded-request flows. Four isolated mutations—removed invalidation, raw-field extraction, wrong-response enablement, and removed stale guard—each went red as recorded in tasks/reviews/pr76-r1-red.txt."
+    }
+  ]
+}

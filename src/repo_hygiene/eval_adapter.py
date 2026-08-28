@@ -1079,7 +1079,9 @@ def check_boilerplate_plumbing(case):
     for why, expr in WIRE_API:
         pin(api, "app.py", why, expr)
 
-    routes = set(ROUTE_RE.findall(api))
+    # Key verification shares the limited /api/extract/ namespace for abuse
+    # protection, but it is not a fourth filing-input mode.
+    routes = set(ROUTE_RE.findall(api)) - {"/api/extract/verify-key"}
     if routes != set(EXTRACT_ENDPOINTS):
         bad.append(f"app.py's /api/extract routes are {sorted(routes)}, not the "
                    f"{sorted(EXTRACT_ENDPOINTS)} this check knows how to pin — "
@@ -3464,7 +3466,8 @@ GATE_MODULE = "src.sec10k.web.gate"
 # door whose client cannot present a credential is not a door, it is an outage.
 SENDS_TOKEN_UI = [
     ("the page has a field to type the key into", 'id="esc-key"'),
-    ("...and names the header the server reads", '"X-Escalation-Token"'),
+    ("...and a button to verify it before extraction", 'id="verify-key"'),
+    ("...and a visible verification status", 'id="key-status"'),
     ("...and injects it in the ONE helper all three modes go through",
      "async function call(url, opts)"),
     # A CROSS-REPO CONTRACT, which is why it is pinned rather than left as an
@@ -3475,6 +3478,8 @@ SENDS_TOKEN_UI = [
     # the free tier with everything green on both sides (ADR-043 §d).
     ("...under the storage key the browser agent seeds",
      'const KEY_STORE = "sec10k.escalation-key"'),
+    ("...and extraction reads only the verified value",
+     "const k = verifiedKey()"),
 ]
 ESCALATION_UI = [
     ("the page declares the strip", "function escalationStrip(e)"),
@@ -3561,6 +3566,26 @@ def check_escalation_choke_point(case):
     if run_fn is None:
         bad.append(f"{api_file}: no `def {runner}` — nothing converges")
 
+    # A cheap credential check must still sit behind the existing global
+    # limiter; otherwise it becomes an unbounded password oracle.
+    verify_fn = next((f for f in fns if f.name == "verify_escalation_key"), None)
+    if "file" not in inp and verify_fn is None:
+        bad.append(f"{api_file}: no `verify_escalation_key` endpoint — the "
+                   "page cannot confirm a key before extraction")
+    elif "file" not in inp:
+        source = ast.unparse(verify_fn)
+        if "gate.paid_path_open" not in source or "gate.HEADER" not in source:
+            bad.append(f"{api_file}: `verify_escalation_key` does not ask the "
+                       "shared gate with its shared header — verification can "
+                       "disagree with extraction")
+        routes = [ast.literal_eval(a.args[0]) for a in verify_fn.decorator_list
+                  if isinstance(a, ast.Call) and a.args
+                  and isinstance(a.args[0], ast.Constant)]
+        if "/api/extract/verify-key" not in routes:
+            bad.append(f"{api_file}: key verification is not under "
+                       "`/api/extract/verify-key` — the existing request "
+                       "limiter does not cover the credential oracle")
+
     # ---- 2: escalating and billing carry the DOOR's verdict, and the same one.
     # ADR-043 restored the door, so `escalate=` names the verdict again rather
     # than the bare off-switch (which the door folds in). The budget must ride
@@ -3616,6 +3641,10 @@ def check_escalation_choke_point(case):
     if ui:
         live = _live((ROOT / ui).read_text(), "js")
 
+        if _squash(live).count(_squash('"X-Escalation-Token"')) != 2:
+            bad.append("index.html: the shared escalation header must appear "
+                       "once for verification and once for extraction")
+
         # ---- 5: THE PAGE CAN ACTUALLY OPEN THE DOOR. The assertion whose
         # absence cost ADR-041. Each pin must occur exactly once: zero means
         # the door is shut to every human (the original defect), and more than
@@ -3641,6 +3670,18 @@ def check_escalation_choke_point(case):
                        "OUTSIDE `call()` — every extract mode funnels through "
                        "that helper, and a header attached at one call site "
                        "leaves the other two modes unable to escalate")
+
+        verify_body = _fn_body(live, "async function verifyKey()")
+        if verify_body is None:
+            bad.append("index.html: no `verifyKey()` — the green state has no "
+                       "credential check behind it")
+        else:
+            for expr in ('fetch("/api/extract/verify-key"',
+                         "VERIFIED_KEY = k", "rememberKey(k)"):
+                if expr not in verify_body:
+                    bad.append(f"index.html: `verifyKey()` is missing `{expr}` "
+                               "— only a server-approved key may be enabled "
+                               "and remembered")
 
         for label, expr in ESCALATION_UI:
             n = _squash(live).count(_squash(expr))
@@ -3781,6 +3822,19 @@ def check_escalation_choke_point(case):
                        f"(no `global`) — a fresh Budget per request bounds one "
                        f"request and leaves the deployment unbounded")
     return bad
+
+
+def check_escalation_key_ui_behavior(case):
+    """Run the escalation credential state machine from the shipped page."""
+    ui = ROOT / case.get("input", {}).get("ui_file", UI_STYLESHEET)
+    probe = ROOT / "evals/probes/escalation_key_ui_behavior.js"
+    got = subprocess.run(["node", str(probe), str(ui)], cwd=ROOT,
+                         capture_output=True, text=True, timeout=10)
+    if got.returncode:
+        detail = (got.stderr or got.stdout).strip().splitlines()
+        return ["index.html escalation-key behavior: " +
+                (detail[-1] if detail else f"node exited {got.returncode}")]
+    return []
 
 
 LIMITER_MODULE = "src.sec10k.web.limiter"
@@ -4213,6 +4267,7 @@ CHECKS = {
     "routing_provenance": check_routing_provenance,
     "escalation_locks": check_escalation_locks,
     "escalation_choke_point": check_escalation_choke_point,
+    "escalation_key_ui_behavior": check_escalation_key_ui_behavior,
     "free_tier_limit": check_free_tier_limit,
     "token_proxy_bound": check_token_proxy_bound,
 }

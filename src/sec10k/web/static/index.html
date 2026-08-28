@@ -89,10 +89,10 @@ legend{font-size:12px;text-transform:uppercase;letter-spacing:.12em;font-weight:
 .mode{display:flex;flex-direction:column;gap:7px}
 .mode label{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.12em;font-weight:600}
 .row{display:flex;gap:7px}
-select,input[type=text],input[type=file]{flex:1;min-width:0;padding:7px 9px;
+select,input[type=text],input[type=file],input[type=password]{flex:1;min-width:0;padding:7px 9px;
   border:1px solid var(--line);border-radius:var(--r);background:var(--bg);
   color:var(--ink);font-size:14px;font-family:inherit}
-select:hover,input[type=text]:hover,input[type=file]:hover{border-color:color-mix(in srgb,var(--ink) 20%,transparent)}
+select:hover,input[type=text]:hover,input[type=file]:hover,input[type=password]:hover{border-color:color-mix(in srgb,var(--ink) 20%,transparent)}
 button{padding:7px 14px;border:1px solid var(--amber);border-radius:var(--r);
   background:var(--amber);color:var(--on-amber);font-size:13px;cursor:pointer;
   font-family:inherit;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
@@ -106,6 +106,11 @@ button:disabled{opacity:.5;cursor:default}
    that can disagree. */
 .opt{display:flex;gap:7px;align-items:center;flex-wrap:wrap;cursor:pointer;
   margin-top:13px;font-size:13px}
+.key-row{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:13px;
+  font-size:13px}
+.key-row input{max-width:260px}
+#key-status{color:var(--dim)}
+#key-status.verified{color:var(--ok);font-weight:700}
 
 #banner{padding:11px 14px;border-radius:var(--r);margin-bottom:12px;font-weight:600;
   border:1px solid;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
@@ -328,25 +333,22 @@ footer a{color:var(--accent)}
     </div>
   </div>
   <label class="opt"><input type="checkbox" id="exclude-bp"> exclude boilerplate
-    <span class="hint">— hides detected running heads, page numbers and EDGAR
-    table furniture from the extracted-item pane. Display only: the offsets and
-    character count stay those of the full span (ADR-026).</span></label>
+    <span class="hint">Hide repeated page headers, page numbers, and EDGAR table chrome.</span></label>
   <label class="opt"><input type="checkbox" id="render-md"> render as Markdown
-    <span class="hint">— shows the extracted item as headings, paragraphs and
-    tables derived from the filing's block structure instead of the flat text
-    run. Display only: the offsets and character count stay those of the raw
-    slice, which the compare pane still shows (ADR-032).</span></label>
+    <span class="hint">Show headings, paragraphs, and tables instead of flat text.</span></label>
   <!-- ADR-043. The door of ADR-036 lock 4 shipped with no way for this page
        to open it and was deleted for that reason (ADR-041). This field is the
        missing half. Hidden until /api/meta says a secret is configured: a box
        that cannot open anything only tells a stranger something is being
-       withheld. The value is remembered in localStorage so it is typed once. -->
-  <label class="opt" id="esc-key-row" hidden>escalation key
+       withheld. Only a server-verified value is remembered in localStorage. -->
+  <div class="key-row" id="esc-key-row" hidden>
+    <label for="esc-key">escalation key</label>
     <input type="password" id="esc-key" autocomplete="off" spellcheck="false"
-           placeholder="paste the key to enable the model tier">
-    <span class="hint">— the deterministic extraction above is complete and
-    free without this. The key only unlocks the paid model tier, which runs
-    only when the coverage trigger fires. Remembered in this browser.</span></label>
+           placeholder="Enter key">
+    <button type="button" id="verify-key">Verify</button>
+    <span id="key-status" role="status" aria-live="polite">Not verified</span>
+    <span class="hint">Optional model fallback. Verify once; saved in this browser.</span>
+  </div>
 </fieldset>
 
 <!-- D10: the page's ONE status region. JS rewrites it after every extraction
@@ -429,7 +431,16 @@ async function boot(){
     if(m.escalation_token_required){
       $("#esc-key-row").hidden = false;
       $("#esc-key").value = storedKey();
-      $("#esc-key").addEventListener("input", e => rememberKey(e.target.value.trim()));
+      $("#esc-key").addEventListener("input", () => {
+        VERIFY_GENERATION++;
+        VERIFIED_KEY = ""; rememberKey(""); keyStatus("Not verified");
+        $("#verify-key").disabled = false;
+      });
+      $("#esc-key").addEventListener("keydown", e => {
+        if(e.key === "Enter") verifyKey();
+      });
+      $("#verify-key").addEventListener("click", verifyKey);
+      if(escalationKey()) await verifyKey();
     }
     $("#fx").innerHTML = m.fixtures.map(f => `<option>${esc(f)}</option>`).join("");
   }catch(e){ $("#sha").textContent = "meta unavailable"; }
@@ -864,16 +875,41 @@ function busy(on, msg){
 // sites. That is not tidiness: `_run` is the server's single door and this is
 // the client's, so a mode cannot forget the header the way ADR-036 lock 4's
 // page forgot it entirely. localStorage is wrapped because it throws outright
-// in some privacy modes, and a page that cannot remember a key must still send
-// one that was just typed.
+// in some privacy modes. The in-memory value still works for this page load;
+// extraction uses it only after the server verifies it.
 const KEY_STORE = "sec10k.escalation-key";
+let VERIFIED_KEY = "";
+let VERIFY_GENERATION = 0;
 function storedKey(){ try{ return localStorage.getItem(KEY_STORE) || ""; }catch(e){ return ""; } }
 function rememberKey(v){ try{ v ? localStorage.setItem(KEY_STORE, v)
                                 : localStorage.removeItem(KEY_STORE); }catch(e){} }
 function escalationKey(){ const f = $("#esc-key"); return ((f && f.value) || "").trim(); }
+function verifiedKey(){ const k = escalationKey(); return k === VERIFIED_KEY ? k : ""; }
+function keyStatus(text, ok=false){
+  const s = $("#key-status");
+  s.textContent = text; s.classList.toggle("verified", ok);
+}
+async function verifyKey(){
+  const generation = ++VERIFY_GENERATION;
+  const k = escalationKey();
+  VERIFIED_KEY = ""; rememberKey("");
+  if(!k){ keyStatus("Not verified"); return; }
+  keyStatus("Checking…");
+  $("#verify-key").disabled = true;
+  try{
+    const r = await fetch("/api/extract/verify-key", {
+      method:"POST", headers:{"X-Escalation-Token": k}});
+    const v = await r.json();
+    if(generation !== VERIFY_GENERATION || escalationKey() !== k) return;
+    if(r.ok && v.valid){
+      VERIFIED_KEY = k; rememberKey(k); keyStatus("✓ Enabled", true);
+    }else keyStatus(r.status === 429 ? "Try again shortly" : "Key not valid");
+  }catch(e){ if(generation === VERIFY_GENERATION) keyStatus("Could not verify"); }
+  finally{ if(generation === VERIFY_GENERATION) $("#verify-key").disabled = false; }
+}
 
 async function call(url, opts){
-  const k = escalationKey();
+  const k = verifiedKey();
   if(k) opts = {...opts, headers: {...(opts.headers || {}), "X-Escalation-Token": k}};
   busy(true);
   try{

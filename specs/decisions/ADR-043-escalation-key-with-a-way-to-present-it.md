@@ -17,7 +17,7 @@ freeze exception: this is a deployment control, not an extraction capability —
 `extract_items` is untouched, its `escalate=False` default is unchanged, and no
 fixture's output moves.
 
-**Ruling**: `src/sec10k/web/gate.py` is restored unchanged and the paid model tier again runs only for a request presenting a valid `X-Escalation-Token` — with no `SEC10K_ESCALATION_TOKEN` on the host, or one under `MIN_TOKEN_CHARS` (10 since §f), it runs for NOBODY, so unset stays CLOSED rather than open. What is NEW, and is the whole reason this ADR is not just a revert: the page can now present it. `index.html` carries a `#esc-key` password field, revealed only where `/api/meta` reports `escalation_token_required`, remembered in `localStorage` so it is typed once, and injected as the header inside `call(url, opts)` — the ONE helper all three extract modes funnel through, mirroring `_run` on the server, so a mode cannot forget it the way the whole page forgot it before. Deterministic extraction stays open, free and unauthenticated on all three routes, and the envelope publishes `escalation.reason` either way.
+**Ruling**: `src/sec10k/web/gate.py` is restored unchanged and the paid model tier again runs only for a request presenting a valid `X-Escalation-Token` — with no `SEC10K_ESCALATION_TOKEN` on the host, or one under `MIN_TOKEN_CHARS` (10 since §f), it runs for NOBODY, so unset stays CLOSED rather than open. What is NEW, and is the whole reason this ADR is not just a revert: the page can now present it. `index.html` carries a `#esc-key` password field, revealed only where `/api/meta` reports `escalation_token_required`. The limited `/api/extract/verify-key` endpoint checks the key first; only a valid key is remembered in `localStorage`, shown as `✓ Enabled`, and injected as the header inside `call(url, opts)` — the ONE helper all three extract modes funnel through, mirroring `_run` on the server, so a mode cannot forget it the way the whole page forgot it before. Deterministic extraction stays open, free and unauthenticated on all three routes, and the envelope publishes `escalation.reason` either way.
 **Because**: ADR-041 removed the door for a real defect — it was shut to every human visitor including the owner — but the defect was the MISSING CLIENT HALF, not the door. Owner, 2026-08-28: "確實會怕非面試官去打我的網站浪費我的錢 我覺得要設個密碼." Deleting the door left the paid tier open to `POST /api/extract/url` on any EDGAR Archives URL for anyone on the internet, bounded only by a process `Budget` that every redeploy refills; a key the interviewer pastes once restores the bound without restoring the outage. The field is chosen over a `?k=` link (owner's call) so the secret never enters a URL, browser history, or a referrer header.
 **Enforced by**: `evals/adversarial/escalation-choke-point.json` + `escalation-choke-point-evaded.json` (both `fast`+`invariant`), which now carry BOTH halves — the door's decision table RUN out of `gate.py` (unset, short secret, absent/empty/wrong header, disarmed deployment, and the one row that opens, plus the five production-shaped rows that pass no `token=`), the `llm.Budget` battery ADR-041 added, the single-entrance and escalate/budget-same-name choke point, AND the new `SENDS_TOKEN_UI` pins with `_fn_body`: the page must have the field, must name the header, and must inject it INSIDE `call()` rather than at one of the three call sites. Red-first observed: before the code changed the case failed on five assertions, two of them the exact absence that killed the last door.
 
@@ -46,11 +46,12 @@ envelope out of the live page's own `VIEW`:
 | in the browser | `escalation.ran` | what the viewer gets |
 |---|---|---|
 | no key typed | `false` | 18 extracted + 5 IBR, strip says the tier is behind the header |
-| key typed | `true` | same items, plus the routing strip |
-| reload, key restored from `localStorage` | `true` | typed once, not once per visit |
+| wrong key verified | `false` | `Key not valid`; nothing is stored or sent to extraction |
+| key verified | `true` | `✓ Enabled`, same items, plus the routing strip |
+| reload, key restored and reverified | `true` | typed once, checked against the current server on each visit |
 | key cleared | `false` | free tier intact |
 
-The free deterministic tier is identical in all four rows. That is the point:
+The free deterministic tier is identical in all five rows. That is the point:
 the key gates the spend, never the product.
 
 ## c) What is still true from ADR-041
@@ -82,9 +83,9 @@ curl -X POST https://…/api/extract/url \
   -d '{"url":"https://www.sec.gov/Archives/…"}'
 ```
 
-**2. Driving the page — type into `#esc-key`, then click Extract.** The field
-is revealed by `/api/meta`, so the agent must wait for boot before filling it.
-Works exactly as a human's does.
+**2. Driving the page — type into `#esc-key`, click Verify, then Extract.** The
+field is revealed by `/api/meta`, so the agent must wait for boot before filling
+it. Extraction sends only the value currently shown as `✓ Enabled`.
 
 **3. The deep link, `?fixture=…&run=1` — and this is the trap.** That link
 extracts during `boot()`, BEFORE any agent can type anything, so a fresh
