@@ -357,6 +357,14 @@ def api_meta():
             "escalation_token_required": bool(gate.configured_token())}
 
 
+@app.post("/api/extract/verify-key")
+def verify_escalation_key(request: Request):
+    """Confirm paid-tier access without running an extraction."""
+    valid, _ = gate.paid_path_open(request.headers.get(gate.HEADER),
+                                   ESCALATION_ENABLED)
+    return {"valid": valid}
+
+
 @app.post("/api/extract/fixture")
 def extract_fixture(body: dict, request: Request):
     name = (body or {}).get("fixture", "")

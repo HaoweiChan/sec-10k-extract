@@ -80,6 +80,18 @@ scope widenings were added 2026-08-26 from the two interviewers' written
 feedback, mapped point-by-point in postmortem §8 — which also records the
 mechanisms that feedback praised but that do NOT exist in this codebase.
 
+### D19 — Verify the escalation key before extraction [status: in-progress]
+Origin: owner request, 2026-08-28
+Spec: Shorten the inspector's boilerplate, Markdown, and escalation-key help
+text. Let a visitor verify the escalation key before extraction and show a
+clear green enabled state only when the server accepts it.
+Reviewer evidence: The key-verification path must agree with the extraction
+gate, remain rate-limited, and never remember or send an unverified key.
+Acceptance: `exclude boilerplate` and `render as Markdown` each have a concise
+one-sentence explanation; a wrong key stays disabled; a valid key shows
+`✓ Enabled`, is remembered, and is the only key sent by extraction; editing the
+field clears verification; invariant and fast gates pass at 100%.
+
 ## Debt
 
 Each block is a decision not to build something, not a forgotten task. Every
