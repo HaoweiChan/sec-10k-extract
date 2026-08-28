@@ -716,8 +716,9 @@ function excludeBp(){ const c = $("#exclude-bp"); return !!(c && c.checked); }
 // S9. Same rule: the pane renders from the response's own `markdown` flag.
 function renderMd(){ const c = $("#render-md"); return !!(c && c.checked); }
 // D11 / owner 2026-08-27: there is no escalate control any more. The SERVER
-// decides — since PR #61 R10 on whether the request carried a valid
-// `X-Escalation-Token` (TD-158), and before that on its own off-switch — so
+// decides, and since ADR-041 it decides on its own off-switch alone — the
+// `X-Escalation-Token` door of PR #61 R10 lasted a day and was removed because
+// a tier the audience cannot open is a tier the audience never sees. So
 // nothing here decides whether to; `escalationStrip` and `routingStrip` below
 // report what the response says actually happened, which is the page's job now.
 
@@ -943,9 +944,9 @@ function routingStrip(r){
     ${esc(money)}</span>`;
 }
 
-// TD-158 / PR #61 R10. The paid tier is behind `X-Escalation-Token`, so for
-// almost every viewer it does not run — and "does not run" must be SAID, not
-// left as an absent strip. `v.escalation.reason` is the server's own sentence,
+// ADR-041. The paid tier is open to every request now (the token door of
+// TD-158 lasted one day), so this strip is the DISARMED case only — and "did
+// not run" must still be SAID, not left as an absent strip. `v.escalation.reason` is the server's own sentence,
 // printed verbatim: the page does not re-derive why, because a second
 // explanation here is a second thing that can disagree with the envelope.
 // The `ran: true` case prints nothing of its own — `routingStrip` above then

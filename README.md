@@ -162,21 +162,25 @@ Full rationale in `specs/decisions/` (18 ADRs). The ones that shaped the system:
   on every request, there is no checkbox and no request-level flag, and the
   operator's off-switch is the host variable `SEC10K_ESCALATION_ENABLED`, set
   to any of `0`, `false`, `no`, `off` (stripped and case-insensitive; unset or
-  empty means ON). **The paid tier is behind a door** (`web/gate.py`, since
-  2026-08-28): it runs only for a request presenting a valid
-  `X-Escalation-Token`, and with no `SEC10K_ESCALATION_TOKEN` configured it
-  runs for *nobody* — unset is closed, not open. **Deterministic extraction
-  stays open, free and unauthenticated on all three routes**; when the door
-  does not open the envelope says so (`escalation.reason`) and the page prints
-  it. Behind the door the spend is bounded by the process-wide budget (which a
-  redeploy refills) and, really, by the credit limit on the API key. Two
-  earlier claims here were false and are corrected rather than deleted: until
+  empty means ON). **The paid tier is OPEN to every request** (ADR-041, 2026-08-28): there is no
+  token, no header and no field to type one into. A door built the previous
+  day (`web/gate.py`, TD-158) was deleted because the page's own `fetch` calls
+  never sent its header, so it was closed to every human who would actually
+  open the link. **Deterministic extraction is likewise open, free and
+  unauthenticated on all three routes**; the envelope always says what the
+  tier did (`escalation.reason`) and the page prints it. The spend is bounded
+  by the process-wide budget alone — `SEC10K_ESCALATION_MAX_USD`, default
+  $10.00, **refilled by every redeploy**, which ADR-041 records as an accepted
+  recurring cost and explicitly not a bound — plus the free-tier rate limit,
+  the 25 MB cap and both rungs' input caps, and ultimately by the credit limit
+  on the API key. `SEC10K_ESCALATION_ENABLED=0` is the operator's stop. The
+  consequence is stated rather than softened: an anonymous caller can reach
+  the paid tier through `/api/extract/url` on any collapsing EDGAR filing.
+  One earlier claim here was false and is corrected rather than deleted: until
   PR #61 R1 the two collapsing fixtures were in the dropdown, so one click —
   or a `?fixture=…&run=1` link, with no click at all — was enough
   (`fixtures.DEPLOY_EXCLUDED` closes the listing *and* request-time
-  resolution); and until PR #61 R10 this said an upload was the only route,
-  while `/api/extract/url` billed on any collapsing EDGAR Archives URL, which
-  no fixture exclusion could ever have fixed. The FREE tier stays open to
+  resolution). The FREE tier stays open to
   anyone, and since 2026-08-28 (D15, ADR-040) its rate is bounded: a global
   per-process token bucket (burst 20, 30/minute by default, bounded env
   config) refuses over-limit `/api/extract/*` requests with 429 +
