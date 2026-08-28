@@ -52,3 +52,7 @@ its ruling and what enforces it. Full context — Context/Decision/Consequences
 Amended-by is also recorded on each amended ADR's own Status line — this
 index only cross-references it for scanning.
 - ADR-042 — [the cross-reference index](ADR-042-cross-reference-index.md) (Intel FY2024, Citigroup FY2025) resolves to `evidence.cross_reference` rather than to spans, because its page ranges overlap and nest; plus the General Instruction J refusal, the collective Part pointer, and the trailing-annex clip.
+- ADR-045 — a reliable `cross_reference_index` resolution makes
+  `low_item_coverage` a published warning rather than an `ambiguous` verdict;
+  spans stay unmoved and paid escalation stays suppressed — enforced by
+  `evals/adversarial/intc-2025-cross-reference-index.json`.

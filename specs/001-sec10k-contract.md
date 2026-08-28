@@ -263,7 +263,11 @@ them all); the example once showed `lenient_match`, which nothing emits.
   `evals/adversarial/interior-span-dominates.json`, per ADR-016's rule that a
   listed code is one a path produces) and `low_item_coverage` (ADR-035 —
   `meta.coverage` below `COVERAGE_MIN`; produced end to end on
-  `evals/adversarial/xref-index-collapse.json`). Every other warning code is
+  `evals/adversarial/xref-index-collapse.json`). A resolved
+  `cross_reference_index` qualifies only `low_item_coverage`: the warning and
+  `meta.coverage` remain published, but that code alone yields
+  `success_with_warning` because the filing's alternative content is resolved
+  (ADR-045). Every other warning code is
   non-escalating — including `item_span_near_empty` (ADR-035 §c) and
   `internal_pointer_unreached` (ADR-039 §b), which carry an item code, move
   that item's `confidence` and set its `review_required`, and say nothing

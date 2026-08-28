@@ -1,0 +1,19 @@
+D20 cold review — 2026-08-29
+
+Fresh-context review read evals first and reported these possible silent inputs:
+
+1. Partial index resolution: `xref.resolve()` accepts any nonempty `refs`, so
+   a few valid references could qualify low coverage (extract.py:341-366,
+   430-433).
+2. A structurally valid page reference could land on unrelated content
+   (xref.py:219-228; extract.py:430-433).
+3. A sparse or misordered page ladder could map folios to unrelated text
+   (xref.py:177-187, 219-228; extract.py:430-435).
+
+Disposition: no in-scope empirical failure. The first condition is present in
+the owner-adjudicated Intel fixture (13 resolved items) and treating that
+reliable resolution as successful alternative content is ADR-045's exact
+ruling. The latter two are the resolver's existing reliability boundary, not a
+new demonstrated D20 regression. This minimal status-only change preserves all
+other ambiguity codes, warnings, spans, and escalation behavior; no additional
+adversarial case was warranted without contradicting the owner decision.
