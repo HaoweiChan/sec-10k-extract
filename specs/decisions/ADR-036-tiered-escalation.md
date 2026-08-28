@@ -892,6 +892,8 @@ diagnosed. (3) An empty completion is its own routing outcome,
 `empty_completion`, carrying the numbers that identify it, recorded with its
 COST — a call that was billed and produced nothing must still report as billed.
 
+**MEASURED 2026-08-28 (D17 deliverable (b), `tasks/reviews/d17-intc-measurement.txt` RUN 2): change (1) does NOT achieve its purpose on `intc-2025`, and this paragraph's inference was wrong.** The fixed ladder was run against the same filing with a real credential: rung 2 was billed **$0.997760** and returned `empty_completion` AGAIN — `finish_reason: length`, `output_tokens: 6144` of `max_tokens: 6144`, `reasoning: {"max_tokens": 4096}`, empty text. OpenRouter's documented rule is satisfied (6,144 > 4,096) and the failure reproduces identically, so tripling the allowance moved the failure rather than removing it, and "raising the answer allowance is nearly free" is true of the PRICE and false of the OUTCOME. Changes (2) and (3) are vindicated in the same run and are the only reason this is legible rather than another unexplained `JSONDecodeError`. The residual is carried as **TD-165**; the response is committed to `evals/cache/llm/` so the finding replays at $0.00.
+
 **On cost, the counter-intuitive part.** Of the $0.895360, only **$0.0512** was
 output; **$0.844160** was input, paid whatever came back. So raising the answer
 allowance is nearly free, and *not* raising it means paying the input for a
@@ -1078,6 +1080,19 @@ the dishonesty this whole milestone is about.
 | `c-2025`, 2026-08-27 | $2.125834, 2 calls | `resolved: []`. Rung 1 `rejected`; rung 2 **worked** and returned parseable `{"7A": null}` — an honest "cannot locate". Not burned. |
 
 **$3.025692 of real money, and no item resolved on either filing.**
+
+**RE-RUN 2026-08-28 AGAINST THE FIXED LADDER (D17 deliverable (b)), and the
+answer is still no.** `intc-2025` was run again with the §h4 fix in place:
+rung 1 replayed from cache at $0.00 and still localizes nothing; rung 2 was
+billed **$0.997760** and returned `empty_completion` a SECOND time, on the
+tripled allowance the fix introduced (§h4's dated note carries the numbers).
+Running total **$4.023452 of real money, still no item resolved on any
+held-out filing.** D11's acceptance stays NOT MET, and the rung-2 half of
+hole 2 below is now MEASURED rather than outstanding: the ladder does not
+merely go untested on this filing, it demonstrably fails on it. The residual
+design question is TD-165. `escalate.verify` STILL has not been handed a real
+bad answer — no answer arrived — so that hole is untouched by this run, and
+D17 (a) closed it against synthetic bad answers only.
 
 What the exam DID prove, which is not nothing:
 
