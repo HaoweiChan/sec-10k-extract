@@ -1676,11 +1676,25 @@ def check_deployed_exclusion_derived(case):
     inp = case.get("input", {})
     root = ROOT / inp.get("fixtures_dir", FIXTURES)
     code = inp.get("trigger", "low_item_coverage")
+    # ADR-042 §e: read the ROUTER'S OWN SENSOR, not the raw warning code. The
+    # two agreed until the cross-reference resolver landed, and the property
+    # this check exists for — "could an anonymous click reach a PAID rung" —
+    # is the sensor's, not the code's: `intc-2025` still publishes
+    # `low_item_coverage` (its spans really are index entries) and no longer
+    # escalates, because the deterministic layer answered it. Keeping the raw
+    # code here would withhold from the demo the one filing this repo now
+    # handles best, for a cost that is no longer incurred. `input.trigger` is
+    # still the rename-pin it was, asserted against TRIGGER_CODES below.
+    from src.sec10k.escalate import TRIGGER_CODES, trigger
+    if code not in TRIGGER_CODES:
+        return {"passed": False, "failures": [
+            f"input.trigger {code!r} is not in escalate.TRIGGER_CODES "
+            f"{list(TRIGGER_CODES)} — the pin followed a rename it should have caught"]}
     fires, names = set(), []
     for name, path in sorted(_single_file_dirs(root).items()):
         names.append(name)
         r = extract_items(str(path))
-        if any(w.get("code") == code for w in r.get("warnings", [])):
+        if trigger(r.get("warnings", []))["fired"]:
             fires.add(name)
     scanned = len(names)
     bad = []

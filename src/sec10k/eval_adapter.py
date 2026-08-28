@@ -70,8 +70,14 @@ def eval_check(result, chk, path=None):
     by_code = {i["item"]: i for i in result.get("items", [])}
     entry = by_code.get(chk.get("item"))
     extracted = [i for i in result.get("items", []) if i["status"] == "extracted"]
-    spanned = [i for i in result.get("items", []) if i["status"] in SPAN_STATUSES]
-    has_span = entry is not None and entry["status"] in SPAN_STATUSES
+    # ADR-042 §c: a span-carrying status with NULL offsets is the collective
+    # Part-level pointer, whose sentence names three or more items at once —
+    # INV-S1 forbids them sharing it, so none of them carries it. Filtered
+    # here rather than special-cased in five checks below.
+    spanned = [i for i in result.get("items", []) if i["status"] in SPAN_STATUSES
+               and i["start"] is not None]
+    has_span = (entry is not None and entry["status"] in SPAN_STATUSES
+                and entry["start"] is not None)
     if "evidence" in chk:
         # ADR-031 / PR #42 R1: resolve (item, evidence key) -> offsets ONCE, and
         # let the span-reading checks below run on that slice unchanged. The
@@ -151,6 +157,30 @@ def eval_check(result, chk, path=None):
             hits = [w for w in hits if w.get("item") == chk["item"]]
         if hits:
             return f"unexpected warning {chk['code']!r}: {hits[0].get('message')}"
+    elif t == "cross_reference":
+        # ADR-042 §d. The trailing cross-reference index's page references,
+        # resolved to character regions. Read like `text_contains` but against
+        # what the item POINTS AT rather than what its span holds — which is
+        # the whole distinction the ADR rests on, so a case must be able to
+        # state it. `min_chars` guards against a resolution that technically
+        # succeeded on an empty region.
+        if entry is None:
+            return f"item {chk['item']} not in output"
+        regs = (entry.get("evidence") or {}).get("cross_reference")
+        if not regs:
+            return f"item {chk['item']} has no evidence.cross_reference"
+        n = len(result["normalized_text"])
+        for r in regs:
+            if not (0 <= r["start"] < r["end"] <= n):
+                return f"item {chk['item']} cross_reference region {r} out of bounds"
+        total = sum(r["end"] - r["start"] for r in regs)
+        if "min_chars" in chk and total < chk["min_chars"]:
+            return f"item {chk['item']} cross_reference {total} chars < {chk['min_chars']}"
+        body = "".join(result["normalized_text"][r["start"]:r["end"]] for r in regs)
+        if "contains" in chk and chk["contains"] not in body:
+            return f"item {chk['item']} cross_reference text lacks {chk['contains']!r}"
+        if "not_contains" in chk and chk["not_contains"] in body:
+            return f"item {chk['item']} cross_reference text contains {chk['not_contains']!r}"
     elif t == "item_field":
         # `title` and `part` ship on every item and the inspector renders them,
         # but until the pre-B audit nothing in the eval vocabulary could read
@@ -292,6 +322,9 @@ def eval_check(result, chk, path=None):
                 return (f"item {i['item']} is {i['status']!r} but carries "
                         f"offsets [{i['start']}, {i['end']}) — the contract says "
                         "missing/omitted spans are null")
+            if spanned and i["start"] is None and i["end"] is None \
+                    and "collective_reference" in (i.get("evidence") or {}):
+                spanned = False   # ADR-042 §c, the one sanctioned null pair
             if spanned and (i["start"] is None or i["end"] is None):
                 return (f"item {i['item']} is {i['status']!r} but has null "
                         "offsets — a span-carrying status must carry a span")
@@ -740,7 +773,7 @@ def eval_check(result, chk, path=None):
                     f"{chk['after']!r}: {text[im['offset']:im['offset'] + 60]!r}")
         if "item" in chk:
             got = next((i["item"] for i in result["items"]
-                        if i["status"] in SPAN_STATUSES
+                        if i["status"] in SPAN_STATUSES and i["start"] is not None
                         and i["start"] <= im["offset"] < i["end"]), None)
             if got != chk["item"]:
                 return f"image {chk['src']} falls in item {got!r}, labeled {chk['item']!r}"

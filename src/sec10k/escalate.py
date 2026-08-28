@@ -35,12 +35,12 @@ from src.sec10k.validate import SPAN_FLOOR
 
 # WHICH D8 code escalates the DOCUMENT — the single most consequential constant
 # in this file, and the one the whole cost argument rests on (ADR-036 §c).
-# RE-DERIVED 2026-08-28 (PR #61 R14) over all 44 dev filing fixtures
+# RE-DERIVED 2026-08-28 (PR #61 R14) over all 49 dev filing fixtures
 # (`tasks/reviews/d11_trigger_scan.py --rates`, artifact
 # `tasks/reviews/d11-trigger-scan.txt`):
 #
-#   low_item_coverage      2/44 = 0.0455 overall, 1/29 on real EDGAR filings
-#   item_span_near_empty  13/44 = 0.2955 overall, 10/29 on real EDGAR filings
+#   low_item_coverage      3/49 = 0.0612 overall, 1/32 on real EDGAR filings
+#   item_span_near_empty  14/49 = 0.2857 overall, 10/32 on real EDGAR filings
 #
 # The figures this comment carried until then — 1/43 and 0/28 — were measured
 # 2026-08-26 and went stale the moment the live exam burned `intc-2025` to the
@@ -172,8 +172,18 @@ def trigger(warnings):
     produced — it re-derives nothing and owns no threshold of its own, so the
     trigger cannot drift away from the validator that defines it."""
     hits = [w for w in warnings if w.get("code") in TRIGGER_CODES]
+    # ADR-042 §e: the deterministic layer got there first. `low_item_coverage`
+    # is still true and still published — the spans really are pointers — but
+    # a filing whose trailing cross-reference index RESOLVED has nothing left
+    # for a paid rung to find, and this is the one document shape on which a
+    # paid rung has actually been measured: intc-2025, twice, $0.997760 the
+    # second time, `empty_completion` both times, zero items resolved
+    # (ADR-036 §k). Suppressing the trigger here rather than withholding the
+    # warning keeps the sensor reading the battery it is defined by.
+    resolved = any(w.get("code") == "cross_reference_index" for w in warnings)
     return {
-        "fired": bool(hits),
+        "fired": bool(hits) and not resolved,
+        "suppressed_by": "cross_reference_index" if (hits and resolved) else None,
         "codes": sorted({w["code"] for w in hits}),
         # the per-item hint the rungs are pointed at: every item D8 flagged as
         # a stub or a pointer. Non-escalating on its own (ADR-035 §c) — it says
@@ -363,7 +373,7 @@ def route(text, items, warnings, budget=None):
     record = {"trigger": tr, "tiers": [], "resolved": [],
               "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0}}
     if not tr["fired"]:
-        # THE COMMON CASE, and the one the cost budget lives on: 42 of 44 dev
+        # THE COMMON CASE, and the one the cost budget lives on: 46 of 49 dev
         # documents land here, spend nothing, and are byte-identical to a run
         # with the flag off.
         return record, []
