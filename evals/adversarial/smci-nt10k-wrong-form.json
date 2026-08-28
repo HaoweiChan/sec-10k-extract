@@ -1,0 +1,40 @@
+{
+  "id": "smci-nt10k-wrong-form",
+  "task": "sec10k",
+  "suites": [
+    "fast",
+    "all"
+  ],
+  "input": {
+    "path": "evals/fixtures/smci-nt10k/filing.htm"
+  },
+  "expect": {
+    "checks": [
+      {
+        "type": "doc_status",
+        "value": "unsupported"
+      },
+      {
+        "type": "warning_present",
+        "code": "unsupported_form"
+      },
+      {
+        "type": "item_absent",
+        "item": "1"
+      },
+      {
+        "type": "item_absent",
+        "item": "7"
+      },
+      {
+        "type": "item_absent",
+        "item": "8"
+      }
+    ]
+  },
+  "triage": {
+    "class": "wrong-form-notification",
+    "note": "Super Micro's Form 12b-25 NT 10-K, filed 2024-08-28 for the period ended June 30, 2024 — the notification that the annual report would be LATE, not the annual report. EDGAR files it under the form type `NT 10-K`, and the document's own cover carries the words `Form 10-K` next to a checked box (`x Form 10-K ¨ Form 20-F ¨ Form 11-K ¨ Form 10-Q ¨ Form 10-D`), which is the trap: the string a form sniffer looks for is present and means the opposite of what it usually means — it names the report being DELAYED. The document also carries `PART I — REGISTRANT INFORMATION`, `PART II — RULES 12b-25(b) AND (c)` and `PART III — NARRATIVE`, so a Part-aware reader finds a plausible Part I/II/III skeleton with no Item 1-16 under it. Correct behaviour is the refusal the contract already promises: this is a 5,415-character notification, not an annual report, and emitting any item set over it would be exactly the failure `bridgecrest-2025-abs-trust` covers from the other direction (that one is legally a 10-K whose taxonomy we do not model; this one is not a 10-K at all). GPT's curated list names this pair — the NT 10-K and the eventual real 10-K — as the late-filing chronology test; the real one is held out as `evals/heldout/smci-2025-heldout.json` and this is deliberately NOT held out, because a refusal has a known answer and belongs in a suite that can be watched red. GREEN ON FIRST RUN, and this is stated rather than glossed: CLAUDE.md rule 2 asks that a new failure be watched red before it is fixed, and there was no failure here. `sniff_form` already reads this document as form `NT` and the envelope already refuses it — doc_status `unsupported`, zero items, warnings `whole_submission_fallback` + `form_type_disagreement` + `unsupported_form`, the middle one being the pipeline noticing for itself that the EDGAR form type and the document's own cover text disagree. So this case is a REGRESSION GUARD over behaviour that already worked, not the record of a defect. It earns its place because nothing else in the corpus covers a document that says `Form 10-K` on its cover and means the report it is NOT filing."
+  },
+  "provenance": "Authored 2026-08-28 from GPT's curated hard-filing list (rank 7). sec.gov/Archives/edgar/data/1375365/000137536524000031/smci-form12bx25nt10xkx2024.htm, accession 0001375365-24-000031, 37,511 bytes. Read blind with tasks/reviews/heldout_blind_scan.py before authoring: 5,415 stripped chars, ZERO `Item N` headings of any kind, `NT 10-K` 2 occurrences, cover reads `FORM 12b-25 / NOTIFICATION OF LATE FILING / For Period Ended: June 30, 2024`."
+}

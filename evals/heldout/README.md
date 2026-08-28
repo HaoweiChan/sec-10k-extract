@@ -41,9 +41,28 @@ record plus every provenance claim they had.
    satisfiable. Adjudicated in the open: the pipeline is right and the label
    is wrong. Changing the label is influence, so the case cannot stay here.
 
-**The set is now four cases** (cost-2022, csco-2016, mrk-1995, pgr-2023) and
-**two replacement filings are owed** at the next expansion, per the budget
-rule below.
+**REPLACEMENTS ADDED 2026-08-28, same day, labels frozen before either filing
+met the pipeline** — the debt is paid rather than carried:
+
+* **`aig-2025-heldout`** — AIG FY2024, 12.3 MB. A RUNNING-HEADER filing: every
+  page of an item reprints that item's name as page furniture
+  (`TABLE OF CONTENTS / ITEM 1A | Risk Factors`), so the blind reader counts
+  `Item 7` 52 times and `Item 8` 95 times in one document, against 2 apiece for
+  a conventional filer. Nothing in the corpus has that shape — it is a
+  competing copy of the heading at the top of every page of its own section,
+  not one TOC block in the front matter.
+* **`smci-2025-heldout`** — Super Micro FY2024, fiscal year ended **June 30**
+  (a non-December year end, which the set is thin on), and the LATE one: a
+  Form 12b-25 NT 10-K preceded it. Part III is inline rather than incorporated
+  by reference, which is what a filer does when the proxy does not exist yet.
+
+Both were read with `tasks/reviews/heldout_blind_scan.py`, which imports
+nothing from `src/` — that independence is what makes "frozen before the first
+run" mean something rather than being an honour-system claim. Every anchor's
+occurrence count is recorded in the case's `provenance`.
+
+The set is six cases again (aig-2025, cost-2022, csco-2016, mrk-1995,
+pgr-2023, smci-2025).
 
 ## Burn rule
 
