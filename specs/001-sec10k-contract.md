@@ -256,8 +256,17 @@ them all); the example once showed `lenient_match`, which nothing emits.
   `routing.stages` is always the ordered list `classify`, `plan`, `route`,
   `verify`, `decide`; each record has backend-authored `status`, `reason`,
   `targets`, zero-or-measured `cost`, and `skipped`. The view passes it through
-  verbatim. Its verify record may contain the bounded cached vision seam;
-  vision can only confirm/reject/null already verified alternative evidence.
+  verbatim. Its verify record may contain `vision`: `{status, source, model,
+  images, cost, reason, verdict?}`. It resolves at most two relevant relative
+  image references only against the validated original `https://www.sec.gov/Archives/…`
+  URL and common image paths (`gif/jpeg/jpg/png/webp`); uploads/fixtures,
+  blank/query-only/non-image, unsafe, off-origin, and absent images visibly skip.
+  OpenRouter receives the bounded verified item/region text plus those image
+  URLs; `source` is `live`, `cache`, or `cached_test` (never a claim that a
+  test replay ran live). Vision can only strict-confirm/reject/null already
+  verified alternative evidence for its listed inspected `items`; it cannot create/move offsets or turn a
+  failed text extraction into success. The inspector exposes status, source,
+  model, image count, and measured cost without displaying the URLs.
 
 ## Envelope rules (v2, normative)
 

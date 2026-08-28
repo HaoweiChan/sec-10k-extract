@@ -994,7 +994,7 @@ WIRE_API = [
      "on the same single decision",
      "extract_items(path, exclude_boilerplate=exclude_boilerplate, "
      "blocks=markdown, escalate=escalate, "
-     "budget=server_budget() if escalate else None)"),
+     "budget=server_budget() if escalate else None, source_url=source_url)"),
     # PR #61 R4. The page stopped reading this when the control went away, and
     # `routing_provenance`'s pin on the reader went with it — so deleting the
     # key reddened nothing, while ADR-036 §h2 had just started claiming it is
@@ -2926,6 +2926,8 @@ ROUTING_UI = [
     ("...and the item pane shows what the deterministic path had said",
      "it.evidence && it.evidence.deterministic"),
     ("...naming the tier that replaced it", "<b>${esc(it.method)}</b>"),
+    ("the five-stage flow visibly identifies vision provenance", "v.source || \"skipped\""),
+    ("...and its bounded image count and measured cost", "images ${Number((v.images || []).length)}"),
 ]
 
 # The mirror of ROUTING_UI: expressions that must NOT be in the page at all.

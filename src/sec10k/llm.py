@@ -46,7 +46,8 @@ DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
 # bumped whenever a prompt in escalate.py or the request shape changes: it is
 # part of the cache key, so a reworded prompt — or a different provider's
 # request body — cannot be answered from an old response.
-PROMPT_VERSION = "d11.2-openrouter"
+PROMPT_VERSION = "d11.2-openrouter"  # preserve existing text-only cache entries
+IMAGE_PROMPT_VERSION = "d21.1-openrouter"
 
 # The two rungs, as OpenRouter SLUGS. Not guessed: both are present verbatim in
 # the committed catalogue record below, and `usd()` refuses a slug that is not.
@@ -177,8 +178,12 @@ class Budget:
                 "usd": round(self.spent, 6)}
 
 
-def _cache_key(model, system, user, max_tokens):
-    blob = json.dumps([PROMPT_VERSION, model, system, user, max_tokens],
+def _cache_key(model, system, user, max_tokens, image_urls=()):
+    # Keep the exact legacy tuple for text calls; image calls need their own
+    # request-shape/version and URLs because those are model input.
+    blob = json.dumps(([PROMPT_VERSION, model, system, user, max_tokens]
+                       if not image_urls else
+                       [IMAGE_PROMPT_VERSION, model, system, user, max_tokens, list(image_urls)]),
                       sort_keys=True, ensure_ascii=False).encode()
     return hashlib.sha256(blob).hexdigest()
 
@@ -199,7 +204,7 @@ def _credential():
     return key
 
 
-def _body(model, system, user, max_tokens, reasoning_tokens=None):
+def _body(model, system, user, max_tokens, reasoning_tokens=None, image_urls=()):
     """The OpenAI-shaped request body OpenRouter expects.
 
     Its own function so `_demo` can assert the SHAPE rather than text-match the
@@ -221,9 +226,12 @@ def _body(model, system, user, max_tokens, reasoning_tokens=None):
     than dependent on a provider default: the caller states the thinking budget,
     and `max_tokens` is that budget plus room for the answer.
     """
+    content = user if not image_urls else ([{"type": "text", "text": user}]
+                                            + [{"type": "image_url", "image_url": {"url": u}}
+                                               for u in image_urls])
     body = {"model": model, "max_tokens": max_tokens,
             "messages": [{"role": "system", "content": system},
-                         {"role": "user", "content": user}]}
+                         {"role": "user", "content": content}]}
     if reasoning_tokens:
         body["reasoning"] = {"max_tokens": reasoning_tokens}
     return body
@@ -239,6 +247,9 @@ def _normalize(payload, text, choice, model, max_tokens):
     field was thrown away.
     """
     u = payload.get("usage") or {}
+    if not all(isinstance(u.get(k), int) and not isinstance(u[k], bool) and u[k] >= 0
+               for k in ("prompt_tokens", "completion_tokens")):
+        raise EscalationUnavailable("provider response has no usable token usage; refusing to invent cost")
     return {
         "text": text,
         "usage": {"input_tokens": u.get("prompt_tokens", 0),
@@ -265,7 +276,7 @@ def _normalize(payload, text, choice, model, max_tokens):
 
 
 def call(model, system, user, max_tokens, budget, timeout=120,
-         reasoning_tokens=None):
+         reasoning_tokens=None, image_urls=()):
     """One OpenRouter chat-completions request.
 
     Returns {"text", "usage", "usd", "model", "cached"}.
@@ -274,14 +285,18 @@ def call(model, system, user, max_tokens, budget, timeout=120,
     budget, then credential, then the socket — cheapest refusal wins, and a
     cached eval run needs no key at all.
     """
-    key_hash = _cache_key(model, system, user, max_tokens)
+    image_urls = tuple(image_urls)
+    if image_urls and "image" not in (_catalogue().get("models", {}).get(model, {})
+                                       .get("architecture", {}).get("input_modalities") or []):
+        raise EscalationUnavailable(f"model {model!r} has no committed image input modality")
+    key_hash = _cache_key(model, system, user, max_tokens, image_urls)
     hit = CACHE_DIR / f"{key_hash}.json"
     if hit.exists():
         return {**json.loads(hit.read_text()), "cached": True}
 
     budget.take()
     api_key = _credential()
-    body = _body(model, system, user, max_tokens, reasoning_tokens)
+    body = _body(model, system, user, max_tokens, reasoning_tokens, image_urls)
     base = os.environ.get("OPENROUTER_BASE_URL") or DEFAULT_BASE_URL
     req = urllib.request.Request(
         base.rstrip("/") + "/chat/completions",
@@ -348,6 +363,11 @@ def _demo():
     assert rec["max_tokens"] == 2048 and rec["usage"]["output_tokens"] == 2048
     assert rec["text"] == "" and rec["usd"] == usd(RUNGS[1][1], 10, 2048)
     assert {"text", "usage", "usd", "model", "finish_reason", "max_tokens"} <= set(rec)
+    try:
+        _normalize({}, "", {"finish_reason": "stop"}, RUNGS[0][1], 1)
+        raise AssertionError("missing provider usage must refuse, not price at $0")
+    except EscalationUnavailable:
+        pass
     # TD-165: `reasoning_tokens` is the field that separates "the reasoning cap
     # was not enforced" from "it was, and the ANSWER was truncated" — the two
     # readings of the 2026-08-28 run, which finish_reason alone cannot tell

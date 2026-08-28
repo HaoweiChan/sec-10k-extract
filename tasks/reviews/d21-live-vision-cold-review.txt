@@ -1,0 +1,16 @@
+D21 live-vision cold review — 2026-08-29
+
+1. A reject derived from at most two flattened images clears every verified
+   alternative, including unrelated items whose evidence/image was not seen.
+   Correct: reject only alternatives tied to inspected images; preserve
+   independently text-verified siblings.
+
+2. Empty or query-only `<img src>` resolves back to the filing `.htm`, passes
+   the SEC Archives origin check, and is sent as `image_url` despite not being
+   an image. Correct: visibly skip non-image resources.
+
+3. A syntactically valid live provider response with no `usage` defaults to
+   zero tokens and $0, making budget and UI cost falsely optimistic. Correct:
+   refuse an unpriceable paid response rather than inventing zero usage.
+
+All three are in scope and require red-first adversarial coverage before repair.

@@ -1,0 +1,10 @@
+D21 live-vision cold-review resolution — 2026-08-29
+
+1. Resolved: vision records inspected item codes and reject removes only those
+   items' alternatives; an uninspected sibling is pinned to survive.
+2. Resolved: blank, query-only, filing-HTML, off-origin, and unsupported paths
+   skip; only SEC Archives gif/jpeg/jpg/png/webp resources are eligible.
+3. Resolved: missing/invalid provider token usage raises an explicit
+   unavailable result instead of inventing zero cost.
+
+Final gates after all repairs: invariant 98/98; fast 168/168; cost $0.

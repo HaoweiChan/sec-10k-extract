@@ -13,14 +13,14 @@
     "api_file": "evals/fixtures/repo_hygiene/boilerplate-wire-values.py"
   },
   "expect": {
-    "min_failures": 8,
-    "max_failures": 8
+    "min_failures": 9,
+    "max_failures": 9
   },
   "triage": {
     "class": "no-mechanical-check",
     "note": "Pair B of two, and the harder half: here every NAME on the wire is correct and every pinned expression is spelled right — only the VALUE is wrong, or the pinned text is present but is not the text that runs. Eight shapes, one failure each, exact count. Four came from PR #27 R6: the fixture handler inverts the flag (`not bool(...)`), so default-OFF becomes always-exclude; the upload handler compares `!= \"1\"`, a one-character typo that makes EVERY upload exclude because with the box unticked the query parameter is absent and `None != \"1\"` is True; the url handler forwards a constant (`False and bool(...)`); and a fourth `/api/extract/paste` mode exists that never wires the flag. Three more were found by attacking the round-2 allow-list itself rather than the hops it pins, and all three passed it before they were closed: a SECOND `excludeBp` definition shadowing the pinned one (JS declarations hoist, the last one binds), a `disabled` checkbox that can never be ticked while every hop stays intact, and a call site commented out with its pinned expression left in the file as dead text. PR #27 R10 and R11 added the eighth shape and re-spelled the fourth. R10: `_live` stripped `//` and `<!-- -->` but not `/* */`, so the SAME dead-call-site defect in the block-comment spelling passed — measured on the real files at 0 plumbing failures and invariant 37/37 fully green, for both a url mode that stopped sending the flag and a truncation notice counting the un-stripped string. Both spellings are now pinned: the url site carries the `//` form and the fixture site the `/* */` form. R11: the route-set pin required the closing paren immediately after the path literal, so `@app.post(\"/api/extract/paste\", response_model=None)` — app.py's own decorator style — evaded it; the paste route here now carries that keyword argument, so the spelling that defeated the pin is the one watched red.",
     "why_two_pairs": "The shapes conflict per slot — a handler can be inverted or renamed but not both, and one file holds one excludeBp definition — so pinning all sixteen in a single pair is impossible without losing the exact count that makes a regressed over-fire visible (PR #21 round-2 R5).",
-    "count_history": "7 -> 8 in the PR #27 round-3 bounded repair: the block-comment spelling of the dead-call-site shape is a new pinned shape. R11 changed a spelling, not a count — the unwired paste route was and remains one failure."
+    "count_history": "7 -> 8 in the PR #27 round-3 bounded repair: the block-comment spelling of the dead-call-site shape is a new pinned shape. R11 changed a spelling, not a count — the unwired paste route was and remains one failure. 8 -> 9 in D21: the poisoned fixture deliberately omits the newly load-bearing source_url forwarding expression, so the expanded allow-list catches one additional defect."
   },
-  "provenance": "S8, created 2026-08-22 in the PR #27 round-2 repair, per hard rule 2."
+  "provenance": "S8, created 2026-08-22 in the PR #27 round-2 repair, per hard rule 2. D21 re-derived the exact count after source_url became load-bearing for bounded SEC-only vision."
 }

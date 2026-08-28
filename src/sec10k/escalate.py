@@ -18,11 +18,15 @@ a proposal that does not verify is DISCARDED, with the rejection published.
 A model can therefore move this pipeline's spans only to somewhere the
 deterministic layers already agree is unattributed, contiguous and in order.
 
-Three things this module deliberately does NOT do, each a ruling in ADR-036:
+Four things this module deliberately does NOT do, under ADR-036 as amended by
+ADR-046:
 
-* it does not render anything (no vision rung — §e, two independent reasons);
+* it does not render pages or extract text from pixels; the bounded vision
+  verifier can only gate already text-verified alternative evidence using at
+  most two SEC filing image references;
 * it does not send an unbounded prompt: BOTH rungs' inputs are capped, so one
-  call's price is bounded even on an attacker-chosen upload (§h2, PR #58 R12);
+  call's price is bounded even on an attacker-chosen upload, and vision evidence
+  is separately capped at VISION_TEXT_CAP with VISION_MAX_TOKENS output;
 * it does not touch a document the trigger left quiet, so default-flag output
   is byte-identical (§f, and `evals/snapshot.py` is the harness that proves it);
 * it does not import `llm` at module scope. The import is inside `route()`, so
@@ -418,27 +422,96 @@ def apply(items, accepted, method, alternative=None):
 
 
 VISION_CAP = 2
+IMAGE_SUFFIXES = (".gif", ".jpeg", ".jpg", ".png", ".webp")
+VISION_TEXT_CAP = 4000
+VISION_MAX_TOKENS = 32
+VISION_MODEL = "openai/gpt-5-mini"
+VISION_SYSTEM = ("You verify already-anchored SEC filing evidence. Reply with exactly "
+                 "one JSON object: {\"verdict\": \"confirm\"}, {\"verdict\": \"reject\"}, "
+                 "or {\"verdict\": null}. Do not provide offsets or prose.")
 
 
-def vision_verify(images, alternatives, cached=None):
-    """Bounded cached vision seam; it can only gate already-anchored evidence.
-
-    Fixture annotations have relative `src` values, not image bytes or absolute
-    URLs (ADR-033), so live acquisition deliberately lives outside this seam.
-    """
+def _vision_urls(images, alternatives, source_url):
+    """Relevant SEC Archives images only; uploads and fixtures have no base."""
+    from urllib.parse import urljoin, urlsplit
+    base = urlsplit(source_url or "")
+    if not (base.scheme == "https" and base.netloc == "www.sec.gov"
+            and base.path.startswith("/Archives/")):
+        return [], [], "no validated SEC Archives base"
     related = [im for im in images or [] if any(
         any(r["start"] <= im.get("offset", -1) < r["end"] for r in regions)
-        for regions in alternatives.values())][:VISION_CAP]
-    base = {"model": "openai/gpt-5-mini", "cap": VISION_CAP,
-            "images": [im.get("src") for im in related],
+        for regions in alternatives.values())]
+    urls, inspected = [], set()
+    for im in related:
+        u = urlsplit(urljoin(source_url, im.get("src") or ""))
+        if (u.scheme == "https" and u.netloc == "www.sec.gov" and u.path.startswith("/Archives/")
+                and u.path.lower().endswith(IMAGE_SUFFIXES)):
+            urls.append(u.geturl())
+            inspected.update(code for code, regions in alternatives.items()
+                             if any(r["start"] <= im.get("offset", -1) < r["end"] for r in regions))
+        if len(urls) == VISION_CAP:
+            break
+    return urls, sorted(inspected), "no eligible SEC Archives image annotations" if not urls else None
+
+
+def _vision_prompt(text, alternatives):
+    """Bounded, already-verified evidence for a semantic image verdict."""
+    evidence, remaining = [], VISION_TEXT_CAP
+    for code, regions in sorted(alternatives.items()):
+        kept = []
+        for r in regions:
+            if not remaining:
+                break
+            sample = text[r["start"]:r["end"]][:min(2000, remaining)]
+            kept.append({"start": r["start"], "end": r["end"], "text": sample})
+            remaining -= len(sample)
+        if kept:
+            evidence.append({"item": code, "regions": kept})
+        if not remaining:
+            break
+    import json
+    return "Verify whether the images support this already-anchored evidence:\n" + json.dumps(evidence)
+
+
+def _vision_verdict(raw):
+    import json
+    parsed = json.loads((raw or "").strip())
+    if not isinstance(parsed, dict) or set(parsed) != {"verdict"}:
+        raise ValueError("response must be exactly a verdict object")
+    if parsed["verdict"] not in ("confirm", "reject", None):
+        raise ValueError("verdict must be confirm, reject, or null")
+    return parsed["verdict"]
+
+
+def vision_verify(images, alternatives, cached=None, source_url=None, budget=None, text=""):
+    """Vision gates verified alternative evidence; it never creates spans."""
+    urls, inspected, skip = _vision_urls(images, alternatives, source_url)
+    base = {"model": VISION_MODEL, "cap": VISION_CAP, "images": urls,
+            "items": inspected,
             "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0}}
-    if not related:
-        return {**base, "status": "skipped", "reason": "no eligible image annotations"}
+    if not urls:
+        return {**base, "status": "skipped", "reason": skip}
     if cached not in ("confirm", "reject", None):
         return {**base, "status": "failed", "reason": "invalid cached vision verdict"}
-    return {**base, "status": "skipped" if cached is None else "verified",
-            "reason": "no cached vision verdict" if cached is None else cached,
-            "verdict": cached}
+    if cached is not None:
+        return {**base, "status": "verified", "reason": cached,
+                "verdict": cached, "source": "cached_test"}
+    if budget is None:
+        return {**base, "status": "skipped", "reason": "no cached vision verdict"}
+    from src.sec10k.llm import EscalationUnavailable, call
+    import json
+    try:
+        got = call(VISION_MODEL, VISION_SYSTEM,
+                   _vision_prompt(text, {code: alternatives[code] for code in inspected}),
+                   VISION_MAX_TOKENS, budget, image_urls=urls)
+        verdict = _vision_verdict(got.get("text"))
+    except (EscalationUnavailable, ValueError, TypeError, json.JSONDecodeError) as e:
+        return {**base, "status": "failed", "reason": f"vision unavailable: {e}"}
+    cost = {"llm_calls": 0 if got["cached"] else 1,
+            "tokens": sum(v or 0 for v in got["usage"].values()),
+            "usd": 0.0 if got["cached"] else got["usd"]}
+    return {**base, "status": "verified", "reason": str(verdict), "verdict": verdict,
+            "source": "cache" if got["cached"] else "live", "cached": got["cached"], "cost": cost}
 
 
 def _stages(tr, record, vision=None):
@@ -449,12 +522,12 @@ def _stages(tr, record, vision=None):
         {"stage": "classify", "status": "done", "reason": tr["reason"], "targets": targets, "cost": zero, "skipped": None},
         {"stage": "plan", "status": "done" if fired else "skipped", "reason": tr["route"], "targets": targets, "cost": zero, "skipped": None if fired else "trigger quiet or deterministically resolved"},
         {"stage": "route", "status": "done" if fired else "skipped", "reason": tr["route"], "targets": targets, "cost": zero, "skipped": None if fired else tr["reason"]},
-        {"stage": "verify", "status": "done" if record["resolved"] or record.get("alternative") else ("failed" if fired and record["tiers"] else "skipped"), "reason": (vision or {}).get("reason", "no verified proposal"), "targets": targets, "cost": zero, "skipped": None if fired else tr["reason"], "vision": vision or {"status": "skipped", "reason": "no alternative evidence", "cost": zero}},
+        {"stage": "verify", "status": "done" if record["resolved"] or record.get("alternative") else ("failed" if fired and record["tiers"] else "skipped"), "reason": (vision or {}).get("reason", "no verified proposal"), "targets": targets, "cost": dict((vision or {}).get("cost", zero)), "skipped": None if fired else tr["reason"], "vision": vision or {"status": "skipped", "reason": "no alternative evidence", "cost": zero}},
         {"stage": "decide", "status": "done", "reason": "accepted verified evidence" if record["resolved"] or record.get("alternative") else "deterministic result retained", "targets": record["resolved"] + record.get("alternative", []), "cost": dict(record["cost"]), "skipped": None},
     ]
 
 
-def route(text, items, warnings, budget=None, images=None, vision_cached=None):
+def route(text, items, warnings, budget=None, images=None, vision_cached=None, source_url=None):
     """Run the ladder. Returns (routing_record, extra_warnings).
 
     `items` is mutated in place when — and only when — a rung's answer
@@ -569,10 +642,11 @@ def route(text, items, warnings, budget=None, images=None, vision_cached=None):
         accepted, why = verify(text, items, proposal, asked=set(codes))
         alternative, alternative_why = verify_alternatives(
             text, items, proposal, asked=set(codes) if tr["route"] == "alternative_regions" else set())
-        vision = vision_verify(images, alternative, vision_cached)
+        vision = vision_verify(images, alternative, vision_cached, source_url, budget, text)
         if vision.get("verdict") == "reject":
-            alternative_why.append("vision rejected candidate alternative evidence")
-            alternative = {}
+            alternative_why.append("vision rejected inspected candidate alternative evidence")
+            alternative = {code: regions for code, regions in alternative.items()
+                           if code not in vision["items"]}
         entry["rejections"] = why + alternative_why
         if accepted or alternative:
             apply(items, accepted, rung, alternative)
@@ -595,7 +669,10 @@ def route(text, items, warnings, budget=None, images=None, vision_cached=None):
             record["cost"][k] = round(record["cost"][k] + t["cost"][k], 6)
     if vision is None:
         vision = vision_verify(images, {i["item"]: (i.get("evidence") or {}).get("alternative_regions", [])
-                                        for i in items if (i.get("evidence") or {}).get("alternative_regions")}, vision_cached)
+                                        for i in items if (i.get("evidence") or {}).get("alternative_regions")}, vision_cached, source_url, budget, text)
+    record["vision"] = vision
+    for k in record["cost"]:
+        record["cost"][k] = round(record["cost"][k] + vision["cost"][k], 6)
     record["stages"] = _stages(tr, record, vision)
     return record, extra
 

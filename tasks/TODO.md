@@ -117,12 +117,19 @@ publication. Accept verified results per item, preserve unresolved items as
 paid work. Publish the same flow to the inspector as five user-visible stages —
 classify, plan, route, verify, decide — each naming its status, reason, target
 items, cost, and why it was skipped, so the user can inspect the agentic process
-rather than see only its final answer. Add a bounded vision-verification route
-for eligible filing images: reuse a model whose committed catalogue record
-declares image input, inspect at most a fixed small set of relevant images, and
-let the result confirm or reject proposed alternative evidence without ever
-bypassing text offsets or the deterministic verifier. Vision is cached,
-budgeted, and skipped visibly when no eligible image exists. This is one
+rather than see only its final answer. Add a bounded, live vision-verification
+route for eligible filing images: record image annotations whenever escalation
+is enabled, resolve at most two relative image references only against the
+validated SEC Archives document URL, and send those public image URLs as
+multimodal inputs to a model whose committed catalogue record declares image
+input. The vision verdict may confirm or reject only proposed alternative
+evidence that already passed text-offset verification; it can neither create
+an offset nor turn an otherwise failed extraction into success. The call uses
+the same cache and shared budget as text escalation, and acquisition, model,
+verdict, failure/skip reason, token count, and cost are visible in the verify
+stage. Uploads, fixtures, unsafe/non-SEC URLs, absent images, exhausted budget,
+and provider failure skip or fail loudly rather than pretending vision ran.
+This is one
 vertical slice, not a claim to enumerate issuers: full-page OCR/rendering, new
 models, and silent precision failures for which no existing signal fires stay
 explicit residual classes.
@@ -131,21 +138,26 @@ in the routing envelope; cached or synthetic cases must cover contiguous repair,
 missing-item alternative evidence, overlapping multi-region evidence, partial
 acceptance, invalid-region rejection, and deterministic cross-reference
 suppression. UI cases must bind all five flow stages, including skipped and
-failed routes. Vision cases must bind eligible-image selection, the fixed image
-cap, cached replay, budget/cost accounting, confirm/reject/null outcomes, and a
-zero-image visible skip. A fresh cold review must search for still-silent input
-classes.
+failed routes. Vision cases must first go red and then bind SEC-relative URL
+resolution, rejection of off-origin/unsafe sources, multimodal request shape,
+eligible-image selection, the fixed image cap, cached replay, shared
+budget/cost accounting, confirm/reject/null outcomes, and a zero-image visible
+skip. A fresh cold review must search for still-silent input classes.
 Acceptance: ADR-046 and the output contract bind the typed routes and evidence
 shape; new adversarial cases are observed red before implementation; Intel and
 Citi remain deterministic and make zero model calls; `fast` and `invariant`
 make zero paid calls and pass at 100% without a baseline move; cost/call/token
 limits and cached replay remain enforced; the deployed inspector renders the
-five-stage flow and cached vision-verification evidence without exposing a
+five-stage flow and live vision-verification evidence without exposing a
 secret or silently claiming vision ran; one cold review is recorded and every
 in-scope finding becomes a red adversarial case before repair.
-Status: implementation in progress — red-first D21 direct cases cover primary,
-alternative, suppression, flow, and cached vision seam; final gates and cold
-review UNRUN.
+Status: PR evidence — bounded live SEC-only multimodal verification implemented;
+the five-stage UI shows vision status/source/model/image count/inspected items
+and measured cost without URLs. Red-first evidence is in
+`tasks/reviews/d21-live-vision-red-first.txt`; fresh cold review and all three
+repairs are in `tasks/reviews/d21-live-vision-cold-review*.txt`. Final invariant
+98/98 and fast 168/168, both $0 with no baseline move. Deployment remains UNRUN
+until PR #78 is merged.
 
 ## Debt
 
