@@ -94,3 +94,84 @@ Whenever a credential exists, re-running is one command
 (python3 tasks/reviews/d17_intc_measurement.py): rung 1 replays free from
 cache, rung 2 costs at most the $1.114685 the gate projects, and the same
 gate enforces the same $5.00 cap before the socket.
+
+
+================================================================================
+RUN 2 — 2026-08-28, WITH the credential. The rung-2 question is now ANSWERED,
+and the answer is negative.
+================================================================================
+
+Tree: 4d9d7dbd6c221e2de10445c9c56376d44a077f3f (main, post PR #67). Runner:
+the SAME committed script, unmodified. OPENROUTER_API_KEY: PRESENT (the
+orchestrator ran it from the owner's login shell under the owner's standing
+instruction to finish the outstanding gate; the key was never read, printed or
+copied — only inherited by the process).
+
+=== what it cost ===
+Projected by the pre-call gate: $1.114685. ACTUALLY BILLED: $0.997760, one
+call, 174,976 tokens. Cumulative $0.997760 of the $5.00 cap. The gate's own
+self-check tripped as designed on a synthetic $4.99-spent probe, refusing
+before the socket.
+
+=== rung 1 (openai/gpt-5-mini) — replayed free, unchanged ===
+Cache HIT, $0.00, 11,257 in / 842 out. Outcome `rejected`, "no rung returned a
+locatable span". The cache hit re-proves what RUN 1 proved: §h4 left rung 1's
+request byte-identical, and the real model's answer localizes nothing in its
+60,000-char window.
+
+=== rung 2 (anthropic/claude-opus-5) — THE FINDING ===
+Cache MISS (as RUN 1 predicted: the post-fix key differs), live call, BILLED
+$0.997760 for 168,832 in / 6,144 out on 517,976 input chars.
+
+  outcome:        empty_completion
+  finish_reason:  length
+  output_tokens:  6144 of max_tokens 6144
+  reasoning:      4096 requested
+  text:           "" (empty)
+
+**The §h4 fix did not close this failure.** §h4 diagnosed the exam's
+`empty_completion` as sending 2,048 tokens with no reasoning budget to a
+reasoning model, and fixed it by sending MAX_TOKENS 2048 + REASONING_TOKENS
+4096 = 6,144 with an explicit `reasoning: {"max_tokens": 4096}`, satisfying
+OpenRouter's documented rule that max_tokens exceed the reasoning budget. That
+rule IS satisfied here (6144 > 4096) and the failure REPRODUCES IDENTICALLY:
+the whole 6,144-token allowance was consumed and nothing was emitted. Raising
+the ceiling 3x moved the failure, it did not remove it.
+
+So ADR-036 §h4's change (1) is now MEASURED not to achieve its stated purpose
+on this input. Changes (2) and (3) DID work exactly as designed, and are the
+only reason this run is legible rather than another unexplained JSONDecodeError:
+`finish_reason: length` was recorded, and `empty_completion` was reported as
+its own outcome WITH its cost. A billed call that produced nothing reported as
+billed.
+
+=== what the envelope changed ===
+Nothing, again. meta.coverage 0.0033 -> 0.0033, no item's span or method
+moved, resolved: []. Warning published: `escalation_unresolved` (escalate.py
+:471) — the ladder RAN, was paid for, and resolved nothing, which is a
+different and more honest outcome than RUN 1's `escalation_unavailable`.
+
+=== verdict, plainly ===
+MEASURED, NEGATIVE. The tiered escalation resolves NOTHING on the one real
+collapsed filing this repo owns, and it now costs $0.997760 to learn that
+again. Both rungs are accounted for: rung 1 answers honestly and cheaply and
+cannot locate the items; rung 2 cannot answer at all on a 517,976-char input
+because its output allowance is consumed before content is emitted.
+
+ADR-036 §k's acceptance for D11 stays NOT MET, and is now not-met with the
+rung-2 half measured rather than outstanding. The residual defect is carried
+as TD-165. This run's response is COMMITTED to evals/cache/llm/, so the
+finding replays at $0.00 forever and no one need spend the dollar twice.
+
+=== what this run still does NOT establish ===
+* Whether a larger answer allowance would work. Untested, and untestable
+  without spending again — TD-165 carries the design question, including the
+  possibility that the input size rather than the allowance is the binding
+  constraint (§d's input cost dominates: $0.844 of the exam's $0.895 was
+  input, and 168,832 input tokens here at $5.00/MTok is $0.844 of this run's
+  $0.998 too, so a retry at a higher ceiling costs nearly the same dollar
+  again and buys one more sample).
+* Whether `escalate.verify` would have rejected a bad answer. Still untested:
+  the trust boundary was never handed one, because no answer arrived. This is
+  the SAME hole ADR-036 §k records, and D17 deliverable (a) closed it against
+  SYNTHETIC bad answers only.

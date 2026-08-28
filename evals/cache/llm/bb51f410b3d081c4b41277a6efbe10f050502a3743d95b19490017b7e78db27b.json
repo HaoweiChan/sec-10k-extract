@@ -1,0 +1,11 @@
+{
+ "finish_reason": "length",
+ "max_tokens": 6144,
+ "model": "anthropic/claude-opus-5",
+ "text": "",
+ "usage": {
+  "input_tokens": 168832,
+  "output_tokens": 6144
+ },
+ "usd": 0.99776
+}
