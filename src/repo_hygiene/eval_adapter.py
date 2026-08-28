@@ -958,17 +958,18 @@ WIRE_API = [
     # `extract_items` unmodified, and escalation reaches it through a decision
     # and never as a constant.
     #
-    # PR #61 R10 moved that decision. `escalate=` now carries the DOOR's
-    # verdict (`gate.paid_path_open`, which folds the off-switch in with the
-    # token check), and the budget rides the same name — so the call cannot
-    # escalate on one condition and bill against another. `escalation_locks`
-    # pins the AST half (the argument is a name, never a literal) and
-    # `escalation_door` pins where that name comes from; this pins the text.
+    # PR #61 R10 moved that decision to a token door; ADR-041 removed the door
+    # again the next day, so `escalate=` is back to the operator's off-switch
+    # NAME and the budget rides that same name — the call still cannot escalate
+    # on one condition and bill against another, which matters more now that
+    # the budget is the ONLY bound. `escalation_locks` pins the AST half (the
+    # argument is a name, never a literal) and `escalation_choke_point` pins
+    # that it is the off-switch specifically; this pins the text.
     ("_run forwards the two display flags unmodified, and escalates and bills "
      "on the same single decision",
      "extract_items(path, exclude_boilerplate=exclude_boilerplate, "
-     "blocks=markdown, escalate=escalate, "
-     "budget=server_budget() if escalate else None)"),
+     "blocks=markdown, escalate=ESCALATION_ENABLED, "
+     "budget=server_budget() if ESCALATION_ENABLED else None)"),
     # PR #61 R4. The page stopped reading this when the control went away, and
     # `routing_provenance`'s pin on the reader went with it — so deleting the
     # key reddened nothing, while ADR-036 §h2 had just started claiming it is
@@ -3391,13 +3392,13 @@ def check_escalation_locks(case):
     # `escalate=True` here hard-wires paid work and leaves the switch above it
     # looking authoritative with nothing reading it.
     #
-    # PR #61 R10 widened what "the switch" means. `escalate=` no longer names
-    # `ESCALATION_ENABLED` directly — it names the DOOR's decision, which folds
-    # the off-switch in with the token check (`web.gate.paid_path_open`). So
-    # this assertion keeps the half that belongs to it, that the argument is a
-    # NAME and never a literal, and `escalation_door` owns the other half:
-    # which name, and where it came from. Neither check can be satisfied by the
-    # other's evasion.
+    # PR #61 R10 briefly widened what "the switch" means — `escalate=` named a
+    # token door's verdict rather than `ESCALATION_ENABLED` — and ADR-041
+    # removed the door the next day, so it names the off-switch again. This
+    # assertion keeps the half that belongs to it, that the argument is a NAME
+    # and never a literal, and `escalation_choke_point` owns the other half:
+    # WHICH name, and that the budget rides it. Neither check can be satisfied
+    # by the other's evasion.
     calls = [n for n in ast.walk(tree)
              if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
              and n.func.id == "extract_items"]
@@ -3415,12 +3416,7 @@ def check_escalation_locks(case):
 
 
 
-GATE_MODULE = "src.sec10k.web.gate"
-# The honesty half: the page must SAY that the paid tier did not run, and say
-# it in the server's own words. Text pins, with `check_confidence_honesty`'s
-# standing warning applying word for word — a green run says the expressions
-# are in the file, never that a browser painted them.
-DOOR_UI = [
+ESCALATION_UI = [
     ("the page declares the strip", "function escalationStrip(e)"),
     ("...and the banner calls it", "escalationStrip(v.escalation)"),
     ("...printing the SERVER's reason, not one the page invented",
@@ -3430,315 +3426,178 @@ DOOR_UI = [
 ]
 
 
-def check_escalation_door(case):
-    """TD-158 / PR #61 R10. The paid path is closed at the door, and the door
-    is one door.
+def check_escalation_choke_point(case):
+    """ADR-041. The paid tier is open to every request, so the process Budget
+    is the ONLY money bound — and nothing may escalate outside it.
 
-    R10 is why fixture exclusion was never going to be the fix.
-    `POST /api/extract/url` extracts any `https://www.sec.gov/Archives/…` URL
-    and reached the same `_run` with escalation on, so `intc-2025` — a real
-    Intel EDGAR filing — still billed through its own Archives URL, and any
-    collapsing filing on EDGAR did too. Excluding committed fixtures cannot
-    close a service whose feature is extracting arbitrary EDGAR URLs.
+    This replaces `escalation_door` (TD-158 / PR #61 R10), which pinned a
+    `X-Escalation-Token` header that the owner removed on 2026-08-28: the
+    deployment exists to be opened by an interviewer who configures nothing,
+    and a door only the operator can walk through closed the demo along with
+    the billing. ADR-041 records that reversal and what it costs.
 
-    Three properties, and only the third is a shape read:
+    **What is GONE with the door, said plainly**: an anonymous caller can now
+    reach the paid tier through `POST /api/extract/url` on any EDGAR Archives
+    URL. That is deliberate. It is also why the assertions below are stricter
+    about the budget than the door's ever were — with the header gone, the
+    ceiling is not the second line of defence, it is the only one.
 
-    1. **The decision is RUN, not read.** `src/sec10k/web/gate.py` is stdlib
-       only and imports no fastapi precisely so this check can import it and
-       exercise the whole table: unset secret, short secret, absent header,
-       empty header, wrong header, disarmed deployment, and the one
-       combination that opens. Every money pin before this one had to read
-       `app.py` with `ast` — and PR #58 R18, PR #61 R2 and PR #61 R11 are three
-       separate evasions that satisfied the shape and broke the property.
-    2. **UNSET IS CLOSED.** The direction that matters on a public host: a
-       deployment nobody configured must refuse everyone, never admit everyone.
-       `MIN_TOKEN_CHARS` extends the same rule to a secret configured badly, so
-       there is no value of the variable that is worse than leaving it unset.
-    3. **One choke point, not three guards.** `_run` is the only caller of
-       `extract_items` in `app.py` and calls the door exactly once; `escalate=`
-       and `budget=` are the SAME name, so a request cannot escalate on one
-       condition and bill against another. R13 is the failure this replaces: a
-       guard pinned as one literal line in one function, which a second
-       endpoint walked around with everything green. Here a second endpoint
-       cannot reach `extract_items` at all without failing this check, and a
-       new endpoint that forgets to pass its `Request` gets the FREE path
-       (`request=None` → no header → closed), which is the fail-safe direction.
+    Four properties, and the first three are the ones a mutation walks around:
 
-    Plus the envelope: `_run` publishes the decision AND its reason, and the
-    page prints the reason verbatim. `routing: null` is now the common case,
-    and a viewer told nothing cannot tell "the tier is behind a token" from
-    "the tier ran and stayed quiet".
+    1. **One entrance.** Exactly one `extract_items(...)` in `app.py`, inside
+       `_run`. PR #61 R13 is the failure this exists for: a guard written once
+       in one function that a second endpoint simply did not call.
+    2. **Escalating and billing are the SAME name.** `escalate=` must be the
+       module off-switch (`ESCALATION_ENABLED`) and `budget=` must be
+       conditioned on that same name. A literal `True` at `escalate=` defeats
+       the operator's runaway stop while `/api/meta` goes on publishing it;
+       two different conditions let a request escalate on one and bill against
+       another, which is the process ceiling bypassed in one token.
+    3. **The envelope publishes the decision**, built from that same name, and
+       the page prints the server's own sentence. `routing: null` alone cannot
+       distinguish "the tier ran and stayed quiet" from "the tier never ran".
+    4. **The ceiling is real and finite.** `llm.Budget` is RUN — it must
+       actually refuse on both its call and its dollar limit — and
+       `SERVER_MAX_USD` must fall back to a positive finite number when the
+       host variable is unset. A ceiling nobody runs is a number in a
+       docstring.
 
     What it does NOT prove: that fastapi binds the routes (the standing
-    `app.py` limitation), that the operator chose a good secret, or that a
-    holder of the secret cannot spend — that is the process `Budget`'s job, and
-    it is the ceiling BEHIND the door, not instead of it. It also does not rate
-    limit: the token is the brake, and a per-IP bucket behind Zeabur's proxy
-    was rejected as unmeasurable here (TD-158). Since 2026-08-28 (D15,
-    ADR-040) the FREE tier's global limiter additionally fronts every
-    /api/extract/* request, token or not — bound by `check_free_tier_limit`,
-    not here.
+    `app.py` limitation, TD-38), that the ceiling is set LOW enough — that is
+    the operator's judgement and `SEC10K_ESCALATION_MAX_USD` is the knob — or
+    that the budget survives a redeploy. It does not: a restart refills it,
+    which ADR-041 states as an accepted, recurring cost rather than a bound.
+    Rate limiting is `check_free_tier_limit`'s (D15, ADR-040), not this one's.
+
+    One half IS a shape read and is marked as such at the site: `app.py`
+    imports fastapi, which the eval environment does not have, so
+    `server_budget()`'s memoization is pinned by its `global` statement rather
+    than by calling it twice. Everything about the ceiling's BEHAVIOUR runs for
+    real out of `llm.py`.
     """
     inp = case.get("input", {})
     api_file = inp.get("file", API_FILE)
+    off_const = inp.get("off_switch", "ESCALATION_ENABLED")
     bad = []
     try:
         tree = ast.parse((ROOT / api_file).read_text())
     except SyntaxError as e:
         return [f"{api_file} does not parse: {e}"]
 
-    # ---- 1 + 2: run the decision table. Real tree only: a known-bad app.py
-    # fixture substitutes THIS file and has no say over gate.py, so asserting
-    # it there would add failures the fixture cannot cause (the lesson
-    # `escalation_locks`' window bound already learned).
-    if "file" not in inp:
-        gate = importlib.import_module(inp.get("gate_module", GATE_MODULE))
-        floor = inp.get("min_token_chars", 16)
-        if gate.MIN_TOKEN_CHARS < floor:
-            bad.append(f"gate.MIN_TOKEN_CHARS is {gate.MIN_TOKEN_CHARS}, under "
-                       f"{floor} — a secret short enough to guess is a door "
-                       f"that is closed only in the docs")
-        good = "k" * max(gate.MIN_TOKEN_CHARS, floor)
-        table = [
-            # (presented, armed, configured) -> may escalate
-            ((good, True, ""), False),          # UNSET IS CLOSED
-            ((None, True, ""), False),
-            ((good, True, good[:gate.MIN_TOKEN_CHARS - 1]), False),  # too short
-            # ...and a SHORT secret the caller gets exactly right. Without this
-            # row the `MIN_TOKEN_CHARS` floor is unbound: deleting the length
-            # test left every other row passing, because a mismatched token
-            # fails the compare anyway. Found by mutation N3 in
-            # tasks/reviews/pr61-r2-red.txt PART 2 — the battery's one green,
-            # fixed here rather than written up as a limitation. That edit
-            # (N3a) reds today because this row exists; the green run is a
-            # fact about a check that no longer ships and the artifact says so.
-            (("abc", True, "abc"), False),
-            ((None, True, good), False),        # no header
-            (("", True, good), False),          # empty header
-            (("w" * len(good), True, good), False),                  # wrong
-            ((good, False, good), False),       # operator's off-switch wins
-            ((good, True, good), True),         # the one case that opens
-        ]
-        for (presented, armed, configured), want in table:
-            try:
-                got, why = gate.paid_path_open(presented, armed,
-                                               token=configured)
-            except Exception as e:
-                bad.append(f"gate.paid_path_open({presented!r}, {armed!r}, "
-                           f"token=<{len(configured)} chars>) raised "
-                           f"{type(e).__name__}: {e} — a door that throws is a "
-                           f"door whose behaviour nobody knows")
-                continue
-            if bool(got) is not want:
-                bad.append(
-                    f"gate.paid_path_open(header={'set' if presented else presented!r}"
-                    f", armed={armed}, secret={len(configured)} chars) is "
-                    f"{got!r}, want {want!r}"
-                    + (" — an unconfigured or misconfigured deployment must be "
-                       "CLOSED to everyone, not open to everyone"
-                       if not configured or len(configured) < gate.MIN_TOKEN_CHARS
-                       else ""))
-            elif not got and (not why or len(why) < 30):
-                bad.append(f"a refusal with no usable reason ({why!r}) — the "
-                           f"envelope publishes this string and a viewer who "
-                           f"is told nothing assumes the tier ran")
-            elif not got and configured and configured in (why or ""):
-                bad.append("the refusal reason contains the secret itself")
-
-        # PR #61 R18. Every row above passes `token=` — and NOTHING in
-        # production does. `app.py` calls `gate.paid_path_open(header,
-        # ESCALATION_ENABLED)` with two positional arguments, so
-        # `configured_token() if token is None else …` is the ONLY branch a
-        # request ever takes, and it was exercised by no row and no `_demo`
-        # assertion. Measured on the reviewer's mutation: a three-line
-        # `if token is None: return True, …` there bills every anonymous
-        # request on an UNCONFIGURED deployment, with `gate.py`'s self-check at
-        # exit 0 and the suite score identical to clean. That is the
-        # UNSET-IS-CLOSED property `gate.py`, ADR-036 §h2, README and this
-        # case's own triage all name as the one that matters.
-        #
-        # So these rows call the door EXACTLY as `_run` does — no `token=` — and
-        # move the secret in the environment instead.
-        for env_secret, presented, want in ((None, good, False),
-                                            (None, None, False),
-                                            ("", good, False),
-                                            (good, None, False),
-                                            (good, good, True)):
-            with _patched_env(**{gate.TOKEN_VAR: env_secret}):
-                try:
-                    got, why = gate.paid_path_open(presented, True)
-                except Exception as e:
-                    bad.append(f"gate.paid_path_open(presented, armed) — the "
-                               f"production call, no token= — raised "
-                               f"{type(e).__name__}: {e}")
-                    continue
-                ref = gate.paid_path_open(presented, True,
-                                          token=env_secret or "")
-            if bool(got) is not want:
-                bad.append(
-                    f"the PRODUCTION call gate.paid_path_open(header, armed) "
-                    f"with {gate.TOKEN_VAR}={env_secret!r} and header="
-                    f"{'set' if presented else presented!r} is {got!r}, want "
-                    f"{want!r}" + ("" if env_secret else
-                                   " — an UNCONFIGURED deployment must be "
-                                   "closed to everyone; this is the one branch "
-                                   "app.py takes and no `token=` row reaches"))
-            elif bool(got) is not bool(ref[0]):
-                bad.append(f"gate.paid_path_open reads {gate.TOKEN_VAR} "
-                           f"differently from an explicit `token=` of the same "
-                           f"value ({got!r} vs {ref[0]!r}) — the table above "
-                           f"then proves nothing about the production path")
-        with _patched_env(**{gate.TOKEN_VAR: "  " + good + "  "}):
-            if gate.configured_token() != good:
-                bad.append(f"gate.configured_token() does not read "
-                           f"{gate.TOKEN_VAR} out of the environment (stripped) "
-                           f"— the secret must be host configuration, never a "
-                           f"literal in the tree")
-        with _patched_env(**{gate.TOKEN_VAR: None}):
-            if gate.configured_token():
-                bad.append(f"gate.configured_token() is truthy with "
-                           f"{gate.TOKEN_VAR} unset")
-
-    # ---- 3: one choke point.
     fns = [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)]
     runner = inp.get("runner", "_run")
     run_fn = next((f for f in fns if f.name == runner), None)
     inside = {id(n) for n in ast.walk(run_fn)} if run_fn else set()
 
-    def calls_to(name, attr=None):
-        return [n for n in ast.walk(tree) if isinstance(n, ast.Call) and (
-            (attr is None and isinstance(n.func, ast.Name) and n.func.id == name)
-            or (isinstance(n.func, ast.Attribute) and n.func.attr == name))]
-
-    ex = calls_to("extract_items")
+    # ---- 1: one entrance.
+    ex = [n for n in ast.walk(tree) if isinstance(n, ast.Call)
+          and isinstance(n.func, ast.Name) and n.func.id == "extract_items"]
     stray = [c for c in ex if id(c) not in inside]
     if len(ex) != 1 or stray:
         bad.append(f"{api_file}: {len(ex)} `extract_items(...)` call(s), "
-                   f"{len(stray)} of them outside `{runner}` — the paid path "
-                   f"must have exactly one entrance, or the door is a guard "
-                   f"the next endpoint walks around (PR #61 R13)")
-    door = calls_to("paid_path_open")
-    if len(door) != 1 or any(id(c) not in inside for c in door):
-        bad.append(f"{api_file}: {len(door)} `paid_path_open(...)` call(s) "
-                   f"inside `{runner}`, want exactly 1 — two doors are two "
-                   f"policies, and the second one drifts")
+                   f"{len(stray)} of them outside `{runner}` — with the tier "
+                   f"open to everyone, a second entrance is an UNBUDGETED "
+                   f"entrance (PR #61 R13)")
     if run_fn is None:
         bad.append(f"{api_file}: no `def {runner}` — nothing converges")
-    elif not any(a.arg == "request" for a in run_fn.args.args):
-        bad.append(f"{api_file}: `{runner}` takes no `request`, so the door "
-                   f"has no header to read and cannot be reached from any mode")
 
-    # PR #61 R19. The call's SHAPE was pinned and its ARGUMENTS were not, so
-    # both operands could be swapped for money-spending values with invariant
-    # and fast byte-identical to clean. Measured by the reviewer:
-    #   arg 0 -> `request.headers.get(gate.HEADER, gate.configured_token())`:
-    #            an anonymous request with NO header is handed the secret as
-    #            the default and gets in, and the envelope then reads "a valid
-    #            x-escalation-token header was presented", which is a lie the
-    #            viewer has no way to check.
-    #   arg 1 -> `True`: the operator's runaway stop is defeated while
-    #            /api/meta still publishes `escalation_enabled: false`.
-    # Both are one-token edits on the line the rest of this check certifies.
-    off_const = inp.get("off_switch", "ESCALATION_ENABLED")
-    for c in door[:1]:
-        if len(c.args) < 2:
-            bad.append(f"{api_file}: the door is called with {len(c.args)} "
-                       f"positional argument(s); it takes the request's header "
-                       f"and the deployment's off-switch, in that order")
-            continue
-        gets = [n for n in ast.walk(c.args[0])
-                if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
-                and n.func.attr == "get"
-                and isinstance(n.func.value, ast.Attribute)
-                and n.func.value.attr == "headers"]
-        if len(gets) != 1:
-            bad.append(f"{api_file}: the door's first argument makes "
-                       f"{len(gets)} read(s) of `<request>.headers.get(...)` — "
-                       f"the presented token must come from the REQUEST and "
-                       f"from nowhere else")
-        for g in gets:
-            obj = g.func.value.value
-            if not (isinstance(obj, ast.Name) and obj.id == "request"):
-                bad.append(f"{api_file}: the door's header read is not off the "
-                           f"`request` parameter — a header taken from anywhere "
-                           f"else is not the caller's")
-            if len(g.args) != 1 or g.keywords:
-                bad.append(f"{api_file}: `headers.get(...)` is called with "
-                           f"{len(g.args)} argument(s) — a DEFAULT here is the "
-                           f"exploit: a request that sent no header is handed "
-                           f"one, gets in, and is told a valid header was "
-                           f"presented")
-            elif not ((isinstance(g.args[0], ast.Attribute)
-                       and g.args[0].attr == "HEADER")
-                      or (isinstance(g.args[0], ast.Name)
-                          and g.args[0].id == "HEADER")):
-                bad.append(f"{api_file}: the door reads a header name that is "
-                           f"not `gate.HEADER` — the module that decides and "
-                           f"the module that reads must name the same header")
-        off = c.args[1]
-        if not (isinstance(off, ast.Name) and off.id == off_const):
-            bad.append(f"{api_file}: the door's second argument is "
-                       f"{ast.dump(off)[:40]}, not the module constant "
-                       f"`{off_const}` — a literal here defeats the operator's "
-                       f"runaway stop while /api/meta goes on publishing it")
+    # ---- 2: escalating and billing are the same name.
+    for c in [c for c in ex if id(c) in inside]:
+        kw = {k.arg: k.value for k in c.keywords}
+        v = kw.get("escalate")
+        if not (isinstance(v, ast.Name) and v.id == off_const):
+            bad.append(f"{api_file}: `extract_items(escalate=...)` is "
+                       f"{ast.dump(v)[:40] if v is not None else 'absent'}, not "
+                       f"the module constant `{off_const}` — a literal here "
+                       f"defeats the operator's runaway stop while /api/meta "
+                       f"goes on publishing it")
+        b = kw.get("budget")
+        names = {n.id for n in ast.walk(b) if isinstance(n, ast.Name)} if b else set()
+        if off_const not in names:
+            bad.append(f"{api_file}: `extract_items(budget=...)` is not "
+                       f"conditioned on `{off_const}` — escalating on one "
+                       f"condition and billing against another is how the "
+                       f"process ceiling gets bypassed, and since ADR-041 that "
+                       f"ceiling is the only bound left")
 
-    # the name the door's verdict is bound to, and the two places it must land
-    verdict = None
-    for n in ast.walk(run_fn) if run_fn else []:
-        if isinstance(n, ast.Assign) and isinstance(n.value, ast.Call) \
-                and isinstance(n.value.func, ast.Attribute) \
-                and n.value.func.attr == "paid_path_open" \
-                and isinstance(n.targets[0], ast.Tuple):
-            first = n.targets[0].elts[0]
-            verdict = first.id if isinstance(first, ast.Name) else None
-    if verdict is None:
-        bad.append(f"{api_file}: `{runner}` does not bind the door's verdict to "
-                   f"a name — `(may, why) = gate.paid_path_open(...)`; a "
-                   f"verdict nothing holds is a verdict nothing can honour")
-    else:
-        # only the call INSIDE `_run`: a stray one elsewhere is already
-        # reported as a second entrance, and charging it twice would make the
-        # known-bad fixture's count depend on how many mutations overlap
-        for c in [c for c in ex if id(c) in inside]:
-            kw = {k.arg: k.value for k in c.keywords}
-            v = kw.get("escalate")
-            if not (isinstance(v, ast.Name) and v.id == verdict):
-                bad.append(f"{api_file}: `extract_items(escalate=...)` is not "
-                           f"the door's verdict `{verdict}` — the decision is "
-                           f"taken and then not used, which is the shape R13 "
-                           f"found and R10 paid for")
-            b = kw.get("budget")
-            names = {n.id for n in ast.walk(b) if isinstance(n, ast.Name)} if b else set()
-            if verdict not in names:
-                bad.append(f"{api_file}: `extract_items(budget=...)` is not "
-                           f"conditioned on `{verdict}` — escalating on one "
-                           f"condition and billing against another is how the "
-                           f"process ceiling gets bypassed")
-        published = [n for n in ast.walk(run_fn)
-                     if isinstance(n, ast.Assign)
-                     and any(isinstance(t, ast.Subscript)
-                             and isinstance(t.slice, ast.Constant)
-                             and t.slice.value == "escalation" for t in n.targets)]
-        if not published:
-            bad.append(f"{api_file}: `{runner}` never sets `view['escalation']` "
-                       f"— with the tier behind a token, `routing: null` is the "
-                       f"common case, and an envelope that says nothing lets a "
-                       f"viewer believe the paid path ran and stayed quiet")
-        elif not all(verdict in {n.id for n in ast.walk(p.value)
-                                 if isinstance(n, ast.Name)} for p in published):
-            bad.append(f"{api_file}: `view['escalation']` is not built from "
-                       f"`{verdict}` — the envelope would be free to disagree "
-                       f"with what actually ran")
+    # ---- 3: the envelope says what was decided, and the page prints it.
+    published = [n for n in (ast.walk(run_fn) if run_fn else [])
+                 if isinstance(n, ast.Assign)
+                 and any(isinstance(t, ast.Subscript)
+                         and isinstance(t.slice, ast.Constant)
+                         and t.slice.value == "escalation" for t in n.targets)]
+    if run_fn is not None and not published:
+        bad.append(f"{api_file}: `{runner}` never sets `view['escalation']` — "
+                   f"an envelope that says nothing lets a viewer believe the "
+                   f"paid path ran and found nothing worth doing")
+    elif not all(off_const in {n.id for n in ast.walk(p.value)
+                               if isinstance(n, ast.Name)} for p in published):
+        bad.append(f"{api_file}: `view['escalation']` is not built from "
+                   f"`{off_const}` — the envelope would be free to disagree "
+                   f"with what actually ran")
 
-    # ---- the page says it, in the server's words
     ui = inp.get("ui_file", None if "file" in inp else UI_STYLESHEET)
     if ui:
         live = _live((ROOT / ui).read_text(), "js")
-        for label, expr in DOOR_UI:
+        for label, expr in ESCALATION_UI:
             n = _squash(live).count(_squash(expr))
             if n != 1:
                 bad.append(f"index.html: {label} — expected exactly one "
                            f"`{expr}`, found {n}")
+
+    # ---- 4: the ceiling is real, and it REFUSES. Run it, never read it.
+    # Scoped off when a known-bad app.py fixture stands in: that fixture has no
+    # say over llm.py, and charging it for a module it cannot influence is the
+    # bound `escalation_locks` already learned the hard way.
+    if "file" not in inp:
+        # `app.py` imports fastapi, which is NOT a dependency of the eval
+        # environment — that is why every money pin in this file reads it with
+        # `ast`. So the ceiling's VALUE is read from the tree and the ceiling's
+        # BEHAVIOUR is run out of `llm.py`, which is stdlib only.
+        ceiling = None
+        for n in tree.body:
+            if isinstance(n, ast.Assign) and any(
+                    isinstance(t, ast.Name) and t.id == "SERVER_MAX_USD"
+                    for t in n.targets):
+                ceiling = n.value
+        lits = [x.value for x in ast.walk(ceiling) if isinstance(x, ast.Constant)
+                and isinstance(x.value, (int, float))
+                and not isinstance(x.value, bool)] if ceiling else []
+        if not lits or not all(0 < v < float("inf") for v in lits):
+            bad.append(f"{api_file}: SERVER_MAX_USD's fallback is {lits!r} — "
+                       f"the only money bound since ADR-041 must fall back to "
+                       f"a positive finite number of dollars when the host "
+                       f"variable is unset or garbage")
+
+        from src.sec10k.llm import Budget, BudgetExceeded
+        spent = Budget(max_calls=5, max_usd=0.01)
+        spent.charge(0.02, 100)
+        try:
+            spent.take()
+            bad.append("llm.Budget did not refuse a call after its DOLLAR "
+                       "ceiling was passed — the deployment's only bound does "
+                       "not bind")
+        except BudgetExceeded:
+            pass
+        try:
+            Budget(max_calls=0, max_usd=100.0).take()
+            bad.append("llm.Budget did not refuse a call at max_calls=0 — the "
+                       "hard offline mode a zero budget is supposed to be")
+        except BudgetExceeded:
+            pass
+
+        # ...and the deployment must build ONE, shared. A per-request Budget is
+        # a ceiling per request, which on an open endpoint is no ceiling at
+        # all. This half IS a shape read (see the docstring's negative space):
+        # `server_budget` cannot be called here without fastapi.
+        sb = next((f for f in fns if f.name == "server_budget"), None)
+        if sb is None:
+            bad.append(f"{api_file}: no `server_budget()` — the process-wide "
+                       f"ceiling every request must share")
+        elif not any(isinstance(n, ast.Global) for n in ast.walk(sb)):
+            bad.append(f"{api_file}: `server_budget()` memoizes nothing "
+                       f"(no `global`) — a fresh Budget per request bounds one "
+                       f"request and leaves the deployment unbounded")
     return bad
 
 
@@ -3754,9 +3613,9 @@ def check_free_tier_limit(case):
     no request cap, no concurrency bound on the three `/api/extract/*` routes,
     only `MAX_BYTES` per document. A caller could post 25 MB filings in a loop,
     and `/api/extract/url` spent an attributable outbound EDGAR fetch each
-    time. This check binds the fix the same way `escalation_door` binds the
-    door, because the recurring defect class in this repo is a safety mechanism
-    nobody bound.
+    time. This check binds the fix the same way `escalation_choke_point` binds
+    the paid path's single budgeted entrance, because the recurring defect
+    class in this repo is a safety mechanism nobody bound.
 
     Two halves, and only the registration line is a shape read:
 
@@ -3813,7 +3672,7 @@ def check_free_tier_limit(case):
 
     # ---- 1: run the limiter's own decision path. Real module only: a
     # known-bad app.py fixture substitutes THIS file and has no say over
-    # limiter.py (the escalation_door precedent).
+    # limiter.py (the escalation_choke_point precedent).
     if lim_mod is not None and "file" not in inp:
         floor_burst = inp.get("min_default_burst", 5)
         floor_rate = inp.get("min_default_per_minute", 10)
@@ -4171,7 +4030,7 @@ CHECKS = {
     "escalation_seam": check_escalation_seam,
     "routing_provenance": check_routing_provenance,
     "escalation_locks": check_escalation_locks,
-    "escalation_door": check_escalation_door,
+    "escalation_choke_point": check_escalation_choke_point,
     "free_tier_limit": check_free_tier_limit,
     "token_proxy_bound": check_token_proxy_bound,
 }

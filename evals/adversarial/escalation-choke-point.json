@@ -1,0 +1,13 @@
+{
+  "id": "escalation-choke-point",
+  "task": "repo_hygiene",
+  "suites": ["invariant", "fast"],
+  "input": {"checks": ["escalation_choke_point"]},
+  "expect": {},
+  "triage": {
+    "class": "cost-regression",
+    "note": "ADR-041, and the owner's decision on 2026-08-28: the demo's audience configures nothing, so the `X-Escalation-Token` door built one day earlier (TD-158, PR #61 R10) is REMOVED and the paid tier is open to every request. This case replaces `escalation-door` and deliberately pins a WEAKER perimeter than that one did, because a weaker perimeter is what was chosen — what it must not let slip is the ceiling behind it. With the header gone the process-wide `Budget` is the only thing between `POST /api/extract/url` on an arbitrary EDGAR Archives URL and a real bill, so the assertions concentrate there: exactly one `extract_items` entrance and it is inside `_run`; `escalate=` is the `ESCALATION_ENABLED` NAME so the operator's runaway stop is not defeated by a literal; `budget=` is conditioned on that SAME name, since escalating on one condition and billing against another is the ceiling bypassed in one token; the envelope publishes the decision and the page prints the server's own sentence. The ceiling itself is RUN, not read — `llm.Budget` must refuse on both its dollar and its call limit — while `SERVER_MAX_USD`'s fallback is read out of the tree because `app.py` imports fastapi and the eval environment has none, which is the same constraint every money pin in this repo has worked under.",
+    "note_negative_space": "It does not prove fastapi binds the routes (TD-38), that the operator set `SEC10K_ESCALATION_MAX_USD` LOW enough — that is judgement, not a property — or that the ceiling survives a restart. It does not: a redeploy refills the budget, which ADR-041 accepts as a recurring cost rather than a bound, and this case would stay green on a deployment that is redeployed hourly. It does not rate limit (`free-tier-limit`, D15/ADR-040 fronts every /api/extract/* path, escalating or not), and it says nothing about whether escalation should be open at all — that is ADR-041's ruling, not this check's."
+  },
+  "provenance": "Created 2026-08-28 with ADR-041, replacing evals/adversarial/escalation-door.json, per hard rule 2."
+}

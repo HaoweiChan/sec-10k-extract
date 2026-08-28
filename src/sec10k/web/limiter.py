@@ -1,7 +1,8 @@
 """A global request limit on the FREE deterministic tier (TD-162 / D15).
 
-The door (`gate.py`, TD-158) closed the PAID path and deliberately left
-extraction open — the product, free and unauthenticated. What that left
+The process `Budget` bounds the PAID path (ADR-041 left it as the only bound
+there) and deliberately leaves extraction open — the product, free and
+unauthenticated. What that left
 unbounded is everything the free path costs: measured 2026-08-28, one
 ~25 MB request is ~1.1 s CPU and ~138 MB peak RSS (`tasks/reviews/
 pr-d15-red.txt`), and `/api/extract/url` additionally spends an outbound
@@ -35,7 +36,7 @@ applied here).
 
 Stdlib only and no fastapi import, deliberately: `repo_hygiene`'s
 `free_tier_limit` check IMPORTS this module and exercises the decision
-path for real, the way `escalation_door` runs `gate.py`'s table instead of
+path for real, the way `escalation_choke_point` runs `llm.Budget` instead of
 reading its shape.
 
 Self-check: python3 -m src.sec10k.web.limiter

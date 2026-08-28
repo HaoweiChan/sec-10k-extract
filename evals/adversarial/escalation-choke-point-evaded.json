@@ -1,0 +1,15 @@
+{
+  "id": "escalation-choke-point-evaded",
+  "task": "repo_hygiene",
+  "suites": ["invariant", "fast"],
+  "input": {
+    "checks": ["escalation_choke_point"],
+    "file": "evals/fixtures/repo_hygiene/escalation-choke-point-evaded.py"
+  },
+  "expect": {"min_failures": 3, "max_failures": 3},
+  "triage": {
+    "class": "cost-regression",
+    "note": "The counterpart PR #21 R1/R2/R3 established, carried over from `escalation-door-open`: a check asserting the real file is clean passes vacuously the day it regresses, so a known-bad fixture proves the miss is caught, and an EXACT count rather than a floor so a check that also over-fires cannot report green (PR #21 round-2 R5). Three mutations, three failures, each aimed at what ADR-041 left as the only bound. (1) `escalate=True` at the call site — the operator's `SEC10K_ESCALATION_ENABLED` stop is defeated by a literal while `/api/meta` goes on publishing it as honoured; `budget=` is left correctly conditioned on `ESCALATION_ENABLED` so this trips the off-switch assertion alone and the count stays exact. (2) a fourth `/api/extract/paste` endpoint calling `extract_items` directly: PR #61 R13's shape exactly, a second path a once-written guard does not dominate, and with no header left to present it is now simply an UNBUDGETED entrance. (3) `view['escalation']` never set, so the envelope goes quiet about a decision it took. The behavioural half (the `llm.Budget` battery and the `SERVER_MAX_USD` fallback read) is scoped off when `input.file` substitutes app.py, for the bound `escalation_locks`' window already learned: a fixture with no say over another module must not be charged for it."
+  },
+  "provenance": "Created 2026-08-28 with ADR-041, replacing evals/adversarial/escalation-door-open.json, per hard rule 2."
+}

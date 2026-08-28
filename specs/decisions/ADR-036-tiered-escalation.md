@@ -1,7 +1,10 @@
 # ADR-036 — D11: the model tier ships, but only behind the D8 document-level trigger, and it is never trusted without a deterministic re-check
 
 Date: 2026-08-26. Status: accepted, **with one part of its acceptance criteria
-UNRUN and said so in §k**. **AMENDED 2026-08-27 in the PR #58 round-1 repair**:
+UNRUN and said so in §k**. **§h2 lock 4 (the `X-Escalation-Token` door) is
+SUPERSEDED 2026-08-28 by [ADR-041](ADR-041-escalation-open-by-default.md)**:
+the paid tier is open to every request and the process `Budget` is the only
+money bound; locks 1–3 stand. **AMENDED 2026-08-27 in the PR #58 round-1 repair**:
 the provider swapped from the Anthropic Messages API to OpenRouter on owner
 instruction (§h1, and every dollar figure in §d is recomputed on OpenRouter's
 published pricing); the deployed inspector gained three independent locks before
@@ -698,7 +701,20 @@ for a new-transport request.
 > collapsing filing on EDGAR was a paid call for an anonymous caller. Four
 > places said an upload was the only route and all four were false.
 >
-> **LOCK 4 — THE DOOR (owner decision, 2026-08-28: "close it at the door").**
+> **LOCK 4 — THE DOOR — WITHDRAWN 2026-08-28 by
+> [ADR-041](ADR-041-escalation-open-by-default.md), the day it shipped.** The
+> door was closed to every human who would actually open the deployment:
+> `index.html`'s four `fetch()` calls never sent `X-Escalation-Token` and no
+> field collected one, so the only interface the service advertises could not
+> reach the paid tier for anyone, the owner included. ADR-041 deletes
+> `gate.py`, the variable and the header, ACCEPTS R10's exposure as the price
+> of a demo an interviewer can open, and leaves the process `Budget` as the
+> only money bound. **The rest of this block is what lock 4 said while it
+> stood, kept because a withdrawn decision with a stated reason is worth more
+> than a deleted one — read it as history, not as current behaviour.**
+>
+> ~~**LOCK 4 — THE DOOR (owner decision, 2026-08-28: "close it at the
+> door").**~~
 > `src/sec10k/web/gate.py::paid_path_open` is consulted ONCE, in `_run`, which
 > is the single point fixture, upload and URL converge on and the only caller
 > of `extract_items` in the web layer. Escalation runs only for a request
@@ -711,10 +727,12 @@ for a new-transport request.
 > routes, and when the door does not open the envelope publishes
 > `escalation.reason` and the page prints it, rather than going quiet.
 >
-> Bound by `evals/adversarial/escalation-door.json`, which IMPORTS `gate.py`
-> and runs the decision table rather than reading its shape — `gate.py` is
-> stdlib-only for exactly that reason — plus
-> `evals/adversarial/escalation-door-open.json` for the miss. The choke point
+> Bound (while it stood) by `evals/adversarial/escalation-door.json`, which
+> IMPORTED `gate.py` and ran the decision table rather than reading its shape —
+> `gate.py` was stdlib-only for exactly that reason — plus
+> `evals/adversarial/escalation-door-open.json` for the miss. **Both cases are
+> replaced by `escalation-choke-point.json` / `-evaded.json` under ADR-041**,
+> which keep every assertion below and drop only the header table. The choke point
 > is pinned as a property, not a line: exactly one `extract_items` entrance,
 > inside `_run`, escalating and billing on the SAME name. PR #61 R13 is why —
 > a guard counted as one literal in one function is a guard the next endpoint
