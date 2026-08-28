@@ -92,6 +92,18 @@ one-sentence explanation; a wrong key stays disabled; a valid key shows
 `✓ Enabled`, is remembered, and is the only key sent by extraction; editing the
 field clears verification; invariant and fast gates pass at 100%.
 
+### D20 — Recognize resolved cross-reference content [status: pr]
+Origin: owner decision, 2026-08-29
+Spec: A filing with a reliable cross-reference-index resolution has successful
+alternative content even when its primary index-row spans keep
+`low_item_coverage`; preserve the warning, coverage, INV-S1 spans, and paid
+escalation suppression while reporting `success_with_warning`.
+Acceptance: Intel cross-reference case observed red before the code change;
+the case, invariant, and fast gates pass at 100%; one cold review is recorded.
+Status: PR evidence — red-first `tasks/reviews/d20-red-first.txt`; targeted
+Intel case PASS; invariant 90/90; fast 160/160; cold review recorded in
+`tasks/reviews/d20-cold-review.txt`.
+
 ## Debt
 
 Each block is a decision not to build something, not a forgotten task. Every

@@ -420,13 +420,17 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
     if blks is not None:
         _promote_item_headings(blks, tabs, items)
 
-    # doc_status ladder (contract v2, fixed order). Only the four validators
-    # named in AMBIGUOUS_CODES may reach `ambiguous`; the rest warn and move
-    # confidence, per the taxonomy's warn-don't-hard-fail policy. Decided
-    # BEFORE scoring: an `ambiguous` verdict caps every item (ADR-027 §a) —
-    # before that, no document-level warning ever reached an item's number.
+    # doc_status ladder (contract v2, fixed order). Only validators in
+    # AMBIGUOUS_CODES may reach `ambiguous`, except ADR-045's resolved
+    # cross-reference alternative content qualifies low coverage alone. The
+    # warning remains published; the other ambiguity codes still escalate.
+    # Decided BEFORE scoring: an `ambiguous` verdict caps every item
+    # (ADR-027 §a) before a document-level warning reaches an item's number.
     extracted = [i for i in items if i["status"] == "extracted"]
-    ambiguous = not extracted or any(w["code"] in AMBIGUOUS_CODES for w in warnings)
+    codes = {w["code"] for w in warnings}
+    if "cross_reference_index" in codes:
+        codes.discard("low_item_coverage")
+    ambiguous = not extracted or bool(codes & set(AMBIGUOUS_CODES))
     for i in items:
         i["confidence"], i["evidence"] = score(i, warnings, doc_ambiguous=ambiguous)
         # ADR-035 §e: the consumer-facing half. A validator that fires on an
