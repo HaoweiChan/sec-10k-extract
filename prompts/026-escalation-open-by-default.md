@@ -81,3 +81,16 @@ because it is the only thing left holding the money.
 - Corrected: the text pin and its known-bad fixture were updated to the new
   call shape, and the comment above the pin now records that the door came and
   went rather than describing a `gate.py` that no longer exists.
+
+- Assumed: a 10-character secret needed the operator warned to GENERATE rather
+  than invent it, and the ADR said so.
+- Eval said: nothing — the owner did. "密碼要給對方的 我會用好記字元 這沒得商量."
+  The secret is handed to another person, read out or typed off a phone during
+  an interview, so memorability is a REQUIREMENT and a random string is the
+  design that fails. The brute-force arithmetic was real but aimed at a threat
+  model nobody occupies: the prize for guessing is permission to spend $10 of
+  someone else's money on 10-K extraction.
+- Corrected: ADR-042 §e and `gate.py`'s comment now say the floor's job is the
+  ACCIDENT and not the adversary, and that `SERVER_MAX_USD` is what bounds the
+  money. The advice to generate is gone rather than softened — it was wrong for
+  this deployment, not merely unwelcome.

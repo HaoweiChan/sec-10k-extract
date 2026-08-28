@@ -96,32 +96,38 @@ browser history and referrer headers — the reason the owner chose a field over
 a link in the first place — and route 1 already covers every case where the
 caller is not a browser.
 
-## e) The secret floor, lowered 16 -> 10, with the arithmetic
+## e) The secret floor, lowered 16 -> 10, and why the secret is memorable
 
-The owner intends to configure a 10-character secret. At `MIN_TOKEN_CHARS = 16`
-that would have been treated as ABSENT — door closed to everyone, field hidden,
-and the only clue a line in the envelope. So the floor moved. It is a real
-weakening and is recorded as one:
+`MIN_TOKEN_CHARS` was 16 — the length `secrets.token_urlsafe(12)` happens to
+produce, a convention rather than a derived bound. At that floor a 10-character
+secret would have been treated as ABSENT: door closed to everyone, field
+hidden, and the only clue a line in the envelope. Silently doing nothing is the
+worst of the available behaviours, so the floor moved to 10.
 
-- The only thing rate-limiting a guesser is ADR-040's global 30/min bucket
-  (shared with the free tier), so **~43,200 attempts per day**.
-- A successful guess buys at most `SERVER_MAX_USD` ($10) before the process
-  budget refuses, and a redeploy is what refills it.
-- **10 random URL-safe characters** is 64^10 ≈ 1.15 × 10^18 — untouchable at
-  43,200/day by a factor of ~10^13 years.
-- **10 memorable characters** are not. A secret inside a common-password list
-  of ~10^6 falls in under a month at that rate.
+**The secret is deliberately memorable, and that is a requirement, not a
+concession.** The owner's decision, and the reason is the thing an
+availability-first reading of this ADR keeps missing: this key is handed to
+*another person*. It gets read out on a call, pasted from an email, or typed
+off a phone screen during an interview. A 43-character random string is the
+design that fails — the viewer mistypes it, or gives up, and the paid tier is
+closed to the only person it was opened for. That is the same failure ADR-041
+had to delete a whole door over, arriving by a different route.
 
-So the floor still does its actual job — refusing `"x"` or `"test"` — and the
-residual risk is entirely in whether the operator GENERATES the secret or
-INVENTS it. `python3 -c "import secrets; print(secrets.token_urlsafe(8)[:10])"`
-is the supported way. Below ~8 characters the day-rate starts to matter for any
-alphabet, and `gate.py`'s comment says not to lower it again without redoing
-this arithmetic.
+**What actually bounds the money is `SERVER_MAX_USD`, not this constant.** A
+guesser's prize is permission to spend at most $10 of someone else's money on
+10-K extraction before the process budget refuses. Nobody brute-forces for
+that. The threat this key is built against is the casual passer-by and the
+crawler that found the URL — and a memorable password stops both completely,
+because neither is guessing at all.
+
+So the floor's job is the ACCIDENT (`"x"`, `"test"`, an empty string that got
+through a config UI), not the adversary. It is not a strength policy and does
+not pretend to be one. Below ~8 characters the accident case starts to overlap
+the guess case, which is where it would stop doing even that job.
 
 What did NOT change: unset is still CLOSED, a secret under the floor is still
-refused in the same words an absent one is, and the refusal still never quotes
-the secret.
+refused in the same words an absent one is, and no refusal ever quotes the
+secret.
 
 ## f) The ledger
 

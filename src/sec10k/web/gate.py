@@ -46,14 +46,19 @@ HEADER = "x-escalation-token"
 TOKEN_VAR = "SEC10K_ESCALATION_TOKEN"
 # A floor on the secret, not a policy about its shape: it exists so a secret
 # configured BY ACCIDENT ("x", "test") is refused in the same words an absent
-# one is. Lowered 16 -> 10 on 2026-08-28 at the owner's request (ADR-042 §f),
-# which is a real weakening and is bounded rather than waved through: the only
-# thing rate-limiting a guesser is ADR-040's global 30/min bucket, so ~43,200
-# attempts a day, and a successful guess buys at most SERVER_MAX_USD before the
-# process budget refuses. 10 RANDOM characters is ~10^18 and untouchable at
-# that rate; 10 memorable ones are not, which is why the operator is told to
-# generate rather than invent. Do not lower this again without redoing that
-# arithmetic — below ~8 the day-rate starts to matter for any alphabet.
+# one is. Lowered 16 -> 10 on 2026-08-28 (ADR-042 §e).
+#
+# The secret is MEANT to be memorable, and that is a requirement rather than a
+# concession: it is read out loud or typed from a phone by the person the demo
+# is for, so a 43-character random string is the design that fails. What bounds
+# the money is not this constant — it is SERVER_MAX_USD. A guesser's prize is
+# permission to spend at most $10 of someone else's money on 10-K extraction
+# before the process budget refuses, which is not a prize anyone brute-forces
+# for. This floor's whole job is the accident, not the adversary.
+#
+# Do not lower it further without saying why here: below ~8 characters the
+# accident case starts to overlap the guess case, which is where it stops doing
+# even that job.
 MIN_TOKEN_CHARS = 10
 
 
