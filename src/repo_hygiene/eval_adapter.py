@@ -3645,7 +3645,7 @@ def check_escalation_choke_point(case):
         # three separate evasions that each satisfied a shape and broke the
         # property; a table that is EXECUTED cannot be satisfied that way.
         gate = importlib.import_module(inp.get("gate_module", GATE_MODULE))
-        floor = inp.get("min_token_chars", 16)
+        floor = inp.get("min_token_chars", 10)
         if gate.MIN_TOKEN_CHARS < floor:
             bad.append(f"gate.MIN_TOKEN_CHARS is {gate.MIN_TOKEN_CHARS}, under "
                        f"{floor} — a secret short enough to guess is a door "

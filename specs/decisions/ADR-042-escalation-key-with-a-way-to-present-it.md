@@ -7,7 +7,7 @@ freeze exception: this is a deployment control, not an extraction capability —
 `extract_items` is untouched, its `escalate=False` default is unchanged, and no
 fixture's output moves.
 
-**Ruling**: `src/sec10k/web/gate.py` is restored unchanged and the paid model tier again runs only for a request presenting a valid `X-Escalation-Token` — with no `SEC10K_ESCALATION_TOKEN` on the host, or one under `MIN_TOKEN_CHARS` (16), it runs for NOBODY, so unset stays CLOSED rather than open. What is NEW, and is the whole reason this ADR is not just a revert: the page can now present it. `index.html` carries a `#esc-key` password field, revealed only where `/api/meta` reports `escalation_token_required`, remembered in `localStorage` so it is typed once, and injected as the header inside `call(url, opts)` — the ONE helper all three extract modes funnel through, mirroring `_run` on the server, so a mode cannot forget it the way the whole page forgot it before. Deterministic extraction stays open, free and unauthenticated on all three routes, and the envelope publishes `escalation.reason` either way.
+**Ruling**: `src/sec10k/web/gate.py` is restored unchanged and the paid model tier again runs only for a request presenting a valid `X-Escalation-Token` — with no `SEC10K_ESCALATION_TOKEN` on the host, or one under `MIN_TOKEN_CHARS` (10 since §f), it runs for NOBODY, so unset stays CLOSED rather than open. What is NEW, and is the whole reason this ADR is not just a revert: the page can now present it. `index.html` carries a `#esc-key` password field, revealed only where `/api/meta` reports `escalation_token_required`, remembered in `localStorage` so it is typed once, and injected as the header inside `call(url, opts)` — the ONE helper all three extract modes funnel through, mirroring `_run` on the server, so a mode cannot forget it the way the whole page forgot it before. Deterministic extraction stays open, free and unauthenticated on all three routes, and the envelope publishes `escalation.reason` either way.
 **Because**: ADR-041 removed the door for a real defect — it was shut to every human visitor including the owner — but the defect was the MISSING CLIENT HALF, not the door. Owner, 2026-08-28: "確實會怕非面試官去打我的網站浪費我的錢 我覺得要設個密碼." Deleting the door left the paid tier open to `POST /api/extract/url` on any EDGAR Archives URL for anyone on the internet, bounded only by a process `Budget` that every redeploy refills; a key the interviewer pastes once restores the bound without restoring the outage. The field is chosen over a `?k=` link (owner's call) so the secret never enters a URL, browser history, or a referrer header.
 **Enforced by**: `evals/adversarial/escalation-choke-point.json` + `escalation-choke-point-evaded.json` (both `fast`+`invariant`), which now carry BOTH halves — the door's decision table RUN out of `gate.py` (unset, short secret, absent/empty/wrong header, disarmed deployment, and the one row that opens, plus the five production-shaped rows that pass no `token=`), the `llm.Budget` battery ADR-041 added, the single-entrance and escalate/budget-same-name choke point, AND the new `SENDS_TOKEN_UI` pins with `_fn_body`: the page must have the field, must name the header, and must inject it INSIDE `call()` rather than at one of the three call sites. Red-first observed: before the code changed the case failed on five assertions, two of them the exact absence that killed the last door.
 
@@ -96,7 +96,34 @@ browser history and referrer headers — the reason the owner chose a field over
 a link in the first place — and route 1 already covers every case where the
 caller is not a browser.
 
-## e) The ledger
+## e) The secret floor, lowered 16 -> 10, with the arithmetic
+
+The owner intends to configure a 10-character secret. At `MIN_TOKEN_CHARS = 16`
+that would have been treated as ABSENT — door closed to everyone, field hidden,
+and the only clue a line in the envelope. So the floor moved. It is a real
+weakening and is recorded as one:
+
+- The only thing rate-limiting a guesser is ADR-040's global 30/min bucket
+  (shared with the free tier), so **~43,200 attempts per day**.
+- A successful guess buys at most `SERVER_MAX_USD` ($10) before the process
+  budget refuses, and a redeploy is what refills it.
+- **10 random URL-safe characters** is 64^10 ≈ 1.15 × 10^18 — untouchable at
+  43,200/day by a factor of ~10^13 years.
+- **10 memorable characters** are not. A secret inside a common-password list
+  of ~10^6 falls in under a month at that rate.
+
+So the floor still does its actual job — refusing `"x"` or `"test"` — and the
+residual risk is entirely in whether the operator GENERATES the secret or
+INVENTS it. `python3 -c "import secrets; print(secrets.token_urlsafe(8)[:10])"`
+is the supported way. Below ~8 characters the day-rate starts to matter for any
+alphabet, and `gate.py`'s comment says not to lower it again without redoing
+this arithmetic.
+
+What did NOT change: unset is still CLOSED, a secret under the floor is still
+refused in the same words an absent one is, and the refusal still never quotes
+the secret.
+
+## f) The ledger
 
 TD-158 returns to `superseded` pointing here rather than at ADR-041 — the
 original finding stands, and this is its second and better fix.

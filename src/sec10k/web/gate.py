@@ -44,9 +44,17 @@ import os
 # Starlette's case-insensitive header mapping is keyed and how curl sends it.
 HEADER = "x-escalation-token"
 TOKEN_VAR = "SEC10K_ESCALATION_TOKEN"
-# A floor on the secret, not a policy about its shape. 16 characters is what
-# `secrets.token_urlsafe(12)` produces; anything shorter is treated as absent.
-MIN_TOKEN_CHARS = 16
+# A floor on the secret, not a policy about its shape: it exists so a secret
+# configured BY ACCIDENT ("x", "test") is refused in the same words an absent
+# one is. Lowered 16 -> 10 on 2026-08-28 at the owner's request (ADR-042 §f),
+# which is a real weakening and is bounded rather than waved through: the only
+# thing rate-limiting a guesser is ADR-040's global 30/min bucket, so ~43,200
+# attempts a day, and a successful guess buys at most SERVER_MAX_USD before the
+# process budget refuses. 10 RANDOM characters is ~10^18 and untouchable at
+# that rate; 10 memorable ones are not, which is why the operator is told to
+# generate rather than invent. Do not lower this again without redoing that
+# arithmetic — below ~8 the day-rate starts to matter for any alphabet.
+MIN_TOKEN_CHARS = 10
 
 
 def configured_token():
@@ -118,7 +126,7 @@ def _demo():
         assert ok is False and len(why) > 40 and good not in why, why
     # HEADER is what app.py reads off the request; keep it lower-case so the
     # ASGI header mapping and a hand-written curl agree
-    assert HEADER == HEADER.lower() and MIN_TOKEN_CHARS >= 16
+    assert HEADER == HEADER.lower() and MIN_TOKEN_CHARS >= 10
 
     # PR #61 R18. Everything above passes `token=`, and NOTHING in production
     # does — `app.py` calls `paid_path_open(header, ESCALATION_ENABLED)`, so
