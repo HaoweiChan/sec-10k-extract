@@ -1,0 +1,17 @@
+{
+  "id": "bridgecrest-2025-abs-trust",
+  "task": "sec10k",
+  "suites": ["fast", "all"],
+  "input": {"path": "evals/fixtures/bridgecrest-2025/filing.htm"},
+  "expect": {
+    "checks": [
+      {"type": "doc_status", "value": "unsupported"},
+      {"type": "warning_present", "code": "abs_general_instruction_j"},
+      {"type": "item_absent", "item": "7"},
+      {"type": "item_absent", "item": "8"},
+      {"type": "item_absent", "item": "15"}
+    ]
+  },
+  "triage": {"class": "wrong-taxonomy-document", "note": "Bridgecrest Lending Auto Securitization Trust 2024-1, FY2024. Legally a 10-K; substantively an asset-backed issuer's annual report under General Instruction J to Form 10-K, whose substance is Items 1112(b)/1114(b)(2)/1117/1119/1122/1123 of Regulation AB, NOT Items 1-16 of Regulation S-K. The document says so twice, in its own words: 'The following items have been omitted in accordance with General Instruction J to Form 10-K' and 'Substitute information provided in accordance with General Instruction J to Form 10-K'. BEFORE THE FIX the pipeline returned doc_status=success_with_warning with 18 of 23 items `extracted`, most at confidence 0.95 -- including an 'Item 7 Management's Discussion and Analysis' of 96 chars at 0.80 and an 'Item 8 Financial Statements' of 54 chars at 0.80. That is precisely the failure the contract's refusal statuses exist to prevent: a plausible-looking item set over a document whose taxonomy we do not model. The five items it reported `missing` (1, 1A, 1C, 2, 3) are exactly the five the filing lists as omitted under Instruction J, so even the `missing` calls were wrong in kind -- the filing is not silent about them, it declares them inapplicable. Correct behaviour is the refusal the README already promises: 'unsupported and failed mean the pipeline refused; it never emits a best-effort parse of a document it could not identify.'"},
+  "provenance": "Authored 2026-08-28 from GPT's curated hard-filing list (negative case, rank 8), against https://www.sec.gov/Archives/edgar/data/1974820/000110465925029334/tm2510195d1_10k.htm (accession 0001104659-25-029334, primary document tm2510195d1_10k.htm, 53,755 bytes). Predicted `unsupported` in tasks/reviews/hard-batch-frozen-predictions.md BEFORE the filing was run; the run returned success_with_warning, so the prediction is the finding. Watched red before the fix."
+}

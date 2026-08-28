@@ -430,6 +430,21 @@ EXEC_OFFICERS_RE = re.compile(
     r"(?im)^[ \t]*executive officers of (the )?(registrant|company)\b(?!\.)")
 
 
+# trap 10: a trailing ANNEX the filing typesets AFTER its final item. Simon
+# Property FY2024 and MetLife FY2024 both close with `Item 16. Form 10-K
+# Summary` whose entire body is the word "None." and then print the exhibit
+# index (SPG, 23,401 chars) or the glossary and exhibit index (MetLife,
+# 38,153) before the signature block — so the last item's span, which runs to
+# TAIL_RE, swallows the annex and the envelope attributes 23-38 KB of exhibit
+# list to an item that says "None.", at 0.95, with no warning. It is the exact
+# mirror of `item_span_near_empty`, which can only see a span that is too
+# SMALL. Clipped on the LAST item only, and never when that item is 15, whose
+# subject matter the exhibit index IS. Where the annex then belongs is left to
+# `unattributed_content` to report rather than guessed at.
+ANNEX_RE = re.compile(r"(?im)^[ \t]*(exhibit index|index to exhibits|"
+                      r"index of exhibits|glossary)[ \t]*$")
+
+
 def assign_boundaries(survivors, expected, text):
     """Greedy ordered assignment: earliest surviving candidate after the last
     accepted boundary wins, so duplicates and disorder resolve by construction."""
@@ -448,6 +463,10 @@ def assign_boundaries(survivors, expected, text):
             eo = EXEC_OFFICERS_RE.search(text, c["heading_end"], c["end"])
             if eo:
                 c["end"] = eo.start()
+    if picks and picks[-1]["item"] != "15":  # trap 10
+        annex = ANNEX_RE.search(text, picks[-1]["heading_end"], picks[-1]["end"])
+        if annex:
+            picks[-1]["end"] = min(picks[-1]["end"], annex.start())
     if picks:  # last item stops at the signature block, not at end-of-file
         tail = TAIL_RE.search(text, picks[-1]["heading_end"])
         if tail:
@@ -616,6 +635,52 @@ MARKER_TAIL_RE = re.compile(r"(\*+)\s*$")
 FOOTNOTE_RE = re.compile(r"(?m)^[ \t]*(\*+)[ \t]*(?=\S)")
 ITEM_LIST_RE = re.compile(r"(?i)\bitems?\s+((?:\d{1,2}[A-D]?\b[\s,]*(?:and\s+)?)+)")
 PARA_END_RE = re.compile(r"\n[ \t]*\n")
+
+
+# ADR-042 §c: a Part addressed COLLECTIVELY, with no per-item heading at all.
+# Berkshire Hathaway FY2024's whole of Part III is one sentence — "information
+# required by this Part (Items 10, 11, 12, 13 and 14) is incorporated by
+# reference to the definitive proxy statement" — so all five items reported
+# `missing`, an honest miss but the wrong diagnosis in kind: the filing is not
+# silent about them, it says where they are and that it is another document.
+# Requires THREE codes, not two, because two-code phrases ("see Items 7 and 8
+# of this report") are ordinary internal navigation and appear in filings that
+# also carry the real headings; and requires both the IBR phrasing and an
+# external-document name, so an internal pointer cannot reach this path
+# (ADR-004 shape 1 only).
+COLLECTIVE_CODES_RE = re.compile(r"(?i)\bitems?\s+(\d{1,2}[A-D]?"
+                                 r"(?:\s*,?\s*(?:and\s+)?\d{1,2}[A-D]?){2,})\b")
+CODE_RE = re.compile(r"\d{1,2}[A-D]?")
+
+
+def collective_pointer(text, unassigned):
+    """`{item code: (start, end)}` — the pointer SENTENCE for each item of
+    `unassigned` a collective Part-level IBR names.
+
+    The span is the sentence, and it is the same span for every code it names,
+    so it is published under `evidence.collective_reference` and NOT as the
+    items' own offsets: INV-S1 forbids five items sharing one range, exactly
+    as ADR-031 found for the footnote case.
+    """
+    out = {}
+    for m in COLLECTIVE_CODES_RE.finditer(text):
+        codes = [c.upper() for c in CODE_RE.findall(m.group(1))]
+        if len(set(codes) & set(unassigned)) < 3:
+            continue
+        # the sentence around the match: back to the previous stop, forward to
+        # the next one. `_sentences` splits a flattened body; this reads the
+        # raw text, so it does its own bounded scan.
+        lo = max(text.rfind(". ", 0, m.start()), text.rfind("\n\n", 0, m.start()))
+        lo = lo + 2 if lo != -1 else max(0, m.start() - 400)
+        hi = text.find(". ", m.end())
+        hi = hi + 1 if hi != -1 else min(len(text), m.end() + 400)
+        sent = text[lo:hi]
+        if not (IBR_RE.search(sent) and EXTERNAL_DOC_RE.search(sent)):
+            continue
+        for c in codes:
+            if c in unassigned:
+                out.setdefault(c, (lo, hi))
+    return out
 
 
 def footnote_pointer(code, heading_text, body, text):

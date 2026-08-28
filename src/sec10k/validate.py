@@ -282,10 +282,23 @@ def validate(text, items, accepted, manifest):
     # produced the offset — a hand copy of it drifted ("Item 9 A." matched
     # upstream, not here) and the only live path was a false positive
     # (gates-2026-08-22 T5-3; `spaced-letter-heading`).
+    # ADR-042 §d: a span the cross-reference resolver produced was cut by
+    # `xref.ENTRY_RE`, so THAT is the regex this assertion must read it back
+    # with. Citi FY2025 writes its index rows as `1. Business`, never as
+    # `Item 1.`, so HEADING_RE calls 11 correct spans broken — which is the
+    # hand-copy failure mode the comment above already warns about, arriving
+    # from the other direction.
+    from src.sec10k.xref import ENTRY_RE as XREF_ENTRY_RE
+    produced_by = {i["item"]: i.get("method") for i in items}
     for code, (s, e) in hygiene_spans.items():
         head = text[s:s + 60].split("\n")[0]
-        m = HEADING_RE.match(head)
-        if not m or m.group(1) + (m.group(2) or "").upper() != code:
+        if produced_by.get(code) == "cross_reference_index":
+            m = XREF_ENTRY_RE.match(head + "\n")
+            ok = bool(m) and m.group(1).upper() == code
+        else:
+            m = HEADING_RE.match(head)
+            ok = bool(m) and m.group(1) + (m.group(2) or "").upper() == code
+        if not ok:
             warn("boundary_hygiene", f"item {code} span does not start with its heading",
                  item=code)
 

@@ -42,8 +42,11 @@ def list_fixtures(root: Path = FIXTURES):
 # escalates by default — so offering them makes the dropdown a paid button, and
 # `?fixture=<name>&run=1` makes it a paid PAGE LOAD, with no click and no
 # upload. Measured, not assumed: `tasks/reviews/d11_trigger_scan.py --rates`
-# reports `low_item_coverage fires 2/44 -> ['intc-2025', 'xref-index-collapse']`
-# (coverage 0.0033 and 0.0303).
+# reported `low_item_coverage fires 2/47 -> ['intc-2025', 'xref-index-collapse']`
+# (coverage 0.0033 and 0.0303) — but the set here is now the fixtures that fire
+# the ROUTER'S SENSOR, which is one name shorter: ADR-042 §e suppresses the
+# trigger on a filing whose trailing cross-reference index resolved, so
+# `intc-2025` publishes the warning, costs $0, and is back in the dropdown.
 #
 # This is a WEB restriction only. Both are eval fixtures and stay eval
 # fixtures: `list_fixtures` and `iter_fixtures` still see them, so the oracle,
@@ -58,7 +61,8 @@ def list_fixtures(root: Path = FIXTURES):
 # fixture through `extract_items` and asserts this set EQUALS the set that
 # fires `low_item_coverage`, in both directions — so adding a collapsing
 # fixture and forgetting this list reds the `fast` suite instead of silently
-# re-opening the hole. It is in `fast` and not `invariant` because the sweep
+# re-opening the hole. That sweep reads `escalate.trigger` rather than the raw
+# warning code, for the reason above (ADR-042 §e). It is in `fast` and not `invariant` because the sweep
 # costs ~4.6s and the PostToolUse hook runs `invariant` on every edit.
 # ponytail: nothing derives this at RUNTIME, so the listing path stays pure
 # stdlib and takes no dependency on the extractor. Surviving residue: a tree
@@ -66,7 +70,7 @@ def list_fixtures(root: Path = FIXTURES):
 # Acceptable since TD-158's door, which makes this the second layer rather
 # than the brake; the upgrade path if that ever changes is an import-time
 # derivation, at the cost of a full sweep per process start.
-DEPLOY_EXCLUDED = frozenset({"intc-2025", "xref-index-collapse"})
+DEPLOY_EXCLUDED = frozenset({"xref-index-collapse"})
 
 
 def deployed_fixtures(root: Path = FIXTURES):

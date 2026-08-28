@@ -152,7 +152,7 @@ Full rationale in `specs/decisions/` (18 ADRs). The ones that shaped the system:
   No model is in the DEFAULT extraction path of the LIBRARY, and cost on that
   path is structurally $0 — not "cheap", zero. ADR-036 adds a slow path
   (`extract_items(path, escalate=True)`, via OpenRouter) that is entered only when D8's
-  document-level `low_item_coverage` fires — measured on **1 of 29 real dev
+  document-level `low_item_coverage` fires — measured on **2 of 34 real dev
   filings**, the collapsed `intc-2025` — and whose answers are discarded unless
   a deterministic re-check accepts their offsets. With no API credential it
   refuses loudly rather than degrading.
@@ -233,6 +233,12 @@ Verified by committed cases; run `python3 -m evals.run --suite all` to reproduce
 | Table-of-contents traps | `toc-titled` (synthetic hard form) | TOC suppressed, body headings win |
 | Non-10-K input | Apple Q1 FY2026 10-Q | **refused** as `unsupported`, zero items |
 | Truncated download | 0 normalized chars | **refused** as `failed`, with the right diagnosis (ADR-010) |
+| Dual registrant, one filing | Simon Property FY2024 (SPG Inc. + SPG L.P., 11.2 MB) | `success`, 92.2% coverage, all 23 items, 0.4 s — the duplicate cover and two sets of financial statements are handled without a rule for them |
+| Insurance / bank megafilings | MetLife FY2024 (13.8 MB), Bank of America FY2024 (12.9 MB) | `success`, 98.7% / 98.8% coverage, 0.6 s each, no warnings |
+| Letter-spaced headings | Berkshire FY2024 (`Par t I`, `Busines s`) | `success`, 97.6% — normalization absorbs the visual splitting; the real defect on this filing was Part III (ADR-042 §c) |
+| A Part addressed by ONE collective pointer | Berkshire FY2024 Part III: one sentence names items 10-14 and no per-item heading exists | items 10-14 `incorporated_by_reference` with **null** offsets and the sentence at `evidence.collective_reference` (ADR-042 §c) |
+| Items answered through a cross-reference index | Intel FY2024 (index at the tail), Citigroup FY2025 (index at the FRONT, rows written `1. Business 4-36` with neither "Item" nor "Page") | the index's page references resolve against the filing's own pagination to 736 KB / 1.9 MB of content at `evidence.cross_reference`, at **$0.00** (ADR-042 §a) |
+| Asset-backed issuer report | Bridgecrest Auto Securitization Trust 2024-1 — legally a 10-K, substantively Regulation AB | **refused** as `unsupported`; it was returning 18 `extracted` items including a 96-char "Item 7 MD&A" (ADR-042 §b) |
 | Large filings | JPM FY2024, 12.25 MiB | **0.58 s** (median of 3, `evals/report/20260823-185707-bench.json`; 0.72 s with `tables=True`), and it flags its own boundary problem |
 
 ## What is difficult, unreliable, or unsupported
@@ -242,6 +248,7 @@ Every row is backed by a committed case or run — nothing here is speculative.
 | Limitation | Concrete case | Status |
 |---|---|---|
 | Legally-permitted omissions are reported as `missing` | Exxon FY2021 drops Item 6, allowed since a 2021 rule change, but the extractor can't tell that apart from a real gap | Known, unfixed — honest but imprecise |
+| A cross-reference index's spans are the index's own rows, not the content | Intel FY2024 coverage 0.0033, Citigroup FY2025 coverage 0.0006 | `doc_status` stays **`ambiguous`** and `low_item_coverage` stays fired, deliberately. The content is addressable through `evidence.cross_reference`, but the page ranges OVERLAP and NEST (Intel item 3 is pages 102-105, inside item 8's 56-108), so INV-S1 forbids them being spans — ADR-042 §a rules this impossible rather than unbuilt |
 | An appendix placed after the last item inflates that item's span | JPM FY2024: the financial appendix sits after the last item's exhibit index, so that item's span swallows 83% of the document | A validator catches it and flags the filing `ambiguous` — loud, but the boundary is still wrong |
 | One validation rule can never actually fire on a real filing | Spans are built from their own heading text by construction, so the check it would catch can't occur | Proven correct in code instead of by example |
 | A handful of validation checks were recently proven able to fail, but not yet tuned | 3 of 4 checks once thought unfailable can now go red on hand-built test cases | The logic is proven; per-case sensitivity tuning is still open |

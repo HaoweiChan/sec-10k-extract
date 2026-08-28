@@ -81,6 +81,30 @@ def build_view(result, display_max=DISPLAY_MAX):
             body = stripped
             truncated = len(body) > display_max
             body = body[:display_max]
+        # ADR-042 §f: the two evidence shapes whose CONTENT is not in the
+        # item's own span. `text` stays the verbatim slice — the anchor oracle
+        # above depends on that and PR #27 R1 is the record of what happens
+        # when it doesn't — so the resolved regions are appended to the RENDER
+        # string only, which is exactly what `display_text` is for. Without
+        # this the inspector shows Intel FY2024's item 7 as a 226-char index
+        # entry and the 119,881 chars it points at are reachable only by
+        # reading the evidence offsets by hand.
+        ev = i.get("evidence") or {}
+        elsewhere = [(f"pages {r['pages']}", r["start"], r["end"])
+                     for r in ev.get("cross_reference") or []]
+        if ev.get("collective_reference"):
+            cr = ev["collective_reference"]
+            elsewhere.append(("the pointer this Part states once, for every "
+                              "item it names", cr["start"], cr["end"]))
+        if elsewhere:
+            out = [body] if body else []
+            for label, a, b in elsewhere:
+                out.append(f"\n\n———— {label} · chars {a:,}–{b:,} ————\n\n"
+                           + text[a:b])
+            joined = "".join(out)
+            truncated = len(joined) > display_max
+            body = joined[:display_max]
+
         item = {
             "item": i.get("item"), "part": i.get("part"), "title": i.get("title"),
             "status": i.get("status"), "confidence": i.get("confidence"),
@@ -93,6 +117,10 @@ def build_view(result, display_max=DISPLAY_MAX):
         }
         if body != raw[:display_max]:
             item["display_text"] = body
+        if elsewhere:
+            # so the pane can say WHY the text it shows is longer than `chars`
+            item["elsewhere"] = [{"label": l, "start": a, "end": b}
+                                 for l, a, b in elsewhere]
         items.append(item)
     return {
         "doc_status": result.get("doc_status"),

@@ -1,0 +1,22 @@
+{
+  "id": "brka-2025-part-iii-collective",
+  "task": "sec10k",
+  "suites": ["fast", "all"],
+  "input": {"path": "evals/fixtures/brka-2025/filing.htm"},
+  "expect": {
+    "checks": [
+      {"type": "no_empty_success"},
+      {"type": "no_overlap_ordered"},
+      {"type": "verbatim"},
+      {"type": "item_present", "item": "10", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "11", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "12", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "13", "status": "incorporated_by_reference"},
+      {"type": "item_present", "item": "14", "status": "incorporated_by_reference"},
+      {"type": "warning_absent", "code": "expected_item_missing", "item": "10"},
+      {"type": "warning_absent", "code": "expected_item_missing", "item": "14"}
+    ]
+  },
+  "triage": {"class": "collective-part-level-pointer", "note": "Berkshire Hathaway FY2024. Part III carries NO per-item headings at all. The whole of Part III is one sentence at normalized_text offset 484,911: 'Except for the information set forth under the caption “Executive Officers of the Registrant” in Part I hereof, information required by this Part (Items 10, 11, 12, 13 and 14) is incorporated by reference to the definitive proxy statement...'. BEFORE THE FIX all five items reported `missing` at 0.40 with five `expected_item_missing` warnings. That is an honest miss but still a miss, and it is the WRONG DIAGNOSIS in kind: the filing is not silent about items 10-14, it says in one machine-readable sentence exactly where their content is and that it is in another document. `missing` means 'expected, and we did not find it'; the correct status is the one the contract already has for a pointer to a different document -- `incorporated_by_reference` (ADR-004 shape 1). DISTINCT FROM axp-2008-combined-part-iii: that filing has a combined HEADING ('ITEMS 10, 11, 12 and 13.') with a ~3,000-char body of real captions, and its debt is a fan-out of one heading into four spans. Berkshire has no heading and no body -- only the pointer sentence -- so the fan-out target is a STATUS, not a span. INV-S1 forbids five items sharing one span, so the five items keep null offsets (the `_item(code, None, ...)` shape INV-S4 already uses) and the pointer sentence's own offsets are published under `evidence.collective_reference`, exactly the shape ADR-031 chose for the footnote case and for the same reason. GPT's prediction for this filing was letter-spaced headings ('Par t I', 'Busines s') defeating normalization; that prediction was WRONG -- normalization handles them, coverage is 97.6% -- and this, not the typography, is the real defect."},
+  "provenance": "Authored 2026-08-28 from GPT's curated hard-filing list (rank 3), against https://www.sec.gov/Archives/edgar/data/1067983/000095017025025210/brka-20241231.htm (10,744,089 bytes). Run before the case was written and before any fix: doc_status success_with_warning, coverage 97.6%, items 10-14 `missing`. The pointer sentence's offset was read out of the run's own normalized_text, not grepped from raw bytes. Watched red before the fix."
+}
