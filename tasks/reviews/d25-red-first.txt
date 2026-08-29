@@ -1,0 +1,43 @@
+D25 red-first — 2026-08-29
+
+Command:
+  python3 -c 'import json; from src.repo_hygiene.eval_adapter import run_case; c=json.load(open("evals/adversarial/ui-cover-navigation.json")); print(json.dumps(run_case(c), indent=2))'
+
+Observed before implementation:
+  passed: false
+  - view.front_matter is not the normalized slice before Item 1
+  - view.front_matter does not report its full size/truncation
+  - index.html cover/navigation behavior: missing function showCover(
+
+Triage: invariant-gap. Existing anchor checks cover heading resolution, not
+default cover selection or observable item-navigation behavior.
+
+D25 SEC URL variant red-first — 2026-08-29
+
+Command:
+  python3 -c 'import json; from src.repo_hygiene.eval_adapter import run_case; c=json.load(open("evals/adversarial/edgar-viewer-url.json")); print(json.dumps(run_case(c), indent=2))'
+
+Observed before implementation:
+  passed: false
+  - src.sec10k.web.edgar_url canonicalizer is missing
+
+Triage: input-variant. The fetch route accepts only a direct string prefix,
+although SEC publishes viewer wrappers for the same Archives document.
+
+D25 Terra audit R1 red-first — 2026-08-29
+
+Observed before repair:
+  passed: false
+  - `%00`, `%0A`, and `%0D` decoded into control characters and were accepted
+
+Triage: unsafe input variant. Control characters must be rejected after the
+single decode, before a canonical fetch URL is returned.
+
+D25 Terra audit R1 delta red-first — 2026-08-29
+
+Observed after the first repair, before the final repair:
+  passed: false
+  - `%7F` decoded into ASCII DEL and was accepted
+
+Triage: unsafe input variant. The decoded-path guard must cover both C0 and
+DEL, not only code points below 32.

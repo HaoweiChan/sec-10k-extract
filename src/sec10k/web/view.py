@@ -137,6 +137,10 @@ def build_view(result, display_max=DISPLAY_MAX):
             item["elsewhere"] = [{"label": l, "start": a, "end": b}
                                  for l, a, b in elsewhere]
         items.append(item)
+    starts = [i.get("start") for i in result.get("items", [])
+              if i.get("start") is not None]
+    front_end = min(starts, default=len(text))
+    front = text[:front_end]
     return {
         "doc_status": result.get("doc_status"),
         "warnings": result.get("warnings", []),
@@ -145,6 +149,11 @@ def build_view(result, display_max=DISPLAY_MAX):
         "cost": result.get("cost", {}),
         "trace": _scrub(_jsonable(result.get("trace", []))[:TRACE_MAX]),
         "items": items,
+        "front_matter": {
+            "text": front[:display_max],
+            "chars": len(front),
+            "truncated": len(front) > display_max,
+        },
         "norm_chars": len(text),
         # D12: the sha a consumer verifies the /api/normalized/{token}
         # download against before trusting the offsets against it. Of the
@@ -245,6 +254,7 @@ def _demo():
     assert v["items"][2]["truncated"] is False
     # short item is not marked truncated
     assert v["items"][1]["truncated"] is (len(text) - cut > 20)
+    assert v["front_matter"] == {"text": "", "chars": 0, "truncated": False}
     assert v["counts"] == {"extracted": 2, "omitted": 1}
     # D12: the sha binds a normalized-text download to THIS run, so it has
     # to be of the normalized text and of nothing else — not the raw file.
@@ -259,6 +269,7 @@ def _demo():
     # an empty/refused envelope must not blow up
     empty = build_view({"doc_status": "failed", "normalized_text": "", "items": []})
     assert empty["items"] == [] and empty["counts"] == {}
+    assert empty["front_matter"] == {"text": "", "chars": 0, "truncated": False}
     assert empty["norm_sha256"] == hashlib.sha256(b"").hexdigest()
     json.dumps(empty)
 

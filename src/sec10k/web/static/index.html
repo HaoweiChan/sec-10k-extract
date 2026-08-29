@@ -233,6 +233,9 @@ button:disabled{opacity:.5;cursor:default}
 pre.text{white-space:pre-wrap;word-wrap:break-word;font:13px/1.6 var(--mono);
   background:var(--bg);border:1px solid var(--line);border-radius:var(--r);
   padding:11px 11px 42px;margin:0 14px;flex:1;min-height:0;overflow:auto}
+pre.front-text{white-space:pre-wrap;word-wrap:break-word;font:13px/1.6 var(--mono);
+  background:var(--bg);border:1px solid var(--line);border-radius:var(--r);
+  padding:11px;margin:0 14px;flex:1;min-height:0;overflow:auto}
 /* S9 (ADR-032): the Markdown-rendered item body. Same box, same flush edges
    and bottom padding as pre.text above — it is the same pane in a second
    mode — but proportional text, real headings, real tables. Colours are the
@@ -698,6 +701,19 @@ function itemRegion(doc, i){
   return {start, end: Math.max(end, start + 1)};
 }
 
+function selectedRegion(doc){
+  if(SEL === -1){
+    let end = null;
+    for(const anchor of ITEM_START_ANCHORS){
+      end = anchorY(doc, anchor);
+      if(end != null) break;
+    }
+    const scroller = doc.scrollingElement || doc.documentElement;
+    return {start: 0, end: Math.max(end ?? scroller.scrollHeight, 1)};
+  }
+  return SEL != null ? itemRegion(doc, SEL) : null;
+}
+
 function anchorStatus(msg){
   const el = document.getElementById("anchor-status");
   if(el) el.textContent = msg || "";
@@ -707,6 +723,11 @@ function anchorStatus(msg){
 // heading wasn't found in the source, the pane says so (via #anchor-status)
 // rather than silently staying put and looking anchored.
 function scrollSourceToItem(i){
+  const item = VIEW && VIEW.items && VIEW.items[i];
+  if(item && item.start == null){
+    anchorStatus(`no source span — Item ${item.item} is ${item.status}`);
+    return;
+  }
   const frame = document.getElementById("src-frame");
   if(!frame) return;
   let doc; try{ doc = frame.contentDocument; }catch(e){ return; }
@@ -716,7 +737,7 @@ function scrollSourceToItem(i){
     anchorStatus("unanchored — heading not found in source");
     return;
   }
-  anchorStatus("");
+  anchorStatus(`showing Item ${item ? item.item : i}`);
   const scroller = doc.scrollingElement || doc.documentElement;
   SYNC_GUARD = true;
   scroller.scrollTop = Math.max(0, region.start - 20);
@@ -807,13 +828,16 @@ function bindSourceScroll(frame){
     let doc; try{ doc = frame.contentDocument; }catch(e){ return; }
     if(!doc) return;
     buildItemAnchors(doc);
-    if(SEL != null) scrollSourceToItem(SEL);
+    if(SEL === -1){
+      (doc.scrollingElement || doc.documentElement).scrollTop = 0;
+      anchorStatus("showing cover");
+    }else if(SEL != null) scrollSourceToItem(SEL);
     const scroller = doc.scrollingElement || doc.documentElement;
     scroller.addEventListener("scroll", () => {
       if(SYNC_GUARD || !syncOn()) return;
       const pre = document.querySelector("#pane .text");
       if(!pre) return;
-      const region = SEL != null ? itemRegion(doc, SEL) : null;
+      const region = selectedRegion(doc);
       const frac = region
         ? (scroller.scrollTop - region.start) / Math.max(1, region.end - region.start)
         : scroller.scrollTop / Math.max(1, scroller.scrollHeight - scroller.clientHeight);
@@ -833,7 +857,7 @@ function bindPaneScroll(pre){
     if(!doc) return;
     const scroller = doc.scrollingElement || doc.documentElement;
     const frac = pre.scrollTop / Math.max(1, pre.scrollHeight - pre.clientHeight);
-    const region = SEL != null ? itemRegion(doc, SEL) : null;
+    const region = selectedRegion(doc);
     SYNC_GUARD = true;
     scroller.scrollTop = region
       ? region.start + frac * Math.max(1, region.end - region.start)
@@ -1080,7 +1104,10 @@ function render(v){
   $("#bp-note").hidden = !v.boilerplate_applied;
 
   const items = v.items || [];
-  $("#sidebar").innerHTML = items.length ? items.map((it,i) => {
+  const cover = `<button class="it" id="cover">
+    <div class="top"><span class="code">Cover</span><span class="ttl">filing front matter</span></div>
+    <div class="badges"><span class="b">${(v.front_matter?.chars || 0).toLocaleString()} ch</span></div></button>`;
+  $("#sidebar").innerHTML = cover + (items.length ? items.map((it,i) => {
     // flag from the evidence, not the number: confidence 0.8 is normal for an
     // omitted item and penalised for an extracted one, so the score alone
     // cannot say "look here". evidence.warnings names the validators that fired.
@@ -1103,14 +1130,29 @@ function render(v){
         <span class="b">${esc(it.method || "—")}</span>
         ${it.chars != null ? `<span class="b">${it.chars.toLocaleString()} ch</span>` : ""}
       </div></button>`;
-  }).join("") : `<div style="padding:11px" class="none">No items — the pipeline refused this input rather than guessing.</div>`;
+  }).join("") : `<div style="padding:11px" class="none">No items — the pipeline refused this input rather than guessing.</div>`);
 
-  $("#pane").innerHTML = `<div class="src-hdr"><span class="lbl">extracted text</span></div>
-    <div class="none" style="padding:12px">Select an item to read its extracted text.</div>`;
   $("#trace").textContent = JSON.stringify(v.trace || [], null, 1);
   $("#meta").textContent = JSON.stringify(
     {meta: v.meta, timings: v.timings, cost: v.cost, normalized_chars: v.norm_chars}, null, 1);
   loadSource(v.source && v.source.token);
+  showCover();
+}
+
+function showCover(){
+  SEL = -1;
+  document.querySelectorAll(".it").forEach(b => b.setAttribute("aria-current", "false"));
+  const cover = $("#cover"); if(cover) cover.setAttribute("aria-current", "true");
+  const front = VIEW.front_matter || {text:"", chars:0, truncated:false};
+  const pane = $("#pane");
+  pane.innerHTML = `<div class="src-hdr"><span class="lbl">filing cover</span>
+      <span class="lbl">normalized front matter · ${front.truncated ? `first ${front.text.length.toLocaleString()} of ` : ""}${front.chars.toLocaleString()} characters</span></div>
+    <pre class="front-text" role="region" tabindex="0" aria-label="Filing cover and front matter">${esc(front.text)}</pre>`;
+  const pre = $("#pane pre.front-text"); if(pre) bindPaneScroll(pre);
+  const frame = document.getElementById("src-frame");
+  let doc; try{ doc = frame && frame.contentDocument; }catch(e){ return; }
+  if(doc) (doc.scrollingElement || doc.documentElement).scrollTop = 0;
+  anchorStatus("showing cover");
 }
 
 function show(i){
@@ -1200,6 +1242,7 @@ function show(i){
 }
 
 $("#sidebar").addEventListener("click", e => {
+  if(e.target.closest("#cover")){ showCover(); return; }
   const b = e.target.closest(".it"); if(b) show(+b.dataset.i);
 });
 $("#go-fx").onclick = () => call("/api/extract/fixture",

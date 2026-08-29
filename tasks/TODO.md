@@ -272,6 +272,26 @@ PR83 round 3 independently VERIFIED R1-R3 at confidence 0.99 and APPROVED with
 no new findings (`tasks/reviews/pr83-r3-verification.json`).
 Final offline gates: invariant 104/104, fast 175/175, $0, no baseline move.
 
+### D25 — Make inspector entry and navigation direct [status: pr]
+Origin: owner localhost review, 2026-08-29
+Spec: After extraction, show the parsed front matter by default with the original
+filing at its cover. Selecting an item must either jump the source pane and say
+which item is showing, or state that the reported status has no source span;
+never leave a silent, apparently inert compare pane. Accept the SEC's own
+confirmed `/ix?doc=/Archives/...` and `/ixviewer/ix.html?doc=/Archives/...`
+viewer links by rebuilding their canonical Archives URL before validation and
+fetch; handle encoded paths and same-origin SEC host variants without widening
+the trusted host or path.
+Acceptance: The view derives bounded front matter from normalized text before
+the first item; the inspector selects it on render and can return to it; an
+anchored item changes the source scroller and reports success; a span-less item
+reports why it cannot jump; the new behavior case is red first, then invariant
+and fast pass at 100% with no baseline move. The supplied Duke viewer URL maps
+exactly to its `https://www.sec.gov/Archives/...` document; the offline matrix
+also covers encoded/current/legacy/direct variants, while off-origin,
+non-HTTPS, non-Archives, missing, duplicate, traversal, and unconfirmed viewer
+forms remain rejected.
+
 ## Debt
 
 Each block is a decision not to build something, not a forgotten task. Every

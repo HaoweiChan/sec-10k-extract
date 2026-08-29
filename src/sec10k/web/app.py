@@ -34,6 +34,7 @@ from src.sec10k.web import gate, limiter
 from src.sec10k.web.build_id import git_sha
 from src.sec10k.web.fixtures import (FIXTURES, ROOT, deployed_fixtures,
                                      fixture_file)
+from src.sec10k.web.edgar_url import canonical_edgar_url
 from src.sec10k.web.view import build_view
 
 STATIC = Path(__file__).resolve().parent / "static"
@@ -408,11 +409,11 @@ async def extract_upload(request: Request):
 
 @app.post("/api/extract/url")
 def extract_url(body: dict, request: Request):
-    url = ((body or {}).get("url") or "").strip()
-    if not url.startswith("https://www.sec.gov/Archives/"):
+    url = canonical_edgar_url((body or {}).get("url") or "")
+    if url is None:
         return _err(400, "bad_input",
-                    "URL must start with https://www.sec.gov/Archives/")
-    suffix = Path(url.split("?")[0]).suffix.lower() or ".htm"
+                    "Enter an SEC Archives document or Inline XBRL viewer URL")
+    suffix = Path(url).suffix.lower() or ".htm"
     if suffix not in ALLOWED_SUFFIX:
         suffix = ".htm"
     req = urllib.request.Request(url, headers={"User-Agent": EDGAR_UA})

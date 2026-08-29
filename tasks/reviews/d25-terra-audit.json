@@ -1,0 +1,19 @@
+{
+  "task": "D25",
+  "reviewer": "Terra",
+  "result": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "P2",
+      "confidence": "high",
+      "claim": "Percent-decoded control characters were accepted by the SEC URL canonicalizer.",
+      "evidence": "src/sec10k/web/edgar_url.py decoded `%00`, `%0A`, `%0D`, and `%7F` only after the original-input control check, then returned a canonical URL containing the decoded control. Delta review caught `%7F` after the first repair covered only C0.",
+      "repro": "The edgar-viewer-url case failed first on `%00`, `%0A`, and `%0D`, then independently failed on `%7F` before the final repair.",
+      "acceptance": "Reject every ASCII C0 or DEL control character after decoding at the URL trust boundary.",
+      "resolution": "fixed",
+      "case": "edgar-viewer-url",
+      "verification": "VERIFIED — `%00/%0A/%0D/%7F` reject; no final-delta or base-integration finding"
+    }
+  ]
+}
