@@ -1,0 +1,12 @@
+{
+  "id": "ui-cover-navigation",
+  "task": "repo_hygiene",
+  "suites": ["invariant", "fast"],
+  "input": {"checks": ["ui_cover_navigation"]},
+  "expect": {},
+  "triage": {
+    "class": "invariant-gap",
+    "note": "Owner localhost review, 2026-08-29: cover metadata and normalized front matter exist, but render() resets SEL and shows only a manual-selection prompt. Successful source jumps clear the status, while span-less items use the same generic unanchored message as a real heading miss. Existing anchor cases validate matching, not the observable click/default-selection behavior."
+  },
+  "provenance": "Minimal synthetic view plus dependency-free Node/VM execution of the shipped showCover and scrollSourceToItem functions; authored before the D25 implementation and watched red."
+}

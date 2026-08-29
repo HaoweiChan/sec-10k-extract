@@ -1,0 +1,12 @@
+{
+  "id": "edgar-viewer-url",
+  "task": "repo_hygiene",
+  "suites": ["invariant", "fast"],
+  "input": {"checks": ["edgar_viewer_url"]},
+  "expect": {},
+  "triage": {
+    "class": "input-variant",
+    "note": "Owner localhost report, 2026-08-29: SEC's own iXBRL viewer wraps a canonical Archives document as https://www.sec.gov/ix?doc=/Archives/..., but the web route validates only the wrapper prefix and returns bad_input. Normalize the known same-origin wrapper before the existing trust-boundary check; do not generalize doc= into an open redirect."
+  },
+  "provenance": "Exact Duke Energy FY2024 URL supplied by the owner. Offline case: it tests URL canonicalization and rejection only, never contacts SEC."
+}

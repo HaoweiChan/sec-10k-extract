@@ -68,3 +68,11 @@ index only cross-references it for scanning.
   D22's bounded loop may navigate SEC attachments inside the validated source
   accession and publish document-scoped verified regions without moving primary
   normalized-text offsets or coverage.
+- ADR-049 — the inspector opens on bounded normalized front matter before Item 1;
+  every item selection reports either a successful source jump or the honest
+  absence of a source span — enforced by `ui-cover-navigation.json`.
+- ADR-050 — direct SEC Archives URLs and the confirmed `/ix` and
+  `/ixviewer/ix.html` viewer forms canonicalize to one same-origin document
+  before fetch; encoded paths and same-origin host variants are accepted while
+  unsafe or unconfirmed forms stay outside the boundary — enforced by
+  `edgar-viewer-url.json`.

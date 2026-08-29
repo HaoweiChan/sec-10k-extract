@@ -1,0 +1,14 @@
+{
+  "task": "D25",
+  "scope": "SEC URL canonicalization",
+  "result": "No qualifying silent-wrong-output inputs found; confidence is high for this bounded URL stage.",
+  "evidence": [
+    "Lines 12–22 reject non-strings, controls, malformed ports, non-HTTPS schemes, non-SEC hosts, credentials, and non-default ports before producing output.",
+    "Lines 24–27 recognize only the two ruled viewer paths and require exactly one `doc`.",
+    "Lines 30–38 decode once and reject residual encoding, backslashes, embedded query/fragment delimiters, and traversal segments.",
+    "Line 39 reconstructs a fixed `https://www.sec.gov` URL without input query or fragment.",
+    "`app.py:412–419` rejects `None` before constructing the request, then fetches only the canonical value; `app.py:436–440` also records that value as provenance.",
+    "`check_edgar_viewer_url` covers direct/viewer forms, literal and encoded `doc`, host/default-port variants, presentation parameters/fragments, and the principal trust-boundary attacks."
+  ],
+  "excluded": "I found additional real-world variants that return `None`—for example `/ixviewer/doc/action`, path-case changes, and alternate viewer routes—but they are explicit 400 refusals, not silent successes, so the cold-review contract excludes them. Similarly, broad `/Archives/` inputs such as filing-index pages or exhibits may reach content validation, but this change neither claims nor performs form/content classification at the URL stage; counting them would conflate acquisition with the downstream extractor contract."
+}

@@ -3841,6 +3841,86 @@ def check_escalation_key_ui_behavior(case):
     return []
 
 
+def check_ui_cover_navigation(case):
+    """Run the cover projection and shipped source-navigation behavior."""
+    from src.sec10k.web.view import build_view
+
+    text = "FORM 10-K\nACME\nItem 1. Business\nbody"
+    start = text.index("Item 1.")
+    view = build_view({"normalized_text": text, "items": [
+        {"item": "1", "status": "extracted", "start": start,
+         "end": len(text), "heading_text": "Item 1. Business"}]}, display_max=12)
+    front = view.get("front_matter") or {}
+    bad = []
+    if front.get("text") != text[:start][:12]:
+        bad.append("view.front_matter is not the normalized slice before Item 1")
+    if front.get("chars") != start or front.get("truncated") is not (start > 12):
+        bad.append("view.front_matter does not report its full size/truncation")
+
+    ui = ROOT / case.get("input", {}).get("ui_file", UI_STYLESHEET)
+    probe = ROOT / "evals/probes/ui_cover_navigation.js"
+    got = subprocess.run(["node", str(probe), str(ui)], cwd=ROOT,
+                         capture_output=True, text=True, timeout=10)
+    if got.returncode:
+        detail = (got.stderr or got.stdout).strip().splitlines()
+        bad.append("index.html cover/navigation behavior: " +
+                   (detail[-1] if detail else f"node exited {got.returncode}"))
+    return bad
+
+
+def check_edgar_viewer_url(case):
+    """Accept SEC's documented URL variants without widening the fetch boundary."""
+    try:
+        from src.sec10k.web.edgar_url import canonical_edgar_url
+    except ImportError:
+        return ["src.sec10k.web.edgar_url canonicalizer is missing"]
+
+    canonical = ("https://www.sec.gov/Archives/edgar/data/17797/"
+                 "000132616025000072/duk-20241231.htm")
+    bad = []
+    accepted = [
+        canonical,
+        canonical + "?output=1#part-ii",
+        canonical.replace("www.sec.gov", "sec.gov"),
+        canonical.replace("www.sec.gov", "WWW.SEC.GOV:443"),
+        ("https://www.sec.gov/ix?doc=/Archives/edgar/data/17797/"
+         "000132616025000072/duk-20241231.htm"),
+        ("https://www.sec.gov/ix?doc=%2FArchives%2Fedgar%2Fdata%2F17797%2F"
+         "000132616025000072%2Fduk-20241231.htm"),
+        ("https://www.sec.gov/ix?theme=dark&doc=/Archives/edgar/data/17797/"
+         "000132616025000072/duk-20241231.htm#facts"),
+        ("https://www.sec.gov/ixviewer/ix.html?doc=%2FArchives%2Fedgar%2Fdata%2F"
+         "17797%2F000132616025000072%2Fduk-20241231.htm"),
+    ]
+    for url in accepted:
+        if canonical_edgar_url(url) != canonical:
+            bad.append(f"valid SEC document variant was not canonicalized: {url}")
+    rejected = [
+        "http://www.sec.gov/Archives/edgar/data/1/a.htm",
+        "https://www.sec.gov.example/Archives/edgar/data/1/a.htm",
+        "https://user@www.sec.gov/Archives/edgar/data/1/a.htm",
+        "https://www.sec.gov:444/Archives/edgar/data/1/a.htm",
+        "https://www.sec.gov/ix",
+        "https://www.sec.gov/ix?doc=https://example.com/a.htm",
+        "https://www.sec.gov/ix?doc=/Archives/a.htm&doc=/Archives/b.htm",
+        "https://www.sec.gov/ix?doc=/not-archives/a.htm",
+        "https://www.sec.gov/ix?doc=/Archives/../etc/passwd",
+        "https://www.sec.gov/ix?doc=%252FArchives%252Fedgar%252Fdata%252F1%252Fa.htm",
+        "https://www.sec.gov/ix?doc=/Archives/a.htm%00evil",
+        "https://www.sec.gov/ix?doc=/Archives/a.htm%0Aevil",
+        "https://www.sec.gov/Archives/a.htm%0Devil",
+        "https://www.sec.gov/ix?doc=/Archives/a.htm%7Fevil",
+        "https://www.sec.gov/ixviewer/doc/action?doc=/Archives/edgar/data/1/a.htm",
+    ]
+    for url in rejected:
+        if canonical_edgar_url(url) is not None:
+            bad.append(f"unsafe/non-document URL was accepted: {url}")
+    app = (ROOT / "src/sec10k/web/app.py").read_text()
+    if "url = canonical_edgar_url(" not in app or "if url is None:" not in app:
+        bad.append("/api/extract/url does not use the canonicalizer before fetch")
+    return bad
+
+
 LIMITER_MODULE = "src.sec10k.web.limiter"
 
 
@@ -4272,6 +4352,8 @@ CHECKS = {
     "escalation_locks": check_escalation_locks,
     "escalation_choke_point": check_escalation_choke_point,
     "escalation_key_ui_behavior": check_escalation_key_ui_behavior,
+    "ui_cover_navigation": check_ui_cover_navigation,
+    "edgar_viewer_url": check_edgar_viewer_url,
     "free_tier_limit": check_free_tier_limit,
     "token_proxy_bound": check_token_proxy_bound,
 }
