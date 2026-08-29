@@ -542,6 +542,54 @@ def eval_check(result, chk, path=None):
             if quiet["tiers"] or xref["tiers"] or quiet["cost"]["llm_calls"] or xref["cost"]["llm_calls"]:
                 return "quiet or cross-reference-resolved route recorded model work"
             return None
+        elif chk["scenario"] == "persistent_context":
+            warnings = [{"code": "internal_pointer_unreached", "item": code,
+                         "message": "cached D22 CVX target"}
+                        for code in ("2", "6", "7A")]
+            expected = {
+                "target_items": [w["item"] for w in warnings],
+                "outline": {
+                    "items": [{"item": i["item"], "status": i["status"],
+                               "start": i.get("start"), "end": i.get("end")}
+                              for i in source["items"]],
+                    "warnings": [{"code": w["code"], "item": w["item"]}
+                                 for w in warnings],
+                },
+            }
+            destination = text.find("Item 7", target["end"])
+            if destination < 0:
+                return "CVX has no bounded read destination for context replay"
+            for first, feedback in (
+                ({"action": "search", "query": "Item 7"}, "matches"),
+                ({"action": "read_window", "start": destination, "end": destination + 40}, "text"),
+                ({"action": "propose_primary_span", "item": "1", "start": 0, "end": 1}, "verifier_rejections"),
+            ):
+                actions, calls = [first, {"action": "finish"}, {"action": "finish"}], []
+                def _context_stub(model, system, user, max_tokens, budget, **kw):
+                    calls.append(user)
+                    return {"cached": True, "text": _json.dumps(actions.pop(0)),
+                            "usage": {"input_tokens": 0, "output_tokens": 0}, "usd": 0.0,
+                            "model": model}
+                real, _llm.call = _llm.call, _context_stub
+                try:
+                    routing, _ = route(text, copy.deepcopy(source["items"]), warnings)
+                finally:
+                    _llm.call = real
+                if len(calls) < 2:
+                    return f"{feedback} replay did not make its bounded follow-up call"
+                try:
+                    next_prompt = _json.loads(calls[1])
+                except _json.JSONDecodeError:
+                    return f"{feedback} replay did not send JSON context"
+                if {k: next_prompt.get(k) for k in expected} != expected:
+                    return f"{feedback} follow-up lost target_items or compact outline"
+                observation = next_prompt.get("observation", {})
+                previous = routing["tiers"][0]["observations"][0]
+                if feedback == "verifier_rejections":
+                    previous = {"verifier_rejections": previous["verifier"]}
+                if observation != previous:
+                    return f"{feedback} follow-up lost exact preceding feedback"
+            return None
         else:
             return f"unknown agent_loop scenario {chk['scenario']!r}"
 

@@ -1,0 +1,12 @@
+D23 red-first — 2026-08-29
+
+Command (with OPENROUTER_API_KEY removed):
+  python3 -c "... run_case(d22-agent-loop.json)"
+
+Result: FAIL d22-agent-loop / persistent_context
+Reason: matches follow-up lost target_items or compact outline
+
+This is the minimal cached end-to-end CVX route reproduction of the D22 live
+failure class. The first action was search; its follow-up prompt contained only
+the changing observation, rather than the immutable target/outline context.
+No network call or baseline update was made.

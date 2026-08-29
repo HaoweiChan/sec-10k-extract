@@ -1,15 +1,17 @@
 {
   "id": "d22-agent-loop",
   "task": "sec10k",
-  "suites": ["invariant"],
+  "suites": ["fast", "invariant"],
   "input": {"path": "evals/fixtures/cvx-2015/filing.htm"},
   "expect": {
     "checks": [
       {"type": "agent_loop", "scenario": "replan_positive"},
       {"type": "agent_loop", "scenario": "exhaustion_negative"},
       {"type": "agent_loop", "scenario": "empty_and_malformed"},
-      {"type": "agent_loop", "scenario": "quiet_and_xref"}
+      {"type": "agent_loop", "scenario": "quiet_and_xref"},
+      {"type": "agent_loop", "scenario": "persistent_context"}
     ]
   },
-  "provenance": "D22 red-first cached end-to-end route proof. CVX FY2015 is a committed real internal-pointer filing; the transport replay supplies only model actions, never a fabricated extractor result. It binds one rejected proposal feeding a later turn, a verified alternative observation, three-turn abstention, and zero-call quiet/xref paths."
+  "triage": {"class": "invariant-gap", "note": "D22's 2026-08-29 CVX live run rejected an out-of-target item, then its next prompt retained only rejection feedback and lost targets and filing outline; the model guessed item 1 again. This cached route case binds context persistence before repair."},
+  "provenance": "D22 red-first cached end-to-end route proof. CVX FY2015 is a committed real internal-pointer filing; the transport replay supplies only model actions, never a fabricated extractor result. It binds one rejected proposal feeding a later turn, a verified alternative observation, three-turn abstention, zero-call quiet/xref paths, and persistent target/outline context with the exact immediately preceding search, bounded-read, or verifier feedback."
 }
