@@ -133,7 +133,7 @@ def _envelope(doc_status, text="", items=None, warnings=None, meta=None,
 
 
 def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
-                  images=False, escalate=False, budget=None):
+                  images=False, escalate=False, budget=None, source_url=None):
     """Extract items from a 10-K filing.
 
     Returns {"normalized_text": str, "doc_status": str, "items": [...], ...}
@@ -195,7 +195,8 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
 
     trace = [{"layer": "acquisition", "path": str(path), "bytes": len(raw_bytes)}]
     text, meta, warnings, tabs, blks, imgs = select_and_normalize(
-        raw, tables=tables, blocks=blocks, images=images)
+        raw, tables=tables, blocks=blocks, images=images or escalate)
+    emit_imgs = imgs if images else None
     meta["input_sha256"] = sha
     trace.append({"layer": "select+normalize", **meta})
     # ADR-026 layer 3b, opt-in. Computed here, off the normalized text, and
@@ -215,7 +216,7 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
             "message": f"{len(raw)} raw chars normalized to {len(text)}"})
         return _envelope("failed", text, meta=meta, warnings=warnings,
                          trace=trace, t0=t0, boilerplate=chrome, tables=tabs,
-                         blocks=blks, images=imgs)
+                         blocks=blks, images=emit_imgs)
 
     # ADR-042 §b: an asset-backed issuer's annual report. Legally a 10-K, and
     # `sniff_form` correctly says so — but General Instruction J to Form 10-K
@@ -238,7 +239,7 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
                        "not Regulation S-K Items 1-16"})
         return _envelope("unsupported", text, meta=meta, warnings=warnings,
                          trace=trace, t0=t0, boilerplate=chrome, tables=tabs,
-                         blocks=blks, images=imgs)
+                         blocks=blks, images=emit_imgs)
 
     if meta["form_type"] not in ACCEPTED_FORMS:
         # refusal, not a best-effort parse (contract v2 envelope rules)
@@ -247,7 +248,7 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
                          "message": f"not an accepted 10-K form (detected: {found})"})
         return _envelope("unsupported", text, meta=meta, warnings=warnings,
                          trace=trace, t0=t0, boilerplate=chrome, tables=tabs,
-                         blocks=blks, images=imgs)
+                         blocks=blks, images=emit_imgs)
 
     expected = expected_items(meta.get("period_end"))
     # taxonomy era is the item set the filing's date implies, not its file
@@ -394,7 +395,8 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
         from src.sec10k.escalate import route   # NOT at module scope: keeping
         # the import here is what makes `python3 -m evals.run` load no network
         # module at all (ADR-036 §h, pinned by repo_hygiene's escalation_seam)
-        routing, extra = route(text, items, warnings, budget=budget)
+        routing, extra = route(text, items, warnings, budget=budget, images=imgs,
+                               source_url=source_url)
         warnings += extra
         trace.append({"layer": "escalate", "trigger": routing["trigger"]["fired"],
                       "tiers": [f"{t['tier']}:{t['outcome']}" for t in routing["tiers"]],
@@ -420,13 +422,17 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
     if blks is not None:
         _promote_item_headings(blks, tabs, items)
 
-    # doc_status ladder (contract v2, fixed order). Only the four validators
-    # named in AMBIGUOUS_CODES may reach `ambiguous`; the rest warn and move
-    # confidence, per the taxonomy's warn-don't-hard-fail policy. Decided
-    # BEFORE scoring: an `ambiguous` verdict caps every item (ADR-027 §a) —
-    # before that, no document-level warning ever reached an item's number.
+    # doc_status ladder (contract v2, fixed order). Only validators in
+    # AMBIGUOUS_CODES may reach `ambiguous`, except ADR-045's resolved
+    # cross-reference alternative content qualifies low coverage alone. The
+    # warning remains published; the other ambiguity codes still escalate.
+    # Decided BEFORE scoring: an `ambiguous` verdict caps every item
+    # (ADR-027 §a) before a document-level warning reaches an item's number.
     extracted = [i for i in items if i["status"] == "extracted"]
-    ambiguous = not extracted or any(w["code"] in AMBIGUOUS_CODES for w in warnings)
+    codes = {w["code"] for w in warnings}
+    if "cross_reference_index" in codes:
+        codes.discard("low_item_coverage")
+    ambiguous = not extracted or bool(codes & set(AMBIGUOUS_CODES))
     for i in items:
         i["confidence"], i["evidence"] = score(i, warnings, doc_ambiguous=ambiguous)
         # ADR-035 §e: the consumer-facing half. A validator that fires on an
@@ -449,4 +455,4 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
     meta["coverage"] = round(coverage(text, items), 4)
     return _envelope(doc_status, text, items=items, meta=meta,
                      warnings=warnings, trace=trace, t0=t0, boilerplate=chrome,
-                     tables=tabs, blocks=blks, images=imgs, routing=routing)
+                     tables=tabs, blocks=blks, images=emit_imgs, routing=routing)

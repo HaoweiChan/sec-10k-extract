@@ -1,0 +1,30 @@
+{
+  "pr": 76,
+  "round": 1,
+  "result": "REQUEST_CHANGES",
+  "reviewer": "pr-loop fresh-context subagent (falsification-only, full review)",
+  "date": "2026-08-29",
+  "gate_at_review": "invariant 89/89 = 1.000, fast 159/159 = 1.000, baseline untouched",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "confidence": 0.99,
+      "route": "repair",
+      "claim": "A late verification response can restore the green enabled state and persist an old key after the visitor edits the field, so a wrong current key can appear enabled and editing does not reliably clear verification.",
+      "evidence": "src/sec10k/web/static/index.html:434-436 clears state on input, but src/sec10k/web/static/index.html:889-903 applies every successful response without checking that the field still equals the captured key; trigger: start verification for valid A, type wrong B before the response arrives, then let A return {valid:true}—the field shows B while status becomes `✓ Enabled` and localStorage contains A.",
+      "repro": "Browser eval with deferred fetch: enter valid A, click Verify, edit the field to wrong B, resolve the pending response as {valid:true}, then assert status is not enabled and storage is empty.",
+      "acceptance": "Verification results are ignored unless they still belong to the current field value/request generation; after any edit the status remains `Not verified` and no key is stored until that current value is accepted."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "confidence": 0.99,
+      "route": "repair",
+      "claim": "The new invariant only pins source tokens and does not exercise the required verified-only state transitions, leaving core credential behavior without a case that could go red.",
+      "evidence": "src/repo_hygiene/eval_adapter.py:3467-3483 and :3644-3684 check literals and function presence but not behavior; in-memory mutations deleting the `#esc-key` input listener or changing `verifiedKey()` to return `escalationKey()` both make `check_escalation_choke_point` return `{'passed': True, 'failures': []}`, despite respectively breaking edit invalidation and sending an unverified key.",
+      "repro": "Run the escalation-choke-point case against either mutation above; it remains green. Add a runnable browser/JS case covering wrong, valid, edited, reloaded, extraction-header, and stale-response states.",
+      "acceptance": "A committed behavior case fails when input invalidation is removed, when extraction reads the raw field, when a wrong response enables or stores a key, or when a stale response re-enables an edited field, and passes for the implemented valid-key flow."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+D20 red-first, 2026-08-29
+
+Reproduction (offline fixture only):
+python3 -c "import json; from pathlib import Path; from evals.run import run_case; p=Path('evals/adversarial/intc-2025-cross-reference-index.json'); c=json.loads(p.read_text()); c['_file']=str(p); c['_kind']='adversarial'; print(run_case(c))"
+
+Before the source change: FAIL `intc-2025-cross-reference-index` because
+`doc_status 'ambiguous' != 'success_with_warning'`. The same result retained
+both `low_item_coverage` and `cross_reference_index`; all 23 primary spans
+remained index rows. This is the ADR-045 spec-ambiguity reproduction.

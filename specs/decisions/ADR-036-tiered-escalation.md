@@ -1,5 +1,7 @@
 # ADR-036 — D11: the model tier ships, but only behind the D8 document-level trigger, and it is never trusted without a deterministic re-check
 
+**AMENDED 2026-08-29 by ADR-046**: §b's all-or-nothing acceptance is superseded. Primary deltas are accepted per item only after each is re-derived against the complete deterministic item list for INV-S1; a rejected sibling cannot erase an independently verified delta.
+
 Date: 2026-08-26. Status: accepted, **with one part of its acceptance criteria
 UNRUN and said so in §k**. **§h2 lock 4 (the `X-Escalation-Token` door) is
 SUPERSEDED 2026-08-28 by [ADR-041](ADR-041-escalation-open-by-default.md)**:

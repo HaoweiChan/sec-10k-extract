@@ -61,11 +61,11 @@ those spans back with `xref.ENTRY_RE` — the regex that produced them — rathe
 than with `HEADING_RE`, which is ADR-016 §2's layer-consistency rule applied
 where it had not been.
 
-**`doc_status` stays `ambiguous` and `low_item_coverage` stays fired.** The
-primary spans really are index rows — 0.33% of Intel, 0.06% of Citi.
-Resolution adds an answer; it does not withdraw the admission. Softening
-either would be the dishonest half of this change, and it is the half that
-would have made the demo look best.
+**Qualified by ADR-045:** `low_item_coverage` stays fired and the primary
+spans remain index rows — 0.33% of Intel, 0.06% of Citi — but a reliable
+`cross_reference_index` resolution makes that code alone a
+`success_with_warning`, not `ambiguous`. Resolution adds successful alternative
+content; it does not withdraw the coverage admission or move overlapping spans.
 
 **What it resolves, measured.** Intel: 13 items, 736,554 chars, every anchor
 verified against the run's own text — item 7's first region opens
