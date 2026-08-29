@@ -80,7 +80,7 @@ scope widenings were added 2026-08-26 from the two interviewers' written
 feedback, mapped point-by-point in postmortem §8 — which also records the
 mechanisms that feedback praised but that do NOT exist in this codebase.
 
-### D18 — Preserve the first real item page across running headers [status: in-progress]
+### D18 — Preserve the first real item page across running headers [status: pr]
 Priority: P1
 Origin: AIG held-out burn, PR #75, 2026-08-28 — the frozen `aig-2025-heldout`
 run lost Item 1's first page while reporting `success`, 0.95 confidence, and
