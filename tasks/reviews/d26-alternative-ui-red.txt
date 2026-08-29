@@ -1,0 +1,14 @@
+D26 alternative-evidence UI red proof
+======================================
+
+The existing partial-routing UI case was extended to require accepted
+alternative evidence in the same completed-target set as model, external, and
+terminal-disposition outcomes.
+
+Before the repair, targeted evaluation returned `passed: False`:
+
+    D26 partial UI missing routing counts accepted alternative evidence
+
+Failure classification: invariant gap. `agent_loop` records a verified
+alternative in `routing.alternative`, not `routing.resolved`; omitting it from
+the UI's accepted set would falsely report it as unresolved.

@@ -1,0 +1,9 @@
+{
+  "id": "d26-xref-omission-prose",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/intc-2025/filing.htm", "escalate": true},
+  "expect": {"checks": [{"type": "d26_xref", "scenario": "omission_prose"}]},
+  "triage": {"class": "invariant-gap", "note": "A substring matcher could treat ordinary index-row prose containing ‘None’ as a terminal omission. A terminal disposition must instead be proved by an exact standalone None or [Reserved] row line."},
+  "provenance": "D26 audit A14 red-first mutation. It changes only the bounded evidence row supplied to the disposition verifier and proves that prose cannot authorize an omission."
+}

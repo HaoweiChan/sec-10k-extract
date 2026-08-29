@@ -1,0 +1,18 @@
+{
+  "task": "D26",
+  "review": "root/cold review",
+  "result": "all findings repaired before audit handoff",
+  "resolutions": [
+    {"id": "A14", "resolution": "fixed", "red_evidence": "tasks/reviews/d26-omission-prose-red.txt", "detail": "Omission verification accepts a standalone None line or the exact code-bound Item N. [Reserved] line, never prose containing None."},
+    {"id": "A15", "resolution": "fixed", "red_evidence": "tasks/reviews/d26-pointer-part-mismatch-red.txt", "detail": "A pointer that explicitly names another Part is not bound, even when its marker matches the row."},
+    {"id": "A16", "resolution": "fixed", "red_evidence": "tasks/reviews/d26-partial-ui-red.txt", "detail": "The fired routing strip names accepted terminal dispositions and unresolved review-required targets."},
+    {"id": "A17", "resolution": "fixed", "red_evidence": "tasks/reviews/d26-pointer-pane-red.txt", "detail": "Pointer-only IBR items render exact verified pointer evidence under its own label, with null primary offsets preserved."},
+    {"id": "A18", "resolution": "fixed", "red_evidence": "tasks/reviews/d26-alternative-ui-red.txt", "detail": "Accepted alternative evidence is included in the UI completed-target set."}
+  ],
+  "verification": {
+    "targeted": "D21/D26/UI focused cases pass; cached replays use zero live calls and $0",
+    "invariant": "109/109",
+    "fast": "180/180",
+    "snapshot": "dev and heldout hashes unchanged"
+  }
+}

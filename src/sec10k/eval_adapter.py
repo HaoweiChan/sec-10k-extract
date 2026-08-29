@@ -322,9 +322,20 @@ def eval_check(result, chk, path=None):
                 return (f"item {i['item']} is {i['status']!r} but carries "
                         f"offsets [{i['start']}, {i['end']}) — the contract says "
                         "missing/omitted spans are null")
-            if spanned and i["start"] is None and i["end"] is None \
-                    and "collective_reference" in (i.get("evidence") or {}):
-                spanned = False   # ADR-042 §c, the one sanctioned null pair
+            ev = i.get("evidence") or {}
+            disposition = ev.get("cross_reference_disposition") or {}
+            pointer = ev.get("cross_reference_pointer") or {}
+            if spanned and i["start"] is None and i["end"] is None and (
+                    "collective_reference" in ev or
+                    (i["status"] == "incorporated_by_reference"
+                     and ev.get("cross_reference_entry")
+                     and pointer
+                     and disposition.get("status") == i["status"]
+                     and (disposition.get("start"), disposition.get("end")) == (pointer.get("start"), pointer.get("end"))
+                     and disposition.get("marker") == pointer.get("marker")
+                     and all(disposition.get("verifier", {}).get(k) is True
+                             for k in ("target", "bounds", "part", "marker", "pointer")))):
+                spanned = False   # ADR-042 collective / ADR-051 verified terminal pair
             if spanned and (i["start"] is None or i["end"] is None):
                 return (f"item {i['item']} is {i['status']!r} but has null "
                         "offsets — a span-carrying status must carry a span")
@@ -947,6 +958,170 @@ def eval_check(result, chk, path=None):
             for turn in (1, 2):
                 if prompts[turn].get("observation") != {"rejection": tiers[turn - 1]["error"]}:
                     return "malformed-response continuation lost exact parse rejection"
+    elif t == "d26_xref":
+        import copy
+        import json as _json
+        import src.sec10k.llm as _llm
+        from src.sec10k.extract import extract_items
+        from src.sec10k.escalate import route
+
+        baseline = extract_items(path)
+        before = {i["item"]: (i["start"], i["end"], i["method"])
+                  for i in baseline["items"]}
+        resolved = {i["item"] for i in baseline["items"]
+                    if (i.get("evidence") or {}).get("cross_reference")}
+        residual = {i["item"] for i in baseline["items"]
+                    if (i.get("evidence") or {}).get("cross_reference_entry")} - resolved
+        disposition = {i["item"] for i in baseline["items"]
+                       if (i.get("evidence") or {}).get("cross_reference_pointer")}
+        if chk["scenario"] == "real_residuals":
+            tr = result["routing"]["trigger"]
+            if (tr["class"], tr["route"], set(tr["resolved_codes"]), set(tr["residual_codes"]),
+                    set(tr["target_items"])) != ("cross_reference_residual", "agent_loop", resolved, residual, residual | disposition):
+                return f"Intel xref routing is not item-scoped: {tr}"
+            if len(resolved) != 13 or not residual:
+                return f"Intel xref evidence counts changed: resolved={sorted(resolved)}, residual={sorted(residual)}"
+            after = {i["item"]: (i["start"], i["end"], i["method"])
+                     for i in result["items"]}
+            if any(after[c] != before[c] for c in resolved):
+                return "verified Intel xref rows changed primary spans or methods"
+            if any("cross_reference_entry" not in i["evidence"] for i in result["items"]
+                   if i["item"] in resolved | residual):
+                return "an Intel index row lacks immutable entry provenance"
+        elif chk["scenario"] == "omission_prose":
+            poisoned = copy.deepcopy(baseline["items"])
+            row = "Item 1B. None of the disclosures below are omitted"
+            item = next(i for i in poisoned if i["item"] == "1B")
+            item["evidence"]["cross_reference_entry"] = {"start": 0, "end": len(row)}
+            accepted, why = __import__("src.sec10k.escalate", fromlist=["verify_dispositions"]).verify_dispositions(
+                row, poisoned, [{"item": "1B", "status": "omitted", "start": 0, "end": len(row)}], {"1B"})
+            if accepted:
+                return f"prose containing None passed as a terminal omission: {accepted}, {why}"
+        elif chk["scenario"] == "pointer_part_mismatch":
+            from src.sec10k.xref import pointer_entries
+            row = "Item 1. Business (a)\n"
+            pointer = "(a) Incorporated by reference into Part III of the proxy statement.\n"
+            got = pointer_entries(row + pointer, (0, len(row)), {"1": (0, len(row))}, {"1": "I"})
+            if got:
+                return f"explicitly cross-Part incorporation pointer was bound: {got}"
+        elif chk["scenario"] in {"cached_dispositions", "partial_batch"}:
+            items = copy.deepcopy(baseline["items"])
+            by_item = {i["item"]: i for i in items}
+            def proposal(code, status, end_shift=0):
+                proof = by_item[code]["evidence"]["cross_reference_pointer" if status == "incorporated_by_reference" else "cross_reference_entry"]
+                return {"item": code, "status": status, "start": proof["start"], "end": proof["end"] + end_shift}
+            pointer = by_item["10"]["evidence"]["cross_reference_pointer"]
+            proposals = [proposal(code, "omitted") for code in ("1B", "4", "6", "9", "9C", "16")] + [
+                proposal(code, "incorporated_by_reference") for code in ("10", "11", "12", "13", "14")]
+            if chk["scenario"] == "partial_batch":
+                proposals = [proposal("1B", "omitted"), proposal("4", "omitted", 1)]
+            actions = [
+                {"action": "search", "query": baseline["normalized_text"][pointer["start"]:pointer["end"]]},
+                {"action": "read_window", "start": pointer["start"], "end": pointer["end"]},
+                {"action": "propose_item_dispositions", "proposals": proposals},
+            ]
+            calls, queued = [], copy.deepcopy(actions)
+            def _stub(model, system, user, max_tokens, budget, **kw):
+                calls.append(_json.loads(user))
+                return {"cached": True, "text": _json.dumps(queued.pop(0)),
+                        "usage": {"input_tokens": 0, "output_tokens": 0}, "usd": 0.0, "model": model}
+            real, _llm.call = _llm.call, _stub
+            try:
+                routing, extra = route(baseline["normalized_text"], items, baseline["warnings"])
+            finally:
+                _llm.call = real
+            by_code = {i["item"]: i for i in items}
+            omitted, ibr = {"1B", "4", "6", "9", "9C", "16"}, {"10", "11", "12", "13", "14"}
+            if chk["scenario"] == "partial_batch":
+                if (routing["dispositions"] != ["1B"] or not routing["tiers"][-1].get("rejections")
+                        or not extra or not by_code["4"]["review_required"]):
+                    return f"partial disposition batch hid rejected work: {routing}, {extra}"
+                from src.sec10k.validate import score
+                _, ev = score(by_code["4"], extra)
+                if not ev["warnings"]:
+                    return "partial disposition target would lose review_required after final scoring"
+                return None
+            if (extra or routing["dispositions"] != sorted(omitted | ibr) or len(calls) != 3
+                    or any(by_code[c]["status"] != "omitted" or by_code[c]["start"] is not None
+                           for c in omitted)):
+                return f"cached index-row dispositions were not applied honestly: {routing}"
+            if any(by_code[c]["status"] != "incorporated_by_reference" or by_code[c]["start"] is not None
+                   or not by_code[c]["evidence"].get("cross_reference_pointer") for c in ibr):
+                return "cached Part III IBR dispositions lack exact pointer provenance"
+            if not by_code["10"]["evidence"].get("cross_reference"):
+                return "item 10 lost its verified local xref evidence under its IBR disposition"
+            if any(c in routing["trigger"]["target_items"] for c in resolved - disposition):
+                return "verified xref rows without a disposition pointer became agent targets"
+            if not all(set(p) >= {"target_items", "outline", "observation"} for p in calls):
+                return "cached disposition replay lost persistent bounded context"
+            shown = {x["item"]: x for x in calls[0].get("cross_reference_evidence", [])}
+            if set(shown) != set(routing["trigger"]["target_items"]) or any(
+                    not shown[c]["entry"].get("text") for c in shown):
+                return "cached disposition replay did not show every target's exact index row"
+            if not all(p["start"] == (by_item[p["item"]]["evidence"].get("cross_reference_pointer")
+                                        if p["status"] == "incorporated_by_reference" else by_item[p["item"]]["evidence"]["cross_reference_entry"])["start"]
+                           and p["end"] == (by_item[p["item"]]["evidence"].get("cross_reference_pointer")
+                                             if p["status"] == "incorporated_by_reference" else by_item[p["item"]]["evidence"]["cross_reference_entry"])["end"]
+                           for p in proposals):
+                return "batch proposals did not carry exact evidence offsets"
+            if routing["cost"] != {"llm_calls": 0, "tokens": 0, "usd": 0.0}:
+                return f"cached disposition replay spent money: {routing['cost']}"
+            if not by_code["11"]["evidence"].get("cross_reference_pointer"):
+                return "Part III pointer evidence was not retained"
+            if not all(by_code[c]["evidence"].get("cross_reference_disposition", {}).get("verifier")
+                       for c in omitted | ibr) or any(
+                    by_code[c]["evidence"]["cross_reference_disposition"].get("marker")
+                    != by_code[c]["evidence"]["cross_reference_pointer"].get("marker") for c in ibr):
+                return "terminal disposition lacks item-scoped verifier provenance"
+            bad, why = __import__("src.sec10k.escalate", fromlist=["verify_dispositions"]).verify_dispositions(
+                baseline["normalized_text"], baseline["items"], [{"item": "1", "status": "omitted", "start": 0, "end": 1}], residual)
+            if bad or not why:
+                return "wrong item/status disposition passed deterministic verification"
+            pointer = copy.deepcopy(baseline["items"])
+            next(i for i in pointer if i["item"] == "10")["evidence"]["cross_reference_pointer"]["part"] = "II"
+            bad, why = __import__("src.sec10k.escalate", fromlist=["verify_dispositions"]).verify_dispositions(
+                baseline["normalized_text"], pointer, [proposal("10", "incorporated_by_reference")], {"10"})
+            if bad or not why:
+                return "wrong Part pointer passed deterministic verification"
+            bounded = copy.deepcopy(baseline["items"])
+            next(i for i in bounded if i["item"] == "10")["evidence"]["cross_reference_pointer"]["start"] = 0
+            bad, why = __import__("src.sec10k.escalate", fromlist=["verify_dispositions"]).verify_dispositions(
+                baseline["normalized_text"], bounded, [proposal("10", "incorporated_by_reference")], {"10"})
+            if bad or not why:
+                return "wrong pointer bounds passed deterministic verification"
+            marked = copy.deepcopy(baseline["items"])
+            next(i for i in marked if i["item"] == "10")["evidence"]["cross_reference_pointer"]["marker"] = "b"
+            bad, why = __import__("src.sec10k.escalate", fromlist=["verify_dispositions"]).verify_dispositions(
+                baseline["normalized_text"], marked, [proposal("10", "incorporated_by_reference")], {"10"})
+            if bad or not why:
+                return "wrong cross-reference marker passed deterministic verification"
+            from src.sec10k.validate import coverage
+            envelope = {**baseline, "items": items, "routing": routing, "cost": routing["cost"],
+                        "meta": {**baseline["meta"], "coverage": round(coverage(baseline["normalized_text"], items), 4)}}
+            if eval_check(envelope, {"type": "envelope_shape"}):
+                return "verified D26 IBR terminal envelope was rejected"
+            from src.sec10k.web.view import build_view
+            shown = next(i for i in build_view(envelope)["items"] if i["item"] == "10")
+            if not (shown["primary_chars"] is None and shown["index_entry_chars"]
+                    and shown["cross_reference_chars"] and shown["evidence"].get("cross_reference_disposition")):
+                return "UI/API conflates null primary IBR with index/xref evidence"
+            pointer_only = next(i for i in build_view(envelope)["items"] if i["item"] == "11")
+            if not (pointer_only["primary_chars"] is None and not pointer_only["cross_reference_chars"]
+                    and pointer_only.get("cross_reference_pointer_chars")
+                    and any(e["label"] == "verified incorporation pointer" for e in pointer_only.get("elsewhere", []))
+                    and pointer_only.get("display_text")):
+                return "pointer-only IBR pane lacks separately labelled verified pointer evidence"
+            malformed = copy.deepcopy(envelope)
+            bad_item = next(i for i in malformed["items"] if i["item"] == "10")
+            bad_item.update(status="extracted", start=None, end=None)
+            if eval_check(malformed, {"type": "envelope_shape"}) is None:
+                return "extracted item with xref entry and null offsets passed"
+            malformed = copy.deepcopy(envelope)
+            next(i for i in malformed["items"] if i["item"] == "10")["evidence"].pop("cross_reference_pointer")
+            if eval_check(malformed, {"type": "envelope_shape"}) is None:
+                return "IBR xref entry without verified pointer passed"
+        else:
+            return f"unknown d26_xref scenario {chk['scenario']!r}"
     elif t == "route_payload":
         # PR #58 / the intc-2025 exam. Replays a RECORDED transport response
         # through `escalate.route` and asserts the router reports something
@@ -1514,6 +1689,8 @@ def _routing_shape(result):
         return "trigger missing fired/codes/items/route/reason/target_items/calls_paid"
     if not isinstance(t["fired"], bool):
         return f"trigger.fired {t['fired']!r} is not a bool"
+    if any(k in t and not isinstance(t[k], list) for k in ("resolved_codes", "residual_codes")):
+        return "trigger resolved_codes/residual_codes must be lists"
     if not t["fired"] and r["tiers"]:
         return "a trigger that did not fire may not report attempted tiers"
     stages = r["stages"]

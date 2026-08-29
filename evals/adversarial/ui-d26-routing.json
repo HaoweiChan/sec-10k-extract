@@ -1,0 +1,9 @@
+{
+  "id": "ui-d26-routing",
+  "task": "repo_hygiene",
+  "suites": ["fast", "invariant"],
+  "input": {"checks": ["d26_routing_ui"]},
+  "expect": {},
+  "triage": {"class": "invariant-gap", "note": "The current item card reports only the primary index-row char count while rendering verified cross-reference content, and its routing/flow strings hide suppression reason and skipped detail. The UI needs a source distinction backed by the API view, not a new renderer."},
+  "provenance": "D26 red-first static UI/API contract pin. It binds primary versus cross-reference labels, explicit suppression language, complete flow detail, and Pipeline trace routing inclusion without exposing prompts or secrets."
+}

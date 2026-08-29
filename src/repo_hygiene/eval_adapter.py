@@ -3007,6 +3007,42 @@ def check_routing_provenance(case):
     return bad
 
 
+def check_d26_routing_ui(case):
+    """D26 keeps index-row counts, xref counts, and routing decisions visible."""
+    ui = (ROOT / "src/sec10k/web/static/index.html").read_text()
+    view = (ROOT / "src/sec10k/web/view.py").read_text()
+    pins = [
+        ("API publishes separately measured primary characters", '"primary_chars"'),
+        ("API publishes index-row provenance characters", '"index_entry_chars"'),
+        ("API publishes separately measured cross-reference characters", '"cross_reference_chars"'),
+        ("cards label primary character counts", "primary ${it.primary_chars.toLocaleString()} ch"),
+        ("cards label verified xref character counts", "verified xref ${it.cross_reference_chars.toLocaleString()} ch"),
+        ("null primary xref header is safe", "no primary span"),
+        ("suppression is not called quiet", 'route === "suppressed"'),
+        ("suppression prints backend reason", "r.trigger.reason || \"\""),
+        ("flow retains reason and skipped detail", "s.skipped ? `; skipped:"),
+        ("fired routing shows exact routing evidence", "resolved xref ${esc((r.trigger.resolved_codes"),
+        ("Pipeline trace serializes routing", "routing: v.routing"),
+        ("problem routing opens Pipeline trace", "$(\"#trace-box\").open"),
+    ]
+    bad = [f"D26 UI missing {label}" for label, pin in pins if pin not in ui and pin not in view]
+    if "reason || s.skipped" in ui:
+        bad.append("D26 UI hides skipped detail behind reason")
+    return bad
+
+
+def check_d26_partial_disposition_ui(case):
+    """D26's partial batch names terminal decisions and unfinished targets."""
+    ui = (ROOT / "src/sec10k/web/static/index.html").read_text()
+    pins = [
+        ("routing reads accepted terminal dispositions", "const dispositions = r.dispositions || [];"),
+        ("routing counts accepted alternative evidence", "...(r.alternative || [])"),
+        ("routing labels the accepted terminal result", "verified terminal disposition"),
+        ("routing lists remaining targets", "unresolved targets"),
+    ]
+    return [f"D26 partial UI missing {label}" for label, pin in pins if pin not in ui]
+
+
 
 def _assign(tree, name):
     """The value node of the last module-level `name = ...`, or None."""
@@ -4349,6 +4385,8 @@ CHECKS = {
     "deep_link": check_deep_link,
     "escalation_seam": check_escalation_seam,
     "routing_provenance": check_routing_provenance,
+    "d26_routing_ui": check_d26_routing_ui,
+    "d26_partial_disposition_ui": check_d26_partial_disposition_ui,
     "escalation_locks": check_escalation_locks,
     "escalation_choke_point": check_escalation_choke_point,
     "escalation_key_ui_behavior": check_escalation_key_ui_behavior,

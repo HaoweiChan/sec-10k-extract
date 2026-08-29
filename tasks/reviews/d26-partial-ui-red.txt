@@ -1,0 +1,14 @@
+D26 partial-disposition UI red proof
+====================================
+
+New adversarial case: `evals/adversarial/ui-d26-partial-disposition.json`.
+
+Before the repair, targeted evaluation returned `passed: False`:
+
+    D26 partial UI missing routing reads accepted terminal dispositions
+    D26 partial UI missing routing labels the accepted terminal result
+    D26 partial UI missing routing lists remaining targets
+
+Failure classification: invariant gap. The backend retained accepted `1B` and
+marked rejected `4` review-required, but the fired routing strip looked only
+at model/external spans and incorrectly stated that no item was resolved.

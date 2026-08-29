@@ -1,0 +1,9 @@
+{
+  "id": "d26-xref-pointer-part-mismatch",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/intc-2025/filing.htm", "escalate": true},
+  "expect": {"checks": [{"type": "d26_xref", "scenario": "pointer_part_mismatch"}]},
+  "triage": {"class": "invariant-gap", "note": "A pointer resolver must not bind a row in one Part to source text that explicitly names another Part merely because their marker letters match."},
+  "provenance": "D26 audit A15 red-first synthetic evidence mutation; it has no issuer-specific condition."
+}

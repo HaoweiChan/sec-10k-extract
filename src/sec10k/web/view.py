@@ -86,12 +86,15 @@ def build_view(result, display_max=DISPLAY_MAX):
         # above depends on that and PR #27 R1 is the record of what happens
         # when it doesn't — so the resolved regions are appended to the RENDER
         # string only, which is exactly what `display_text` is for. Without
-        # this the inspector shows Intel FY2024's item 7 as a 226-char index
+        # this the inspector shows Intel FY2025's item 7 as a 226-char index
         # entry and the 119,881 chars it points at are reachable only by
         # reading the evidence offsets by hand.
         ev = i.get("evidence") or {}
         elsewhere = [(f"pages {r['pages']}", r["start"], r["end"])
                      for r in ev.get("cross_reference") or []]
+        pointer = ev.get("cross_reference_pointer") or {}
+        if pointer:
+            elsewhere.append(("verified incorporation pointer", pointer["start"], pointer["end"]))
         elsewhere += [("verified alternative evidence", r["start"], r["end"])
                       for r in ev.get("alternative_regions") or []]
         if ev.get("collective_reference"):
@@ -126,6 +129,15 @@ def build_view(result, display_max=DISPLAY_MAX):
             "review_required": i.get("review_required", False),
             "start": s, "end": e,
             "chars": len(raw) if has_span else None,
+            # Primary offsets always describe this short row/span. Cross-reference
+            # evidence is a separate annotation and must never be presented as
+            # primary character coverage.
+            "primary_chars": len(raw) if has_span else None,
+            "index_entry_chars": ((ev.get("cross_reference_entry") or {}).get("end", 0)
+                                  - (ev.get("cross_reference_entry") or {}).get("start", 0)) or None,
+            "cross_reference_chars": sum(r["end"] - r["start"]
+                                         for r in ev.get("cross_reference") or []),
+            "cross_reference_pointer_chars": (pointer.get("end", 0) - pointer.get("start", 0)) or None,
             "text": raw[:display_max],
             "truncated": truncated,
             "evidence": i.get("evidence") or {},

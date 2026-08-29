@@ -88,7 +88,7 @@ them all); the example once showed `lenient_match`, which nothing emits.
 - A third `evidence` key, `cross_reference`, is a pure ANNOTATION and moves
   nothing (ADR-042 §a): a list of `{"pages", "start", "end"}` regions naming
   where a *cross-reference index* says an item is answered, present only on a
-  filing that carries one. The regions may OVERLAP and NEST — Intel FY2024's
+  filing that carries one. The regions may OVERLAP and NEST — Intel FY2025's
   item 3 is pages 102-105, inside item 8's 56-108 — which is exactly why they
   are not the item's span. An item whose span the index's own row supplied
   (a filing that writes no `Item N` heading at all) carries
@@ -327,6 +327,21 @@ them all); the example once showed `lenient_match`, which nothing emits.
   value outside the enum; `item_field` pins the value per item.
   `cross_reference_index` is emitted for the resolved pointer index; ADR-047
   adds `agent_loop` only when its primary proposal passed `escalate.verify`.
+  ADR-051's item dispositions preserve the deterministic `method` (for Intel,
+  `heading_strict`) and index-entry provenance; their terminal status is the
+  honest statement that the index row itself proves.
+  Every index row publishes immutable
+  `evidence.cross_reference_entry = {"start", "end"}`. Routing splits index
+  evidence into `resolved_codes`, `residual_codes`, and optional footnote-backed
+  `disposition_codes`; only the latter two enter `agent_loop`. Terminal
+  `omitted` / `incorporated_by_reference` dispositions retain entry provenance
+  and null primary offsets. The accepted decision is item-scoped evidence, not
+  merely routing history: `evidence.cross_reference_disposition` publishes its
+  status, exact source `start`/`end`, and deterministic verifier booleans.
+  An omission's source equals its entry; an IBR source and published marker
+  equal its verified `cross_reference_pointer`, whose marker must equal both
+  the entry and pointed-text marker. This is the second sanctioned null pair for IBR,
+  alongside ADR-042's collective pointer.
 
   ADR-048 extends that same loop to verified Annual Report evidence in another
   document of the source accession. An item may then carry

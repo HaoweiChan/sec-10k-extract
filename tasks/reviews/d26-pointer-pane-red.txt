@@ -1,0 +1,15 @@
+D26 pointer-only pane red proof
+==============================
+
+The cached-dispositions branch of
+`evals/adversarial/d26-intc-xref-residual-routing.json` gained an Item 11
+assertion (unlike Item 10, Item 11 has no local cross-reference region).
+
+Before the view repair, targeted evaluation returned `passed: False`:
+
+    pointer-only IBR pane lacks separately labelled verified pointer evidence
+
+Failure classification: invariant gap. Null primary offsets are honest for the
+terminal IBR disposition, but the inspector left the pane blank because it
+only rendered cross-reference regions and Item 10's local evidence had hidden
+the omission.

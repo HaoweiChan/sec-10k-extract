@@ -292,6 +292,13 @@ also covers encoded/current/legacy/direct variants, while off-origin,
 non-HTTPS, non-Archives, missing, duplicate, traversal, and unconfirmed viewer
 forms remain rejected.
 
+### D26 — Route unresolved cross-reference rows per item [status: pr]
+Priority: P1
+Origin: owner correction, 2026-08-30
+Spec: A cross-reference index is evidence per item, not a document-wide paid-work off switch. Preserve each primary index row and every verified cross-reference region; route residual rows and footnote-backed disposition rows through the existing bounded agent loop, then let the deterministic verifier decide whether an exact omission or incorporation-by-reference terminal outcome is proved. The inspector/API must distinguish primary-row characters from verified cross-reference characters, state whether routing was quiet or explicitly suppressed (with reason and targets), and expose the backend routing record in the Pipeline trace. Intel `intc-2025` is FY2025, not FY2024; FY2024 has the same layout and is not a new parser regression.
+Validation: `python3 -m evals.run --suite invariant` then `python3 -m evals.run --suite fast` — invariant 111/111; fast 182/182; $0; snapshot matches `origin/main`.
+Status: root+cold audit approved; A14–A18 repaired; ready for PR.
+
 ## Debt
 
 Each block is a decision not to build something, not a forgotten task. Every

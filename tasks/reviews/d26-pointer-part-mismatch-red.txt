@@ -1,0 +1,16 @@
+D26 pointer Part-mismatch red proof
+====================================
+
+New adversarial case: `evals/adversarial/d26-xref-pointer-part-mismatch.json`.
+
+The synthetic row is Part I Item 1 with marker `(a)`; its only pointer says
+`(a) Incorporated by reference into Part III of the proxy statement.`
+
+Before the repair, targeted evaluation returned `passed: False`:
+
+    explicitly cross-Part incorporation pointer was bound:
+    {'1': {'start': 21, 'end': 88, 'part': 'I', 'marker': 'a'}}
+
+Failure classification: invariant gap. Assigning the item's own Part to
+pointer provenance cannot substitute for checking a contradictory Part named
+in the pointed text.
