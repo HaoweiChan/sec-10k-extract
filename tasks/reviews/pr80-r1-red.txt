@@ -1,0 +1,7 @@
+PR80 R1-R4 red-first — 2026-08-29
+
+Before repair: CVX Item 2 accepted its own [107079,107613) pointer as an
+alternative; cached [] raised AttributeError at action.get; a read_window
+turn still published the next tier as offset/input_chars 0/0; and the compact
+route case did not bind the next prompt, malformed response, mixed targets, or
+API review_required.

@@ -1,0 +1,6 @@
+{"pr":80,"round":1,"resolutions":[
+{"id":"R1","status":"fixed","evidence":"overlapping current primary alternatives reject; cached XOM-2021 Item 7 uses distinct [104502,108502) evidence after old [103997,104264)."},
+{"id":"R2","status":"fixed","evidence":"non-object JSON is handled as unparseable within the three-turn loop."},
+{"id":"R3","status":"fixed","evidence":"the next tier records the bounded preceding read_window range; envelope shape cross-checks it."},
+{"id":"R4","status":"debt","route":"debt","reason":"converged","task":"TD-166","evidence":"Direct replays verify the implementation, but the committed case still does not bind mixed targets, exact next-prompt feedback, routing shape, or the API response surface; demoted after the default two review calls."}
+]}

@@ -1,0 +1,14 @@
+{
+  "pr": 80,
+  "round": 2,
+  "result": "OPEN",
+  "reviewer": "pr-loop fresh-context subagent (delta verification only)",
+  "date": "2026-08-29",
+  "verifications": [
+    {"id": "R1", "status": "VERIFIED", "confidence": 0.99, "evidence": "The verifier rejects the overlapping CVX pointer, while direct replay accepts distinct XOM Item 7 evidence [104502,108502) outside primary [103997,104264)."},
+    {"id": "R2", "status": "VERIFIED", "confidence": 0.99, "evidence": "A non-object JSON action produces exactly three unparseable turns, preserves deterministic output, and leaves review_required."},
+    {"id": "R3", "status": "VERIFIED", "confidence": 0.99, "evidence": "The next turn records and receives the exact bounded read_window range, and envelope validation rejects a mismatched range."},
+    {"id": "R4", "status": "DEBT", "confidence": 0.99, "task": "TD-166", "evidence": "The implementation passes direct replay, but the committed case does not bind all required mixed-target, exact-feedback, routing-shape, and API-response behaviors; converged to P1 debt after call 2."}
+  ],
+  "new_findings": []
+}

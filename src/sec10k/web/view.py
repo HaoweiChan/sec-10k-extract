@@ -111,6 +111,7 @@ def build_view(result, display_max=DISPLAY_MAX):
             "item": i.get("item"), "part": i.get("part"), "title": i.get("title"),
             "status": i.get("status"), "confidence": i.get("confidence"),
             "method": i.get("method"), "heading_text": i.get("heading_text"),
+            "review_required": i.get("review_required", False),
             "start": s, "end": e,
             "chars": len(raw) if has_span else None,
             "text": raw[:display_max],

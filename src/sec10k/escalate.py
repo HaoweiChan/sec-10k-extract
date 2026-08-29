@@ -67,6 +67,10 @@ from src.sec10k.validate import SPAN_FLOOR
 # the auditor's blind sample adjudicating cvx-2015 item **6** CORRECT and
 # says in terms that "items 7 and 8 were never independently adjudicated".
 TRIGGER_CODES = ("low_item_coverage",)
+AGENT_CODES = ("internal_pointer_unreached",)
+AGENT_TURNS = 3
+AGENT_MODEL = "openai/gpt-5-mini"
+OBSERVATION_CAP = 4000
 
 # The statuses that carry offsets (`specs/001-sec10k-contract.md`: "For status:
 # missing / omitted: start/end are null — there is no span", and ADR-011 for
@@ -159,9 +163,11 @@ SYSTEM = (
     "a cross-reference index row, or an internal pointer rather than the "
     "item's own content.\n"
     "Answer with a JSON object and nothing else: a map from item code to "
-    "[start, end] character offsets INTO THE TEXT AS GIVEN TO YOU, or null "
-    "when you cannot locate that item's content. Do not quote, summarize, "
-    "rewrite or extract any text. Offsets only.\n"
+    "either [start, end] character offsets INTO THE TEXT AS GIVEN TO YOU, "
+    "{\"regions\": [{\"start\": start, \"end\": end, \"title\": heading}]} "
+    "for separately anchored alternative evidence, or null when you cannot "
+    "locate that item's content. Do not quote, summarize, rewrite or extract "
+    "any text. Offsets only.\n"
     "Every offset you return is re-checked against the parser's own output "
     "before it is used; a span that overlaps another item, sits inside text "
     "another item already claims, is shorter than "
@@ -171,27 +177,34 @@ SYSTEM = (
 )
 
 
-def classify(warnings, items):
+def classify(warnings, items, agentic=False):
     """Name the deterministic failure shape before any paid rung is considered."""
     hits = [w for w in warnings if w.get("code") in TRIGGER_CODES]
     xref = any(w.get("code") == "cross_reference_index" for w in warnings)
     missing = sorted(i["item"] for i in items if i["status"] == "missing")
     stubs = sorted({w["item"] for w in warnings
                     if w.get("code") == "item_span_near_empty" and w.get("item")})
+    agent = sorted({w["item"] for w in warnings
+                    if agentic and w.get("code") in AGENT_CODES and w.get("item")})
     if hits and xref:
         return {"class": "deterministic_resolved", "route": "suppressed",
                 "reason": "cross_reference_index", "items": [], "calls_paid": False}
     if hits and missing:
         return {"class": "alternative_evidence", "route": "alternative_regions",
-                "reason": "missing primary spans", "items": missing, "calls_paid": True}
+                "reason": "missing primary spans", "items": sorted(set(missing) | set(stubs)),
+                "calls_paid": True}
     if hits:
         return {"class": "replace_primary", "route": "contiguous_span_repair",
                 "reason": "low_item_coverage", "items": stubs, "calls_paid": True}
+    if agent:
+        return {"class": "agentic_repair", "route": "agent_loop",
+                "reason": "internal_pointer_unreached", "items": agent,
+                "calls_paid": True}
     return {"class": "quiet", "route": "none", "reason": "no trigger", "items": [],
             "calls_paid": False}
 
 
-def trigger(warnings, items=()):
+def trigger(warnings, items=(), agentic=False):
     """The router's sensor. Reads the warnings the layer-8 battery already
     produced — it re-derives nothing and owns no threshold of its own, so the
     trigger cannot drift away from the validator that defines it."""
@@ -204,11 +217,12 @@ def trigger(warnings, items=()):
     # second time, `empty_completion` both times, zero items resolved
     # (ADR-036 §k). Suppressing the trigger here rather than withholding the
     # warning keeps the sensor reading the battery it is defined by.
-    classification = classify(warnings, items)
+    classification = classify(warnings, items, agentic=agentic)
     return {
-        "fired": bool(hits) and classification["route"] != "suppressed",
+        "fired": classification["route"] not in ("none", "suppressed"),
         "suppressed_by": "cross_reference_index" if classification["route"] == "suppressed" else None,
-        "codes": sorted({w["code"] for w in hits}),
+        "codes": sorted({w["code"] for w in warnings
+                         if w.get("code") in TRIGGER_CODES + (AGENT_CODES if agentic else ())}),
         # the per-item hint the rungs are pointed at: every item D8 flagged as
         # a stub or a pointer. Non-escalating on its own (ADR-035 §c) — it says
         # WHICH items to ask about once something else has escalated.
@@ -260,19 +274,23 @@ def _region(text, code, region):
     return None, "region lacks title-or-reference evidence anchored to its verbatim slice"
 
 
-def verify_alternatives(text, items, proposal, asked=None):
+def verify_alternatives(text, items, proposal, asked=None, existing=False):
     """Verify item-scoped regions without changing primary INV-S1 spans."""
     by_code, accepted, why = {i["item"]: i for i in items}, {}, []
     for code, value in sorted(proposal.items()):
         if not isinstance(value, dict) or set(value) != {"regions"}:
             continue
-        if (code not in by_code or by_code[code]["status"] != "missing"
+        if (code not in by_code or (not existing and by_code[code]["status"] != "missing")
                 or (asked is not None and code not in asked)):
             why.append(f"item {code}: not an admissible alternative target")
             continue
         regions, rejects = [], []
         for region in value["regions"] if isinstance(value["regions"], list) else []:
             good, bad = _region(text, code, region)
+            if good and existing and by_code[code].get("start") is not None:
+                old = by_code[code]
+                if not (good["end"] <= old["start"] or old["end"] <= good["start"]):
+                    good, bad = None, "region overlaps the target's current primary span"
             (regions if good else rejects).append(good or bad)
         if not regions or rejects:
             why.extend(f"item {code}: {x}" for x in rejects or ["no regions"])
@@ -421,6 +439,103 @@ def apply(items, accepted, method, alternative=None):
             it.setdefault("evidence", {})["alternative_regions"] = alternative[it["item"]]
 
 
+AGENT_SYSTEM = (
+    "Return one JSON object only. Its action is one of: "
+    "search {action,query}; read_window {action,start,end}; "
+    "propose_primary_span {action,item,start,end}; "
+    "propose_alternative_regions {action,item,regions}; or finish {action}. "
+    "The only accepted evidence is normalized-text offsets."
+)
+
+
+def _agent_loop(text, items, warnings, budget, call):
+    """A three-turn action loop; verifier output is the next turn's observation."""
+    import json
+    from src.sec10k.llm import EscalationUnavailable
+    tr = trigger(warnings, items, agentic=True)
+    targets = tr["target_items"]
+    record = {"trigger": tr, "tiers": [], "resolved": [], "alternative": [],
+              "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0}}
+    observation = {"items": [{"item": i["item"], "status": i["status"],
+                              "start": i.get("start"), "end": i.get("end")}
+                             for i in items],
+                   "warnings": [{"code": w.get("code"), "item": w.get("item")}
+                                for w in warnings]}
+    prompt_range = (0, 0)
+    for turn in range(1, AGENT_TURNS + 1):
+        offset, end = prompt_range
+        entry = {"tier": "agent_loop", "turn": turn, "model": AGENT_MODEL,
+                 "items": targets, "offset": offset, "input_chars": end - offset,
+                 "truncated": end - offset < len(text),
+                 "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0},
+                 "actions": [], "observations": []}
+        try:
+            got = call(AGENT_MODEL, AGENT_SYSTEM, json.dumps(observation), MAX_TOKENS, budget)
+        except EscalationUnavailable as e:
+            entry.update(outcome="unavailable", error=str(e)); record["tiers"].append(entry); break
+        entry["cost"] = {"llm_calls": 0 if got["cached"] else 1,
+                         "tokens": sum(got["usage"].values()),
+                         "usd": 0.0 if got["cached"] else got["usd"]}
+        entry["cached"] = got["cached"]
+        try:
+            action = json.loads((got.get("text") or "").strip())
+            if not isinstance(action, dict):
+                raise ValueError("action is not an object")
+            kind = action.get("action")
+            if kind not in {"search", "read_window", "propose_primary_span", "propose_alternative_regions", "finish"}:
+                raise ValueError("unknown action")
+        except (ValueError, TypeError, json.JSONDecodeError) as e:
+            entry.update(outcome="unparseable", error=str(e)); record["tiers"].append(entry)
+            observation = {"rejection": entry["error"]}; prompt_range = (0, 0); continue
+        entry["actions"].append(action)
+        accepted, alternative = {}, {}
+        if kind == "search":
+            q = action.get("query", "")
+            hits, at = [], 0
+            while isinstance(q, str) and q and len(hits) < 5:
+                at = text.find(q, at)
+                if at < 0: break
+                hits.append(at); at += len(q)
+            entry["observations"].append({"matches": hits}); entry["outcome"] = "rejected"
+            record["tiers"].append(entry); observation = entry["observations"][0]; prompt_range = (0, 0); continue
+        if kind == "read_window":
+            s, e = action.get("start"), action.get("end")
+            if not (isinstance(s, int) and isinstance(e, int) and 0 <= s < e <= len(text)):
+                why = ["read_window bounds outside normalized_text"]
+            else:
+                entry["observations"].append({"start": s, "end": min(e, s + OBSERVATION_CAP),
+                                              "text": text[s:min(e, s + OBSERVATION_CAP)]})
+                entry["outcome"] = "rejected"; record["tiers"].append(entry)
+                observation = entry["observations"][0]
+                prompt_range = (observation["start"], observation["end"]); continue
+        elif kind == "propose_primary_span":
+            accepted, why = verify(text, items, {action.get("item"): [action.get("start"), action.get("end")]}, asked=set(targets))
+        elif kind == "propose_alternative_regions":
+            alternative, why = verify_alternatives(text, items, {action.get("item"): {"regions": action.get("regions")}},
+                                                    asked=set(targets), existing=True)
+        else:
+            accepted, alternative, why = {}, {}, ["agent finished without evidence"]
+        entry["observations"].append({"verifier": why})
+        if accepted or alternative:
+            apply(items, accepted, "agent_loop", alternative)
+            record["resolved"], record["alternative"] = sorted(accepted), sorted(alternative)
+            entry.update(outcome="resolved", resolved=record["resolved"], alternative=record["alternative"])
+            record["tiers"].append(entry); break
+        entry.update(outcome="rejected", rejections=why); record["tiers"].append(entry)
+        observation = {"verifier_rejections": why}; prompt_range = (0, 0)
+    for entry in record["tiers"]:
+        for k in record["cost"]: record["cost"][k] = round(record["cost"][k] + entry["cost"][k], 6)
+    record["vision"] = vision_verify(None, {}, None, None, None, text)
+    record["stages"] = _stages(tr, record, record["vision"])
+    if record["resolved"] or record["alternative"]:
+        return record, []
+    for item in items:
+        if item["item"] in targets:
+            item["review_required"] = True
+    return record, [{"code": "escalation_unresolved", "item": None,
+                     "message": "agent loop exhausted without verified evidence"}]
+
+
 VISION_CAP = 2
 IMAGE_SUFFIXES = (".gif", ".jpeg", ".jpg", ".png", ".webp")
 VISION_TEXT_CAP = 4000
@@ -538,7 +653,7 @@ def route(text, items, warnings, budget=None, images=None, vision_cached=None, s
     from src.sec10k.llm import Budget, EscalationUnavailable, call  # noqa: E402
     import json
 
-    tr = trigger(warnings, items)
+    tr = trigger(warnings, items, agentic=True)
     record = {"trigger": tr, "tiers": [], "resolved": [],
               "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0}}
     if not tr["fired"]:
@@ -549,6 +664,8 @@ def route(text, items, warnings, budget=None, images=None, vision_cached=None, s
         return record, []
 
     budget = budget if budget is not None else Budget()
+    if tr["route"] == "agent_loop":
+        return _agent_loop(text, items, warnings, budget, call)
     codes = tr["target_items"] or tr["items"] or [i["item"] for i in items
                             if i.get("start") is not None]
     extra, vision = [], None
