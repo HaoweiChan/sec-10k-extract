@@ -5,7 +5,7 @@ boundaries, status, label-free validation, confidence, assembly. Layer 10 — th
 model-based slow path ADR-020 ruled NOT JUSTIFIED in 2026-08-19 — now exists as
 a TRIGGERED tier behind `escalate=True` (ADR-036, which supersedes ADR-020).
 It is off by default, it runs only when the D8 document-level signal fires, and
-on a dev corpus where that signal fires on 2 of 36 real filings the default
+on a dev corpus where that signal fires on 2 of 38 real filings the default
 cost stays exactly $0.
 `success` is deliberately hard to earn — it requires the validator battery to
 find nothing at all.
@@ -164,8 +164,8 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
     flags above this one is NOT a pure annotation: when the trigger fires AND a
     tier's answer survives `escalate.verify`, the resolved items' spans,
     `method` and `heading_text` move, with the deterministic answer preserved
-    under `evidence.deterministic`. When the trigger does NOT fire — 48 of 51
-    dev fixtures, and 34 of the 36 real EDGAR filings among them — nothing
+    under `evidence.deterministic`. When the trigger does NOT fire — 50 of 53
+    dev fixtures, and 36 of the 38 real EDGAR filings among them — nothing
     moves, nothing is spent, and the only difference from a default run is the
     presence of the `routing` key itself. The exception is `intc-2025`, the
     collapsed real filing the live exam burned to the dev side: this line said
@@ -396,7 +396,7 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
         # the import here is what makes `python3 -m evals.run` load no network
         # module at all (ADR-036 §h, pinned by repo_hygiene's escalation_seam)
         routing, extra = route(text, items, warnings, budget=budget, images=imgs,
-                               source_url=source_url)
+                               source_url=source_url, raw=raw_bytes)
         warnings += extra
         trace.append({"layer": "escalate", "trigger": routing["trigger"]["fired"],
                       "tiers": [f"{t['tier']}:{t['outcome']}" for t in routing["tiers"]],

@@ -64,3 +64,7 @@ index only cross-references it for scanning.
   an existing-model, maximum-three-turn action loop starts only from existing
   internal-pointer honesty evidence; bounded observations re-plan after a
   verifier rejection, and only existing deterministic verifiers publish.
+- ADR-048 — [same-accession external Annual Report evidence](ADR-048-same-accession-external-evidence.md):
+  D22's bounded loop may navigate SEC attachments inside the validated source
+  accession and publish document-scoped verified regions without moving primary
+  normalized-text offsets or coverage.

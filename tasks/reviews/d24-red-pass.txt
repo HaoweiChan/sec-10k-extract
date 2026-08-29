@@ -1,0 +1,21 @@
+D24 red-first and positive replay evidence, 2026-08-29
+
+Before implementation:
+  mrk-1995-external-annual-report-burned FAIL
+  pgr-2023-external-annual-report-burned FAIL
+  fast targeted: 0/2, $0
+  report: evals/report/20260829-210723-fast.json
+
+After implementation:
+  mrk-1995 Items 7/8 external evidence PASS
+  pgr-2023 Items 7/8 external evidence PASS
+  4/4 target items carry non-empty document-scoped evidence
+  primary spans/methods/headings and meta.coverage unchanged
+  fast targeted: 2/2, $0
+  report: evals/report/20260829-211733-fast.json
+
+Default snapshot comparison at base e34dfa8055be0fe6db0c2cebd3f703c9c82187d5:
+  UNCHANGED_OUTSIDE_BURNS True
+  before: 70 dev + 5 held-out
+  after: 72 dev + 3 held-out
+  after removing the two moved burn identities: 70 == 70 dev, 3 == 3 held-out

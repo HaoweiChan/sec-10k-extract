@@ -1,0 +1,19 @@
+{
+  "suite": "invariant",
+  "score": 1.0,
+  "git_sha": "e34dfa8055be0fe6db0c2cebd3f703c9c82187d5-dirty",
+  "table_cells_fidelity": null,
+  "table_rows_fidelity": null,
+  "structure_blocks_fidelity": null,
+  "structure_bounds_fidelity": null,
+  "results": [
+    {
+      "passed": true,
+      "failures": [],
+      "seconds": 0.02,
+      "id": "adr-header-and-index",
+      "kind": "d24-adr.U9FybM"
+    }
+  ],
+  "debt": []
+}

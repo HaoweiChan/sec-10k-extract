@@ -106,6 +106,18 @@ def build_view(result, display_max=DISPLAY_MAX):
             joined = "".join(out)
             truncated = len(joined) > display_max
             body = joined[:display_max]
+        external = ev.get("external_regions") or []
+        if external:
+            notes = []
+            for region in external:
+                doc = region["document"]
+                identity = doc.get("url") or doc.get("sgml_block")
+                notes.append(f"{doc.get('type')} {doc.get('filename') or 'embedded document'}"
+                             f" · document chars {region['start']:,}–{region['end']:,}"
+                             f" · {identity}")
+            body = (body + "\n\n———— verified evidence in another same-accession "
+                    "document (offsets are not /normalized_text) ————\n\n"
+                    + "\n".join(notes))[:display_max]
 
         item = {
             "item": i.get("item"), "part": i.get("part"), "title": i.get("title"),
