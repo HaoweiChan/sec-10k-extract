@@ -1,0 +1,21 @@
+{
+  "pr": 81,
+  "round": 2,
+  "result": "APPROVED",
+  "date": "2026-08-29",
+  "verifications": [
+    {
+      "id": "R1",
+      "status": "VERIFIED",
+      "confidence": 0.98,
+      "evidence": "The web-contract check dispatches a POST through the FastAPI ASGI app; removing the registered route makes the HTTP-200 assertion fail, as recorded in pr81-r1-red.txt."
+    },
+    {
+      "id": "R2",
+      "status": "VERIFIED",
+      "confidence": 0.99,
+      "evidence": "The response asserts the exact target set {2,16} and review_required for each; dropping a target makes the exact-set assertion fail, as recorded in pr81-r1-red.txt."
+    }
+  ],
+  "new_findings": []
+}

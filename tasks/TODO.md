@@ -1242,7 +1242,7 @@ Decided 2026-08-28 (orchestrator acting as human-in-the-loop), and PARTLY TAKEN:
 Stop rule, pre-declared so the next taker does not drift: at most ONE further paid attempt, and only after a run carries `reasoning_tokens`. If it shows thinking consumed the whole allowance again, the honest conclusion is that the A1 whole-document-collapse class is out of this ladder's reach, recorded in an ADR that supersedes §h4's optimism — NOT a third ceiling. If instead it shows reasoning stopping at its cap with the answer truncated, then raising `MAX_TOKENS` alone is the indicated fix and is worth one call. Either way the decision is made BEFORE the money, which is the part the first two attempts got backwards
 Not taken because: Every route to an answer costs another dollar and buys one sample. §d's own arithmetic says why the retry is not cheap: input dominates — $0.844 of this run's $0.998 was input — so a second attempt at a higher ceiling costs nearly the same again, and a THIRD failure would still not distinguish 'allowance too small' from 'this input cannot be answered'. The honest sequencing is to decide the design question before spending: either raise `REASONING_TOKENS`/`MAX_TOKENS` on a stated hypothesis with a pre-declared stop rule, or accept that the A1 collapse class is out of the ladder's reach and say so in an ADR that supersedes §h4's optimism. Whoever takes it starts free: the failing response is committed to `evals/cache/llm/`, so RUN 2 replays at $0.00 and only a CHANGED request costs money
 
-### TD-166 — Bind the D22 agent loop through its real public surfaces [status: in-progress]
+### TD-166 — Bind the D22 agent loop through its real public surfaces [status: pr]
 Priority: P1
 Origin: PR #80 R4 (converged)
 Spec: The D22 implementation passes direct replays, but its committed
@@ -1257,6 +1257,6 @@ feedback in the next call; empty and malformed responses; routing-envelope
 validation; and an API response retaining `review_required` for every unresolved
 target. The cases fail when any of those connections is removed, then invariant
 and fast pass at 100% with $0 and no baseline move.
-Review status 2026-08-29: PR #81 R1/R2 repair is implemented with red-first
-route-removal and target-loss repros in `tasks/reviews/pr81-r1-red.txt`; fresh
-independent review remains pending (no approval claimed).
+Status: PR #81 R2 APPROVED — R1 verifies the ASGI app POST and route-removal
+red repro; R2 verifies exact `{2,16}` targets and target-drop red repro; no new
+findings. Evidence: `tasks/reviews/pr81-r2-verification.json`.
