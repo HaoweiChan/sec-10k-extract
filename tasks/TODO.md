@@ -179,7 +179,7 @@ repairs are in `tasks/reviews/d21-live-vision-cold-review*.txt`. Final invariant
 98/98 and fast 168/168, both $0 with no baseline move. PR #78 merged as
 `d8680ab`; deployment/build-identity verification remains UNRUN.
 
-### D22 — Bounded agent loop that repairs a real filing [status: in-progress]
+### D22 — Bounded agent loop that repairs a real filing [status: pr]
 Priority: P1
 Origin: owner decision, 2026-08-29; implementation plan in
 `docs/product/two-day-agentic-recovery-plan.md`
@@ -1241,3 +1241,19 @@ Spec: **The §h4 fix did not close the failure it was built for.** §h4 diagnose
 Decided 2026-08-28 (orchestrator acting as human-in-the-loop), and PARTLY TAKEN: **the next paid attempt is deferred until it can explain itself, and the $0 half of that was shipped in this same decision.** Reading the client settled one hypothesis for free — the `reasoning` parameter IS sent correctly (`llm.py::_body` sends `{"max_tokens": 4096}` with `max_tokens` 6144, so OpenRouter's documented rule is satisfied and a malformed request is ruled OUT). What could not be settled for free is the one that matters: `usage.output_tokens` counts thinking AND answer, so `6144 of 6144` with empty text has two readings — the reasoning cap was not enforced and thinking consumed everything, or it was enforced and the ANSWER was truncated — and `finish_reason: length` is identical under both. `_normalize` was DROPPING `completion_tokens_details.reasoning_tokens`, the single field that separates them, so a second $1 call would have returned exactly as uninformative as the first. That is §h4's own lesson recurring at the next field along ("a diagnostic nothing asserts is one that quietly stops being written"), and it is now closed: the field is recorded, `None` when the provider omits it rather than 0, and pinned by `llm.py::_demo` (added red-first, then re-proved by deleting the field and watching `_demo` exit 1)
 Stop rule, pre-declared so the next taker does not drift: at most ONE further paid attempt, and only after a run carries `reasoning_tokens`. If it shows thinking consumed the whole allowance again, the honest conclusion is that the A1 whole-document-collapse class is out of this ladder's reach, recorded in an ADR that supersedes §h4's optimism — NOT a third ceiling. If instead it shows reasoning stopping at its cap with the answer truncated, then raising `MAX_TOKENS` alone is the indicated fix and is worth one call. Either way the decision is made BEFORE the money, which is the part the first two attempts got backwards
 Not taken because: Every route to an answer costs another dollar and buys one sample. §d's own arithmetic says why the retry is not cheap: input dominates — $0.844 of this run's $0.998 was input — so a second attempt at a higher ceiling costs nearly the same again, and a THIRD failure would still not distinguish 'allowance too small' from 'this input cannot be answered'. The honest sequencing is to decide the design question before spending: either raise `REASONING_TOKENS`/`MAX_TOKENS` on a stated hypothesis with a pre-declared stop rule, or accept that the A1 collapse class is out of the ladder's reach and say so in an ADR that supersedes §h4's optimism. Whoever takes it starts free: the failing response is committed to `evals/cache/llm/`, so RUN 2 replays at $0.00 and only a CHANGED request costs money
+
+### TD-166 — Bind the D22 agent loop through its real public surfaces [status: todo]
+Priority: P1
+Origin: PR #80 R4 (converged)
+Spec: The D22 implementation passes direct replays, but its committed
+`d22-agent-loop` case still uses one target, does not prove the exact verifier
+observation reaches the next model prompt, does not validate the produced route
+through `envelope_shape`, and checks `build_view` instead of the
+`/api/extract` payload. These gaps allow mixed-target loss, feedback disconnect,
+or API projection regressions to remain green even when direct behavior worked.
+Acceptance: Add red-first end-to-end cached cases with multiple missing and
+bad-primary targets; `search → read_window → proposal`; the exact verifier
+feedback in the next call; empty and malformed responses; routing-envelope
+validation; and an API response retaining `review_required` for every unresolved
+target. The cases fail when any of those connections is removed, then invariant
+and fast pass at 100% with $0 and no baseline move.
