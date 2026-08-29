@@ -561,6 +561,8 @@ def eval_check(result, chk, path=None):
                 return "rejection was not observed by the next cached turn or alternative was not recorded"
             if extra or "alternative_regions" not in items_in[[i["item"] for i in items_in].index(target_code)]["evidence"]:
                 return f"verified cached repair did not apply honestly: extra={extra}"
+            if _json.dumps(tiers[0]["observations"][0]) not in calls[1] or _json.dumps(tiers[1]["observations"][0]) not in calls[2]:
+                return "exact search/read observation did not reach the next model prompt"
         else:
             if len(tiers) != 3 or any(x["outcome"] != "rejected" for x in tiers):
                 return f"agent exhaustion did not use exactly three rejected turns: {tiers}"

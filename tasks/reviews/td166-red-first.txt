@@ -1,0 +1,6 @@
+TD-166 red-first — 2026-08-29
+
+Before this coverage addition, removing either `observation =` hand-off in
+`_agent_loop` left d22-agent-loop green: it inspected tiers, not next-call
+payloads. The new cached route assertion fails when either serialized search
+or read-window observation is absent from the following call.
