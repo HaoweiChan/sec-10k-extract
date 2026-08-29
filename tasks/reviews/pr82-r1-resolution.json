@@ -1,0 +1,15 @@
+{
+  "pr": 82,
+  "round": 1,
+  "result": "OPEN",
+  "date": "2026-08-29",
+  "resolutions": [
+    {
+      "id": "R1",
+      "status": "implemented",
+      "fix": "The curated D23 record now calls context loss an inference and names the preserved runtime path, token drop, repeated item-1 action, and absence of full prompt capture.",
+      "evidence": "The wording matches ADR-047 and tasks/reviews/d22-live-run-report.md; no runtime or eval behavior changed."
+    }
+  ],
+  "verification_status": "awaiting independent review; no approval claimed"
+}

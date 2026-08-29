@@ -17,8 +17,10 @@ search, `read_window`, and verifier rejection each carries both parts.
 
 - Assumed: feeding the most recent observation alone was enough for a bounded
   agent to retain the assigned target and filing shape.
-- Eval said: the D22 live CVX run rejected out-of-target item 1, and its next
-  prompt contained only that rejection; turn 2 guessed item 1 again. The new
-  cached `persistent_context` case was observed red on the missing target/outline.
+- Eval said: the D22 live CVX run rejected out-of-target item 1 and turn 2
+  guessed item 1 again. Full prompts were not retained; the pre-D23 runtime
+  path, input-token drop 727→87, and repeated action support the context-loss
+  inference. The cached `persistent_context` case was observed red on the
+  missing target/outline.
 - Corrected: the loop serializes a fixed context beside the changing observation
   on every turn; no live retry or heuristic was added.
