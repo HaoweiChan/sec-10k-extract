@@ -152,7 +152,7 @@ Full rationale in `specs/decisions/` (18 ADRs). The ones that shaped the system:
   No model is in the DEFAULT extraction path of the LIBRARY, and cost on that
   path is structurally $0 — not "cheap", zero. ADR-036 adds a slow path
   (`extract_items(path, escalate=True)`, via OpenRouter) that is entered only when D8's
-  document-level `low_item_coverage` fires — measured on **2 of 35 real dev
+  document-level `low_item_coverage` fires — measured on **2 of 36 real dev
   filings**, the collapsed `intc-2025` — and whose answers are discarded unless
   a deterministic re-check accepts their offsets. With no API credential it
   refuses loudly rather than degrading.

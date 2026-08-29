@@ -1,0 +1,28 @@
+{
+  "pr": 75,
+  "round": 2,
+  "result": "APPROVED",
+  "reviewer": "pr-loop fresh-context subagent (delta verification only)",
+  "date": "2026-08-29",
+  "verifications": [
+    {
+      "id": "R1",
+      "status": "VERIFIED",
+      "confidence": 0.99,
+      "evidence": "The repair restores all 63 deleted current-base history records; the final branch comparison is additive-only with zero deletions and the JSONL parses successfully."
+    },
+    {
+      "id": "R2",
+      "status": "VERIFIED",
+      "confidence": 0.99,
+      "evidence": "ADR-044, the prompt record, INDEX, and TODO consistently record 69 dev / 6 held-out becoming 70 dev / 5 held-out with all 74 non-AIG filings unchanged; obsolete 50/50 claims are absent."
+    },
+    {
+      "id": "R3",
+      "status": "VERIFIED",
+      "confidence": 0.99,
+      "evidence": "TODO contains exactly one D18 block, no stale integration UNRUN claim, and the current AIG, gate, cost, and blast-radius evidence."
+    }
+  ],
+  "new_findings": []
+}

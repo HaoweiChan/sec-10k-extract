@@ -1,0 +1,40 @@
+{
+  "pr": 75,
+  "round": 1,
+  "result": "REQUEST_CHANGES",
+  "reviewer": "pr-loop fresh-context subagent (falsification-only, full review)",
+  "date": "2026-08-29",
+  "gate_at_review": "invariant 98/98 = 1.000, fast 169/169 = 1.000, baseline untouched, cost $0",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "HIGH",
+      "confidence": 0.99,
+      "route": "repair",
+      "claim": "The merge resolution deletes 63 current-base eval-history records, including D19-D21 and current-main gate evidence.",
+      "evidence": "evals/report/history.jsonl:1278 replaces the base sequence beginning at 20260828-213116 with older D18 records; the branch diff reports 23 additions and 63 deletions, including records for SHAs 2e0e39f, 2118abd, b0c2185, e56d218, and d8680ab.",
+      "repro": "git diff origin/plan/agentic-recovery...task/D18 -- evals/report/history.jsonl",
+      "acceptance": "Retain every history line present on origin/plan/agentic-recovery and append D18 records without deleting or replacing current-base audit history."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "confidence": 0.99,
+      "route": "repair",
+      "claim": "The committed blast-radius evidence still copies PR #75's obsolete origin/main 50-case measurement instead of recording the required current-base corpus comparison.",
+      "evidence": "ADR-044, the D18 prompt record, and the decision index claim 50/50 origin/main fixtures unchanged, while the integration measurement is base 69 dev/6 held-out versus integrated 70 dev/5 held-out with all 74 non-AIG filings unchanged.",
+      "repro": "rg -n '50/50 unchanged|all 50 pre-existing' specs/decisions/ADR-044-running-header-candidate-filter.md prompts/2026-08-28-d18-running-header-burn.md specs/decisions/INDEX.md",
+      "acceptance": "Record the blast radius against origin/plan/agentic-recovery, including 69 to 70 dev, 6 to 5 held-out, and all 74 non-AIG filings unchanged."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "confidence": 0.99,
+      "route": "repair",
+      "claim": "The task ledger contains two conflicting D18 blocks and the current integration block still says its completed gates are UNRUN.",
+      "evidence": "tasks/TODO.md contains one D18 status pr block from PR #74 and another D18 status in-progress block from PR #75; the latter says current integration and gates are UNRUN despite the completed reruns.",
+      "repro": "rg -n '^### D18|current-main integration and gates are UNRUN' tasks/TODO.md",
+      "acceptance": "Keep exactly one D18 milestone block and update its status/evidence to the completed current-base gates and blast-radius run."
+    }
+  ]
+}

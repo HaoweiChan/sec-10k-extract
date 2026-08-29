@@ -1,0 +1,23 @@
+{
+  "pr": 75,
+  "round": 1,
+  "responds_to": "tasks/reviews/pr75-r1.json",
+  "result": "REPAIRED",
+  "resolutions": [
+    {
+      "id": "R1",
+      "resolution": "fixed",
+      "evidence": "Red repro: git diff origin/plan/agentic-recovery...task/D18 -- evals/report/history.jsonl showed 23 additions and 63 deletions. The repaired file starts with every origin/plan/agentic-recovery line unchanged, then appends the 23 D18 records and the new gate record; the post-fix diff has no deletions."
+    },
+    {
+      "id": "R2",
+      "resolution": "fixed",
+      "evidence": "Red repro found obsolete 50/50 origin/main claims in ADR-044, the D18 decision record, and INDEX. Each now records the re-derived current-base measurement: 69 dev / 6 held-out at origin/plan/agentic-recovery, 70 dev / 5 held-out after moving AIG, and all 74 non-AIG filings unchanged."
+    },
+    {
+      "id": "R3",
+      "resolution": "fixed",
+      "evidence": "Red repro found two D18 headers and an UNRUN integration claim. The legacy block was merged into the current P1 plan block: its frozen-run provenance and red-first evidence are retained, while status now records AIG Item 1 at 48,136 chars, invariant 98/98, fast 169/169, $0, and the 74-filing current-base comparison."
+    }
+  ]
+}

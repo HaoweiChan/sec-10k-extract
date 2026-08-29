@@ -33,7 +33,7 @@ RE-AFFIRMED, not moved — §e). Narrative:
 `docs/evals/audits/2026-08-25-demo-intel-citi-postmortem.md` §7.
 
 **Ruling**: four decisions. (1) The ladder is `deterministic → llm_localize (small model, the largest unattributed region, capped at `LOCALIZE_WINDOW`) → llm_extract (large model, the document capped at `EXTRACT_WINDOW`)` — BOTH rungs' inputs are bounded, so one call's price is bounded on arbitrary input, entered **only** when `low_item_coverage` fires, opt-in behind `escalate=True`, and no rung's answer is used until `escalate.verify` re-derives its offsets against the deterministic output (bounds, `SPAN_FLOOR`, INV-S1 ordering, and a `SIM_FLOOR` heading match). (2) **Text-less / scanned filings stay OUT of scope** and the README row is re-affirmed, so **no vision rung is built** (§e). (3) The envelope publishes a `routing` record and two new `method` values, and the inspector renders both. (4) With no `OPENROUTER_API_KEY` the slow path **refuses loudly** — a `routing` outcome of `unavailable` plus an `escalation_unavailable` warning — and never degrades silently.
-**Because**: measured over all 50 dev filing fixtures, `low_item_coverage` fires on **3 of 50 (0.0600), and on 2 of 35 real EDGAR filings**, so the ladder's default cost is exactly $0.00 and the whole dev corpus escalates for an estimated $1.3440 (derived, `tasks/reviews/d11_sweep_cost.py`; the $0.056 this header carried until 2026-08-27 was the pre-OpenRouter figure and is withdrawn — PR #58 R20). **Both figures moved on 2026-08-27 when the live exam burned `intc-2025` and its fixture moved to the dev side (`evals/heldout/README.md`, Burn 2026-08-27): the trigger now fires on a REAL filing and not only on the synthetic, which is stronger evidence, and the sweep is 21× more expensive because that filing is 517,976 chars.** The item-level `item_span_near_empty` fires on 13 of 47 (11 of 35 real) and is deliberately NOT the trigger, because escalating on it would spend money on the A2 class ADR-034 §e2 declined and put the dev escalation rate at 28.0%.
+**Because**: measured over all 51 dev filing fixtures, `low_item_coverage` fires on **3 of 51 (0.0588), and on 2 of 36 real EDGAR filings**, so the ladder's default cost is exactly $0.00 and the whole dev corpus escalates for an estimated $1.3440 (derived, `tasks/reviews/d11_sweep_cost.py`; the $0.056 this header carried until 2026-08-27 was the pre-OpenRouter figure and is withdrawn — PR #58 R20). **Both figures moved on 2026-08-27 when the live exam burned `intc-2025` and its fixture moved to the dev side (`evals/heldout/README.md`, Burn 2026-08-27): the trigger now fires on a REAL filing and not only on the synthetic, which is stronger evidence, and the sweep is 21× more expensive because that filing is 517,976 chars.** The item-level `item_span_near_empty` fires on 14 of 51 (11 of 36 real) and is deliberately NOT the trigger, because escalating on it would spend money on the A2 class ADR-034 §e2 declined and put the dev escalation rate at 27.5%.
 **Enforced by**: `evals/adversarial/escalation-trigger-quiet.json` and `evals/adversarial/escalation-no-credential.json` (fast + invariant), `evals/adversarial/ui-routing-provenance.json` + `evals/adversarial/ui-routing-provenance-regression.json` (its 11-failure mutation fixture `evals/fixtures/repo_hygiene/routing-strip-missing.html`), `evals/adversarial/escalation-seam-offline.json`, `src/sec10k/escalate.py::_demo`, `src/sec10k/llm.py::_demo`, `src/sec10k/web/view.py::_demo`, `evals/adversarial/escalation-verify-guards.json` (PR #58 R1/R2/R7 — the first case that reaches `verify` at all), `src/sec10k/eval_adapter.py::_routing_shape` + the `routing` / `escalation_invariant` / `verify_guards` check types, and `.github/workflows/ci.yml`'s unit-tests job, which runs both `_demo`s (PR #58 R3: before it did, every guard in this ADR was deletable with the gate 100% green). Red-first record with its sha: `tasks/reviews/d11-red-first.txt`. Measurement: `tasks/reviews/d11_trigger_scan.py` (§c's census) and `tasks/reviews/d11_sweep_cost.py` (§d's dollars, derived from that census and the committed price record rather than retyped — PR #58 R8), plus `evals/adversarial/ui-escalation-locks.json` with its two mutation fixtures — `escalation-locks-removed.py` (the locks deleted, PR #58 R9) and `escalation-locks-evaded.py` (every name and shape intact and both locks defeated by three one-token edits, PR #58 R18) — which bind §h2's locks.
 
 ---
@@ -49,7 +49,7 @@ footnote.
 |---|---|---|
 | Six of seven residual-failure classes are **precision** failures a recall-only fallback cannot reach | **Still true, and this ADR does not claim otherwise.** The ladder is a recall mechanism; it moves spans into unattributed text and cannot fix a span that is in the wrong place for a precision reason. | Nothing. §i names what this ladder does not reach. |
 | The one real recall gap (`axp-2008`, 4 of 768 items) closes deterministically at $0 | **Still true.** | Nothing — and ADR-034 §e3 already ruled the `axp-2008` fan-out "subsumed by D11" on the escalation-ladder principle, which is exactly what this document builds. |
-| Therefore no fallback ships | **No longer true**, and this is the whole change | Two things arrived after 2026-08-19 that ADR-020 could not have measured: the 2026-08-24 demo, where two real filings (Intel, Citigroup) collapsed onto cross-reference index rows and were reported at `conf 0.95`; and D8's `low_item_coverage`, a **measured, document-level, zero-false-positive** signal for exactly that shape. ADR-020's argument was "no fallback ships *unconditionally*, because there is no gap worth the money". The gap is now identified, and — critically — so is a trigger that costs nothing on 47 of 50 dev documents. |
+| Therefore no fallback ships | **No longer true**, and this is the whole change | Two things arrived after 2026-08-19 that ADR-020 could not have measured: the 2026-08-24 demo, where two real filings (Intel, Citigroup) collapsed onto cross-reference index rows and were reported at `conf 0.95`; and D8's `low_item_coverage`, a **measured, document-level, zero-false-positive** signal for exactly that shape. ADR-020's argument was "no fallback ships *unconditionally*, because there is no gap worth the money". The gap is now identified, and — critically — so is a trigger that costs nothing on 48 of 51 dev documents. |
 
 **What ADR-020 got right, and this ADR keeps.** The escalation-ladder
 principle: the deterministic pipeline is the default and the only path on a
@@ -301,7 +301,7 @@ silent on all five. Read against D8's item-level code, it does not. So:
 ## d) Cost — one measured input, one ESTIMATE clearly labelled
 
 **The measured half.** The escalation rate is measured, deterministic and $0:
-**3 of 50 dev documents, 2 of 35 real filings** (re-derived 2026-08-28, PR #61
+**3 of 51 dev documents, 2 of 36 real filings** (re-derived 2026-08-28, PR #61
 R14; `tasks/reviews/d11-trigger-scan.txt`). This paragraph said 1 of 43 and 0
 of 28 until then, contradicting §c1's own table two hundred lines above it,
 which had been re-derived on 2026-08-27 and this one had not. Both now come
@@ -455,7 +455,7 @@ unchanged, and no vision rung is built.** Four reasons, strongest first.
    `normalization_collapse` **before any item exists** — before `expected`,
    before `validate`, before `meta.coverage`. There is no item span, so
    `low_item_coverage` cannot fire, so the trigger cannot fire, so escalation
-   is unreachable. Measured: 6 of 50 dev documents refuse before any item
+   is unreachable. Measured: 6 of 51 dev documents refuse before any item
    exists (`aapl-2026-10q`, `amended-cover-2021`, `ksb-2007` as `unsupported`;
    `truncated-download` as `failed`). Admitting scanned input is therefore not
    "add a rung" — it is "make a refusal into a trigger", which is a different
@@ -467,7 +467,7 @@ unchanged, and no vision rung is built.** Four reasons, strongest first.
    which is exactly why the contract tests collapse *before* form identity.
    The escalation rate stops being 1/29 and becomes "however many bad inputs
    arrive", which is unbounded and adversary-controlled.
-3. **The corpus has zero instances.** 0 of 50 dev filings and 0 of 7 held-out
+3. **The corpus has zero instances.** 0 of 51 dev filings and 0 of 7 held-out
    filings are text-less (the held-out figure from ADR-035 §b4's published
    table, not from a new read). EDGAR has required machine-readable HTML or
    text since 1996. A capability with no committed instance cannot be evaluated

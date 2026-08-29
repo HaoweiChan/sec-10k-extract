@@ -542,7 +542,7 @@ def route(text, items, warnings, budget=None, images=None, vision_cached=None, s
     record = {"trigger": tr, "tiers": [], "resolved": [],
               "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0}}
     if not tr["fired"]:
-        # THE COMMON CASE, and the one the cost budget lives on: 47 of 50 dev
+        # THE COMMON CASE, and the one the cost budget lives on: 48 of 51 dev
         # documents land here, spend nothing, and are byte-identical to a run
         # with the flag off.
         record["stages"] = _stages(tr, record)

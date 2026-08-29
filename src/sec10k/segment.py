@@ -371,6 +371,16 @@ def _toc_runs(cands, universe=None):
         # a run is an index if most of what it names turns up again below it
         if len({cands[i]["item"] for i in recurs}) * 2 < len(codes):
             continue
+        # A leading chain of dense TOC clusters may run directly into the first
+        # body heading. Retain its last candidate when its code was declared in
+        # that chain: later page headers would otherwise make the body heading
+        # look like a recurring TOC entry too. A standalone candidate ends the
+        # chain, so an independent later index cannot inherit that exception.
+        last = cands[run[-1]]
+        if (any(c["item"] == last["item"] and c["start"] in clustered
+                for c in cands[:run[-1]])
+                and all(c["start"] in clustered for c in cands[:run[-1]])):
+            recurs.discard(run[-1])
         drop |= recurs
         manifest += [cands[i]["item"] for i in run]
     return drop, manifest
@@ -857,6 +867,32 @@ def _demo():
     got = assign_boundaries(kept, exp2, text)
     assert text[got["1"]["start"]:got["1"]["end"]].startswith("Item 1. Business")
     assert "Item 1A" not in text[got["1"]["start"]:got["1"]["end"]]
+
+    # A front-matter TOC can run directly into the first real heading.  If
+    # that item then has running headers, recurrence alone must not throw away
+    # the trailing body candidate with the TOC entries.
+    first_toc = ["1", "1A", "1B", "2", "3"]
+    second_toc = ["4", "5", "6", "7", "1"]
+    running_header = ([{"item": code, "start": i * 20}
+                       for i, code in enumerate(first_toc)] +
+                      [{"item": code, "start": 600 + i * 20}
+                       for i, code in enumerate(second_toc)] +
+                      [{"item": code, "start": 2000 + i * 1000}
+                       for i, code in enumerate(first_toc + second_toc)])
+    assert _toc_runs(running_header)[0] == set(range(9)), _toc_runs(running_header)
+
+    # An independent index run must not inherit a duplicate from the leading
+    # chain once a standalone body heading has appeared.
+    first_run = ["1", "1A", "1B", "2", "3"]
+    later_run = ["4", "5", "6", "7", "1"]
+    independent = ([{"item": code, "start": i * 20}
+                    for i, code in enumerate(first_run)] +
+                   [{"item": "1", "start": 1000}] +
+                   [{"item": code, "start": 2000 + i * 20}
+                    for i, code in enumerate(later_run)] +
+                   [{"item": code, "start": 4000 + i * 1000}
+                    for i, code in enumerate(later_run)])
+    assert _toc_runs(independent)[0] == set(range(6, 11)), _toc_runs(independent)
 
     # page furniture and prose refs never become headings
     junk = find_candidates("Item 2, 3, 4, 5\nItem 1 above, Part III is\n", ["1", "2"])

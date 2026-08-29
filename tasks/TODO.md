@@ -80,22 +80,25 @@ scope widenings were added 2026-08-26 from the two interviewers' written
 feedback, mapped point-by-point in postmortem §8 — which also records the
 mechanisms that feedback praised but that do NOT exist in this codebase.
 
-### D18 — Preserve the first real item page across running headers [status: todo]
+### D18 — Preserve the first real item page across running headers [status: pr]
 Priority: P1
-Origin: AIG held-out burn, PR #75, 2026-08-28
+Origin: AIG held-out burn, PR #75, 2026-08-28 — the frozen `aig-2025-heldout`
+run lost Item 1's first page while reporting `success`, 0.95 confidence, and
+no item-level warning.
 Spec: Port or rebase the already measured shared candidate-filter fix that keeps
 AIG Item 1's first real body heading instead of starting at the next running
 header. This is a bounded known-defect landing, not a new deterministic search
 track; add no filer literal or threshold.
-Reviewer evidence: The burned AIG case must recover its opening anchor and the
-branch-vs-main blast-radius comparison must keep every pre-existing filing
-unchanged.
+Reviewer evidence: The burned AIG case recovered its opening anchor; the
+red-first synthetic reproduction remains recorded; and the current-base
+comparison keeps all 74 non-AIG filings unchanged.
 Acceptance: PR #75's red-first evidence and ADR-044 remain intact; the merge
 conflict is resolved on current main; the AIG case, invariant, and fast gates
 pass at 100% with no baseline move; current corpus counts and held-out burn
 accounting are re-derived rather than copied.
-Status: PR #75's original implementation and gates were green, but the PR now
-conflicts with main; current-main integration and gates are UNRUN.
+Status: Current-base integration evidence: targeted AIG PASS (Item 1 48,136
+chars); invariant 98/98; fast 169/169; $0; base 69 dev / 6 held-out → integrated
+70 dev / 5 held-out after the AIG move, with all 74 non-AIG filings unchanged.
 
 ### D19 — Verify the escalation key before extraction [status: pr]
 Origin: owner request, 2026-08-28
