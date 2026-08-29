@@ -1008,6 +1008,9 @@ function routingStrip(r){
   const tiers = (r.tiers || []).map(t => `${esc(t.tier)} (${esc(t.model || "—")}) →
     <b>${esc(t.outcome)}</b>${t.error ? ` — ${esc(t.error)}` : ""}${
       t.cached ? " · from cache" : ""}${
+      t.tier === "agent_loop" ? ` · compact outline${t.input_chars ?
+        ` · filing-text window chars ${Number(t.offset).toLocaleString()}–${
+        Number(t.offset + t.input_chars).toLocaleString()}` : "; no filing-text window"}` :
       t.truncated ? ` · saw chars ${Number(t.offset).toLocaleString()}–${
         Number(t.offset + t.input_chars).toLocaleString()}, not the whole document` : ""}`
     ).join("; ") || "none attempted";

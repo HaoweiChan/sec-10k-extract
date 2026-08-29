@@ -559,12 +559,15 @@ def eval_check(result, chk, path=None):
             destination = text.find("Item 7", target["end"])
             if destination < 0:
                 return "CVX has no bounded read destination for context replay"
-            for first, feedback in (
-                ({"action": "search", "query": "Item 7"}, "matches"),
-                ({"action": "read_window", "start": destination, "end": destination + 40}, "text"),
-                ({"action": "propose_primary_span", "item": "1", "start": 0, "end": 1}, "verifier_rejections"),
-            ):
-                actions, calls = [first, {"action": "finish"}, {"action": "finish"}], []
+            plans = [
+                [{"action": "search", "query": "Item 7"},
+                 {"action": "read_window", "start": destination, "end": destination + 40},
+                 {"action": "propose_primary_span", "item": "1", "start": 0, "end": 1}],
+                [{"action": "propose_primary_span", "item": "1", "start": 0, "end": 1},
+                 {"action": "finish"}, {"action": "finish"}],
+            ]
+            for actions in plans:
+                calls = []
                 def _context_stub(model, system, user, max_tokens, budget, **kw):
                     calls.append(user)
                     return {"cached": True, "text": _json.dumps(actions.pop(0)),
@@ -575,20 +578,26 @@ def eval_check(result, chk, path=None):
                     routing, _ = route(text, copy.deepcopy(source["items"]), warnings)
                 finally:
                     _llm.call = real
-                if len(calls) < 2:
-                    return f"{feedback} replay did not make its bounded follow-up call"
+                if len(calls) != 3:
+                    return "persistent-context replay did not use all three turns"
                 try:
-                    next_prompt = _json.loads(calls[1])
+                    prompts = [_json.loads(call) for call in calls]
                 except _json.JSONDecodeError:
-                    return f"{feedback} replay did not send JSON context"
-                if {k: next_prompt.get(k) for k in expected} != expected:
-                    return f"{feedback} follow-up lost target_items or compact outline"
-                observation = next_prompt.get("observation", {})
-                previous = routing["tiers"][0]["observations"][0]
-                if feedback == "verifier_rejections":
-                    previous = {"verifier_rejections": previous["verifier"]}
-                if observation != previous:
-                    return f"{feedback} follow-up lost exact preceding feedback"
+                    return "persistent-context replay did not send JSON context"
+                for turn, prompt in enumerate(prompts):
+                    if {k: prompt.get(k) for k in expected} != expected:
+                        return f"turn {turn + 1} lost target_items or compact outline"
+                    observation = {"initial": True}
+                    if turn:
+                        previous = routing["tiers"][turn - 1]["observations"][0]
+                        observation = ({"verifier_rejections": previous["verifier"]}
+                                       if "verifier" in previous else previous)
+                    if prompt.get("observation") != observation:
+                        return f"turn {turn + 1} lost exact preceding feedback"
+                mutated = copy.deepcopy(prompts)
+                mutated[2].pop("outline")
+                if all({k: prompt.get(k) for k in expected} == expected for prompt in mutated):
+                    return "persistent-context mutation dropped turn 3 outline unnoticed"
             return None
         else:
             return f"unknown agent_loop scenario {chk['scenario']!r}"
@@ -648,6 +657,21 @@ def eval_check(result, chk, path=None):
                 return "view payload dropped item review_required"
         if routing["cost"] != {"llm_calls": 0, "tokens": 0, "usd": 0.0} or any(len(x) >= len(text) for x in calls):
             return "cached loop cost or bounded observation accounting is dishonest"
+        if chk["scenario"] == "empty_and_malformed":
+            expected = {"target_items": ["16", "2"], "outline": {
+                "items": [{"item": i["item"], "status": i["status"],
+                           "start": i.get("start"), "end": i.get("end")}
+                          for i in items_in],
+                "warnings": [{"code": w["code"], "item": w["item"]}
+                             for w in warnings],
+            }}
+            prompts = [_json.loads(call) for call in calls]
+            if len(prompts) != 3 or any({k: prompt.get(k) for k in expected} != expected
+                                        for prompt in prompts):
+                return "malformed-response continuation lost target_items or compact outline"
+            for turn in (1, 2):
+                if prompts[turn].get("observation") != {"rejection": tiers[turn - 1]["error"]}:
+                    return "malformed-response continuation lost exact parse rejection"
     elif t == "route_payload":
         # PR #58 / the intc-2025 exam. Replays a RECORDED transport response
         # through `escalate.route` and asserts the router reports something

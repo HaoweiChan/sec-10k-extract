@@ -27,7 +27,9 @@ explicit abstentions rather than reasons to add a second search heuristic.
 The single allowed 2026-08-29 CVX replay used three uncached calls (4,578
 tokens, $0.004122, 21.710292 seconds). All proposals were rejected; deterministic
 spans were unchanged and there was no positive live recovery. Turn 1 proposed
-out-of-target item 1. The pre-D23 turn-2 prompt retained its rejection but lost
-the targets and outline, then guessed item 1 again. D23 binds persistent context
+out-of-target item 1 and turn 2 repeated item 1. The committed live artifact
+does not retain full prompts, so it cannot directly establish their contents.
+The pre-D23 runtime code path, the input-token drop from 727 to 87, and that
+repetition support the context-loss inference. D23 binds persistent context
 with cached search/read/verifier replays; it does not claim a live recovery.
 The pre-declared stop rule prevents a retry.

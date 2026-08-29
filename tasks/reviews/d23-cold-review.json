@@ -1,0 +1,43 @@
+{
+  "task": "D23",
+  "review": "cold",
+  "result": "REQUEST_CHANGES",
+  "date": "2026-08-29",
+  "source": "fresh review findings supplied to the repair pass",
+  "verbatim": [
+    "R1 UI currently says agent_loop with offset/input_chars 0 saw chars 0–0, silently omitting nonempty targets/outline; add red-first UI/eval case then minimally make wording distinguish filing-text window from compact outline (no backend-derived story, no new framework).",
+    "R2 persistent_context checks only calls[1]; add red-first mutations/coverage proving EVERY turn including calls[0] and calls[2] retains exact immutable context, and follow-up observations correspond to preceding action.",
+    "R3 malformed response continuation context untested; add red-first coverage using real route/stubbed malformed response proving next prompt retains targets/outline plus parse rejection.",
+    "Separate overclaim: ADR-047 and live report state exact turn-2 prompt loss as live fact, but committed artifact omitted full prompts; narrow wording to an inference supported by runtime code path + turn input-token drop 727→87 and repeated item-1 behavior, not direct prompt capture."
+  ],
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "UI currently says agent_loop with offset/input_chars 0 saw chars 0–0, silently omitting nonempty targets/outline.",
+      "acceptance": "Add a red-first UI/eval case, then make wording distinguish filing-text window from compact outline without a backend-derived story or new framework."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "persistent_context checks only calls[1].",
+      "acceptance": "Add red-first mutations/coverage proving every turn, including calls[0] and calls[2], retains exact immutable context and follow-up observations correspond to the preceding action."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "Malformed response continuation context is untested.",
+      "acceptance": "Add red-first coverage using the real route and a stubbed malformed response proving the next prompt retains targets/outline plus the parse rejection."
+    },
+    {
+      "id": "O1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "ADR-047 and the live report state exact turn-2 prompt loss as a live fact, but the committed artifact omitted full prompts.",
+      "acceptance": "Narrow wording to an inference supported by the runtime code path, input-token drop 727→87, and repeated item-1 behavior; do not fabricate prompt capture."
+    }
+  ]
+}

@@ -6,10 +6,11 @@ were rejected. The deterministic spans for items 2, 6, and 7A were unchanged;
 the loop retained `review_required` and emitted `escalation_unresolved`. There
 was no positive live recovery. The stop rule prevents a retry.
 
-The failure exposed a prompt invariant gap: turn 1's rejected out-of-target
-item-1 proposal became the complete turn-2 prompt, losing the assigned targets
-and compact outline. D23 records a $0 cached red-first reproduction and fixes
-only that context retention.
+The failure supports a prompt invariant-gap inference, not a captured-prompt
+fact: turn 1 rejected out-of-target item 1; turn 2 repeated item 1; input tokens
+dropped 727→87; and the pre-D23 runtime path sent only the changing observation.
+The committed artifact omits full prompts. D23 records a $0 cached red-first
+reproduction and fixes only context retention.
 
 Deployment evidence from the merged `acadbedb1596` build is intentionally
 limited: `/api/meta` reported escalation enabled and token required. A public,

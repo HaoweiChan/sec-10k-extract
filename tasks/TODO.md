@@ -227,6 +227,8 @@ and no baseline move. The D22 negative live result remains honestly recorded;
 this task does not claim a positive live recovery.
 Status: implementation and focused cached replay PASS; invariant 99/99 and
 fast 170/170 PASS with `OPENROUTER_API_KEY` removed, $0, and no baseline move.
+Cold-review repairs R1–R3/O1 are recorded in `tasks/reviews/d23-cold-review*.json`;
+the repair is awaiting independent review and no approval is claimed.
 
 ## Debt
 
