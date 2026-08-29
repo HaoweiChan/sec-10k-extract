@@ -560,6 +560,20 @@ def eval_check(result, chk, path=None):
         finally:
             _llm.call = real
         tiers = routing["tiers"]
+        envelope = {**source, "items": items_in, "routing": routing,
+                    "cost": routing["cost"]}
+        why_shape = eval_check(envelope, {"type": "envelope_shape"})
+        if why_shape:
+            return f"produced routing did not pass public envelope_shape: {why_shape}"
+        bad = copy.deepcopy(envelope)
+        bad["routing"]["tiers"][0].pop("actions", None)
+        if eval_check(bad, {"type": "envelope_shape"}) is None:
+            return "envelope_shape accepted an agent tier without actions"
+        bad = copy.deepcopy(envelope)
+        if len(bad["routing"]["tiers"]) > 2 and any("text" in x for x in bad["routing"]["tiers"][1].get("observations", [])):
+            bad["routing"]["tiers"][2]["offset"] += 1
+            if eval_check(bad, {"type": "envelope_shape"}) is None:
+                return "envelope_shape accepted a mismatched read-window range"
         if chk["scenario"] == "replan_positive":
             if [x["outcome"] for x in tiers] != ["rejected", "rejected", "resolved"]:
                 return f"expected rejected -> resolved re-plan, got {[x['outcome'] for x in tiers]}"

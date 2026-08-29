@@ -85,3 +85,13 @@ jobs:
       # --report (ADR-025): this is the report-of-record run for main at head,
       # so it writes the full per-case report even though the gate is green.
       - run: python3 -m evals.run --suite fast --report
+
+  web-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -e .
+      - run: python3 -m src.sec10k.test_web_contract
