@@ -521,10 +521,15 @@ def eval_check(result, chk, path=None):
             proposal(statement_at, mda_at, statements), [doc], {"7"})
         arbitrary, arbitrary_why = verify_external(result["normalized_text"], [item],
             proposal(mda_at, mda_at + 1000, mda), [doc], {"7"})
+        title_line, title_line_why = verify_external(result["normalized_text"], [item],
+            proposal(mda_at, mda_at + len(mda) + 1, mda), [doc], {"7"})
         if wrong or not any("requested item" in x for x in wrong_why):
             return f"Item 7 accepted the real wrong section: {wrong}, {wrong_why}"
         if arbitrary or not any("end" in x for x in arbitrary_why):
             return f"Item 7 accepted an arbitrary unrelated end: {arbitrary}, {arbitrary_why}"
+        if title_line or not any("end" in x for x in title_line_why):
+            return ("Item 7 accepted the title-line-only 86-char region: "
+                    f"{title_line}, {title_line_why}")
         return None
     elif t == "external_cp1252_raw_hash":
         # PR83 R2: exact bytes differ from UTF-8 after decoding 0xE9.

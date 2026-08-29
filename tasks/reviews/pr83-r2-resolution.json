@@ -1,0 +1,22 @@
+{
+  "pr": 83,
+  "round": 2,
+  "result": "OPEN",
+  "date": "2026-08-29",
+  "resolutions": [
+    {
+      "id": "R1",
+      "status": "implemented",
+      "fix": "Title-proved external regions now end only at the attachment end or at a whole normalized line exactly equal to a canonical SEC item title. Fuzzy title similarity remains only for associating the proposed region title with its requested item; it no longer proves an end boundary.",
+      "evidence": "evals/adversarial/d24-external-wrong-section.json rejects the real PGR 86-character title-line-only region, the wrong Item 7 section, and the arbitrary mid-section end; the combined replay preserves MRK/PGR 4/4 plus R2/R3.",
+      "red_report": "evals/report/20260829-220618-fast.json",
+      "green_report": "evals/report/20260829-220650-fast.json"
+    }
+  ],
+  "gates": {
+    "invariant": {"passed": 104, "total": 104, "cost_usd": 0.0, "report": "evals/report/20260829-221139-invariant.json"},
+    "fast": {"passed": 175, "total": 175, "cost_usd": 0.0, "report": "evals/report/20260829-221258-fast.json"},
+    "snapshot": "tasks/reviews/pr83-r2-snapshot.txt"
+  },
+  "verification_status": "awaiting independent final verification; no approval claimed"
+}

@@ -264,7 +264,10 @@ Status: Red-first 0/2 and pass-after 2/2 are recorded in
 spans and coverage unchanged. PR83 R1-R3 repairs are recorded red-first and
 resolved in `tasks/reviews/pr83-r1*.json`: wrong-section/end proof, exact
 CP1252 attachment hashes, and the real KO 1997 EX-13.1 route. Default snapshots
-are unchanged outside the two burns and identical across the review repair.
+are unchanged outside the two burns and identical across both review repairs.
+PR83 round 2 keeps R2/R3 verified and closes the remaining R1 with the real
+PGR 86-character title-line-only red case: fuzzy similarity no longer proves
+an end boundary; only a whole canonical-title line or document end does.
 Final offline gates: invariant 104/104, fast 175/175, $0, no baseline move.
 
 ## Debt

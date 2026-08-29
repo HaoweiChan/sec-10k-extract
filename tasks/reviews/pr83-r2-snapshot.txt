@@ -1,0 +1,15 @@
+PR83 round 2 final R1 repair default extraction snapshot, 2026-08-29
+
+Base: 914b75c8d8a833f80b0e3afc61956d21f74b1a9b
+Compared: final R1 repair working tree
+
+dev: 72 files
+before sha256: 2ee159156017cde5f37b2012ef9f6d566813c6baef9b9f2cf796fb2b8f932119
+after  sha256: 2ee159156017cde5f37b2012ef9f6d566813c6baef9b9f2cf796fb2b8f932119
+
+heldout: 3 files
+before sha256: 0abb59e694c44381626e1a6e4e11d0624193a6204bf7c89630d9b73481025d06
+after  sha256: 0abb59e694c44381626e1a6e4e11d0624193a6204bf7c89630d9b73481025d06
+
+cmp before.json after.json: identical
+Primary normalized text, item offsets, methods, headings, warnings, status and envelope keys unchanged.

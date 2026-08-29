@@ -35,3 +35,9 @@ numbered exhibit variants. The repair reuses the canonical item-title taxonomy
 plus a proved end boundary, slices SGML attachment bodies before decoding, and
 admits only numeric `EX-13.<digits>` variants. PGR wrong-section/end, CP1252, and
 real KO 1997 EX-13.1 cases were each red before the shared-boundary fixes.
+
+Round-2 verification showed the first end proof remained semantic rather than
+structural: ordinary prose after PGR's MD&A title cleared the 0.4 fuzzy floor.
+The final repair does not tune that threshold. It permits a title-proved end
+only at document end or a whole line exactly equal to a canonical item title;
+page-marker proof remains separate.

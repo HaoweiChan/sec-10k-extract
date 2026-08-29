@@ -70,3 +70,18 @@ The three adversarial cases were observed together at 0/3 before these repairs
 and 3/3 after. KO FY1997 supplies the real EX-13.1 route; the CP1252 case pins
 byte identity; PGR FY2023 pins item-specific title and end proof. Default
 extraction snapshots are identical across the amendment.
+
+### PR83 round 2: structural end proof
+
+Verification found the first amendment still used fuzzy title similarity to
+prove an end boundary. On real PGR, a region ending immediately after the MD&A
+title passed because the helper skipped blank lines and the following ordinary
+prose scored 0.425; hundreds of ordinary lines cleared the 0.4 boundary floor.
+The floor was not retuned. Fuzzy similarity still associates a proposed title
+with its requested item, but an end boundary is now structural: the attachment
+end, or a whole normalized line exactly equal to a canonical SEC item title.
+Page-proved regions keep their independent page-marker boundary rule.
+
+The exact 86-character PGR region was observed red before repair. The combined
+green replay retains MRK/PGR 4/4, R2's exact-byte identity and R3's EX-13.1
+route. Default extraction snapshots remain identical.

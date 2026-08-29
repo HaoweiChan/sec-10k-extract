@@ -481,12 +481,11 @@ def _page_marker(text, page):
 
 
 def _external_section_boundary(text, end):
-    """A document end or the opening line of another canonical item section."""
+    """A document end or a whole line equal to a canonical item title."""
     if end == len(text):
         return True
     line = next((x.strip() for x in text[end:end + 500].splitlines() if x.strip()), "")
-    return bool(line and max(title_similarity(code, line) for code in TITLES)
-                >= EXTERNAL_TITLE_FLOOR)
+    return bool(line and any(title_similarity(code, line) == 1.0 for code in TITLES))
 
 
 def verify_external(primary_text, items, action, documents, asked):
