@@ -1,0 +1,12 @@
+{
+  "id": "ko-1997-ex13-numbered",
+  "task": "sec10k",
+  "suites": ["invariant", "fast"],
+  "triage": {
+    "class": "input-variant",
+    "note": "PR83 R3: SEC exhibit type EX-13.1 is the bounded numbered variant of EX-13; the exact-type allowlist made the real KO 1997 Item 8 Annual Report route abstain."
+  },
+  "input": {"path": "evals/fixtures/ko-1997/filing.txt"},
+  "expect": {"checks": [{"type": "external_numbered_exhibit", "item": "8"}]},
+  "provenance": "PR83 R3, real Coca-Cola FY1997 full submission already committed as ko-1997. Its SGML package contains EX-13.1 and its primary Item 8 incorporates the Annual Report financial statements. Watched red before repair on 2026-08-29 because embedded_documents returned no candidate."
+}

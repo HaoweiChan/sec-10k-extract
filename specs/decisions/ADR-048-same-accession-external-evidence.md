@@ -53,3 +53,20 @@ Default extraction snapshots stay unchanged. Offline gates use cached transport
 replays and local SGML/attachment fixtures, never network or an API key. The two
 held-out outcomes that shaped this decision are burned as `input-variant` cases,
 moved to adversarial with their fixtures, and replaced later under TD-167.
+
+## PR83 round 1 amendment
+
+Fresh review exposed three gaps in the first implementation. Title proof had
+shown only that some title occurred near the proposed start, not that it named
+the requested item or proved the region's end. It now reuses the canonical SEC
+item title taxonomy and requires the next canonical section boundary or document
+end; pointer-page proof remains a separate valid route. Embedded SGML extraction
+now slices the original bytes before decoding, so `raw_sha256` identifies the
+exact attachment body and `normalized_sha256` retains its normalized-text
+meaning. Finally, the bounded Annual Report type allowlist includes SEC's numeric
+`EX-13.<digits>` variants, while unrelated and nonnumeric suffixes remain out.
+
+The three adversarial cases were observed together at 0/3 before these repairs
+and 3/3 after. KO FY1997 supplies the real EX-13.1 route; the CP1252 case pins
+byte identity; PGR FY2023 pins item-specific title and end proof. Default
+extraction snapshots are identical across the amendment.

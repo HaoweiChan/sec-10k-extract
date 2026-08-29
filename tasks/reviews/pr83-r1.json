@@ -1,0 +1,33 @@
+{
+  "pr": 83,
+  "round": 1,
+  "result": "REQUEST_CHANGES",
+  "date": "2026-08-29",
+  "source": "fresh review findings supplied to the repair pass",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "HIGH",
+      "confidence": 0.99,
+      "route": "repair",
+      "claim": "verify_external accepts wrong requested section. Real PGR Item 7 proposal over Consolidated Statements of Comprehensive Income is accepted.",
+      "acceptance": "wrong-item title or arbitrarily unrelated end rejected; real PGR red case."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "confidence": 0.99,
+      "route": "repair",
+      "claim": "Embedded legacy CP1252 attachment hashes UTF-8-reencoded body, not exact source attachment bytes.",
+      "acceptance": "raw_sha256 exact source attachment bytes; normalized hash unchanged; CP1252 case."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "confidence": 0.98,
+      "route": "repair",
+      "claim": "Exact {EX-13,ARS} allowlist excludes EX-13.1. Real KO 1997 full submission has EX-13.1 + Item 8 Annual Report pointer, route abstains.",
+      "acceptance": "bounded EX-13 numbering variants admitted, unrelated types not; KO-style committed case and all identity/hash/bounds guards remain."
+    }
+  ]
+}

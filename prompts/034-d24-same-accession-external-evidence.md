@@ -26,3 +26,12 @@ fixtures moved from held-out, with two replacements tracked as TD-167.
   primary file per directory; a second file made PGR disappear from the corpus.
 - Corrected: package attachments live under `evals/package-fixtures/`, outside
   default fixture discovery, with independent provenance and hashes.
+
+## PR83 round 1 correction
+
+Fresh review showed that a nearby title was not enough section proof, decoded
+SGML could not support a raw-byte hash claim, and exact `EX-13` omitted SEC's
+numbered exhibit variants. The repair reuses the canonical item-title taxonomy
+plus a proved end boundary, slices SGML attachment bodies before decoding, and
+admits only numeric `EX-13.<digits>` variants. PGR wrong-section/end, CP1252, and
+real KO 1997 EX-13.1 cases were each red before the shared-boundary fixes.

@@ -19,3 +19,14 @@ Default snapshot comparison at base e34dfa8055be0fe6db0c2cebd3f703c9c82187d5:
   before: 70 dev + 5 held-out
   after: 72 dev + 3 held-out
   after removing the two moved burn identities: 70 == 70 dev, 3 == 3 held-out
+
+PR83 round 1 repair:
+  R1 wrong-section/end proof FAIL -> PASS
+  R2 CP1252 exact raw attachment hash FAIL -> PASS
+  R3 KO 1997 EX-13.1 Item 8 route FAIL -> PASS
+  targeted red: 0/3, evals/report/20260829-215112-fast.json
+  targeted green: 3/3, evals/report/20260829-215219-fast.json
+  final invariant: 104/104, evals/report/20260829-215805-invariant.json
+  final fast: 175/175, evals/report/20260829-215918-fast.json
+  default snapshot identical: tasks/reviews/pr83-r1-snapshot.txt
+  cost: $0; no API key or baseline move

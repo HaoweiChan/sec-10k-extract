@@ -6,12 +6,18 @@ import urllib.error
 import urllib.request
 from urllib.parse import urlsplit
 
-from src.sec10k.normalize import format_era, normalize, split_documents
+from src.sec10k.normalize import format_era, normalize
 
 ARCHIVES = "https://www.sec.gov/Archives/"
 PACKAGE_MAX_BYTES = 25 * 1024 * 1024
 EDGAR_UA = "Haowei Chan hwchan42@gmail.com"
 _ACCESSION = re.compile(r"^/Archives/edgar/data/(\d+)/(\d{18})/[^/]+$")
+_DOCUMENT = re.compile(br"<DOCUMENT>(.*?)(?:</DOCUMENT>|\Z)", re.S | re.I)
+_TEXT = re.compile(br"<TEXT>(.*?)(?:</TEXT>|\Z)", re.S | re.I)
+_TYPE = re.compile(br"^<TYPE>(\S+)", re.M | re.I)
+_SEQUENCE = re.compile(br"^<SEQUENCE>(\S+)", re.M | re.I)
+_FILENAME = re.compile(br"^<FILENAME>(\S+)", re.M | re.I)
+_ANNUAL_REPORT_TYPE = re.compile(r"^(?:EX-13(?:\.\d+)?|ARS)$")
 _FETCH_CACHE = {}
 _BLOBS = {}
 
@@ -59,14 +65,18 @@ def document(raw, type_, sequence, filename, *, url=None, sgml_block=None):
 
 
 def embedded_documents(raw):
-    """EX-13/ARS documents already present in an uploaded full submission."""
-    decoded = _decode(raw)
+    """EX-13 variants/ARS already present in an uploaded full submission."""
     out = []
-    for n, d in enumerate(split_documents(decoded)):
-        if d["type"] not in {"EX-13", "ARS"}:
+    for n, match in enumerate(_DOCUMENT.finditer(raw)):
+        block = match.group(1)
+        field = lambda rx: _decode(rx.search(block).group(1)) if rx.search(block) else ""  # noqa: E731
+        type_ = field(_TYPE).upper()
+        if not _ANNUAL_REPORT_TYPE.fullmatch(type_):
             continue
-        out.append(document(d["body"].encode("utf-8"), d["type"], d["sequence"],
-                            d["filename"], sgml_block=f"DOCUMENT[{n}]"))
+        inner = _TEXT.search(block)
+        body = inner.group(1) if inner else block
+        out.append(document(body, type_, field(_SEQUENCE), field(_FILENAME),
+                            sgml_block=f"DOCUMENT[{n}]"))
     return out
 
 

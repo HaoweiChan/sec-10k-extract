@@ -494,6 +494,115 @@ def eval_check(result, chk, path=None):
                 if sorted(got) != sorted(sub["accepts"]):
                     return (f"{sub['name']}: verify accepted {sorted(got)} != "
                             f"{sorted(sub['accepts'])} (why={why})")
+    elif t == "external_wrong_section_guard":
+        # PR83 R1: real PGR attachment, wrong item and unproved end boundary.
+        from src.sec10k.escalate import verify_external
+        from src.sec10k.package import document
+
+        raw = Path("evals/package-fixtures/pgr-2023/pgr-20231231_d2.htm").read_bytes()
+        url = ("https://www.sec.gov/Archives/edgar/data/80661/"
+               "000008066124000007/pgr-20231231_d2.htm")
+        doc = document(raw, "EX-13", "6", "pgr-20231231_d2.htm", url=url)
+        text = doc["text"]
+        statements = "Consolidated Statements of Comprehensive Income"
+        mda = "Management’s Discussion and Analysis of Financial Condition and Results of Operations"
+        statement_at, mda_at = text.find(statements), text.find(mda)
+        item = next((i for i in result["items"] if i["item"] == "7"), None)
+        if item is None or min(statement_at, mda_at) < 0:
+            return "PGR review guard fixture lacks Item 7 or a real attachment title"
+        identity = doc["document"]
+        def proposal(start, end, title):
+            return {"action": "propose_external_regions", "item": "7",
+                    "document": identity["id"],
+                    "raw_sha256": identity["raw_sha256"],
+                    "normalized_sha256": identity["normalized_sha256"],
+                    "regions": [{"start": start, "end": end, "title": title}]}
+        wrong, wrong_why = verify_external(result["normalized_text"], [item],
+            proposal(statement_at, mda_at, statements), [doc], {"7"})
+        arbitrary, arbitrary_why = verify_external(result["normalized_text"], [item],
+            proposal(mda_at, mda_at + 1000, mda), [doc], {"7"})
+        if wrong or not any("requested item" in x for x in wrong_why):
+            return f"Item 7 accepted the real wrong section: {wrong}, {wrong_why}"
+        if arbitrary or not any("end" in x for x in arbitrary_why):
+            return f"Item 7 accepted an arbitrary unrelated end: {arbitrary}, {arbitrary_why}"
+        return None
+    elif t == "external_cp1252_raw_hash":
+        # PR83 R2: exact bytes differ from UTF-8 after decoding 0xE9.
+        import hashlib as _hashlib
+        from src.sec10k.normalize import format_era, normalize
+        from src.sec10k.package import embedded_documents
+
+        body = b"\nFINANCIAL STATEMENTS caf\xe9\n"
+        raw = (b"<DOCUMENT>\n<TYPE>EX-13\n<SEQUENCE>2\n"
+               b"<FILENAME>annual.txt\n<TEXT>" + body
+               + b"</TEXT>\n</DOCUMENT>")
+        docs = embedded_documents(raw)
+        if len(docs) != 1:
+            return f"CP1252 SGML produced {len(docs)} attachments"
+        identity = docs[0]["document"]
+        exact = _hashlib.sha256(body).hexdigest()
+        decoded = body.decode("cp1252")
+        normalized = normalize(decoded, format_era(decoded))[0]
+        normalized_hash = _hashlib.sha256(normalized.encode()).hexdigest()
+        if identity["raw_sha256"] != exact:
+            return "raw_sha256 is not the exact CP1252 source attachment bytes"
+        if identity["normalized_sha256"] != normalized_hash:
+            return "normalized hash changed while preserving exact raw bytes"
+        return None
+    elif t == "external_numbered_exhibit":
+        # PR83 R3: real KO EX-13.1 and Item 8 cached/offline route.
+        import copy
+        import json as _json
+        from src.sec10k.escalate import route
+        from src.sec10k.package import embedded_documents
+        import src.sec10k.llm as _llm
+
+        documents = embedded_documents(Path(path).read_bytes())
+        doc = next((d for d in documents if d["document"]["type"] == "EX-13.1"), None)
+        if doc is None:
+            return "KO full submission did not admit its EX-13.1 attachment"
+        unrelated = (b"<DOCUMENT>\n<TYPE>EX-130\n<SEQUENCE>1\n"
+                     b"<FILENAME>wrong.txt\n<TEXT>unrelated\n</TEXT>\n</DOCUMENT>"
+                     b"<DOCUMENT>\n<TYPE>EX-13.A\n<SEQUENCE>2\n"
+                     b"<FILENAME>wrong2.txt\n<TEXT>unrelated\n</TEXT>\n</DOCUMENT>")
+        if embedded_documents(unrelated):
+            return "unrelated exhibit types passed the bounded EX-13 allowlist"
+        title = "CONSOLIDATED STATEMENTS OF INCOME"
+        start = doc["text"].find(title)
+        if start < 0:
+            return "KO EX-13.1 lacks its financial-statement title"
+        identity = doc["document"]
+        actions = [
+            {"action": "list_documents"},
+            {"action": "search_document", "document": identity["id"],
+             "query": title},
+            {"action": "propose_external_regions", "item": chk["item"],
+             "document": identity["id"], "raw_sha256": identity["raw_sha256"],
+             "normalized_sha256": identity["normalized_sha256"],
+             "regions": [{"start": start, "end": len(doc["text"]), "title": title}]},
+        ]
+        queued = copy.deepcopy(actions)
+        def _stub(model, system, user, max_tokens, budget, **kw):
+            return {"cached": True, "text": _json.dumps(queued.pop(0)),
+                    "usage": {"input_tokens": 0, "output_tokens": 0},
+                    "usd": 0.0, "model": model}
+        warnings = [{"code": "item_span_near_empty", "item": chk["item"],
+                     "message": "PR83 R3 cached numbered-exhibit replay"}]
+        items = copy.deepcopy(result["items"])
+        before = [(i["item"], i.get("start"), i.get("end")) for i in items]
+        real, _llm.call = _llm.call, _stub
+        try:
+            routing, extra = route(result["normalized_text"], items, warnings,
+                                   documents=documents,
+                                   acquisition={"status": "available", "source": "sgml",
+                                                "calls": 0, "bytes": len(Path(path).read_bytes()),
+                                                "latency_ms": 0.0})
+        finally:
+            _llm.call = real
+        after = [(i["item"], i.get("start"), i.get("end")) for i in items]
+        if extra or routing["external"] != [chk["item"]] or before != after:
+            return f"KO numbered-exhibit route did not resolve externally: {routing}, {extra}"
+        return None
     elif t == "external_agent_loop":
         # D24: cached actions over real same-accession attachments. Attachment
         # text is local fixture/SGML input; only the model transport is replayed.

@@ -261,9 +261,11 @@ issuer literals, attachment concatenation, generated filing content, or a
 claim that all filings can reach 100% coverage.
 Status: Red-first 0/2 and pass-after 2/2 are recorded in
 `tasks/reviews/d24-red-pass.txt`; MRK/PGR Items 7/8 resolve 4/4 with primary
-spans and coverage unchanged. Default snapshots are unchanged outside the two
-burns. Final offline gates: invariant 101/101, fast 172/172, $0, no baseline
-move.
+spans and coverage unchanged. PR83 R1-R3 repairs are recorded red-first and
+resolved in `tasks/reviews/pr83-r1*.json`: wrong-section/end proof, exact
+CP1252 attachment hashes, and the real KO 1997 EX-13.1 route. Default snapshots
+are unchanged outside the two burns and identical across the review repair.
+Final offline gates: invariant 104/104, fast 175/175, $0, no baseline move.
 
 ## Debt
 

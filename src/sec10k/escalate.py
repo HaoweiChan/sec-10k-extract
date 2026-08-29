@@ -36,7 +36,7 @@ Self-check: python3 -m src.sec10k.escalate
 """
 import re
 
-from src.sec10k.segment import SIM_FLOOR, title_similarity
+from src.sec10k.segment import SIM_FLOOR, TITLES, title_similarity
 from src.sec10k.validate import SPAN_FLOOR
 
 # WHICH D8 code escalates the DOCUMENT — the single most consequential constant
@@ -73,6 +73,7 @@ AGENT_CODES = ("internal_pointer_unreached",)
 AGENT_TURNS = 3
 AGENT_MODEL = "openai/gpt-5-mini"
 OBSERVATION_CAP = 4000
+EXTERNAL_TITLE_FLOOR = 0.4
 EXTERNAL_ANNUAL_RE = re.compile(r"(?is)incorporated\b[^.]{0,80}\bby reference"
                                 r"[^.]{0,240}\bannual report\b|"
                                 r"\bannual report\b[^.]{0,240}\bincorporated\b"
@@ -479,6 +480,15 @@ def _page_marker(text, page):
     return match.start() if match else None
 
 
+def _external_section_boundary(text, end):
+    """A document end or the opening line of another canonical item section."""
+    if end == len(text):
+        return True
+    line = next((x.strip() for x in text[end:end + 500].splitlines() if x.strip()), "")
+    return bool(line and max(title_similarity(code, line) for code in TITLES)
+                >= EXTERNAL_TITLE_FLOOR)
+
+
 def verify_external(primary_text, items, action, documents, asked):
     """Verify document identity, hashes, bounds and title-or-page proof."""
     if isinstance(action, dict) and set(action) == {"action", "proposals"} \
@@ -516,8 +526,11 @@ def verify_external(primary_text, items, action, documents, asked):
                 and 0 <= s < e <= len(doc["text"])):
             why.append("region bounds are outside the attachment normalized text"); continue
         title = region.get("title")
-        title_ok = (isinstance(title, str) and len(title.strip()) >= 6
-                    and title in doc["text"][s:min(e, s + 500)])
+        title_anchored = (isinstance(title, str) and len(title.strip()) >= 6
+                          and title in doc["text"][s:min(e, s + 500)])
+        title_ok = (title_anchored
+                    and title_similarity(code, title) >= EXTERNAL_TITLE_FLOOR)
+        end_ok = title_ok and _external_section_boundary(doc["text"], e)
         pages = region.get("pages")
         page_ok = False
         if (isinstance(pages, list) and len(pages) == 2
@@ -528,13 +541,17 @@ def verify_external(primary_text, items, action, documents, asked):
                          for p in range(pages[1] + 1, pages[1] + 4)]
             following = [at for at, _ in following if at is not None]
             page_ok = start is not None and s == start and e == (min(following) if following else len(doc["text"]))
-        if not (title_ok or page_ok):
+        if title_anchored and not title_ok:
+            why.append("region title does not match requested item"); continue
+        if title_ok and not end_ok:
+            why.append("region end is not a proved section boundary"); continue
+        if not (end_ok or page_ok):
             why.append("region lacks title-or-page proof anchored to the attachment slice"); continue
         accepted.append({"start": s, "end": e, "title": title,
                          "pages": pages, "document": dict(identity),
                          "verifier": {"identity": True, "hashes": True,
                                       "bounds": True, "title": title_ok,
-                                      "pages": page_ok}})
+                                      "end": end_ok or page_ok, "pages": page_ok}})
     return ({code: accepted} if accepted and not why else {}), why or ([] if accepted else ["no regions"])
 
 

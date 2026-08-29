@@ -1,0 +1,12 @@
+{
+  "id": "d24-external-wrong-section",
+  "task": "sec10k",
+  "suites": ["invariant", "fast"],
+  "triage": {
+    "class": "invariant-gap",
+    "note": "PR83 R1: the external verifier proved only that a title occurred near the proposed start, not that it named the requested item or that the proposed end was a section boundary."
+  },
+  "input": {"path": "evals/fixtures/pgr-2023/filing.htm"},
+  "expect": {"checks": [{"type": "external_wrong_section_guard"}]},
+  "provenance": "PR83 R1, authored before repair on 2026-08-29 from PGR's committed same-accession EX-13. Watched red when Item 7 accepted the real Consolidated Statements of Comprehensive Income region and when a correctly titled MD&A proposal used an arbitrary mid-section end."
+}

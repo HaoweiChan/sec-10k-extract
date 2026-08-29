@@ -1,0 +1,38 @@
+{
+  "pr": 83,
+  "round": 1,
+  "result": "OPEN",
+  "date": "2026-08-29",
+  "resolutions": [
+    {
+      "id": "R1",
+      "status": "implemented",
+      "fix": "External title proof now requires the proposed title to match the requested SEC item taxonomy and the proposed end to be the next canonical section boundary or document end; page proof remains independent.",
+      "evidence": "evals/adversarial/d24-external-wrong-section.json; real PGR wrong-section and arbitrary-end proposals are rejected.",
+      "red_report": "evals/report/20260829-215112-fast.json",
+      "green_report": "evals/report/20260829-215219-fast.json"
+    },
+    {
+      "id": "R2",
+      "status": "implemented",
+      "fix": "Embedded SGML is sliced as bytes, so raw_sha256 covers the exact source attachment body while normalization still decodes CP1252 deterministically.",
+      "evidence": "evals/adversarial/d24-cp1252-attachment-hash.json",
+      "red_report": "evals/report/20260829-215112-fast.json",
+      "green_report": "evals/report/20260829-215219-fast.json"
+    },
+    {
+      "id": "R3",
+      "status": "implemented",
+      "fix": "The attachment allowlist admits EX-13 and EX-13.<digits> plus ARS, while EX-130 and nonnumeric EX-13 suffixes remain excluded.",
+      "evidence": "evals/adversarial/ko-1997-ex13-numbered.json; real KO 1997 Item 8 resolves through its EX-13.1 with primary offsets unchanged.",
+      "red_report": "evals/report/20260829-215112-fast.json",
+      "green_report": "evals/report/20260829-215219-fast.json"
+    }
+  ],
+  "gates": {
+    "invariant": {"passed": 104, "total": 104, "cost_usd": 0.0, "report": "evals/report/20260829-215805-invariant.json"},
+    "fast": {"passed": 175, "total": 175, "cost_usd": 0.0, "report": "evals/report/20260829-215918-fast.json"},
+    "snapshot": "tasks/reviews/pr83-r1-snapshot.txt"
+  },
+  "verification_status": "awaiting independent re-review; no approval claimed"
+}
