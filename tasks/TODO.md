@@ -80,6 +80,23 @@ scope widenings were added 2026-08-26 from the two interviewers' written
 feedback, mapped point-by-point in postmortem §8 — which also records the
 mechanisms that feedback praised but that do NOT exist in this codebase.
 
+### D18 — Preserve the first real item page across running headers [status: todo]
+Priority: P1
+Origin: AIG held-out burn, PR #75, 2026-08-28
+Spec: Port or rebase the already measured shared candidate-filter fix that keeps
+AIG Item 1's first real body heading instead of starting at the next running
+header. This is a bounded known-defect landing, not a new deterministic search
+track; add no filer literal or threshold.
+Reviewer evidence: The burned AIG case must recover its opening anchor and the
+branch-vs-main blast-radius comparison must keep every pre-existing filing
+unchanged.
+Acceptance: PR #75's red-first evidence and ADR-044 remain intact; the merge
+conflict is resolved on current main; the AIG case, invariant, and fast gates
+pass at 100% with no baseline move; current corpus counts and held-out burn
+accounting are re-derived rather than copied.
+Status: PR #75's original implementation and gates were green, but the PR now
+conflicts with main; current-main integration and gates are UNRUN.
+
 ### D19 — Verify the escalation key before extraction [status: pr]
 Origin: owner request, 2026-08-28
 Spec: Shorten the inspector's boilerplate, Markdown, and escalation-key help
@@ -156,8 +173,37 @@ the five-stage UI shows vision status/source/model/image count/inspected items
 and measured cost without URLs. Red-first evidence is in
 `tasks/reviews/d21-live-vision-red-first.txt`; fresh cold review and all three
 repairs are in `tasks/reviews/d21-live-vision-cold-review*.txt`. Final invariant
-98/98 and fast 168/168, both $0 with no baseline move. Deployment remains UNRUN
-until PR #78 is merged.
+98/98 and fast 168/168, both $0 with no baseline move. PR #78 merged as
+`d8680ab`; deployment/build-identity verification remains UNRUN.
+
+### D22 — Bounded agent loop that repairs a real filing [status: todo]
+Priority: P1
+Origin: owner decision, 2026-08-29; implementation plan in
+`docs/product/two-day-agentic-recovery-plan.md`
+Spec: Turn D11/D21's fixed text ladder into a maximum-three-turn
+`observe → act → verify → re-plan/abstain` loop. Give one existing model a
+compact filing outline plus bounded search/window actions; accept only primary
+spans or alternative regions that the existing deterministic verifiers approve.
+Use existing honesty signals for entry, keep clean and cross-reference-resolved
+filings at zero paid calls, reuse the existing cache and shared Budget, and add
+no agent framework, model, OCR, renderer, XBRL check, or issuer heuristic.
+Reviewer evidence: End-to-end cached `route()` cases must bind the prompt/action
+schema, mixed targets, verifier-feedback re-plan, three-turn exhaustion,
+contract/envelope shape, API `review_required`, cache/cost accounting, and a
+clean zero-call path. A real dev filing must supply positive verified recovery;
+a separate case must show rejection and honest abstention. The inspector must
+render actual actions and verifier observations rather than a UI-derived story.
+Acceptance: An ADR binds the entry predicate, action schema, turn/cost bounds,
+and residual classes; every new failure is observed red before repair; one real
+non-synthetic filing gains non-empty model-proposed evidence or a primary repair
+that reproduces from `normalized_text`; one invalid proposal is rejected before
+re-plan or abstention; no unresolved item is reported clean; invariant and fast
+pass at 100% with zero paid calls and no baseline move; full/cached replay and
+one bounded live run record calls, tokens, dollars, latency, and verifier
+decisions; a fresh cold review is disposed; the deployed inspector proves the
+clean, positive, and negative paths against the merged build SHA.
+Status: plan authored; ADR, red-first cases, implementation, live evidence,
+cold review, gates, and deployment are UNRUN.
 
 ## Debt
 
