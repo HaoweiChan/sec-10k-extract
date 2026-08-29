@@ -522,7 +522,11 @@ def eval_check(result, chk, path=None):
                 {"action": "propose_alternative_regions", "item": "7", "regions": [{
                     "start": destination, "end": min(len(text), destination + 4000), "reference": "Item 7"}]},
             ]
-        elif chk["scenario"] == "exhaustion_negative":
+        elif chk["scenario"] in ("exhaustion_negative", "empty_and_malformed"):
+            items_in.append({"item": "16", "status": "missing", "start": None, "end": None,
+                             "method": "status_keyword", "heading_text": None, "confidence": 0.0,
+                             "part": "IV", "title": "Form 10-K Summary", "evidence": {}, "review_required": False})
+            warnings.append({"code": "internal_pointer_unreached", "item": "16", "message": "mixed missing target"})
             actions = [{"action": "propose_primary_span", "item": "2", "start": 0, "end": 1}] * 3
         elif chk["scenario"] == "quiet_and_xref":
             def _quiet(*args, **kwargs):
@@ -541,10 +545,12 @@ def eval_check(result, chk, path=None):
         else:
             return f"unknown agent_loop scenario {chk['scenario']!r}"
 
+        if chk["scenario"] == "empty_and_malformed":
+            actions = ["", "[]", "{"]
         def _stub(model, system, user, max_tokens, budget, **kw):
             calls.append(user)
             action = actions.pop(0)
-            return {"cached": True, "text": _json.dumps(action),
+            return {"cached": True, "text": action if isinstance(action, str) else _json.dumps(action),
                     "usage": {"input_tokens": 0, "output_tokens": 0}, "usd": 0.0,
                     "model": model}
 
@@ -554,6 +560,20 @@ def eval_check(result, chk, path=None):
         finally:
             _llm.call = real
         tiers = routing["tiers"]
+        envelope = {**source, "items": items_in, "routing": routing,
+                    "cost": routing["cost"]}
+        why_shape = eval_check(envelope, {"type": "envelope_shape"})
+        if why_shape:
+            return f"produced routing did not pass public envelope_shape: {why_shape}"
+        bad = copy.deepcopy(envelope)
+        bad["routing"]["tiers"][0].pop("actions", None)
+        if eval_check(bad, {"type": "envelope_shape"}) is None:
+            return "envelope_shape accepted an agent tier without actions"
+        bad = copy.deepcopy(envelope)
+        if len(bad["routing"]["tiers"]) > 2 and any("text" in x for x in bad["routing"]["tiers"][1].get("observations", [])):
+            bad["routing"]["tiers"][2]["offset"] += 1
+            if eval_check(bad, {"type": "envelope_shape"}) is None:
+                return "envelope_shape accepted a mismatched read-window range"
         if chk["scenario"] == "replan_positive":
             if [x["outcome"] for x in tiers] != ["rejected", "rejected", "resolved"]:
                 return f"expected rejected -> resolved re-plan, got {[x['outcome'] for x in tiers]}"
@@ -561,11 +581,18 @@ def eval_check(result, chk, path=None):
                 return "rejection was not observed by the next cached turn or alternative was not recorded"
             if extra or "alternative_regions" not in items_in[[i["item"] for i in items_in].index(target_code)]["evidence"]:
                 return f"verified cached repair did not apply honestly: extra={extra}"
+            if _json.dumps(tiers[0]["observations"][0]) not in calls[1] or _json.dumps(tiers[1]["observations"][0]) not in calls[2]:
+                return "exact search/read observation did not reach the next model prompt"
         else:
             if len(tiers) != 3 or any(x["outcome"] != "rejected" for x in tiers):
-                return f"agent exhaustion did not use exactly three rejected turns: {tiers}"
+                if chk["scenario"] != "empty_and_malformed" or len(tiers) != 3 or any(x["outcome"] != "unparseable" for x in tiers):
+                    return f"agent exhaustion did not use three bounded turns: {tiers}"
+            if set(routing["trigger"]["target_items"]) != {"2", "16"}:
+                return "mixed missing and bad-primary targets did not both reach route planning"
             if not extra or not items_in[[i["item"] for i in items_in].index("2")]["review_required"]:
                 return "exhaustion did not leave the target review_required"
+            if not items_in[[i["item"] for i in items_in].index("16")]["review_required"]:
+                return "mixed missing target lost review_required"
             from src.sec10k.web.view import build_view
             view_item = next(i for i in build_view({"normalized_text": result["normalized_text"], "items": items_in})["items"]
                              if i["item"] == "2")

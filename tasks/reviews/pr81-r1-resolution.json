@@ -1,0 +1,21 @@
+{
+  "pr": 81,
+  "round": 1,
+  "result": "OPEN",
+  "date": "2026-08-29",
+  "resolutions": [
+    {
+      "id": "R1",
+      "status": "implemented",
+      "fix": "test_web_contract.py now dispatches JSON through app.app with a minimal ASGI request/response harness; only app.extract_items is stubbed.",
+      "evidence": "The shipped check exits 0; removing /api/extract/fixture from the live router makes its HTTP-200 assertion fail (pr81-r1-red.txt)."
+    },
+    {
+      "id": "R2",
+      "status": "implemented",
+      "fix": "The response items are indexed by code, their set must equal {2, 16}, and both review_required values must be true.",
+      "evidence": "Dropping Item 16 makes the exact-target assertion fail (pr81-r1-red.txt)."
+    }
+  ],
+  "verification_status": "awaiting independent review; no approval claimed"
+}
