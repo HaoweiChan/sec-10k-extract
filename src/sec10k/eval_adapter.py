@@ -38,8 +38,8 @@ DOC_STATUSES = {"success", "success_with_warning", "ambiguous", "unsupported", "
 # for the unconditional fallback that never shipped, and ADR-036 §j keeps it
 # rather than reusing it for a triggered tier that means something else.
 METHODS = {"heading_strict", "heading_lenient", "status_keyword", "llm_fallback",
-           "llm_localize", "llm_extract"}
-ESCALATION_METHODS = {"llm_localize", "llm_extract"}
+           "llm_localize", "llm_extract", "cross_reference_index", "agent_loop"}
+ESCALATION_METHODS = {"llm_localize", "llm_extract", "agent_loop"}
 # statuses that carry offsets, per ADR-011. `incorporated_by_reference` points
 # at the pointer paragraph — real, inspectable text — so every span-level check
 # must reach it. `missing`/`omitted` have no span by definition.
@@ -494,6 +494,77 @@ def eval_check(result, chk, path=None):
                 if sorted(got) != sorted(sub["accepts"]):
                     return (f"{sub['name']}: verify accepted {sorted(got)} != "
                             f"{sorted(sub['accepts'])} (why={why})")
+    elif t == "agent_loop":
+        # D22's transport is recorded/cached: it exercises the real router,
+        # normalised offsets, and deterministic verifier without a paid call.
+        import copy
+        import json as _json
+
+        import src.sec10k.llm as _llm
+        from src.sec10k.escalate import route
+        target = next((i for i in result["items"] if i["item"] == "2"), None)
+        if target is None or target["start"] is None:
+            return "fixture has no primary Item 2 span for the cached agent replay"
+        warnings = [{"code": "internal_pointer_unreached", "item": "2",
+                     "message": "cached D22 replay target"}]
+        calls, items_in = [], copy.deepcopy(result["items"])
+        if chk["scenario"] == "replan_positive":
+            actions = [
+                {"action": "propose_primary_span", "item": "2", "start": 0, "end": 1},
+                {"action": "propose_alternative_regions", "item": "2", "regions": [{
+                    "start": target["start"], "end": target["end"], "reference": "Item 2"}]},
+            ]
+        elif chk["scenario"] == "exhaustion_negative":
+            actions = [{"action": "propose_primary_span", "item": "2", "start": 0, "end": 1}] * 3
+        elif chk["scenario"] == "quiet_and_xref":
+            def _quiet(*args, **kwargs):
+                raise AssertionError("quiet/xref route made a model call")
+            real, _llm.call = _llm.call, _quiet
+            try:
+                quiet, _ = route(result["normalized_text"], copy.deepcopy(result["items"]), [])
+                xref, _ = route(result["normalized_text"], copy.deepcopy(result["items"]), [
+                    {"code": "low_item_coverage", "item": "2", "message": "replay"},
+                    {"code": "cross_reference_index", "item": "2", "message": "replay"}])
+            finally:
+                _llm.call = real
+            if quiet["tiers"] or xref["tiers"] or quiet["cost"]["llm_calls"] or xref["cost"]["llm_calls"]:
+                return "quiet or cross-reference-resolved route recorded model work"
+            return None
+        else:
+            return f"unknown agent_loop scenario {chk['scenario']!r}"
+
+        def _stub(model, system, user, max_tokens, budget, **kw):
+            calls.append(user)
+            action = actions.pop(0)
+            return {"cached": True, "text": _json.dumps(action),
+                    "usage": {"input_tokens": 0, "output_tokens": 0}, "usd": 0.0,
+                    "model": model}
+
+        real, _llm.call = _llm.call, _stub
+        try:
+            routing, extra = route(result["normalized_text"], items_in, warnings)
+        finally:
+            _llm.call = real
+        tiers = routing["tiers"]
+        if chk["scenario"] == "replan_positive":
+            if [x["outcome"] for x in tiers] != ["rejected", "resolved"]:
+                return f"expected rejected -> resolved re-plan, got {[x['outcome'] for x in tiers]}"
+            if not tiers[0]["observations"] or not routing["alternative"]:
+                return "rejection was not observed by the next cached turn or alternative was not recorded"
+            if extra or "alternative_regions" not in items_in[[i["item"] for i in items_in].index("2")]["evidence"]:
+                return f"verified cached repair did not apply honestly: extra={extra}"
+        else:
+            if len(tiers) != 3 or any(x["outcome"] != "rejected" for x in tiers):
+                return f"agent exhaustion did not use exactly three rejected turns: {tiers}"
+            if not extra or not items_in[[i["item"] for i in items_in].index("2")]["review_required"]:
+                return "exhaustion did not leave the target review_required"
+            from src.sec10k.web.view import build_view
+            view_item = next(i for i in build_view({"normalized_text": result["normalized_text"], "items": items_in})["items"]
+                             if i["item"] == "2")
+            if not view_item["review_required"]:
+                return "view payload dropped item review_required"
+        if routing["cost"] != {"llm_calls": 0, "tokens": 0, "usd": 0.0} or any(len(x) >= len(result["normalized_text"]) for x in calls):
+            return "cached loop cost or bounded observation accounting is dishonest"
     elif t == "route_payload":
         # PR #58 / the intc-2025 exam. Replays a RECORDED transport response
         # through `escalate.route` and asserts the router reports something
@@ -1056,8 +1127,9 @@ def _routing_shape(result):
     if not isinstance(r, dict) or not {"trigger", "tiers", "resolved", "cost", "stages"} <= set(r):
         return f"keys {sorted(r) if isinstance(r, dict) else type(r).__name__}"
     t = r["trigger"]
-    if not isinstance(t, dict) or not {"fired", "codes", "items"} <= set(t):
-        return "trigger missing fired/codes/items"
+    if not isinstance(t, dict) or not {"fired", "codes", "items", "route", "reason",
+                                       "target_items", "calls_paid"} <= set(t):
+        return "trigger missing fired/codes/items/route/reason/target_items/calls_paid"
     if not isinstance(t["fired"], bool):
         return f"trigger.fired {t['fired']!r} is not a bool"
     if not t["fired"] and r["tiers"]:
@@ -1095,6 +1167,9 @@ def _routing_shape(result):
                     f"over {n} of {len(result['normalized_text'])} chars")
         if tier["outcome"] not in ROUTING_OUTCOMES:
             return f"tier outcome {tier['outcome']!r} not in {sorted(ROUTING_OUTCOMES)}"
+        if tier["tier"] == "agent_loop":
+            if not isinstance(tier.get("actions"), list) or not isinstance(tier.get("observations"), list):
+                return "agent_loop tier missing action/observation lists"
         if not COST_KEYS <= set(tier["cost"]):
             return f"tier {tier['tier']} cost missing {sorted(COST_KEYS - set(tier['cost']))}"
         for k in COST_KEYS:

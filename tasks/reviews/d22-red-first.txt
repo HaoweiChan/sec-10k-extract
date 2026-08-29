@@ -1,0 +1,17 @@
+D22 red-first — 2026-08-29
+
+Command:
+python3 - <<'PY'
+import json
+from src.sec10k.eval_adapter import run_case
+print(run_case(json.load(open("evals/adversarial/d22-agent-loop.json"))))
+PY
+
+Before the repair, the committed CVX fixture case failed:
+- replan_positive: unknown check type 'agent_loop'
+- exhaustion_negative: unknown check type 'agent_loop'
+- quiet_and_xref: unknown check type 'agent_loop'
+
+The case binds the existing real CVX normalized text, cached model actions only,
+and the actual deterministic verifier; no extractor output or paid response is
+fabricated.

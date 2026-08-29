@@ -60,3 +60,7 @@ index only cross-references it for scanning.
 - ADR-046 — systematic escalation classifies contiguous repair, alternative
   evidence, and deterministic suppression; alternative regions are verbatim
   item-scoped annotations and never weaken INV-S1 — enforced by `d21-*.json`.
+- ADR-047 — [bounded agent repair loop](ADR-047-bounded-agent-repair-loop.md):
+  an existing-model, maximum-three-turn action loop starts only from existing
+  internal-pointer honesty evidence; bounded observations re-plan after a
+  verifier rejection, and only existing deterministic verifiers publish.

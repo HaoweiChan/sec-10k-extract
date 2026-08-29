@@ -1,0 +1,14 @@
+{
+  "id": "d22-agent-loop",
+  "task": "sec10k",
+  "suites": ["invariant"],
+  "input": {"path": "evals/fixtures/cvx-2015/filing.htm"},
+  "expect": {
+    "checks": [
+      {"type": "agent_loop", "scenario": "replan_positive"},
+      {"type": "agent_loop", "scenario": "exhaustion_negative"},
+      {"type": "agent_loop", "scenario": "quiet_and_xref"}
+    ]
+  },
+  "provenance": "D22 red-first cached end-to-end route proof. CVX FY2015 is a committed real internal-pointer filing; the transport replay supplies only model actions, never a fabricated extractor result. It binds one rejected proposal feeding a later turn, a verified alternative observation, three-turn abstention, and zero-call quiet/xref paths."
+}

@@ -223,14 +223,15 @@ them all); the example once showed `lenient_match`, which nothing emits.
 
 - **`routing` (optional, ADR-036)**: present *only* when the caller passes
   `extract_items(path, escalate=True)`. The tiered slow path's record —
-  `{trigger: {fired, codes, items, message}, tiers: [...], resolved: [...],
+  `{trigger: {fired, codes, items, route, reason, target_items, calls_paid},
+  tiers: [...], resolved: [...],
   cost: {llm_calls, tokens, usd}}`. `trigger.fired` is true exactly when a
   warning in `warnings` carries a code in `escalate.TRIGGER_CODES`
   (`low_item_coverage` today); `trigger.items` names the items D8 flagged as
   stubs or pointers and is a hint to the tiers, not an escalation on its own
   (ADR-035 §c). Each `tiers` entry is `{tier, model, items, offset,
   input_chars, truncated, outcome, cost, ...}` with `outcome` ∈ `resolved` |
-  `rejected` | `unparseable` | `unavailable`; `offset`/`input_chars`/
+  `rejected` | `unparseable` | `unavailable` | `empty_completion`; `offset`/`input_chars`/
   `truncated` report what that rung was actually shown, as a RANGE
   (`[offset, offset + input_chars)` into `normalized_text`) and not merely a
   length — both rungs' inputs are capped (ADR-036 §h2) and rung 1's window
@@ -267,6 +268,11 @@ them all); the example once showed `lenient_match`, which nothing emits.
   verified alternative evidence for its listed inspected `items`; it cannot create/move offsets or turn a
   failed text extraction into success. The inspector exposes status, source,
   model, image count, and measured cost without displaying the URLs.
+  ADR-047 adds `agent_loop`: at most three turns, each carrying the compact
+  action and its deterministic observation as `actions` and `observations`.
+  It may publish a verified primary span or existing-item alternative region;
+  a rejected/malformed/exhausted action leaves the deterministic result and
+  target `review_required` intact.
 
 ## Envelope rules (v2, normative)
 
@@ -319,6 +325,8 @@ them all); the example once showed `lenient_match`, which nothing emits.
   `evidence.deterministic` block holding the offsets, method, heading and
   title similarity the $0 path had published. `envelope_shape` refuses any
   value outside the enum; `item_field` pins the value per item.
+  `cross_reference_index` is emitted for the resolved pointer index; ADR-047
+  adds `agent_loop` only when its primary proposal passed `escalate.verify`.
 
 ## Envelope fields (v2, informative)
 

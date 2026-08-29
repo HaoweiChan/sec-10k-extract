@@ -179,7 +179,7 @@ repairs are in `tasks/reviews/d21-live-vision-cold-review*.txt`. Final invariant
 98/98 and fast 168/168, both $0 with no baseline move. PR #78 merged as
 `d8680ab`; deployment/build-identity verification remains UNRUN.
 
-### D22 — Bounded agent loop that repairs a real filing [status: todo]
+### D22 — Bounded agent loop that repairs a real filing [status: in-progress]
 Priority: P1
 Origin: owner decision, 2026-08-29; implementation plan in
 `docs/product/two-day-agentic-recovery-plan.md`

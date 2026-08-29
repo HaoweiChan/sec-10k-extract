@@ -1022,9 +1022,12 @@ function routingStrip(r){
 function flowStrip(r){
   if(!r || !Array.isArray(r.stages)) return "";
   const stages = r.stages.map(s => `${esc(s.stage)}: <b>${esc(s.status)}</b> — ${esc(s.reason || s.skipped || "")}`).join("; ");
+  const trace = (r.tiers || []).flatMap(t => (t.actions || []).map((a, i) =>
+    `turn ${esc(t.turn || "?")} action ${esc(JSON.stringify(a))}; observation ${esc(JSON.stringify((t.observations || [])[i] || {}))}`
+  )).join("; ");
   const v = r.stages.find(s => s.stage === "verify")?.vision;
   const vision = v ? `; vision: <b>${esc(v.status)}</b> ${esc(v.source || "skipped")} · ${esc(v.model)} · images ${Number((v.images || []).length)} · items ${esc((v.items || []).join(", "))} · $${Number((v.cost || {}).usd || 0).toFixed(4)}` : "";
-  return ` <span class="src" id="agentic-flow">agentic flow: ${stages}${vision}</span>`;
+  return ` <span class="src" id="agentic-flow">agentic flow: ${stages}${trace ? `; ${trace}` : ""}${vision}</span>`;
 }
 
 // ADR-041. The paid tier is open to every request now (the token door of
