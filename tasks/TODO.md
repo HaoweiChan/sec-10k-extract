@@ -233,7 +233,7 @@ PR82 R2 independently VERIFIED R1 at confidence 0.99 with no new findings
 (`tasks/reviews/pr82-r2-verification.json`). This approval verifies evidence
 wording only; D23 still does not claim a positive live recovery.
 
-### D24 — Resolve same-accession Annual Report references [status: in-progress]
+### D24 — Resolve same-accession Annual Report references [status: pr]
 Priority: P1
 Origin: owner request, 2026-08-29, after the deployed held-out verification
 showed MRK 1995 and PGR 2023 Items 7/8 are short pointers to Annual Report
@@ -268,6 +268,8 @@ are unchanged outside the two burns and identical across both review repairs.
 PR83 round 2 keeps R2/R3 verified and closes the remaining R1 with the real
 PGR 86-character title-line-only red case: fuzzy similarity no longer proves
 an end boundary; only a whole canonical-title line or document end does.
+PR83 round 3 independently VERIFIED R1-R3 at confidence 0.99 and APPROVED with
+no new findings (`tasks/reviews/pr83-r3-verification.json`).
 Final offline gates: invariant 104/104, fast 175/175, $0, no baseline move.
 
 ## Debt

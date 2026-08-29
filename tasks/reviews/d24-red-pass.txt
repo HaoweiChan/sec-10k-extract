@@ -41,3 +41,7 @@ PR83 round 2 final R1 repair:
   final fast: 175/175, evals/report/20260829-221258-fast.json
   default snapshot identical: tasks/reviews/pr83-r2-snapshot.txt
   cost: $0; no API key or baseline move
+
+PR83 round 3 final review:
+  APPROVED; R1-R3 VERIFIED at confidence 0.99; no new findings
+  artifact: tasks/reviews/pr83-r3-verification.json

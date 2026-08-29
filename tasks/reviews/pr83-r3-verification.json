@@ -1,0 +1,24 @@
+{
+  "result": "APPROVED",
+  "verifications": [
+    {
+      "id": "R1",
+      "status": "VERIFIED",
+      "confidence": 0.99,
+      "evidence": "The exact real-PGR 86-character title-line proposal now returns no accepted region with `region end is not a proved section boundary`. End proof accepts the PGR Item 8 boundary at the exact canonical MD&A line, PGR Item 7 at document end, and existing MRK page/document-end proofs. Red 0/1, combined green 5/5, invariant 104/104, fast 175/175, and the 72-dev/3-heldout snapshot is unchanged."
+    },
+    {
+      "id": "R2",
+      "status": "VERIFIED",
+      "confidence": 0.99,
+      "evidence": "Standing verification remains satisfied; the combined final replay and both full gates keep the exact CP1252 raw-byte hash case green."
+    },
+    {
+      "id": "R3",
+      "status": "VERIFIED",
+      "confidence": 0.99,
+      "evidence": "Standing verification remains satisfied; the combined final replay and both full gates keep the real KO EX-13.1 route and bounded exhibit-type guards green."
+    }
+  ],
+  "new_findings": []
+}
