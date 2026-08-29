@@ -287,6 +287,10 @@ def verify_alternatives(text, items, proposal, asked=None, existing=False):
         regions, rejects = [], []
         for region in value["regions"] if isinstance(value["regions"], list) else []:
             good, bad = _region(text, code, region)
+            if good and existing and by_code[code].get("start") is not None:
+                old = by_code[code]
+                if not (good["end"] <= old["start"] or old["end"] <= good["start"]):
+                    good, bad = None, "region overlaps the target's current primary span"
             (regions if good else rejects).append(good or bad)
         if not regions or rejects:
             why.extend(f"item {code}: {x}" for x in rejects or ["no regions"])
@@ -457,9 +461,12 @@ def _agent_loop(text, items, warnings, budget, call):
                              for i in items],
                    "warnings": [{"code": w.get("code"), "item": w.get("item")}
                                 for w in warnings]}
+    prompt_range = (0, 0)
     for turn in range(1, AGENT_TURNS + 1):
+        offset, end = prompt_range
         entry = {"tier": "agent_loop", "turn": turn, "model": AGENT_MODEL,
-                 "items": targets, "offset": 0, "input_chars": 0, "truncated": True,
+                 "items": targets, "offset": offset, "input_chars": end - offset,
+                 "truncated": end - offset < len(text),
                  "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0},
                  "actions": [], "observations": []}
         try:
@@ -472,12 +479,14 @@ def _agent_loop(text, items, warnings, budget, call):
         entry["cached"] = got["cached"]
         try:
             action = json.loads((got.get("text") or "").strip())
+            if not isinstance(action, dict):
+                raise ValueError("action is not an object")
             kind = action.get("action")
-            if not isinstance(action, dict) or kind not in {"search", "read_window", "propose_primary_span", "propose_alternative_regions", "finish"}:
+            if kind not in {"search", "read_window", "propose_primary_span", "propose_alternative_regions", "finish"}:
                 raise ValueError("unknown action")
         except (ValueError, TypeError, json.JSONDecodeError) as e:
             entry.update(outcome="unparseable", error=str(e)); record["tiers"].append(entry)
-            observation = {"rejection": entry["error"]}; continue
+            observation = {"rejection": entry["error"]}; prompt_range = (0, 0); continue
         entry["actions"].append(action)
         accepted, alternative = {}, {}
         if kind == "search":
@@ -488,7 +497,7 @@ def _agent_loop(text, items, warnings, budget, call):
                 if at < 0: break
                 hits.append(at); at += len(q)
             entry["observations"].append({"matches": hits}); entry["outcome"] = "rejected"
-            record["tiers"].append(entry); observation = entry["observations"][0]; continue
+            record["tiers"].append(entry); observation = entry["observations"][0]; prompt_range = (0, 0); continue
         if kind == "read_window":
             s, e = action.get("start"), action.get("end")
             if not (isinstance(s, int) and isinstance(e, int) and 0 <= s < e <= len(text)):
@@ -497,7 +506,8 @@ def _agent_loop(text, items, warnings, budget, call):
                 entry["observations"].append({"start": s, "end": min(e, s + OBSERVATION_CAP),
                                               "text": text[s:min(e, s + OBSERVATION_CAP)]})
                 entry["outcome"] = "rejected"; record["tiers"].append(entry)
-                observation = entry["observations"][0]; continue
+                observation = entry["observations"][0]
+                prompt_range = (observation["start"], observation["end"]); continue
         elif kind == "propose_primary_span":
             accepted, why = verify(text, items, {action.get("item"): [action.get("start"), action.get("end")]}, asked=set(targets))
         elif kind == "propose_alternative_regions":
@@ -512,7 +522,7 @@ def _agent_loop(text, items, warnings, budget, call):
             entry.update(outcome="resolved", resolved=record["resolved"], alternative=record["alternative"])
             record["tiers"].append(entry); break
         entry.update(outcome="rejected", rejections=why); record["tiers"].append(entry)
-        observation = {"verifier_rejections": why}
+        observation = {"verifier_rejections": why}; prompt_range = (0, 0)
     for entry in record["tiers"]:
         for k in record["cost"]: record["cost"][k] = round(record["cost"][k] + entry["cost"][k], 6)
     record["vision"] = vision_verify(None, {}, None, None, None, text)

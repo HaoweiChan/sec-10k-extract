@@ -501,18 +501,26 @@ def eval_check(result, chk, path=None):
         import json as _json
 
         import src.sec10k.llm as _llm
+        from src.sec10k.extract import extract_items
         from src.sec10k.escalate import route
-        target = next((i for i in result["items"] if i["item"] == "2"), None)
+        positive = chk["scenario"] == "replan_positive"
+        source = (extract_items("evals/fixtures/xom-2021/filing.htm") if positive else result)
+        target_code = "7" if positive else "2"
+        target = next((i for i in source["items"] if i["item"] == target_code), None)
         if target is None or target["start"] is None:
             return "fixture has no primary Item 2 span for the cached agent replay"
-        warnings = [{"code": "internal_pointer_unreached", "item": "2",
+        warnings = [{"code": "internal_pointer_unreached", "item": target_code,
                      "message": "cached D22 replay target"}]
-        calls, items_in = [], copy.deepcopy(result["items"])
+        text, calls, items_in = source["normalized_text"], [], copy.deepcopy(source["items"])
         if chk["scenario"] == "replan_positive":
+            destination = text.find("Item 7", target["end"])
+            if destination < 0:
+                return "XOM has no distinct Item 7 destination after its pointer span"
             actions = [
-                {"action": "propose_primary_span", "item": "2", "start": 0, "end": 1},
-                {"action": "propose_alternative_regions", "item": "2", "regions": [{
-                    "start": target["start"], "end": target["end"], "reference": "Item 2"}]},
+                {"action": "search", "query": "Item 7"},
+                {"action": "read_window", "start": destination, "end": destination + 4000},
+                {"action": "propose_alternative_regions", "item": "7", "regions": [{
+                    "start": destination, "end": min(len(text), destination + 4000), "reference": "Item 7"}]},
             ]
         elif chk["scenario"] == "exhaustion_negative":
             actions = [{"action": "propose_primary_span", "item": "2", "start": 0, "end": 1}] * 3
@@ -542,16 +550,16 @@ def eval_check(result, chk, path=None):
 
         real, _llm.call = _llm.call, _stub
         try:
-            routing, extra = route(result["normalized_text"], items_in, warnings)
+            routing, extra = route(text, items_in, warnings)
         finally:
             _llm.call = real
         tiers = routing["tiers"]
         if chk["scenario"] == "replan_positive":
-            if [x["outcome"] for x in tiers] != ["rejected", "resolved"]:
+            if [x["outcome"] for x in tiers] != ["rejected", "rejected", "resolved"]:
                 return f"expected rejected -> resolved re-plan, got {[x['outcome'] for x in tiers]}"
             if not tiers[0]["observations"] or not routing["alternative"]:
                 return "rejection was not observed by the next cached turn or alternative was not recorded"
-            if extra or "alternative_regions" not in items_in[[i["item"] for i in items_in].index("2")]["evidence"]:
+            if extra or "alternative_regions" not in items_in[[i["item"] for i in items_in].index(target_code)]["evidence"]:
                 return f"verified cached repair did not apply honestly: extra={extra}"
         else:
             if len(tiers) != 3 or any(x["outcome"] != "rejected" for x in tiers):
@@ -563,7 +571,7 @@ def eval_check(result, chk, path=None):
                              if i["item"] == "2")
             if not view_item["review_required"]:
                 return "view payload dropped item review_required"
-        if routing["cost"] != {"llm_calls": 0, "tokens": 0, "usd": 0.0} or any(len(x) >= len(result["normalized_text"]) for x in calls):
+        if routing["cost"] != {"llm_calls": 0, "tokens": 0, "usd": 0.0} or any(len(x) >= len(text) for x in calls):
             return "cached loop cost or bounded observation accounting is dishonest"
     elif t == "route_payload":
         # PR #58 / the intc-2025 exam. Replays a RECORDED transport response
@@ -1145,6 +1153,7 @@ def _routing_shape(result):
         if not COST_KEYS <= set(stage["cost"]):
             return f"flow stage cost missing keys: {stage!r}"
     total = {k: 0 for k in COST_KEYS}
+    prior_window = None
     for tier in r["tiers"]:
         # PR #58 R17/R19: `offset` joins the required set, and the three are
         # required TOGETHER because they are one fact — what this rung was
@@ -1170,6 +1179,12 @@ def _routing_shape(result):
         if tier["tier"] == "agent_loop":
             if not isinstance(tier.get("actions"), list) or not isinstance(tier.get("observations"), list):
                 return "agent_loop tier missing action/observation lists"
+            if prior_window is not None and (tier["offset"], tier["input_chars"]) != prior_window:
+                return "agent_loop tier range does not match the prior read_window observation"
+            prior_window = None
+            for obs in tier["observations"]:
+                if isinstance(obs, dict) and isinstance(obs.get("text"), str):
+                    prior_window = (obs["start"], obs["end"] - obs["start"])
         if not COST_KEYS <= set(tier["cost"]):
             return f"tier {tier['tier']} cost missing {sorted(COST_KEYS - set(tier['cost']))}"
         for k in COST_KEYS:
