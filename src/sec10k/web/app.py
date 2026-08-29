@@ -261,7 +261,7 @@ def _cache_source(raw: bytes, suffix: str, normalized: str) -> str:
 
 def _run(path: str, source: dict, raw: bytes = None,
          exclude_boilerplate: bool = False, markdown: bool = False,
-         request: Request = None):
+         request: Request = None, source_url: str = None):
     """Extract and shape for the UI. Never leaks a traceback to the browser.
 
     `raw` is the original bytes already in hand for upload/URL; the fixture
@@ -298,7 +298,8 @@ def _run(path: str, source: dict, raw: bytes = None,
     try:
         result = extract_items(path, exclude_boilerplate=exclude_boilerplate,
                                blocks=markdown, escalate=escalate,
-                               budget=server_budget() if escalate else None)
+                               budget=server_budget() if escalate else None,
+                               source_url=source_url)
     except Exception as e:                       # refuse loudly, hard rule 4
         return _err(500, "extractor_exception", f"{type(e).__name__}: {e}",
                     source=source)
@@ -434,7 +435,8 @@ def extract_url(body: dict, request: Request):
         return _run(str(p), {"mode": "url", "name": url, "bytes": len(raw),
                              "sha256": hashlib.sha256(raw).hexdigest()[:16]}, raw=raw,
                     exclude_boilerplate=bool((body or {}).get("exclude_boilerplate")),
-                    markdown=bool((body or {}).get("markdown")), request=request)
+                    markdown=bool((body or {}).get("markdown")), request=request,
+                    source_url=url)
 
 
 @app.get("/api/source/{token}")

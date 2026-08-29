@@ -246,6 +246,27 @@ them all); the example once showed `lenient_match`, which nothing emits.
   affected items' `start`, `end`, `method` and `heading_text`, preserving the
   deterministic answer under `evidence.deterministic`. With the trigger quiet
   nothing moves — see ADR-036 §f for the measured blast radius.
+  ADR-046 adds deterministic `trigger.class`, `route`, `reason`,
+  `target_items`, and `calls_paid`; a resolved cross-reference class is
+  `deterministic_resolved` / `suppressed` / false. Alternative results are
+  published at `evidence.alternative_regions`: a list of bounded
+  `{start,end,title}` or `{start,end,reference}` records whose evidence string
+  is verbatim inside that region. They may overlap, nest, or be discontiguous,
+  and are annotations only: primary `start`/`end` and INV-S1 never move.
+  `routing.stages` is always the ordered list `classify`, `plan`, `route`,
+  `verify`, `decide`; each record has backend-authored `status`, `reason`,
+  `targets`, zero-or-measured `cost`, and `skipped`. The view passes it through
+  verbatim. Its verify record may contain `vision`: `{status, source, model,
+  images, cost, reason, verdict?}`. It resolves at most two relevant relative
+  image references only against the validated original `https://www.sec.gov/Archives/…`
+  URL and common image paths (`gif/jpeg/jpg/png/webp`); uploads/fixtures,
+  blank/query-only/non-image, unsafe, off-origin, and absent images visibly skip.
+  OpenRouter receives the bounded verified item/region text plus those image
+  URLs; `source` is `live`, `cache`, or `cached_test` (never a claim that a
+  test replay ran live). Vision can only strict-confirm/reject/null already
+  verified alternative evidence for its listed inspected `items`; it cannot create/move offsets or turn a
+  failed text extraction into success. The inspector exposes status, source,
+  model, image count, and measured cost without displaying the URLs.
 
 ## Envelope rules (v2, normative)
 

@@ -1,0 +1,1 @@
+{"id":"d21-vision-cache","task":"sec10k","suites":["fast","invariant"],"input":{"path":"evals/fixtures/xom-2021/filing.htm"},"expect":{"checks":[{"type":"d21_verify","scenario":"vision"}]},"provenance":"D21 red-first cached-only vision seam: relevant image selection is capped, confirm/reject/null and zero-image skip cost $0."}

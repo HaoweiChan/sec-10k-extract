@@ -1,0 +1,15 @@
+2026-08-29 — D21 live vision red-first
+
+Before implementation:
+  python3 -c "from src.sec10k.escalate import vision_verify; print(vision_verify([], {}, 'confirm', 'https://www.sec.gov/Archives/x'))"
+  TypeError: vision_verify() takes from 2 to 3 positional arguments but 4 were given
+
+The red check was then extended in evals/adversarial/d21-vision-cache.json's
+direct verifier: SEC-relative resolution, off-origin rejection, two-image cap,
+multimodal OpenRouter content blocks, URL-sensitive cache keys, and explicit
+cached-test confirmation/rejection/null behavior.
+
+Parent cost review before the final gate constructed six verified 2,000-char
+regions. `_vision_prompt` emitted 12,346 chars and failed the asserted 5,000-char
+ceiling. The repair globally caps evidence text at 4,000 chars and reserves only
+32 output tokens for the strict verdict.

@@ -1,0 +1,1 @@
+{"id":"d21-contiguous-repair","task":"sec10k","suites":["fast","invariant"],"input":{"path":"evals/fixtures/xom-2021/filing.htm"},"expect":{"checks":[{"type":"d21_verify","scenario":"contiguous"}]},"provenance":"D21 red-first direct verifier case; synthetic offsets are anchored to this committed filing at evaluation time."}

@@ -126,8 +126,8 @@
                 "like_item": "1A"
               }
             },
-            "expect": "reject",
-            "why_contains": "INV-S1"
+            "expect": "accept",
+            "accepts": ["1A"]
           },
           {
             "name": "a sibling proposal duplicating another item's proposed span",
@@ -139,8 +139,8 @@
                 "like_item": "1"
               }
             },
-            "expect": "reject",
-            "why_contains": "title similarity"
+            "expect": "accept",
+            "accepts": ["1"]
           },
           {
             "name": "shape: JSON booleans are not offsets (isinstance(True, int) is True)",
@@ -199,7 +199,7 @@
             "why_contains": "not an [int, int] offset pair"
           },
           {
-            "name": "all-or-nothing: one out-of-bounds sibling discards the good one",
+            "name": "D21: one out-of-bounds sibling leaves the good delta accepted",
             "proposal": {
               "1": {
                 "like_item": "1"
@@ -209,8 +209,8 @@
                 60000
               ]
             },
-            "expect": "reject",
-            "why_contains": "outside normalized_text"
+            "expect": "accept",
+            "accepts": ["1"]
           }
         ]
       }

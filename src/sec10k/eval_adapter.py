@@ -593,6 +593,101 @@ def eval_check(result, chk, path=None):
             return f"a quiet trigger reported a cost: {on['cost']}"
         if "routing" not in on or "routing" in off:
             return "the routing key must appear with the flag and only with it"
+    elif t == "d21_verify":
+        # D21's direct, synthetic verifier battery: no model transport and no
+        # live call can make these contract decisions pass by accident.
+        from src.sec10k.escalate import (classify, verify, verify_alternatives,
+                                         vision_verify, VISION_CAP,
+                                         VISION_TEXT_CAP, _vision_prompt,
+                                         _vision_verdict)
+        from src.sec10k.segment import item_label
+        title = item_label("1", None)[1]
+        body = f"Item 1. {title}\n" + "evidence " * 400
+        alt_body = "Item 7. Alternative evidence\n" + "evidence " * 400
+        text = "stub\n" + body + alt_body + "tail " * 400
+        start = text.index(body)
+        alt_start = text.index(alt_body)
+        items = [{"item": "1", "start": 0, "end": 5, "status": "extracted",
+                  "method": "heading_strict", "heading_text": "stub"},
+                 {"item": "7", "start": None, "end": None, "status": "missing",
+                  "method": "status_keyword", "heading_text": None}]
+        scenario = chk["scenario"]
+        if scenario == "contiguous":
+            got, why = verify(text, items, {"1": [start, start + len(body)]})
+            if set(got) != {"1"} or why:
+                return f"contiguous repair rejected: {why}"
+        elif scenario == "missing_alternative":
+            got, why = verify_alternatives(text, items, {"7": {"regions": [
+                {"start": alt_start, "end": alt_start + len(alt_body), "reference": "Item 7"}]}})
+            if set(got) != {"7"} or items[1]["start"] is not None or why:
+                return f"missing alternative rejected or rewrote primary: {why}"
+        elif scenario == "overlap":
+            got, why = verify_alternatives(text, items, {"7": {"regions": [
+                {"start": alt_start, "end": alt_start + 1800, "reference": "Item 7"},
+                {"start": alt_start, "end": alt_start + 1900, "reference": "Item 7"}]}})
+            if len(got.get("7", ())) != 2 or why:
+                return f"overlapping regions rejected: {why}"
+        elif scenario == "partial":
+            got, why = verify(text, items, {"1": [start, start + len(body)], "99": [start, start + len(body)]})
+            if set(got) != {"1"} or not why:
+                return f"valid delta was erased by sibling: {got}, {why}"
+        elif scenario == "invalid":
+            got, why = verify_alternatives(text, items, {"7": {"regions": [
+                {"start": start, "end": start + 1800}]}})
+            if got or not why:
+                return "invalid in-bounds region was accepted"
+        elif scenario == "suppressed":
+            c = classify([{"code": "low_item_coverage"}, {"code": "cross_reference_index"}], items)
+            if c["route"] != "suppressed" or c["calls_paid"]:
+                return f"xref route not suppressed: {c}"
+        elif scenario == "vision":
+            alternatives = {"7": [{"start": alt_start, "end": alt_start + 1800, "reference": "Item 7"}]}
+            images = [{"src": f"chart-{n}.png", "offset": alt_start + n} for n in range(VISION_CAP + 1)]
+            base = "https://www.sec.gov/Archives/edgar/data/1/a/filing.htm"
+            yes = vision_verify(images, alternatives, "confirm", base)
+            no = vision_verify(images, alternatives, "reject", base)
+            null = vision_verify(images, alternatives, None, base)
+            skip = vision_verify([], alternatives, "confirm")
+            unsafe = vision_verify([{"src": "https://evil.example/x.png", "offset": alt_start}], alternatives, "confirm", base)
+            bad_src = [vision_verify([{"src": src, "offset": alt_start}], alternatives, "confirm", base)
+                       for src in ("", "?page=2", "filing.htm")]
+            sibling = {"7": alternatives["7"], "8": [{"start": alt_start + 1900,
+                                                           "end": alt_start + 2000}]}
+            scoped = vision_verify(images[:1], sibling, "reject", base)
+            kept = {code: regions for code, regions in sibling.items() if code not in scoped["items"]}
+            from src.sec10k.llm import _body, _cache_key, PROMPT_VERSION
+            body = _body("openai/gpt-5-mini", "s", "u", 9, image_urls=yes["images"])
+            content = body["messages"][1]["content"]
+            prompt = _vision_prompt(text, alternatives)
+            malformed = []
+            for raw in ('[]', '"confirm"', '{"verdict":"confirm","extra":1}'):
+                try: _vision_verdict(raw)
+                except (ValueError, TypeError): malformed.append(raw)
+            if (yes["status"] != "verified" or yes.get("source") != "cached_test"
+                    or no.get("verdict") != "reject" or null["status"] != "skipped"
+                    or skip["reason"] != "no validated SEC Archives base"
+                    or unsafe["status"] != "skipped" or len(yes["images"]) != VISION_CAP
+                    or any(x["status"] != "skipped" for x in bad_src)
+                    or scoped["items"] != ["7"] or set(kept) != {"8"}
+                    or not all(u.startswith("https://www.sec.gov/Archives/") for u in yes["images"])
+                    or content[0] != {"type": "text", "text": "u"}
+                    or not all(x["type"] == "image_url" for x in content[1:])
+                    or '"item": "7"' not in prompt or "Alternative evidence" not in prompt
+                    or len(malformed) != 3
+                    or _cache_key("m", "s", "u", 1) != __import__("hashlib").sha256(__import__("json").dumps([PROMPT_VERSION, "m", "s", "u", 1], sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+                    or _cache_key("m", "s", "u", 1) == _cache_key("m", "s", "u", 1, yes["images"])
+                    or len(_vision_prompt("x" * 20000, {"7": [
+                        {"start": n, "end": n + 2000}
+                        for n in range(0, 12000, 2000)]})) > VISION_TEXT_CAP + 1000):
+                return f"vision bounded cached decisions wrong: {yes}, {no}, {null}, {skip}"
+        elif scenario == "flow":
+            from src.sec10k.escalate import _stages
+            tr = {"fired": False, "reason": "no trigger", "route": "none", "target_items": []}
+            stages = _stages(tr, {"resolved": [], "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0}})
+            if [s["stage"] for s in stages] != ["classify", "plan", "route", "verify", "decide"] or not any(s["status"] == "skipped" for s in stages):
+                return f"flow stages not fixed/visible: {stages}"
+        else:
+            return f"unknown d21 scenario {scenario!r}"
     elif t == "deterministic":
         from src.sec10k.extract import extract_items
         r2 = extract_items(path)
@@ -958,7 +1053,7 @@ def _routing_shape(result):
       the fabricated-output failure repo rule 4 forbids.
     """
     r = result["routing"]
-    if not isinstance(r, dict) or not {"trigger", "tiers", "resolved", "cost"} <= set(r):
+    if not isinstance(r, dict) or not {"trigger", "tiers", "resolved", "cost", "stages"} <= set(r):
         return f"keys {sorted(r) if isinstance(r, dict) else type(r).__name__}"
     t = r["trigger"]
     if not isinstance(t, dict) or not {"fired", "codes", "items"} <= set(t):
@@ -967,6 +1062,16 @@ def _routing_shape(result):
         return f"trigger.fired {t['fired']!r} is not a bool"
     if not t["fired"] and r["tiers"]:
         return "a trigger that did not fire may not report attempted tiers"
+    stages = r["stages"]
+    if not isinstance(stages, list) or [s.get("stage") for s in stages if isinstance(s, dict)] != ["classify", "plan", "route", "verify", "decide"]:
+        return "routing.stages is not the fixed classify/plan/route/verify/decide flow"
+    for stage in stages:
+        if not isinstance(stage, dict) or not {"stage", "status", "reason", "targets", "cost", "skipped"} <= set(stage):
+            return f"flow stage malformed: {stage!r}"
+        if stage["status"] not in {"done", "skipped", "failed"} or not isinstance(stage["targets"], list):
+            return f"flow stage invalid status/targets: {stage!r}"
+        if not COST_KEYS <= set(stage["cost"]):
+            return f"flow stage cost missing keys: {stage!r}"
     total = {k: 0 for k in COST_KEYS}
     for tier in r["tiers"]:
         # PR #58 R17/R19: `offset` joins the required set, and the three are
@@ -994,6 +1099,12 @@ def _routing_shape(result):
             return f"tier {tier['tier']} cost missing {sorted(COST_KEYS - set(tier['cost']))}"
         for k in COST_KEYS:
             total[k] = round(total[k] + tier["cost"][k], 6)
+    vision = r.get("vision")
+    if vision is not None:
+        if not isinstance(vision, dict) or not COST_KEYS <= set(vision.get("cost") or {}):
+            return f"routing.vision missing measured cost: {vision!r}"
+        for k in COST_KEYS:
+            total[k] = round(total[k] + vision["cost"][k], 6)
     if {k: round(r["cost"][k], 6) for k in COST_KEYS} != total:
         return (f"routing.cost {r['cost']} != {total} summed over its own tiers")
     if {k: round(result["cost"][k], 6) for k in COST_KEYS} != total:

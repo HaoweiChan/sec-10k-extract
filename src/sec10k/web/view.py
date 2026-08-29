@@ -92,6 +92,8 @@ def build_view(result, display_max=DISPLAY_MAX):
         ev = i.get("evidence") or {}
         elsewhere = [(f"pages {r['pages']}", r["start"], r["end"])
                      for r in ev.get("cross_reference") or []]
+        elsewhere += [("verified alternative evidence", r["start"], r["end"])
+                      for r in ev.get("alternative_regions") or []]
         if ev.get("collective_reference"):
             cr = ev["collective_reference"]
             elsewhere.append(("the pointer this Part states once, for every "

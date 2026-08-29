@@ -133,7 +133,7 @@ def _envelope(doc_status, text="", items=None, warnings=None, meta=None,
 
 
 def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
-                  images=False, escalate=False, budget=None):
+                  images=False, escalate=False, budget=None, source_url=None):
     """Extract items from a 10-K filing.
 
     Returns {"normalized_text": str, "doc_status": str, "items": [...], ...}
@@ -195,7 +195,8 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
 
     trace = [{"layer": "acquisition", "path": str(path), "bytes": len(raw_bytes)}]
     text, meta, warnings, tabs, blks, imgs = select_and_normalize(
-        raw, tables=tables, blocks=blocks, images=images)
+        raw, tables=tables, blocks=blocks, images=images or escalate)
+    emit_imgs = imgs if images else None
     meta["input_sha256"] = sha
     trace.append({"layer": "select+normalize", **meta})
     # ADR-026 layer 3b, opt-in. Computed here, off the normalized text, and
@@ -215,7 +216,7 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
             "message": f"{len(raw)} raw chars normalized to {len(text)}"})
         return _envelope("failed", text, meta=meta, warnings=warnings,
                          trace=trace, t0=t0, boilerplate=chrome, tables=tabs,
-                         blocks=blks, images=imgs)
+                         blocks=blks, images=emit_imgs)
 
     # ADR-042 §b: an asset-backed issuer's annual report. Legally a 10-K, and
     # `sniff_form` correctly says so — but General Instruction J to Form 10-K
@@ -238,7 +239,7 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
                        "not Regulation S-K Items 1-16"})
         return _envelope("unsupported", text, meta=meta, warnings=warnings,
                          trace=trace, t0=t0, boilerplate=chrome, tables=tabs,
-                         blocks=blks, images=imgs)
+                         blocks=blks, images=emit_imgs)
 
     if meta["form_type"] not in ACCEPTED_FORMS:
         # refusal, not a best-effort parse (contract v2 envelope rules)
@@ -247,7 +248,7 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
                          "message": f"not an accepted 10-K form (detected: {found})"})
         return _envelope("unsupported", text, meta=meta, warnings=warnings,
                          trace=trace, t0=t0, boilerplate=chrome, tables=tabs,
-                         blocks=blks, images=imgs)
+                         blocks=blks, images=emit_imgs)
 
     expected = expected_items(meta.get("period_end"))
     # taxonomy era is the item set the filing's date implies, not its file
@@ -394,7 +395,8 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
         from src.sec10k.escalate import route   # NOT at module scope: keeping
         # the import here is what makes `python3 -m evals.run` load no network
         # module at all (ADR-036 §h, pinned by repo_hygiene's escalation_seam)
-        routing, extra = route(text, items, warnings, budget=budget)
+        routing, extra = route(text, items, warnings, budget=budget, images=imgs,
+                               source_url=source_url)
         warnings += extra
         trace.append({"layer": "escalate", "trigger": routing["trigger"]["fired"],
                       "tiers": [f"{t['tier']}:{t['outcome']}" for t in routing["tiers"]],
@@ -453,4 +455,4 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
     meta["coverage"] = round(coverage(text, items), 4)
     return _envelope(doc_status, text, items=items, meta=meta,
                      warnings=warnings, trace=trace, t0=t0, boilerplate=chrome,
-                     tables=tabs, blocks=blks, images=imgs, routing=routing)
+                     tables=tabs, blocks=blks, images=emit_imgs, routing=routing)
