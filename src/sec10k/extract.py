@@ -342,9 +342,16 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
     if any(w["code"] in COLLAPSE_CODES for w in findings):
         ix, entries, refs = xref.resolve(text, expected)
         if refs:
+            pointers = xref.pointer_entries(text, ix, entries,
+                                            {i["item"]: i["part"] for i in items})
             total_collapse = all(i["start"] is None for i in items)
             for i in items:
                 code = i["item"]
+                if code in entries:
+                    a, b = entries[code]
+                    i["evidence"]["cross_reference_entry"] = {"start": a, "end": b}
+                if code in pointers:
+                    i["evidence"]["cross_reference_pointer"] = pointers[code]
                 if code in refs:
                     i["evidence"]["cross_reference"] = refs[code]
                 if total_collapse and code in entries and code in refs:
@@ -400,8 +407,10 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
         warnings += extra
         trace.append({"layer": "escalate", "trigger": routing["trigger"]["fired"],
                       "tiers": [f"{t['tier']}:{t['outcome']}" for t in routing["tiers"]],
-                      "resolved": routing["resolved"], "cost": routing["cost"]})
-        if routing["resolved"]:
+                      "resolved": routing["resolved"],
+                      "dispositions": routing.get("dispositions", []),
+                      "routing": routing["trigger"], "cost": routing["cost"]})
+        if routing["resolved"] or routing.get("dispositions"):
             # spans moved, so EVERY number derived from them is now stale.
             # Re-deriving is not optional politeness: `envelope_shape`
             # recomputes `meta.coverage` from the items the envelope publishes

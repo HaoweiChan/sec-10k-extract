@@ -1,0 +1,19 @@
+D26 old-production red proof
+============================
+
+Base: `544cde9` extracted with `git archive` to `/private/tmp/sec10k-D26-base`
+(an isolated, read-only checkout equivalent; the implementation worktree was
+not altered).
+
+Command (old-production acceptance assertions; expected to fail):
+
+    python3 -c 'from pathlib import Path; from src.sec10k.extract import extract_items; from src.sec10k.escalate import trigger; from src.sec10k.web.view import build_view; e=extract_items("evals/fixtures/intc-2025/filing.htm"); t=trigger(e["warnings"],e["items"]); v=build_view(e); i=next(x for x in v["items"] if x["item"]=="10"); ui=Path("src/sec10k/web/static/index.html").read_text(); bad=[]; bad += ["route=%r (expected non-suppressed)" % t["route"]] if t["route"] == "suppressed" else []; bad += ["fired=%r (expected true)" % t["fired"]] if not t["fired"] else []; bad += ["targets=%r (expected nonempty)" % t["target_items"]] if not t["target_items"] else []; bad += ["view item 10 has only chars=%r (expected primary_chars and cross_reference_chars)" % i["chars"]] if not {"primary_chars", "cross_reference_chars"} <= set(i) else []; bad += ["flow still hides skipped detail"] if "reason || s.skipped" in ui else []; bad += ["Pipeline trace omits routing"] if "routing: v.routing" not in ui else []; assert not bad, "D26 old-production acceptance failure: " + "; ".join(bad)'
+
+Observed exit: 1
+
+    AssertionError: D26 old-production acceptance failure: route='suppressed' (expected non-suppressed); fired=False (expected true); targets=[] (expected nonempty); view item 10 has only chars=78 (expected primary_chars and cross_reference_chars); flow still hides skipped detail; Pipeline trace omits routing
+
+The assertions are conditional checks against the old production output. They
+are red because old production blanket-suppressed the real FY2025 filing
+despite unresolved index rows, and its view exposed neither split evidence nor
+the routing record.

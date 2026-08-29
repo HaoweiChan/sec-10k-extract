@@ -1026,9 +1026,12 @@ function routingStrip(r){
   const c = r.cost || {};
   const money = `$${Number(c.usd || 0).toFixed(4)} · ${c.llm_calls || 0} call${
     (c.llm_calls || 0) === 1 ? "" : "s"} · ${(c.tokens || 0).toLocaleString()} tokens`;
-  if(!(r.trigger && r.trigger.fired))
+  if(!(r.trigger && r.trigger.fired)){
+    if(r.trigger && r.trigger.route === "suppressed") return ` <span class="src" id="routing">routing: <b>explicitly suppressed</b>
+      — ${esc(r.trigger.reason || "")}; targets ${esc((r.trigger.target_items || []).join(", ") || "none")}; ${esc(money)}</span>`;
     return ` <span class="src" id="routing">routing: <b>deterministic only</b>
       — the escalation trigger stayed quiet, no tier ran, ${esc(money)}</span>`;
+  }
   const tiers = (r.tiers || []).map(t => `${esc(t.tier)} (${esc(t.model || "—")}) →
     <b>${esc(t.outcome)}</b>${t.error ? ` — ${esc(t.error)}` : ""}${
       t.cached ? " · from cache" : ""}${
@@ -1038,22 +1041,26 @@ function routingStrip(r){
       t.truncated ? ` · saw chars ${Number(t.offset).toLocaleString()}–${
         Number(t.offset + t.input_chars).toLocaleString()}, not the whole document` : ""}`
     ).join("; ") || "none attempted";
-  const done = (r.resolved || []).length
+  const dispositions = r.dispositions || [];
+  const accepted = [...(r.resolved || []), ...(r.alternative || []), ...(r.external || []), ...dispositions];
+  const unresolved = (r.trigger.target_items || []).filter(x => !accepted.includes(x));
+  const done = dispositions.length
+    ? `items ${esc(dispositions.join(", "))} have verified terminal disposition${dispositions.length === 1 ? "" : "s"}`
+    : (r.resolved || []).length
     ? `items ${esc((r.resolved || []).join(", "))} resolved by a model tier`
     : (r.external || []).length
       ? `items ${esc(r.external.join(", "))} gained verified same-accession evidence; primary spans stand`
       : "no item was resolved by a model tier; the deterministic spans stand";
+  const unfinished = unresolved.length ? ` — unresolved targets ${esc(unresolved.join(", "))} remain review-required` : "";
   return ` <span class="src" id="routing">routing: <b>trigger fired</b>
-    (${esc((r.trigger.codes || []).join(", "))}) — ${tiers} — ${esc(done)} —
-    ${esc(money)}</span>`;
+    (${esc((r.trigger.codes || []).join(", "))}) — ${esc(r.trigger.reason || "")} — targets ${esc((r.trigger.target_items || []).join(", ") || "none")} — resolved xref ${esc((r.trigger.resolved_codes || []).join(", ") || "none")} — residual xref ${esc((r.trigger.residual_codes || []).join(", ") || "none")} — ${tiers} — ${esc(done)} —
+    ${esc(money)}${unfinished}</span>`;
 }
 
 function flowStrip(r){
   if(!r || !Array.isArray(r.stages)) return "";
-  const stages = r.stages.map(s => `${esc(s.stage)}: <b>${esc(s.status)}</b> — ${esc(s.reason || s.skipped || "")}`).join("; ");
-  const trace = (r.tiers || []).flatMap(t => (t.actions || []).map((a, i) =>
-    `turn ${esc(t.turn || "?")} action ${esc(JSON.stringify(a))}; observation ${esc(JSON.stringify((t.observations || [])[i] || {}))}`
-  )).join("; ");
+  const stages = r.stages.map(s => `${esc(s.stage)}: <b>${esc(s.status)}</b> — targets ${esc((s.targets || []).join(", ") || "none")}; ${esc(s.reason || "")}${s.skipped ? `; skipped: ${esc(s.skipped)}` : ""}`).join("; ");
+  const trace = (r.tiers || []).map(t => `turn ${esc(t.turn || "?")} action ${esc(JSON.stringify(t.actions || []))}; observation ${esc(JSON.stringify(t.observations || []))}; rejections ${esc(JSON.stringify(t.rejections || []))}; cost $${Number((t.cost || {}).usd || 0).toFixed(4)}`).join("; ");
   const v = r.stages.find(s => s.stage === "verify")?.vision;
   const vision = v ? `; vision: <b>${esc(v.status)}</b> ${esc(v.source || "skipped")} · ${esc(v.model)} · images ${Number((v.images || []).length)} · items ${esc((v.items || []).join(", "))} · $${Number((v.cost || {}).usd || 0).toFixed(4)}` : "";
   return ` <span class="src" id="agentic-flow">agentic flow: ${stages}${trace ? `; ${trace}` : ""}${vision}</span>`;
@@ -1128,11 +1135,17 @@ function render(v){
         <span class="b st-${esc(it.status)}">${esc(it.status)}</span>
         <span class="b${flag}">conf ${it.confidence ?? "—"}${docQual()}${itemQual(it)}</span>
         <span class="b">${esc(it.method || "—")}</span>
-        ${it.chars != null ? `<span class="b">${it.chars.toLocaleString()} ch</span>` : ""}
+        ${it.primary_chars != null ? `<span class="b">primary ${it.primary_chars.toLocaleString()} ch</span>` : ""}
+        ${it.index_entry_chars ? `<span class="b">index row ${it.index_entry_chars.toLocaleString()} ch</span>` : ""}
+        ${it.cross_reference_chars ? `<span class="b">verified xref ${it.cross_reference_chars.toLocaleString()} ch</span>` : ""}
+        ${it.cross_reference_pointer_chars ? `<span class="b">verified IBR pointer ${it.cross_reference_pointer_chars.toLocaleString()} ch</span>` : ""}
       </div></button>`;
   }).join("") : `<div style="padding:11px" class="none">No items — the pipeline refused this input rather than guessing.</div>`);
 
-  $("#trace").textContent = JSON.stringify(v.trace || [], null, 1);
+  $("#pane").innerHTML = `<div class="src-hdr"><span class="lbl">extracted text</span></div>
+    <div class="none" style="padding:12px">Select an item to read its extracted text.</div>`;
+  $("#trace").textContent = JSON.stringify({pipeline: v.trace || [], routing: v.routing}, null, 1);
+  $("#trace-box").open = !!(v.routing && (v.routing.trigger?.fired || v.routing.trigger?.route === "suppressed"));
   $("#meta").textContent = JSON.stringify(
     {meta: v.meta, timings: v.timings, cost: v.cost, normalized_chars: v.norm_chars}, null, 1);
   loadSource(v.source && v.source.token);
@@ -1184,8 +1197,10 @@ function show(i){
   // the qualifier has to sit on the surviving side of that cut, not appended
   // past it. `via` is the part that may be lost; what the number is worth
   // is not.
+  const xrefCounts = it.cross_reference_chars ? `${it.primary_chars != null ? `primary ${it.primary_chars.toLocaleString()} ch · ` : "no primary span · "}index row ${it.index_entry_chars?.toLocaleString() || "—"} ch · verified xref ${it.cross_reference_chars.toLocaleString()} ch · ` : "";
+  const pointerCounts = it.cross_reference_pointer_chars ? `verified IBR pointer ${it.cross_reference_pointer_chars.toLocaleString()} ch · ` : "";
   const hdrRight = (VIEW.markdown ? "markdown · " : "") + (VIEW.boilerplate_excluded ? "boilerplate hidden · " : "") +
-    `Part ${esc(it.part || "—")} · ${esc(it.status)} · conf ${it.confidence ?? "—"}${docQual()}${itemQual(it)} · via ${esc(it.method || "—")}`;
+    `${xrefCounts}${pointerCounts}Part ${esc(it.part || "—")} · ${esc(it.status)} · conf ${it.confidence ?? "—"}${docQual()}${itemQual(it)} · via ${esc(it.method || "—")}`;
   // The truncation notice used to be its own in-flow sibling after
   // pre.text, which is exactly the bug .pane-meta's own move to
   // position:absolute just fixed, reintroduced through a second element: on

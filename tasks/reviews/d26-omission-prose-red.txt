@@ -1,0 +1,17 @@
+D26 omission-prose red proof
+=============================
+
+New adversarial case: `evals/adversarial/d26-xref-omission-prose.json`.
+
+Before the matcher repair, its bounded row mutation was:
+
+    Item 1B. None of the disclosures below are omitted
+
+Observed targeted result: `passed: False`.
+
+    prose containing None passed as a terminal omission:
+    {'1B': {'status': 'omitted', 'start': 0, 'end': 50,
+            'verifier': {'target': True, 'bounds': True, 'row': True}}}
+
+Failure classification: invariant gap. A substring occurrence is not the
+independent `None` / `[Reserved]` terminal evidence required by ADR-051.

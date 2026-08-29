@@ -1,0 +1,9 @@
+{
+  "id": "ui-d26-partial-disposition",
+  "task": "repo_hygiene",
+  "suites": ["fast", "invariant"],
+  "input": {"checks": ["d26_partial_disposition_ui"]},
+  "expect": {},
+  "triage": {"class": "invariant-gap", "note": "A fired partial terminal-disposition batch must show both accepted items and the unresolved target set rather than claiming that no item was resolved."},
+  "provenance": "D26 audit A16 red-first UI contract pin."
+}

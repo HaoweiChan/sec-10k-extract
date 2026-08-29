@@ -194,26 +194,44 @@ def classify(warnings, items, agentic=False, external_items=()):
                     if w.get("code") == "item_span_near_empty" and w.get("item")})
     agent = sorted({w["item"] for w in warnings
                     if agentic and w.get("code") in AGENT_CODES and w.get("item")})
+    entries = {i["item"] for i in items
+               if (i.get("evidence") or {}).get("cross_reference_entry")}
+    resolved = {i["item"] for i in items
+                if (i.get("evidence") or {}).get("cross_reference")}
+    residual = sorted(entries - resolved)
+    dispositions = sorted(i["item"] for i in items
+                          if (i.get("evidence") or {}).get("cross_reference_pointer"))
     if hits and xref:
+        targets = sorted(set(residual) | set(dispositions))
+        if targets:
+            return {"class": "cross_reference_residual", "route": "agent_loop",
+                    "reason": "cross-reference rows without verified content",
+                    "items": targets, "calls_paid": True,
+                    "resolved_codes": sorted(resolved), "residual_codes": residual,
+                    "disposition_codes": dispositions}
         return {"class": "deterministic_resolved", "route": "suppressed",
-                "reason": "cross_reference_index", "items": [], "calls_paid": False}
+                "reason": "all cross-reference rows have verified content", "items": [],
+                "calls_paid": False, "resolved_codes": sorted(resolved), "residual_codes": [],
+                "disposition_codes": []}
     if hits and missing:
         return {"class": "alternative_evidence", "route": "alternative_regions",
                 "reason": "missing primary spans", "items": sorted(set(missing) | set(stubs)),
-                "calls_paid": True}
+                "calls_paid": True, "resolved_codes": [], "residual_codes": [], "disposition_codes": []}
     if hits:
         return {"class": "replace_primary", "route": "contiguous_span_repair",
-                "reason": "low_item_coverage", "items": stubs, "calls_paid": True}
+                "reason": "low_item_coverage", "items": stubs, "calls_paid": True,
+                "resolved_codes": [], "residual_codes": [], "disposition_codes": []}
     if external_items:
         return {"class": "external_evidence", "route": "agent_loop",
                 "reason": "same-accession Annual Report reference",
-                "items": sorted(external_items), "calls_paid": True}
+                "items": sorted(external_items), "calls_paid": True,
+                "resolved_codes": [], "residual_codes": [], "disposition_codes": []}
     if agent:
         return {"class": "agentic_repair", "route": "agent_loop",
                 "reason": "internal_pointer_unreached", "items": agent,
-                "calls_paid": True}
+                "calls_paid": True, "resolved_codes": [], "residual_codes": [], "disposition_codes": []}
     return {"class": "quiet", "route": "none", "reason": "no trigger", "items": [],
-            "calls_paid": False}
+            "calls_paid": False, "resolved_codes": [], "residual_codes": [], "disposition_codes": []}
 
 
 def trigger(warnings, items=(), agentic=False, external_items=()):
@@ -245,6 +263,9 @@ def trigger(warnings, items=(), agentic=False, external_items=()):
         "class": classification["class"], "route": classification["route"],
         "reason": classification["reason"], "target_items": classification["items"],
         "calls_paid": classification["calls_paid"],
+        "resolved_codes": classification["resolved_codes"],
+        "residual_codes": classification["residual_codes"],
+        "disposition_codes": classification["disposition_codes"],
     }
 
 
@@ -567,11 +588,81 @@ AGENT_SYSTEM = (
     "list_documents {action}; search_document {action,document,query}; "
     "read_document_window {action,document,start,end}; "
     "propose_primary_span {action,item,start,end}; "
-    "propose_alternative_regions {action,item,regions}; or finish {action}. "
+    "propose_alternative_regions {action,item,regions}; "
+    "propose_item_dispositions {action,proposals:[{item,status,start,end}]}; "
+    "status is only omitted or incorporated_by_reference; or finish {action}. "
     "propose_external_regions {action,item,document,raw_sha256,normalized_sha256,regions}; "
     "or finish {action}. External offsets are scoped to one listed attachment; "
     "they never replace primary normalized-text offsets."
 )
+
+XREF_CONTEXT_CAP = 4000
+
+
+def _xref_context(text, items, targets):
+    """Bounded, exact index evidence the agent may cite in a batch proposal."""
+    by_code, out, remaining = {i["item"]: i for i in items}, [], XREF_CONTEXT_CAP
+    for code in targets:
+        ev = by_code[code].get("evidence") or {}
+        entry, pointer = ev.get("cross_reference_entry"), ev.get("cross_reference_pointer")
+        if not entry:
+            continue
+        proof = {"item": code, "entry": {**entry, "text": text[entry["start"]:entry["end"]][:remaining]}}
+        remaining -= len(proof["entry"]["text"])
+        if pointer and remaining:
+            proof["pointer"] = {**pointer, "text": text[pointer["start"]:pointer["end"]][:remaining]}
+            remaining -= len(proof["pointer"]["text"])
+        out.append(proof)
+        if not remaining:
+            break
+    return out
+
+
+def verify_dispositions(text, items, dispositions, asked):
+    """Accept only terminal statements literally proved by an index row."""
+    if not isinstance(dispositions, list):
+        return {}, ["dispositions must be a list"]
+    by_code, accepted, why = {i["item"]: i for i in items}, {}, []
+    for proposal in dispositions:
+        if not isinstance(proposal, dict) or set(proposal) != {"item", "status", "start", "end"}:
+            why.append("disposition is not the declared schema"); continue
+        code, status, start, end = proposal["item"], proposal["status"], proposal["start"], proposal["end"]
+        entry = (by_code.get(code, {}).get("evidence") or {}).get("cross_reference_entry")
+        if code not in asked or not entry:
+            why.append(f"item {code}: not an admissible cross-reference residual"); continue
+        row = text[entry["start"]:entry["end"]]
+        terminal_omission = (re.search(r"(?im)^none\s*$", row) or
+                             re.search(rf"(?im)^item\s+{re.escape(code)}\.?\s+\[reserved\]\s*$", row))
+        if status == "omitted" and (start, end) == (entry["start"], entry["end"]) and terminal_omission:
+            accepted[code] = {"status": status, "start": start, "end": end,
+                              "verifier": {"target": True, "bounds": True, "row": True}}
+        elif status == "incorporated_by_reference":
+            part = by_code[code].get("part")
+            pointer = (by_code[code].get("evidence") or {}).get("cross_reference_pointer")
+            pointed = text[pointer["start"]:pointer["end"]] if pointer else ""
+            row_marker = re.search(r"(?i)\(([a-z])\)", row)
+            pointed_marker = re.match(r"(?i)\(([a-z])\)", pointed)
+            if (pointer and pointer.get("part") == part and (start, end) == (pointer["start"], pointer["end"])
+                    and row_marker and pointed_marker and pointer.get("marker") == row_marker.group(1).lower() == pointed_marker.group(1).lower()
+                    and "http" not in pointed.lower()
+                    and re.search(r"(?i)^\([a-z]\)\s+incorporated\s+by\s+reference", pointed)):
+                accepted[code] = {"status": status, "start": start, "end": end,
+                                  "marker": pointer["marker"],
+                                  "verifier": {"target": True, "bounds": True, "part": True,
+                                               "marker": True, "pointer": True}}
+            else:
+                why.append(f"item {code}: row does not prove an item/Part incorporation pointer")
+        else:
+            why.append(f"item {code}: status is not an allowed proved disposition")
+    return accepted, why or ([] if accepted else ["no proved dispositions"])
+
+
+def apply_dispositions(items, dispositions):
+    for item in items:
+        decision = dispositions.get(item["item"])
+        if decision:
+            item.update(status=decision["status"], start=None, end=None, heading_text=None)
+            item.setdefault("evidence", {})["cross_reference_disposition"] = decision
 
 
 def _agent_loop(text, items, warnings, budget, call, tr=None, documents=(), acquisition=None):
@@ -582,7 +673,7 @@ def _agent_loop(text, items, warnings, budget, call, tr=None, documents=(), acqu
     from src.sec10k.package import summaries
     tr = tr or trigger(warnings, items, agentic=True)
     targets = tr["target_items"]
-    record = {"trigger": tr, "tiers": [], "resolved": [], "alternative": [],
+    record = {"trigger": tr, "tiers": [], "resolved": [], "alternative": [], "dispositions": [],
               "external": [], "acquisition": acquisition,
               "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0}}
     context = {"target_items": targets,
@@ -591,7 +682,8 @@ def _agent_loop(text, items, warnings, budget, call, tr=None, documents=(), acqu
                                         "start": i.get("start"), "end": i.get("end")}
                                        for i in items],
                            "warnings": [{"code": w.get("code"), "item": w.get("item")}
-                                        for w in warnings]}}
+                                        for w in warnings]},
+               "cross_reference_evidence": _xref_context(text, items, targets)}
     observation = {"initial": True}
     prompt_range = (0, 0)
     for turn in range(1, AGENT_TURNS + 1):
@@ -619,14 +711,14 @@ def _agent_loop(text, items, warnings, budget, call, tr=None, documents=(), acqu
             kind = action.get("action")
             if kind not in {"search", "read_window", "list_documents",
                             "search_document", "read_document_window",
-                            "propose_primary_span", "propose_alternative_regions",
+                            "propose_primary_span", "propose_alternative_regions", "propose_item_dispositions",
                             "propose_external_regions", "finish"}:
                 raise ValueError("unknown action")
         except (ValueError, TypeError, json.JSONDecodeError) as e:
             entry.update(outcome="unparseable", error=str(e)); record["tiers"].append(entry)
             observation = {"rejection": entry["error"]}; prompt_range = (0, 0); continue
         entry["actions"].append(action)
-        accepted, alternative, external = {}, {}, {}
+        accepted, alternative, external, dispositions = {}, {}, {}, {}
         if kind == "search":
             q = action.get("query", "")
             hits, at = [], 0
@@ -692,16 +784,24 @@ def _agent_loop(text, items, warnings, budget, call, tr=None, documents=(), acqu
                                                     asked=set(targets), existing=True)
         elif kind == "propose_external_regions":
             external, why = verify_external(text, items, action, documents, set(targets))
+        elif kind == "propose_item_dispositions":
+            if set(action) != {"action", "proposals"}:
+                dispositions, why = {}, ["item disposition action is not the declared schema"]
+            else:
+                dispositions, why = verify_dispositions(text, items, action["proposals"], set(targets))
         else:
             accepted, alternative, external, why = {}, {}, {}, ["agent finished without evidence"]
         entry["observations"].append({"verifier": why})
-        if accepted or alternative or external:
+        if accepted or alternative or external or dispositions:
             apply(items, accepted, "agent_loop", alternative)
             apply_external(items, external)
+            apply_dispositions(items, dispositions)
             record["resolved"], record["alternative"] = sorted(accepted), sorted(alternative)
             record["external"] = sorted(external)
+            record["dispositions"] = sorted(dispositions)
             entry.update(outcome="resolved", resolved=record["resolved"],
-                         alternative=record["alternative"], external=record["external"])
+                         alternative=record["alternative"], external=record["external"],
+                         dispositions=record["dispositions"], rejections=why or [])
             record["tiers"].append(entry); break
         entry.update(outcome="rejected", rejections=why); record["tiers"].append(entry)
         observation = {"verifier_rejections": why}; prompt_range = (0, 0)
@@ -709,8 +809,14 @@ def _agent_loop(text, items, warnings, budget, call, tr=None, documents=(), acqu
         for k in record["cost"]: record["cost"][k] = round(record["cost"][k] + entry["cost"][k], 6)
     record["vision"] = vision_verify(None, {}, None, None, None, text)
     record["stages"] = _stages(tr, record, record["vision"])
-    if record["resolved"] or record["alternative"] or record["external"]:
-        return record, []
+    if record["resolved"] or record["alternative"] or record["external"] or record["dispositions"]:
+        accepted_codes = set(record["resolved"] + record["alternative"] + record["external"] + record["dispositions"])
+        for item in items:
+            if item["item"] in targets and item["item"] not in accepted_codes:
+                item["review_required"] = True
+        return record, [{"code": "escalation_unresolved", "item": code,
+                         "message": "agent loop left this target without verified evidence"}
+                        for code in sorted(set(targets) - accepted_codes)]
     for item in items:
         if item["item"] in targets:
             item["review_required"] = True

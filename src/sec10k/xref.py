@@ -1,7 +1,7 @@
 """Cross-reference index resolution (ADR-042).
 
 Two of the largest real filings in this corpus organize themselves the same
-way, and the ordinary segmenter is right to fail on both. Intel FY2024's body
+way, and the ordinary segmenter is right to fail on both. Intel FY2025's body
 is a business narrative whose ONLY `Item N.` headings sit in a `Form 10-K
 Cross-Reference Index` on the last two pages. Citigroup's FY2025 10-K carries
 the same index at the FRONT, writes its entries WITHOUT the word "Item"
@@ -35,7 +35,7 @@ import re
 INDEX_TITLE_RE = re.compile(
     r"(?im)^[ \t]*(form\s*10-?k\s+)?cross[ -]?reference\s+index[ \t]*$")
 
-# how far past its title an index may run. Intel's is 1,786 chars, Citi's
+# how far past its title an index may run. Intel FY2025's is 1,786 chars, Citi's
 # 2,733; the cap exists so a filing that merely MENTIONS the phrase cannot
 # turn half the document into an entry table.
 INDEX_MAX = 12_000
@@ -197,6 +197,27 @@ def _merge(regions):
             out[-1] = (out[-1][0], max(out[-1][1], e), out[-1][2] + [label])
         else:
             out.append((s, e, [label]))
+    return out
+
+
+def pointer_entries(text, span, entries, parts):
+    """Footnote-backed incorporation pointers tied to their marked index rows."""
+    tail = text[span[1]:min(len(text), span[1] + 2000)]
+    pointers = {m.group(1): (span[1] + m.start(), span[1] + m.end(),
+                              (re.search(r"(?i)\bpart\s+(iv|iii|ii|i)\b", m.group(0)) or [None, None])[1])
+                for m in re.finditer(r"(?im)^\(([a-z])\)\s+incorporated\s+by\s+reference[^\n]*$", tail)}
+    out = {}
+    for code, (start, end) in entries.items():
+        row = text[start:end]
+        marker = re.search(r"\(([a-z])\)", row, re.I)
+        if marker and marker.group(1).lower() in pointers:
+            part = parts.get(code)
+            if part:
+                a, b, pointed_part = pointers[marker.group(1).lower()]
+                if pointed_part and pointed_part.upper() != part.upper():
+                    continue
+                out[code] = {"start": a, "end": b, "part": part,
+                             "marker": marker.group(1).lower()}
     return out
 
 

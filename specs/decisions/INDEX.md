@@ -76,3 +76,7 @@ index only cross-references it for scanning.
   before fetch; encoded paths and same-origin host variants are accepted while
   unsafe or unconfirmed forms stay outside the boundary — enforced by
   `edgar-viewer-url.json`.
+- ADR-051 — item-scoped cross-reference routing preserves primary index rows,
+  routes only unresolved or footnote-backed disposition work through the
+  bounded loop, and publishes terminal omissions/IBR with immutable row
+  provenance — enforced by `evals/adversarial/d26-intc-xref-residual-routing.json`.
