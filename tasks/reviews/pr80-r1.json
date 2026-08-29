@@ -1,0 +1,50 @@
+{
+  "pr": 80,
+  "round": 1,
+  "result": "REQUEST_CHANGES",
+  "reviewer": "pr-loop fresh-context subagent (falsification-only, full review)",
+  "date": "2026-08-29",
+  "gate_at_review": "invariant 99/99 = 1.000, fast 169/169 = 1.000, baseline untouched, cost $0",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "HIGH",
+      "confidence": 0.99,
+      "route": "repair",
+      "claim": "The positive CVX case reports a resolved alternative even though it merely republishes the existing pointer span, so it proves no real filing repair.",
+      "evidence": "The case proposes Item 2's unchanged primary span as its alternative; verify_alternatives accepts the same pointer slice because it contains the Item 2 reference.",
+      "repro": "Run CVX extraction and route an Item 2 propose_alternative_regions action using that item's current start/end; routing reports resolved without distinct content.",
+      "acceptance": "Reject alternative evidence duplicating the target's current pointer span and make the real-filing positive case identify distinct normalized-text content that actually repairs the pointer."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "confidence": 0.99,
+      "route": "repair",
+      "claim": "A valid JSON completion of the wrong top-level type crashes the route instead of becoming an unparseable turn and bounded abstention.",
+      "evidence": "The route calls action.get before checking action is a dict; cached text [] raises AttributeError.",
+      "repro": "Stub llm.call to return cached text [] and invoke route with an internal_pointer_unreached warning.",
+      "acceptance": "Non-object or malformed responses are recorded unparseable, remain within the turn cap, preserve deterministic items, and leave unresolved targets review_required."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "confidence": 0.98,
+      "route": "repair",
+      "claim": "Agent tier envelopes report zero normalized-text characters even when a prior read_window observation sends text into the next call.",
+      "evidence": "Every turn hard-codes offset=0,input_chars=0 while read_window places up to 4,000 normalized-text characters in the next observation.",
+      "repro": "Replay read_window start=100,end=500 followed by finish and compare the second prompt with its tier range.",
+      "acceptance": "Each turn records the actual normalized-text range included in its prompt with correct truncation, and envelope validation rejects a mismatched range."
+    },
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "confidence": 0.97,
+      "route": "repair",
+      "claim": "The invariant case does not bind mixed targets, search/read, exact next-prompt feedback, malformed responses, routing shape, or the API review_required surface.",
+      "evidence": "The current case uses one target/proposal actions, inspects an observation without asserting it enters the next prompt, skips _routing_shape, and calls build_view rather than the API projection.",
+      "repro": "Drop the observation before the next call or keep input_chars zero; the current d22-agent-loop case stays green.",
+      "acceptance": "Red-first end-to-end coverage binds multiple targets, search to read_window to proposal, exact next-call feedback, malformed responses, routing-envelope validation, and API payload review_required for every unresolved target."
+    }
+  ]
+}
