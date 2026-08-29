@@ -33,10 +33,10 @@ when its code has an earlier declaration in the leading dense index chain.
 
 At the frozen implementation, AIG Item 1 started at 8,828 and failed its
 opening anchor. After the correction it starts at 6,459, has 48,136 characters,
-and passes the complete burned case. A two-process comparison of the serialized
-`doc_status`, `warnings`, and `items` fields for every fixture present at
-`origin/main` found **50/50 unchanged**. The newly moved AIG fixture is not in
-that denominator.
+and passes the complete burned case. A two-process comparison against
+`origin/plan/agentic-recovery` found **69 dev / 6 held-out** fixtures at the
+base and **70 dev / 5 held-out** after the AIG move; all **74 non-AIG** filings
+are unchanged in serialized `doc_status`, `warnings`, and `items`.
 
 This is not a general page-furniture classifier. It only corrects a real
 heading physically attached to the index it follows. A falsifier is a filing

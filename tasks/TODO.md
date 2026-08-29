@@ -59,13 +59,6 @@ high-quality prompt records." No active blocks today.
 runs. The T8 walk S1 was waiting on has now run (11/11 green). No active
 blocks today.
 
-### D18 — Running-header candidate filtering: preserve the first real item page [status: pr]
-Origin: PR #74 `aig-2025-heldout` — the frozen held-out run lost item 1's first page while reporting `success`, confidence 0.95 and no item-level warning
-Priority: P1
-Spec: Burn AIG into the adversarial set and fix the root candidate-selection defect: a dense front-matter TOC immediately followed by a real item heading must not cause `_toc_runs` to discard that first body heading merely because later running headers repeat it. Keep the rule structural and corpus-measured; do not special-case AIG, its offsets, or its text. Record the post-freeze exception and the held-out replacement debt explicitly.
-Reviewer evidence: Demonstrates that a frozen, real-filing silent-partial-loss finding becomes a reproducible red-first case and a bounded pipeline correction, with blast radius measured across the corpus.
-Acceptance: (1) the burned AIG case is in `evals/adversarial/` with `triage.class = input-variant` and its original frozen labels intact; (2) the AIG item-1 anchor passes and the complete adversarial case is green; (3) a minimal synthetic running-header repro is watched red before the fix and pins the structural discriminator; (4) invariant then fast gates pass at or above baseline without a manual baseline edit; (5) all pre-existing filing outputs are compared against `origin/main`, with every change named and justified; (6) `evals/heldout/README.md` records the burn and that one fresh replacement is owed; (7) an ADR records the sanctioned freeze exception, alternatives, measurements, and falsifier.
-
 **Demo-remediation track** — opened 2026-08-25 after the 2026-08-24 live demo
 ran recent Intel (INTC) and Citigroup (C) 10-Ks — neither in any eval set —
 and both extracted wrong while the side panel showed per-item conf 0.95. The
@@ -89,20 +82,23 @@ mechanisms that feedback praised but that do NOT exist in this codebase.
 
 ### D18 — Preserve the first real item page across running headers [status: in-progress]
 Priority: P1
-Origin: AIG held-out burn, PR #75, 2026-08-28
+Origin: AIG held-out burn, PR #75, 2026-08-28 — the frozen `aig-2025-heldout`
+run lost Item 1's first page while reporting `success`, 0.95 confidence, and
+no item-level warning.
 Spec: Port or rebase the already measured shared candidate-filter fix that keeps
 AIG Item 1's first real body heading instead of starting at the next running
 header. This is a bounded known-defect landing, not a new deterministic search
 track; add no filer literal or threshold.
-Reviewer evidence: The burned AIG case must recover its opening anchor and the
-branch-vs-main blast-radius comparison must keep every pre-existing filing
-unchanged.
+Reviewer evidence: The burned AIG case recovered its opening anchor; the
+red-first synthetic reproduction remains recorded; and the current-base
+comparison keeps all 74 non-AIG filings unchanged.
 Acceptance: PR #75's red-first evidence and ADR-044 remain intact; the merge
 conflict is resolved on current main; the AIG case, invariant, and fast gates
 pass at 100% with no baseline move; current corpus counts and held-out burn
 accounting are re-derived rather than copied.
-Status: PR #75's original implementation and gates were green, but the PR now
-conflicts with main; current-main integration and gates are UNRUN.
+Status: Current-base integration evidence: targeted AIG PASS (Item 1 48,136
+chars); invariant 98/98; fast 169/169; $0; base 69 dev / 6 held-out → integrated
+70 dev / 5 held-out after the AIG move, with all 74 non-AIG filings unchanged.
 
 ### D19 — Verify the escalation key before extraction [status: pr]
 Origin: owner request, 2026-08-28
