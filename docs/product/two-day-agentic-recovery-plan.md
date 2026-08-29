@@ -177,4 +177,3 @@ Stop rather than broaden scope when any of these occurs:
 - a fourth model turn, new model, OCR, renderer, or issuer-specific rule seems
   necessary;
 - a second live run would only repeat an already cached failure.
-
