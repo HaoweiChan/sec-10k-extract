@@ -1,0 +1,24 @@
+PR81 R1/R2 red-first repro — 2026-08-29
+
+Shipped check:
+  /private/tmp/sec10k-td166-venv/bin/python -m src.sec10k.test_web_contract
+  exit 0
+
+R1 mutation: remove the registered POST /api/extract/fixture route from the
+live FastAPI router, then run the shipped check.
+  /private/tmp/sec10k-td166-venv/bin/python -c '... routes[:] = [r for r in
+  routes if getattr(r, "path", None) != "/api/extract/fixture"]; t.main()'
+  exit 1
+  src/sec10k/test_web_contract.py:42: AssertionError
+  assert status == 200
+
+R2 mutation: project away Item 16 after build_view, then run the shipped check.
+  /private/tmp/sec10k-td166-venv/bin/python -c '... app.build_view = lambda
+  result: dict(real(result), items=real(result)["items"][:1]); t.main()'
+  exit 1
+  src/sec10k/test_web_contract.py:44: AssertionError
+  assert set(targets) == {"2", "16"}
+
+These are in-process mutations only; no tracked source was modified for either
+reproduction. R1 proves the check reaches FastAPI routing rather than directly
+calling extract_fixture. R2 proves the target assertion is not vacuous.

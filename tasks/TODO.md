@@ -1257,3 +1257,6 @@ feedback in the next call; empty and malformed responses; routing-envelope
 validation; and an API response retaining `review_required` for every unresolved
 target. The cases fail when any of those connections is removed, then invariant
 and fast pass at 100% with $0 and no baseline move.
+Review status 2026-08-29: PR #81 R1/R2 repair is implemented with red-first
+route-removal and target-loss repros in `tasks/reviews/pr81-r1-red.txt`; fresh
+independent review remains pending (no approval claimed).

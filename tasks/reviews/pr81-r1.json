@@ -1,0 +1,23 @@
+{
+  "pr": 81,
+  "round": 1,
+  "result": "REQUEST_CHANGES",
+  "date": "2026-08-29",
+  "source": "fresh review findings supplied to the repair pass",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The dependency-backed web-contract check directly invokes app.extract_fixture, so removing the @app.post route leaves it green.",
+      "acceptance": "Dispatch POST /api/extract/fixture through the FastAPI ASGI app, stub only app.extract_items, and assert HTTP 200 plus JSON output."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "The filtered all() check is vacuous if one or both targets are absent.",
+      "acceptance": "Assert both item codes 2 and 16 are present and both have review_required true."
+    }
+  ]
+}
