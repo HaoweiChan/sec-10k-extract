@@ -1,0 +1,27 @@
+{
+  "pr": 83,
+  "round": 2,
+  "result": "REQUEST_CHANGES",
+  "date": "2026-08-29",
+  "verification": [
+    {
+      "id": "R1",
+      "status": "OPEN",
+      "confidence": 0.99,
+      "evidence": "Real PGR Item 7 region starts at the actual MD&A title and ends immediately after the title line (86 chars); current _external_section_boundary skips blank, scores ordinary MD&A prose 0.425, and accepts ['7']. The 0.4 threshold also classifies hundreds of ordinary lines as canonical boundaries."
+    },
+    {
+      "id": "R2",
+      "status": "VERIFIED",
+      "confidence": 0.99,
+      "evidence": "raw_sha256 covers the exact CP1252 source attachment bytes while normalized_sha256 remains the normalized-text hash."
+    },
+    {
+      "id": "R3",
+      "status": "VERIFIED",
+      "confidence": 0.98,
+      "evidence": "Real KO 1997 EX-13.1 resolves Item 8, numeric EX-13 variants are admitted, and unrelated types plus identity/hash/bounds guards remain rejected."
+    }
+  ],
+  "new_findings": []
+}

@@ -1,0 +1,12 @@
+{
+  "id": "d24-cp1252-attachment-hash",
+  "task": "sec10k",
+  "suites": ["invariant", "fast"],
+  "triage": {
+    "class": "invariant-gap",
+    "note": "PR83 R2: embedded SGML was decoded and then UTF-8 re-encoded before hashing, so raw_sha256 did not identify the exact source attachment bytes."
+  },
+  "input": {"path": "evals/fixtures/ko-1997/filing.txt"},
+  "expect": {"checks": [{"type": "external_cp1252_raw_hash"}]},
+  "provenance": "PR83 R2 minimal CP1252 SGML block, authored and watched red before repair on 2026-08-29. The byte 0xE9 distinguishes exact source bytes from the former UTF-8 re-encoding while normalized text and its hash remain stable."
+}

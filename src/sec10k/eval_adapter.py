@@ -494,6 +494,281 @@ def eval_check(result, chk, path=None):
                 if sorted(got) != sorted(sub["accepts"]):
                     return (f"{sub['name']}: verify accepted {sorted(got)} != "
                             f"{sorted(sub['accepts'])} (why={why})")
+    elif t == "external_wrong_section_guard":
+        # PR83 R1: real PGR attachment, wrong item and unproved end boundary.
+        from src.sec10k.escalate import verify_external
+        from src.sec10k.package import document
+
+        raw = Path("evals/package-fixtures/pgr-2023/pgr-20231231_d2.htm").read_bytes()
+        url = ("https://www.sec.gov/Archives/edgar/data/80661/"
+               "000008066124000007/pgr-20231231_d2.htm")
+        doc = document(raw, "EX-13", "6", "pgr-20231231_d2.htm", url=url)
+        text = doc["text"]
+        statements = "Consolidated Statements of Comprehensive Income"
+        mda = "Management’s Discussion and Analysis of Financial Condition and Results of Operations"
+        statement_at, mda_at = text.find(statements), text.find(mda)
+        item = next((i for i in result["items"] if i["item"] == "7"), None)
+        if item is None or min(statement_at, mda_at) < 0:
+            return "PGR review guard fixture lacks Item 7 or a real attachment title"
+        identity = doc["document"]
+        def proposal(start, end, title):
+            return {"action": "propose_external_regions", "item": "7",
+                    "document": identity["id"],
+                    "raw_sha256": identity["raw_sha256"],
+                    "normalized_sha256": identity["normalized_sha256"],
+                    "regions": [{"start": start, "end": end, "title": title}]}
+        wrong, wrong_why = verify_external(result["normalized_text"], [item],
+            proposal(statement_at, mda_at, statements), [doc], {"7"})
+        arbitrary, arbitrary_why = verify_external(result["normalized_text"], [item],
+            proposal(mda_at, mda_at + 1000, mda), [doc], {"7"})
+        title_line, title_line_why = verify_external(result["normalized_text"], [item],
+            proposal(mda_at, mda_at + len(mda) + 1, mda), [doc], {"7"})
+        if wrong or not any("requested item" in x for x in wrong_why):
+            return f"Item 7 accepted the real wrong section: {wrong}, {wrong_why}"
+        if arbitrary or not any("end" in x for x in arbitrary_why):
+            return f"Item 7 accepted an arbitrary unrelated end: {arbitrary}, {arbitrary_why}"
+        if title_line or not any("end" in x for x in title_line_why):
+            return ("Item 7 accepted the title-line-only 86-char region: "
+                    f"{title_line}, {title_line_why}")
+        return None
+    elif t == "external_cp1252_raw_hash":
+        # PR83 R2: exact bytes differ from UTF-8 after decoding 0xE9.
+        import hashlib as _hashlib
+        from src.sec10k.normalize import format_era, normalize
+        from src.sec10k.package import embedded_documents
+
+        body = b"\nFINANCIAL STATEMENTS caf\xe9\n"
+        raw = (b"<DOCUMENT>\n<TYPE>EX-13\n<SEQUENCE>2\n"
+               b"<FILENAME>annual.txt\n<TEXT>" + body
+               + b"</TEXT>\n</DOCUMENT>")
+        docs = embedded_documents(raw)
+        if len(docs) != 1:
+            return f"CP1252 SGML produced {len(docs)} attachments"
+        identity = docs[0]["document"]
+        exact = _hashlib.sha256(body).hexdigest()
+        decoded = body.decode("cp1252")
+        normalized = normalize(decoded, format_era(decoded))[0]
+        normalized_hash = _hashlib.sha256(normalized.encode()).hexdigest()
+        if identity["raw_sha256"] != exact:
+            return "raw_sha256 is not the exact CP1252 source attachment bytes"
+        if identity["normalized_sha256"] != normalized_hash:
+            return "normalized hash changed while preserving exact raw bytes"
+        return None
+    elif t == "external_numbered_exhibit":
+        # PR83 R3: real KO EX-13.1 and Item 8 cached/offline route.
+        import copy
+        import json as _json
+        from src.sec10k.escalate import route
+        from src.sec10k.package import embedded_documents
+        import src.sec10k.llm as _llm
+
+        documents = embedded_documents(Path(path).read_bytes())
+        doc = next((d for d in documents if d["document"]["type"] == "EX-13.1"), None)
+        if doc is None:
+            return "KO full submission did not admit its EX-13.1 attachment"
+        unrelated = (b"<DOCUMENT>\n<TYPE>EX-130\n<SEQUENCE>1\n"
+                     b"<FILENAME>wrong.txt\n<TEXT>unrelated\n</TEXT>\n</DOCUMENT>"
+                     b"<DOCUMENT>\n<TYPE>EX-13.A\n<SEQUENCE>2\n"
+                     b"<FILENAME>wrong2.txt\n<TEXT>unrelated\n</TEXT>\n</DOCUMENT>")
+        if embedded_documents(unrelated):
+            return "unrelated exhibit types passed the bounded EX-13 allowlist"
+        title = "CONSOLIDATED STATEMENTS OF INCOME"
+        start = doc["text"].find(title)
+        if start < 0:
+            return "KO EX-13.1 lacks its financial-statement title"
+        identity = doc["document"]
+        actions = [
+            {"action": "list_documents"},
+            {"action": "search_document", "document": identity["id"],
+             "query": title},
+            {"action": "propose_external_regions", "item": chk["item"],
+             "document": identity["id"], "raw_sha256": identity["raw_sha256"],
+             "normalized_sha256": identity["normalized_sha256"],
+             "regions": [{"start": start, "end": len(doc["text"]), "title": title}]},
+        ]
+        queued = copy.deepcopy(actions)
+        def _stub(model, system, user, max_tokens, budget, **kw):
+            return {"cached": True, "text": _json.dumps(queued.pop(0)),
+                    "usage": {"input_tokens": 0, "output_tokens": 0},
+                    "usd": 0.0, "model": model}
+        warnings = [{"code": "item_span_near_empty", "item": chk["item"],
+                     "message": "PR83 R3 cached numbered-exhibit replay"}]
+        items = copy.deepcopy(result["items"])
+        before = [(i["item"], i.get("start"), i.get("end")) for i in items]
+        real, _llm.call = _llm.call, _stub
+        try:
+            routing, extra = route(result["normalized_text"], items, warnings,
+                                   documents=documents,
+                                   acquisition={"status": "available", "source": "sgml",
+                                                "calls": 0, "bytes": len(Path(path).read_bytes()),
+                                                "latency_ms": 0.0})
+        finally:
+            _llm.call = real
+        after = [(i["item"], i.get("start"), i.get("end")) for i in items]
+        if extra or routing["external"] != [chk["item"]] or before != after:
+            return f"KO numbered-exhibit route did not resolve externally: {routing}, {extra}"
+        return None
+    elif t == "external_agent_loop":
+        # D24: cached actions over real same-accession attachments. Attachment
+        # text is local fixture/SGML input; only the model transport is replayed.
+        import copy
+        import json as _json
+        from src.sec10k.escalate import (_document_allowed, _page_marker, route,
+                                         verify_external)
+        from src.sec10k.package import document, embedded_documents
+        import src.sec10k.llm as _llm
+
+        source = result
+        items = copy.deepcopy(source["items"])
+        targets = chk["items"]
+        warnings = [{"code": "item_span_near_empty", "item": code,
+                     "message": "D24 cached external replay"} for code in targets]
+        source_url = None
+        if chk["scenario"] == "mrk_1995":
+            documents = embedded_documents(Path(path).read_bytes())
+            doc = next((d for d in documents if d["document"]["type"] == "EX-13"), None)
+            if doc is None:
+                return "MRK full submission has no EX-13 document"
+            s7, e7 = _page_marker(doc["text"], 28), _page_marker(doc["text"], 38)
+            s8 = e7
+            proposals = [
+                {"item": "7", "document": doc["document"]["id"],
+                 "raw_sha256": doc["document"]["raw_sha256"],
+                 "normalized_sha256": doc["document"]["normalized_sha256"],
+                 "regions": [{"start": s7, "end": e7, "pages": [28, 37]}]},
+                {"item": "8", "document": doc["document"]["id"],
+                 "raw_sha256": doc["document"]["raw_sha256"],
+                 "normalized_sha256": doc["document"]["normalized_sha256"],
+                 "regions": [{"start": s8, "end": len(doc["text"]), "pages": [38, 50]}]},
+            ]
+            actions = [
+                {"action": "search_document", "document": doc["document"]["id"],
+                 "query": "FINANCIAL REVIEW"},
+                {"action": "read_document_window", "document": doc["document"]["id"],
+                 "start": s7, "end": s7 + 4000},
+                {"action": "propose_external_regions", "proposals": proposals},
+            ]
+        elif chk["scenario"] == "pgr_2023":
+            source_url = ("https://www.sec.gov/Archives/edgar/data/80661/"
+                          "000008066124000007/pgr-20231231.htm")
+            attachment = Path("evals/package-fixtures/pgr-2023/pgr-20231231_d2.htm").read_bytes()
+            doc = document(attachment, "EX-13", "6", "pgr-20231231_d2.htm",
+                           url=source_url.rsplit("/", 1)[0] + "/pgr-20231231_d2.htm")
+            documents = [doc]
+            md = doc["text"].find("Management’s Discussion and Analysis of Financial Condition and Results of Operations")
+            if md < 0:
+                return "PGR EX-13 has no MD&A title"
+            proposals = [
+                {"item": "7", "document": doc["document"]["id"],
+                 "raw_sha256": doc["document"]["raw_sha256"],
+                 "normalized_sha256": doc["document"]["normalized_sha256"],
+                 "regions": [{"start": md, "end": len(doc["text"]),
+                              "title": "Management’s Discussion and Analysis of Financial Condition and Results of Operations"}]},
+                {"item": "8", "document": doc["document"]["id"],
+                 "raw_sha256": doc["document"]["raw_sha256"],
+                 "normalized_sha256": doc["document"]["normalized_sha256"],
+                 "regions": [{"start": 0, "end": md,
+                              "title": "Consolidated Statements of Comprehensive Income"}]},
+            ]
+            actions = [
+                {"action": "list_documents"},
+                {"action": "search_document", "document": doc["document"]["id"],
+                 "query": "Management’s Discussion and Analysis"},
+                {"action": "propose_external_regions", "proposals": proposals},
+            ]
+        else:
+            return f"unknown external_agent_loop scenario {chk['scenario']!r}"
+
+        calls, queued = [], copy.deepcopy(actions)
+        def _stub(model, system, user, max_tokens, budget, **kw):
+            calls.append(_json.loads(user))
+            return {"cached": True, "text": _json.dumps(queued.pop(0)),
+                    "usage": {"input_tokens": 0, "output_tokens": 0},
+                    "usd": 0.0, "model": model}
+        before = {i["item"]: (i.get("start"), i.get("end"), i.get("method"),
+                               i.get("heading_text")) for i in items}
+        real, _llm.call = _llm.call, _stub
+        try:
+            routing, extra = route(source["normalized_text"], items, warnings,
+                                   source_url=source_url, documents=documents,
+                                   acquisition={"status": "available", "source": "fixture",
+                                                "calls": 0, "bytes": 0, "latency_ms": 0.0})
+        finally:
+            _llm.call = real
+        after = {i["item"]: (i.get("start"), i.get("end"), i.get("method"),
+                              i.get("heading_text")) for i in items}
+        if extra or routing["external"] != targets or routing["resolved"]:
+            return f"4/4 external replay did not resolve honestly: {routing}, {extra}"
+        envelope = {**source, "items": items, "routing": routing,
+                    "cost": routing["cost"]}
+        shaped = eval_check(envelope, {"type": "envelope_shape"})
+        if shaped:
+            return f"external replay failed public envelope shape: {shaped}"
+        from src.sec10k.web.view import build_view
+        view = build_view(envelope)
+        for code in targets:
+            shown = next(i for i in view["items"] if i["item"] == code)
+            if (not shown["evidence"].get("external_regions")
+                    or "offsets are not /normalized_text" not in shown["display_text"]):
+                return f"inspector/API hid or conflated item {code} external evidence"
+        if before != after or source["meta"]["coverage"] != result["meta"]["coverage"]:
+            return "external evidence moved a primary pointer span or coverage"
+        for code in targets:
+            got = next(i for i in items if i["item"] == code)["evidence"].get("external_regions")
+            if not got or any(r["end"] <= r["start"] or not r.get("document")
+                              or not all(r["verifier"].get(k) for k in ("identity", "hashes", "bounds"))
+                              for r in got):
+                return f"item {code} lacks reproducible document-scoped evidence"
+        if len(calls) != 3 or any(set(c) < {"target_items", "documents", "outline", "observation"}
+                                  for c in calls):
+            return "external replay lost persistent target/document/outline context"
+        for turn in range(1, 3):
+            previous = routing["tiers"][turn - 1]["observations"][0]
+            if calls[turn]["observation"] != previous:
+                return f"turn {turn + 1} lost exact prior external observation"
+
+        # Trust-boundary mutation matrix: schema, identity, accession, hash,
+        # bounds and proof each have a red-producing rejection.
+        base_action = actions[-1]
+        mutations = [
+            ({"action": "propose_external_regions", "proposals": "bad"}, "no proposals"),
+            ({**base_action, "proposals": [{**proposals[0], "document": "missing"}]}, "not in"),
+            ({**base_action, "proposals": [{**proposals[0], "raw_sha256": "0" * 64}]}, "hash"),
+            ({**base_action, "proposals": [{**proposals[0], "regions": [{"start": -1, "end": 2, "title": "invalid"}]}]}, "bounds"),
+            ({**base_action, "proposals": [{**proposals[0], "regions": [{"start": 0, "end": 2, "title": "absent title"}]}]}, "title-or-page"),
+        ]
+        for bad, needle in mutations:
+            got, why = verify_external(source["normalized_text"], items, bad,
+                                       documents, set(targets))
+            if got or not any(needle in reason for reason in why):
+                return f"external verifier failed {needle} rejection: {got}, {why}"
+        evil = copy.deepcopy(documents[0]); evil["document"]["url"] = "https://evil.example/x.htm"; evil["document"]["sgml_block"] = None
+        wrong = copy.deepcopy(documents[0]); wrong["document"]["url"] = "https://www.sec.gov/Archives/edgar/data/1/000000000000000001/x.htm"; wrong["document"]["sgml_block"] = None
+        if _document_allowed(evil, source_url) or _document_allowed(wrong, source_url):
+            return "off-origin or wrong-accession attachment passed the allowlist"
+
+        # Attachment absent: no model call, no clean claim. Three bad cached
+        # proposals: exact three-turn exhaustion and honest abstention.
+        no_doc, no_extra = route(source["normalized_text"], copy.deepcopy(source["items"]),
+                                 warnings, source_url=source_url, documents=[])
+        if no_doc["tiers"] or no_doc["external"] or no_doc["trigger"]["fired"]:
+            return f"absent attachment did not abstain before a model call: {no_doc}"
+        bad_actions = [{**base_action, "proposals": [{**proposals[0], "raw_sha256": "bad"}]}] * 3
+        def _bad_stub(model, system, user, max_tokens, budget, **kw):
+            return {"cached": True, "text": _json.dumps(bad_actions.pop(0)),
+                    "usage": {"input_tokens": 0, "output_tokens": 0}, "usd": 0.0,
+                    "model": model}
+        real, _llm.call = _llm.call, _bad_stub
+        exhausted_items = copy.deepcopy(source["items"])
+        try:
+            exhausted, exhausted_extra = route(source["normalized_text"], exhausted_items,
+                                               warnings, source_url=source_url,
+                                               documents=documents)
+        finally:
+            _llm.call = real
+        if len(exhausted["tiers"]) != 3 or exhausted["external"] or not exhausted_extra:
+            return "external rejection did not exhaust exactly three turns and abstain"
+        return None
     elif t == "agent_loop":
         # D22's transport is recorded/cached: it exercises the real router,
         # normalised offsets, and deterministic verifier without a paid call.
@@ -1282,7 +1557,8 @@ def _routing_shape(result):
                 return "agent_loop tier range does not match the prior read_window observation"
             prior_window = None
             for obs in tier["observations"]:
-                if isinstance(obs, dict) and isinstance(obs.get("text"), str):
+                if (isinstance(obs, dict) and isinstance(obs.get("text"), str)
+                        and "document" not in obs):
                     prior_window = (obs["start"], obs["end"] - obs["start"])
         if not COST_KEYS <= set(tier["cost"]):
             return f"tier {tier['tier']} cost missing {sorted(COST_KEYS - set(tier['cost']))}"
@@ -1303,6 +1579,35 @@ def _routing_shape(result):
     if set(r["resolved"]) != by_tier:
         return (f"routing.resolved {sorted(r['resolved'])} != the items whose "
                 f"method names a tier {sorted(by_tier)}")
+    external = r.get("external", [])
+    if not isinstance(external, list):
+        return "routing.external is not a list"
+    by_code = {i["item"]: i for i in result["items"]}
+    for code in external:
+        regions = (by_code.get(code, {}).get("evidence") or {}).get("external_regions")
+        if not regions:
+            return f"routing.external names item {code} without external_regions"
+        for region in regions:
+            if not isinstance(region, dict) or not {"start", "end", "document", "verifier"} <= set(region):
+                return f"item {code} external region malformed: {region!r}"
+            doc = region["document"]
+            required = {"id", "type", "sequence", "filename", "url", "sgml_block",
+                        "raw_sha256", "normalized_sha256"}
+            if not required <= set(doc) or bool(doc["url"]) == bool(doc["sgml_block"]):
+                return f"item {code} external document identity malformed: {doc!r}"
+            if not all(isinstance(doc[k], str) and len(doc[k]) == 64
+                       for k in ("raw_sha256", "normalized_sha256")):
+                return f"item {code} external document hashes malformed"
+            if not (isinstance(region["start"], int) and isinstance(region["end"], int)
+                    and 0 <= region["start"] < region["end"]):
+                return f"item {code} external document offsets malformed"
+            if not all(region["verifier"].get(k) is True
+                       for k in ("identity", "hashes", "bounds")):
+                return f"item {code} external verifier decisions incomplete"
+    acquisition = r.get("acquisition")
+    if external and (not isinstance(acquisition, dict)
+                     or not {"status", "calls", "bytes", "latency_ms"} <= set(acquisition)):
+        return "externally resolved routing lacks measured acquisition provenance"
     return None
 
 

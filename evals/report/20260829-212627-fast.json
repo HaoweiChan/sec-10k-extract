@@ -1,0 +1,27 @@
+{
+  "suite": "fast",
+  "score": 1.0,
+  "git_sha": "e34dfa8055be0fe6db0c2cebd3f703c9c82187d5-dirty",
+  "table_cells_fidelity": null,
+  "table_rows_fidelity": null,
+  "structure_blocks_fidelity": null,
+  "structure_bounds_fidelity": null,
+  "results": [
+    {
+      "passed": true,
+      "failures": [],
+      "deployed_exclusion_scanned": 53,
+      "deployed_exclusion_fires": [
+        "xref-index-collapse"
+      ],
+      "census_corpus": {
+        "dev": 53,
+        "real": 38
+      },
+      "seconds": 7.4,
+      "id": "deployed-exclusion-derived",
+      "kind": "d24-census.nA9w6f"
+    }
+  ],
+  "debt": []
+}

@@ -1,0 +1,441 @@
+{
+  "suite": "fast",
+  "score": 0.0,
+  "git_sha": "e015f98d1fc2951a900165d75588b918815445fa-dirty",
+  "table_cells_fidelity": null,
+  "table_rows_fidelity": null,
+  "structure_blocks_fidelity": null,
+  "structure_bounds_fidelity": null,
+  "results": [
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "external_wrong_section_guard"
+          },
+          "why": "Item 7 accepted the real wrong section: {'7': [{'start': 133, 'end': 159833, 'title': 'Consolidated Statements of Comprehensive Income', 'pages': None, 'document': {'id': 'url:6:pgr-20231231_d2.htm:4a6822004bde', 'type': 'EX-13', 'sequence': '6', 'filename': 'pgr-20231231_d2.htm', 'url': 'https://www.sec.gov/Archives/edgar/data/80661/000008066124000007/pgr-20231231_d2.htm', 'sgml_block': None, 'raw_sha256': '4a6822004bde47e8dae4b2107c84e4af244743f3b8f64d4b473024c415b4f538', 'normalized_sha256': '890ccd6817ace5289afd72c56140ef15f53434d5b633c98359e8b3283d5ad650'}, 'verifier': {'identity': True, 'hashes': True, 'bounds': True, 'title': True, 'pages': False}}]}, []"
+        }
+      ],
+      "n_items": 23,
+      "n_extracted": 20,
+      "doc_status": "success_with_warning",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 61262
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 72542
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 106
+        },
+        {
+          "item": "1C",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 5236
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 835
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 155
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 348
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2265
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 44
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.8,
+          "method": "heading_strict",
+          "chars": 243
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 386
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.8,
+          "method": "heading_strict",
+          "chars": 253
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 101
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1620
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 1336
+        },
+        {
+          "item": "9C",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 103
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 3781
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2247
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 14767
+        },
+        {
+          "item": "16",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 123
+        }
+      ],
+      "seconds": 0.24,
+      "id": "d24-external-wrong-section",
+      "kind": "pr83-r1-red.r4WdWp"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "external_cp1252_raw_hash"
+          },
+          "why": "raw_sha256 is not the exact CP1252 source attachment bytes"
+        }
+      ],
+      "n_items": 15,
+      "n_extracted": 7,
+      "doc_status": "success_with_warning",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 41318
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 3194
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2373
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 7781
+        },
+        {
+          "item": "5",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "6",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "7",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_lenient",
+          "chars": null
+        },
+        {
+          "item": "7A",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.8,
+          "method": "heading_strict",
+          "chars": 930
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_lenient",
+          "chars": 212
+        },
+        {
+          "item": "10",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 11569
+        }
+      ],
+      "seconds": 0.01,
+      "id": "d24-cp1252-attachment-hash",
+      "kind": "pr83-r1-red.r4WdWp"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "external_numbered_exhibit",
+            "item": "8"
+          },
+          "why": "KO full submission did not admit its EX-13.1 attachment"
+        }
+      ],
+      "n_items": 15,
+      "n_extracted": 7,
+      "doc_status": "success_with_warning",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 41318
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 3194
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2373
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 7781
+        },
+        {
+          "item": "5",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "6",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "7",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_lenient",
+          "chars": null
+        },
+        {
+          "item": "7A",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.8,
+          "method": "heading_strict",
+          "chars": 930
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.75,
+          "method": "heading_lenient",
+          "chars": 212
+        },
+        {
+          "item": "10",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 11569
+        }
+      ],
+      "seconds": 0.02,
+      "id": "ko-1997-ex13-numbered",
+      "kind": "pr83-r1-red.r4WdWp"
+    }
+  ],
+  "debt": []
+}

@@ -233,6 +233,45 @@ PR82 R2 independently VERIFIED R1 at confidence 0.99 with no new findings
 (`tasks/reviews/pr82-r2-verification.json`). This approval verifies evidence
 wording only; D23 still does not claim a positive live recovery.
 
+### D24 — Resolve same-accession Annual Report references [status: pr]
+Priority: P1
+Origin: owner request, 2026-08-29, after the deployed held-out verification
+showed MRK 1995 and PGR 2023 Items 7/8 are short pointers to Annual Report
+content outside the selected primary document.
+Spec: Extend D22's maximum-three-turn loop into a same-accession filing-package
+navigator. Deterministic acquisition may expose only validated SEC Archives
+attachments or SGML blocks from the input; the model may list, search, and read
+bounded attachment windows and propose document-scoped evidence, while primary
+offsets and coverage remain unchanged and every proposal is deterministically
+verified. Burn MRK 1995 and PGR 2023 as input variants, moving their cases and
+fixtures from held-out and recording replacement debt.
+Reviewer evidence: Cached end-to-end route replays bind the document/action
+schema, persistent context, accepted evidence, malformed/off-origin/
+wrong-accession/hash/bounds/title-or-page rejection, exhaustion and absent-
+attachment abstention. Inspector/API output keeps attachment offsets in their
+own document identity rather than presenting them as normalized-text offsets.
+Acceptance: MRK and PGR Items 7/8 resolve 4/4 to non-empty reproducible external
+evidence while their primary pointer spans and meta.coverage do not move; clean,
+internal-pointer, unavailable-source, upload-without-manifest and deterministic
+cross-reference paths stay bounded and honest; SEC acquisition is accession-
+allowlisted, byte-capped and cached; invariant and fast pass at 100%, offline,
+$0, with no baseline move; one coherent commit reports red/pass evidence.
+Out of scope: arbitrary browsing, OCR/PDF rendering, a new model/framework,
+issuer literals, attachment concatenation, generated filing content, or a
+claim that all filings can reach 100% coverage.
+Status: Red-first 0/2 and pass-after 2/2 are recorded in
+`tasks/reviews/d24-red-pass.txt`; MRK/PGR Items 7/8 resolve 4/4 with primary
+spans and coverage unchanged. PR83 R1-R3 repairs are recorded red-first and
+resolved in `tasks/reviews/pr83-r1*.json`: wrong-section/end proof, exact
+CP1252 attachment hashes, and the real KO 1997 EX-13.1 route. Default snapshots
+are unchanged outside the two burns and identical across both review repairs.
+PR83 round 2 keeps R2/R3 verified and closes the remaining R1 with the real
+PGR 86-character title-line-only red case: fuzzy similarity no longer proves
+an end boundary; only a whole canonical-title line or document end does.
+PR83 round 3 independently VERIFIED R1-R3 at confidence 0.99 and APPROVED with
+no new findings (`tasks/reviews/pr83-r3-verification.json`).
+Final offline gates: invariant 104/104, fast 175/175, $0, no baseline move.
+
 ## Debt
 
 Each block is a decision not to build something, not a forgotten task. Every
@@ -244,6 +283,20 @@ rows that the pre-conversion table had already struck through and marked
 PROMOTED to a numbered milestone (D1–D5) are not repeated here — each is
 archived in `tasks/DONE.md` under its milestone id, and the struck row is
 still readable in git history at `e54573f`.
+
+### TD-167 — Replace the two D24 held-out burns [status: todo]
+Priority: P1
+Origin: D24 held-out burn, 2026-08-29
+Spec: Add two independently labeled SEC 10-K filings to replace
+`mrk-1995-heldout` and `pgr-2023-heldout`. Freeze labels before either filing
+meets the extractor, preserving the set's sector/era diversity and following
+`evals/heldout/README.md` authoring discipline.
+Acceptance: Two fresh case/fixture pairs restore the held-out inventory count;
+their provenance records independent labels, accession, byte size, and the
+fact that the extractor had not been run before authoring.
+Not taken because: D24 must move influenced cases immediately, while replacement
+selection is a separate held-out expansion and may not be improvised from
+filings already inspected during this implementation.
 
 ### TD-1 — D9's A2 ruling rests on a reason its own falsifier now trips [status: todo]
 Priority: P2

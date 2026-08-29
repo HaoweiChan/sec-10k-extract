@@ -34,7 +34,9 @@ ADR-046:
 
 Self-check: python3 -m src.sec10k.escalate
 """
-from src.sec10k.segment import SIM_FLOOR, title_similarity
+import re
+
+from src.sec10k.segment import SIM_FLOOR, TITLES, title_similarity
 from src.sec10k.validate import SPAN_FLOOR
 
 # WHICH D8 code escalates the DOCUMENT — the single most consequential constant
@@ -71,6 +73,12 @@ AGENT_CODES = ("internal_pointer_unreached",)
 AGENT_TURNS = 3
 AGENT_MODEL = "openai/gpt-5-mini"
 OBSERVATION_CAP = 4000
+EXTERNAL_TITLE_FLOOR = 0.4
+EXTERNAL_ANNUAL_RE = re.compile(r"(?is)incorporated\b[^.]{0,80}\bby reference"
+                                r"[^.]{0,240}\bannual report\b|"
+                                r"\bannual report\b[^.]{0,240}\bincorporated\b"
+                                r"[^.]{0,80}\bby reference")
+SAME_FORM_RE = re.compile(r"(?i)annual report on form 10-k")
 
 # The statuses that carry offsets (`specs/001-sec10k-contract.md`: "For status:
 # missing / omitted: start/end are null — there is no span", and ADR-011 for
@@ -177,7 +185,7 @@ SYSTEM = (
 )
 
 
-def classify(warnings, items, agentic=False):
+def classify(warnings, items, agentic=False, external_items=()):
     """Name the deterministic failure shape before any paid rung is considered."""
     hits = [w for w in warnings if w.get("code") in TRIGGER_CODES]
     xref = any(w.get("code") == "cross_reference_index" for w in warnings)
@@ -196,6 +204,10 @@ def classify(warnings, items, agentic=False):
     if hits:
         return {"class": "replace_primary", "route": "contiguous_span_repair",
                 "reason": "low_item_coverage", "items": stubs, "calls_paid": True}
+    if external_items:
+        return {"class": "external_evidence", "route": "agent_loop",
+                "reason": "same-accession Annual Report reference",
+                "items": sorted(external_items), "calls_paid": True}
     if agent:
         return {"class": "agentic_repair", "route": "agent_loop",
                 "reason": "internal_pointer_unreached", "items": agent,
@@ -204,7 +216,7 @@ def classify(warnings, items, agentic=False):
             "calls_paid": False}
 
 
-def trigger(warnings, items=(), agentic=False):
+def trigger(warnings, items=(), agentic=False, external_items=()):
     """The router's sensor. Reads the warnings the layer-8 battery already
     produced — it re-derives nothing and owns no threshold of its own, so the
     trigger cannot drift away from the validator that defines it."""
@@ -217,7 +229,8 @@ def trigger(warnings, items=(), agentic=False):
     # second time, `empty_completion` both times, zero items resolved
     # (ADR-036 §k). Suppressing the trigger here rather than withholding the
     # warning keeps the sensor reading the battery it is defined by.
-    classification = classify(warnings, items, agentic=agentic)
+    classification = classify(warnings, items, agentic=agentic,
+                              external_items=external_items)
     return {
         "fired": classification["route"] not in ("none", "suppressed"),
         "suppressed_by": "cross_reference_index" if classification["route"] == "suppressed" else None,
@@ -439,24 +452,141 @@ def apply(items, accepted, method, alternative=None):
             it.setdefault("evidence", {})["alternative_regions"] = alternative[it["item"]]
 
 
+def _external_pointer_targets(text, items, warnings):
+    """Existing item honesty evidence intersected with an external AR pointer."""
+    flagged = {w.get("item") for w in warnings
+               if w.get("code") == "item_span_near_empty"}
+    out = []
+    for item in items:
+        if item["item"] not in flagged or item.get("start") is None:
+            continue
+        body = text[item["start"]:item["end"]]
+        if EXTERNAL_ANNUAL_RE.search(body) and not SAME_FORM_RE.search(body):
+            out.append(item["item"])
+    return sorted(out)
+
+
+def _document_allowed(doc, source_url):
+    from src.sec10k.package import accession_base
+    identity = doc.get("document") or {}
+    if identity.get("sgml_block"):
+        return identity.get("url") is None
+    return (accession_base(identity.get("url")) is not None
+            and accession_base(identity.get("url")) == accession_base(source_url))
+
+
+def _page_marker(text, page):
+    match = re.search(rf"(?m)^{page}\s*$", text)
+    return match.start() if match else None
+
+
+def _external_section_boundary(text, end):
+    """A document end or a whole line equal to a canonical item title."""
+    if end == len(text):
+        return True
+    line = next((x.strip() for x in text[end:end + 500].splitlines() if x.strip()), "")
+    return bool(line and any(title_similarity(code, line) == 1.0 for code in TITLES))
+
+
+def verify_external(primary_text, items, action, documents, asked):
+    """Verify document identity, hashes, bounds and title-or-page proof."""
+    if isinstance(action, dict) and set(action) == {"action", "proposals"} \
+            and action.get("action") == "propose_external_regions":
+        accepted, why = {}, []
+        for proposal in action["proposals"] if isinstance(action["proposals"], list) else []:
+            got, bad = verify_external(primary_text, items,
+                {"action": "propose_external_regions", **proposal}, documents, asked)
+            accepted.update(got); why.extend(bad)
+        return (accepted if accepted and not why else {}), why or ([] if accepted else ["no proposals"])
+    allowed = {"action", "item", "document", "raw_sha256",
+               "normalized_sha256", "regions"}
+    if not isinstance(action, dict) or set(action) != allowed:
+        return {}, ["external proposal is not the declared action schema"]
+    code, doc_id = action["item"], action["document"]
+    by_code = {i["item"]: i for i in items}
+    if code not in asked or code not in by_code:
+        return {}, [f"item {code}: not an admissible external target"]
+    doc = next((d for d in documents if d["document"]["id"] == doc_id), None)
+    if not doc:
+        return {}, ["document is not in the same-accession listing"]
+    identity = doc["document"]
+    if (action["raw_sha256"] != identity["raw_sha256"]
+            or action["normalized_sha256"] != identity["normalized_sha256"]):
+        return {}, ["document hash does not match the listed attachment"]
+    pointer = primary_text[by_code[code]["start"]:by_code[code]["end"]]
+    page_numbers = {int(x) for x in re.findall(r"\b(?:pages?|through|and)\s+(\d+)\b", pointer, re.I)}
+    accepted, why = [], []
+    for region in action["regions"] if isinstance(action["regions"], list) else []:
+        if not isinstance(region, dict) or set(region) - {"start", "end", "title", "pages"}:
+            why.append("region is not a declared external region"); continue
+        s, e = region.get("start"), region.get("end")
+        if not (isinstance(s, int) and isinstance(e, int)
+                and not isinstance(s, bool) and not isinstance(e, bool)
+                and 0 <= s < e <= len(doc["text"])):
+            why.append("region bounds are outside the attachment normalized text"); continue
+        title = region.get("title")
+        title_anchored = (isinstance(title, str) and len(title.strip()) >= 6
+                          and title in doc["text"][s:min(e, s + 500)])
+        title_ok = (title_anchored
+                    and title_similarity(code, title) >= EXTERNAL_TITLE_FLOOR)
+        end_ok = title_ok and _external_section_boundary(doc["text"], e)
+        pages = region.get("pages")
+        page_ok = False
+        if (isinstance(pages, list) and len(pages) == 2
+                and all(isinstance(p, int) and not isinstance(p, bool) for p in pages)
+                and set(pages) <= page_numbers):
+            start = _page_marker(doc["text"], pages[0])
+            following = [(_page_marker(doc["text"], p), p)
+                         for p in range(pages[1] + 1, pages[1] + 4)]
+            following = [at for at, _ in following if at is not None]
+            page_ok = start is not None and s == start and e == (min(following) if following else len(doc["text"]))
+        if title_anchored and not title_ok:
+            why.append("region title does not match requested item"); continue
+        if title_ok and not end_ok:
+            why.append("region end is not a proved section boundary"); continue
+        if not (end_ok or page_ok):
+            why.append("region lacks title-or-page proof anchored to the attachment slice"); continue
+        accepted.append({"start": s, "end": e, "title": title,
+                         "pages": pages, "document": dict(identity),
+                         "verifier": {"identity": True, "hashes": True,
+                                      "bounds": True, "title": title_ok,
+                                      "end": end_ok or page_ok, "pages": page_ok}})
+    return ({code: accepted} if accepted and not why else {}), why or ([] if accepted else ["no regions"])
+
+
+def apply_external(items, external):
+    """Annotate only; primary offsets/method/coverage inputs are untouched."""
+    for item in items:
+        if item["item"] in external:
+            item.setdefault("evidence", {})["external_regions"] = external[item["item"]]
+
+
 AGENT_SYSTEM = (
     "Return one JSON object only. Its action is one of: "
     "search {action,query}; read_window {action,start,end}; "
+    "list_documents {action}; search_document {action,document,query}; "
+    "read_document_window {action,document,start,end}; "
     "propose_primary_span {action,item,start,end}; "
     "propose_alternative_regions {action,item,regions}; or finish {action}. "
-    "The only accepted evidence is normalized-text offsets."
+    "propose_external_regions {action,item,document,raw_sha256,normalized_sha256,regions}; "
+    "or finish {action}. External offsets are scoped to one listed attachment; "
+    "they never replace primary normalized-text offsets."
 )
 
 
-def _agent_loop(text, items, warnings, budget, call):
+def _agent_loop(text, items, warnings, budget, call, tr=None, documents=(), acquisition=None):
     """A three-turn loop with fixed context and a changing last observation."""
     import json
     from src.sec10k.llm import EscalationUnavailable
-    tr = trigger(warnings, items, agentic=True)
+    import time
+    from src.sec10k.package import summaries
+    tr = tr or trigger(warnings, items, agentic=True)
     targets = tr["target_items"]
     record = {"trigger": tr, "tiers": [], "resolved": [], "alternative": [],
+              "external": [], "acquisition": acquisition,
               "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0}}
     context = {"target_items": targets,
+               "documents": summaries(documents),
                "outline": {"items": [{"item": i["item"], "status": i["status"],
                                         "start": i.get("start"), "end": i.get("end")}
                                        for i in items],
@@ -472,10 +602,12 @@ def _agent_loop(text, items, warnings, budget, call):
                  "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0},
                  "actions": [], "observations": []}
         try:
+            started = time.monotonic()
             got = call(AGENT_MODEL, AGENT_SYSTEM,
                        json.dumps({**context, "observation": observation}), MAX_TOKENS, budget)
         except EscalationUnavailable as e:
             entry.update(outcome="unavailable", error=str(e)); record["tiers"].append(entry); break
+        entry["latency_ms"] = round((time.monotonic() - started) * 1000, 3)
         entry["cost"] = {"llm_calls": 0 if got["cached"] else 1,
                          "tokens": sum(got["usage"].values()),
                          "usd": 0.0 if got["cached"] else got["usd"]}
@@ -485,13 +617,16 @@ def _agent_loop(text, items, warnings, budget, call):
             if not isinstance(action, dict):
                 raise ValueError("action is not an object")
             kind = action.get("action")
-            if kind not in {"search", "read_window", "propose_primary_span", "propose_alternative_regions", "finish"}:
+            if kind not in {"search", "read_window", "list_documents",
+                            "search_document", "read_document_window",
+                            "propose_primary_span", "propose_alternative_regions",
+                            "propose_external_regions", "finish"}:
                 raise ValueError("unknown action")
         except (ValueError, TypeError, json.JSONDecodeError) as e:
             entry.update(outcome="unparseable", error=str(e)); record["tiers"].append(entry)
             observation = {"rejection": entry["error"]}; prompt_range = (0, 0); continue
         entry["actions"].append(action)
-        accepted, alternative = {}, {}
+        accepted, alternative, external = {}, {}, {}
         if kind == "search":
             q = action.get("query", "")
             hits, at = [], 0
@@ -501,6 +636,45 @@ def _agent_loop(text, items, warnings, budget, call):
                 hits.append(at); at += len(q)
             entry["observations"].append({"matches": hits}); entry["outcome"] = "rejected"
             record["tiers"].append(entry); observation = entry["observations"][0]; prompt_range = (0, 0); continue
+        if kind == "list_documents":
+            entry["observations"].append({"documents": summaries(documents)})
+            entry["outcome"] = "rejected"; record["tiers"].append(entry)
+            observation = entry["observations"][0]; prompt_range = (0, 0); continue
+        if kind in {"search_document", "read_document_window"}:
+            doc = next((d for d in documents
+                        if d["document"]["id"] == action.get("document")), None)
+            if doc is None:
+                entry["observations"].append({"verifier": [
+                    "document is not in the same-accession listing"]})
+                entry.update(outcome="rejected", rejections=entry["observations"][0]["verifier"])
+                record["tiers"].append(entry); observation = {
+                    "verifier_rejections": entry["rejections"]}; prompt_range = (0, 0); continue
+            elif kind == "search_document":
+                q, hits, at = action.get("query"), [], 0
+                while isinstance(q, str) and q and len(hits) < 5:
+                    at = doc["text"].find(q, at)
+                    if at < 0: break
+                    hits.append(at); at += len(q)
+                entry["observations"].append({"document": action["document"],
+                                              "matches": hits})
+                entry["outcome"] = "rejected"; record["tiers"].append(entry)
+                observation = entry["observations"][0]; prompt_range = (0, 0); continue
+            else:
+                s, e = action.get("start"), action.get("end")
+                if not (isinstance(s, int) and isinstance(e, int)
+                        and 0 <= s < e <= len(doc["text"])):
+                    entry["observations"].append({"verifier": [
+                        "read_document_window bounds outside attachment text"]})
+                    entry.update(outcome="rejected", rejections=entry["observations"][0]["verifier"])
+                    record["tiers"].append(entry); observation = {
+                        "verifier_rejections": entry["rejections"]}; prompt_range = (0, 0); continue
+                else:
+                    e = min(e, s + OBSERVATION_CAP)
+                    entry["observations"].append({"document": action["document"],
+                                                  "start": s, "end": e,
+                                                  "text": doc["text"][s:e]})
+                    entry["outcome"] = "rejected"; record["tiers"].append(entry)
+                    observation = entry["observations"][0]; prompt_range = (0, 0); continue
         if kind == "read_window":
             s, e = action.get("start"), action.get("end")
             if not (isinstance(s, int) and isinstance(e, int) and 0 <= s < e <= len(text)):
@@ -516,13 +690,18 @@ def _agent_loop(text, items, warnings, budget, call):
         elif kind == "propose_alternative_regions":
             alternative, why = verify_alternatives(text, items, {action.get("item"): {"regions": action.get("regions")}},
                                                     asked=set(targets), existing=True)
+        elif kind == "propose_external_regions":
+            external, why = verify_external(text, items, action, documents, set(targets))
         else:
-            accepted, alternative, why = {}, {}, ["agent finished without evidence"]
+            accepted, alternative, external, why = {}, {}, {}, ["agent finished without evidence"]
         entry["observations"].append({"verifier": why})
-        if accepted or alternative:
+        if accepted or alternative or external:
             apply(items, accepted, "agent_loop", alternative)
+            apply_external(items, external)
             record["resolved"], record["alternative"] = sorted(accepted), sorted(alternative)
-            entry.update(outcome="resolved", resolved=record["resolved"], alternative=record["alternative"])
+            record["external"] = sorted(external)
+            entry.update(outcome="resolved", resolved=record["resolved"],
+                         alternative=record["alternative"], external=record["external"])
             record["tiers"].append(entry); break
         entry.update(outcome="rejected", rejections=why); record["tiers"].append(entry)
         observation = {"verifier_rejections": why}; prompt_range = (0, 0)
@@ -530,7 +709,7 @@ def _agent_loop(text, items, warnings, budget, call):
         for k in record["cost"]: record["cost"][k] = round(record["cost"][k] + entry["cost"][k], 6)
     record["vision"] = vision_verify(None, {}, None, None, None, text)
     record["stages"] = _stages(tr, record, record["vision"])
-    if record["resolved"] or record["alternative"]:
+    if record["resolved"] or record["alternative"] or record["external"]:
         return record, []
     for item in items:
         if item["item"] in targets:
@@ -640,12 +819,13 @@ def _stages(tr, record, vision=None):
         {"stage": "classify", "status": "done", "reason": tr["reason"], "targets": targets, "cost": zero, "skipped": None},
         {"stage": "plan", "status": "done" if fired else "skipped", "reason": tr["route"], "targets": targets, "cost": zero, "skipped": None if fired else "trigger quiet or deterministically resolved"},
         {"stage": "route", "status": "done" if fired else "skipped", "reason": tr["route"], "targets": targets, "cost": zero, "skipped": None if fired else tr["reason"]},
-        {"stage": "verify", "status": "done" if record["resolved"] or record.get("alternative") else ("failed" if fired and record["tiers"] else "skipped"), "reason": (vision or {}).get("reason", "no verified proposal"), "targets": targets, "cost": dict((vision or {}).get("cost", zero)), "skipped": None if fired else tr["reason"], "vision": vision or {"status": "skipped", "reason": "no alternative evidence", "cost": zero}},
-        {"stage": "decide", "status": "done", "reason": "accepted verified evidence" if record["resolved"] or record.get("alternative") else "deterministic result retained", "targets": record["resolved"] + record.get("alternative", []), "cost": dict(record["cost"]), "skipped": None},
+        {"stage": "verify", "status": "done" if record["resolved"] or record.get("alternative") or record.get("external") else ("failed" if fired and record["tiers"] else "skipped"), "reason": (vision or {}).get("reason", "no verified proposal"), "targets": targets, "cost": dict((vision or {}).get("cost", zero)), "skipped": None if fired else tr["reason"], "vision": vision or {"status": "skipped", "reason": "no alternative evidence", "cost": zero}},
+        {"stage": "decide", "status": "done", "reason": "accepted verified evidence" if record["resolved"] or record.get("alternative") or record.get("external") else "deterministic result retained", "targets": record["resolved"] + record.get("alternative", []) + record.get("external", []), "cost": dict(record["cost"]), "skipped": None},
     ]
 
 
-def route(text, items, warnings, budget=None, images=None, vision_cached=None, source_url=None):
+def route(text, items, warnings, budget=None, images=None, vision_cached=None,
+          source_url=None, raw=None, documents=None, acquisition=None):
     """Run the ladder. Returns (routing_record, extra_warnings).
 
     `items` is mutated in place when — and only when — a rung's answer
@@ -656,19 +836,33 @@ def route(text, items, warnings, budget=None, images=None, vision_cached=None, s
     from src.sec10k.llm import Budget, EscalationUnavailable, call  # noqa: E402
     import json
 
-    tr = trigger(warnings, items, agentic=True)
-    record = {"trigger": tr, "tiers": [], "resolved": [],
+    external_candidates = _external_pointer_targets(text, items, warnings)
+    package = [d for d in documents or () if _document_allowed(d, source_url)]
+    if external_candidates and raw is not None and not package:
+        from src.sec10k.package import acquire
+        package, acquisition = acquire(raw, source_url)
+    acquisition = acquisition or {"status": "absent", "source": None, "calls": 0,
+                                  "bytes": 0, "latency_ms": 0.0}
+    external_targets = external_candidates if package else []
+    tr = trigger(warnings, items, agentic=True, external_items=external_targets)
+    if external_candidates and not package and tr["route"] == "none":
+        tr["reason"] = "external Annual Report attachment unavailable"
+    record = {"trigger": tr, "tiers": [], "resolved": [], "alternative": [],
+              "external": [], "acquisition": acquisition,
               "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0}}
     if not tr["fired"]:
-        # THE COMMON CASE, and the one the cost budget lives on: 48 of 51 dev
+        # THE COMMON CASE, and the one the cost budget lives on: 50 of 53 dev
         # documents land here, spend nothing, and are byte-identical to a run
         # with the flag off.
         record["stages"] = _stages(tr, record)
-        return record, []
+        extra = ([{"code": "external_source_unavailable", "item": None,
+                   "message": acquisition.get("error", tr["reason"])}]
+                 if acquisition.get("status") == "unavailable" else [])
+        return record, extra
 
     budget = budget if budget is not None else Budget()
     if tr["route"] == "agent_loop":
-        return _agent_loop(text, items, warnings, budget, call)
+        return _agent_loop(text, items, warnings, budget, call, tr, package, acquisition)
     codes = tr["target_items"] or tr["items"] or [i["item"] for i in items
                             if i.get("start") is not None]
     extra, vision = [], None

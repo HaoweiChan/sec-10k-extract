@@ -15,6 +15,8 @@ bench). `repo_hygiene/` holds UI/ledger regression stubs and is not one.
 | Fixture | Source | Accession | Filed | Format | Bytes |
 |---|---|---|---|---|---|
 | `aig-2025/filing.htm` | sec.gov/Archives/edgar/data/5272/000000527225000012/aig-20241231.htm | 0000005272-25-000012 | 2025-02-20 | iXBRL, FY2024 AIG 10-K with per-page item running headers; moved from held-out when D18 burned the frozen silent Item 1 loss | 12,307,024 |
+| `mrk-1995/filing.txt` | sec.gov/Archives/edgar/data/64978/0000950130-96-000896.txt | 0000950130-96-000896 | 1996-03-20 | plain-text full submission moved from held-out when D24 burned its same-submission EX-13 outcome | 322,618 |
+| `pgr-2023/filing.htm` | sec.gov/Archives/edgar/data/80661/000008066124000007/pgr-20231231.htm | 0000080661-24-000007 | 2024-02-26 | iXBRL primary document moved from held-out when D24 burned its same-accession EX-13 outcome; package attachment provenance is in `evals/package-fixtures/README.md` | 1,474,219 |
 | `aapl-2025/filing.htm` | sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm | 0000320193-25-000079 | 2025-10-31 | iXBRL (2019+ era) | 1,520,208 |
 | `ge-1994/filing.txt` | sec.gov/Archives/edgar/data/40545/0000040545-94-000003.txt | 0000040545-94-000003 | 1994-03-11 (10-K for FY1993) | plain-text full submission (1993–2001 era) | 430,539 |
 | `msft-2013/filing.htm` | sec.gov/Archives/edgar/data/789019/000119312513310206/d527745d10k.htm | 0001193125-13-310206 | 2013-07-30 | legacy HTML (2001–2019 era), mid-era deep-tier pick | 1,776,947 |

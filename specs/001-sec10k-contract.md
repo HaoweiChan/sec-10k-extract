@@ -328,6 +328,22 @@ them all); the example once showed `lenient_match`, which nothing emits.
   `cross_reference_index` is emitted for the resolved pointer index; ADR-047
   adds `agent_loop` only when its primary proposal passed `escalate.verify`.
 
+  ADR-048 extends that same loop to verified Annual Report evidence in another
+  document of the source accession. An item may then carry
+  `evidence.external_regions`, whose offsets are explicitly scoped to the
+  embedded `document` identity rather than `/normalized_text`. Each record
+  carries `start`, `end`, `document` (`id`, `type`, `sequence`, `filename`,
+  `url` or `sgml_block`, `raw_sha256`, `normalized_sha256`) and `verifier`.
+  `raw_sha256` hashes the exact source attachment bytes. A title-proved region
+  must match the requested item's canonical title family and end at a proved
+  next-section boundary — a whole normalized line exactly equal to a canonical
+  item title — or the attachment end; page-proved regions retain their pointer-
+  page boundary proof. `EX-13` and numeric `EX-13.<digits>` variants
+  are Annual Report candidates; unrelated exhibit types are not.
+  The item's primary `start`/`end`, `method`, `heading_text`, and the envelope's
+  `meta.coverage` remain the deterministic pointer result. `routing.external`
+  lists accepted item codes separately from `routing.resolved` primary repairs.
+
 ## Envelope fields (v2, informative)
 
 `meta`, `trace`, `timings`, `cost`, `heading_text`, `evidence` must be present,

@@ -1016,7 +1016,9 @@ function routingStrip(r){
     ).join("; ") || "none attempted";
   const done = (r.resolved || []).length
     ? `items ${esc((r.resolved || []).join(", "))} resolved by a model tier`
-    : "no item was resolved by a model tier; the deterministic spans stand";
+    : (r.external || []).length
+      ? `items ${esc(r.external.join(", "))} gained verified same-accession evidence; primary spans stand`
+      : "no item was resolved by a model tier; the deterministic spans stand";
   return ` <span class="src" id="routing">routing: <b>trigger fired</b>
     (${esc((r.trigger.codes || []).join(", "))}) — ${tiers} — ${esc(done)} —
     ${esc(money)}</span>`;

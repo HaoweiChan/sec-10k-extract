@@ -1,0 +1,47 @@
+D24 red-first and positive replay evidence, 2026-08-29
+
+Before implementation:
+  mrk-1995-external-annual-report-burned FAIL
+  pgr-2023-external-annual-report-burned FAIL
+  fast targeted: 0/2, $0
+  report: evals/report/20260829-210723-fast.json
+
+After implementation:
+  mrk-1995 Items 7/8 external evidence PASS
+  pgr-2023 Items 7/8 external evidence PASS
+  4/4 target items carry non-empty document-scoped evidence
+  primary spans/methods/headings and meta.coverage unchanged
+  fast targeted: 2/2, $0
+  report: evals/report/20260829-211733-fast.json
+
+Default snapshot comparison at base e34dfa8055be0fe6db0c2cebd3f703c9c82187d5:
+  UNCHANGED_OUTSIDE_BURNS True
+  before: 70 dev + 5 held-out
+  after: 72 dev + 3 held-out
+  after removing the two moved burn identities: 70 == 70 dev, 3 == 3 held-out
+
+PR83 round 1 repair:
+  R1 wrong-section/end proof FAIL -> PASS
+  R2 CP1252 exact raw attachment hash FAIL -> PASS
+  R3 KO 1997 EX-13.1 Item 8 route FAIL -> PASS
+  targeted red: 0/3, evals/report/20260829-215112-fast.json
+  targeted green: 3/3, evals/report/20260829-215219-fast.json
+  final invariant: 104/104, evals/report/20260829-215805-invariant.json
+  final fast: 175/175, evals/report/20260829-215918-fast.json
+  default snapshot identical: tasks/reviews/pr83-r1-snapshot.txt
+  cost: $0; no API key or baseline move
+
+PR83 round 2 final R1 repair:
+  real PGR Item 7 title-line-only 86-char region FAIL -> PASS
+  structural boundary: document end or whole line exactly equal to canonical title
+  targeted red: 0/1, evals/report/20260829-220618-fast.json
+  combined green: 5/5 (R1-R3 and original MRK/PGR 4/4),
+    evals/report/20260829-220650-fast.json
+  final invariant: 104/104, evals/report/20260829-221139-invariant.json
+  final fast: 175/175, evals/report/20260829-221258-fast.json
+  default snapshot identical: tasks/reviews/pr83-r2-snapshot.txt
+  cost: $0; no API key or baseline move
+
+PR83 round 3 final review:
+  APPROVED; R1-R3 VERIFIED at confidence 0.99; no new findings
+  artifact: tasks/reviews/pr83-r3-verification.json

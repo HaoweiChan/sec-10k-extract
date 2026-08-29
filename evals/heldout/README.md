@@ -88,6 +88,19 @@ moved case, with dated triage appended. The held-out inventory is now **five**
 cases. **One fresh replacement is owed** at the next held-out expansion; it
 must be independently labeled before the pipeline sees it.
 
+## D24 burns, 2026-08-29
+
+**`mrk-1995-heldout` and `pgr-2023-heldout` are burned and moved, not copied**
+to `evals/adversarial/mrk-1995-external-annual-report-burned.json` and
+`pgr-2023-external-annual-report-burned.json`; their fixture directories moved
+to `evals/fixtures/`. Their observed Item 7/8 outcomes directly define D24's
+same-accession external-evidence route, so both are `input-variant` influence.
+PGR's same-accession EX-13 is committed under `evals/package-fixtures/` for the
+offline replay; Merck's EX-13 is already an SGML block in its full submission.
+The inventory is now **three** cases. **Two fresh replacements are owed** at the
+next held-out expansion and tracked by TD-167; neither may be selected from a
+filing inspected during D24.
+
 ## Burn rule
 
 A case is burned the moment its labeled outcome influences implementation — a
@@ -189,10 +202,10 @@ first run, so it cannot be retrofitted afterwards.
 
 | Fixture | Source | Accession | Filed | Period end | Stratum | Bytes |
 |---|---|---|---|---|---|---|
-| `pgr-2023/filing.htm` | sec.gov/Archives/edgar/data/80661/000008066124000007/pgr-20231231.htm | 0000080661-24-000007 | 2024-02-26 | 2023-12-31 | iXBRL, **fire/marine/casualty insurance** — restores the financial-sector coverage. Sits 16 days past the Item 1C era boundary, and its cover carries a **floating comma** (`December 31 , 2023`). Replaces `gs-2002`, burned 2026-08-17 | 1,474,219 |
+| ~~`pgr-2023/filing.htm`~~ | **BURNED AND MOVED 2026-08-29 (D24)** — case and fixture now adversarial | 0000080661-24-000007 | 2024-02-26 | 2023-12-31 | Same-accession EX-13 Annual Report outcome influenced D24 | 1,474,219 |
 | `csco-2016/filing.htm` | sec.gov/Archives/edgar/data/858877/000085887716000117/csco-2016730x10k.htm | 0000858877-16-000117 | 2016-09-08 | 2016-07-30 | mid-2010s HTML, computer-communications equipment; 52/53-week FY ending in **July**. Replaces `jnj-2016`, burned by H1 | 4,476,127 |
 | `cost-2022/filing.htm` | sec.gov/Archives/edgar/data/909832/000090983222000021/cost-20220828.htm | 0000909832-22-000021 | 2022-10-05 | 2022-08-28 | iXBRL, retail, **August** FY end; separates every item code from its title with an **em dash**, a heading shape no dev fixture contains | 1,861,894 |
-| `mrk-1995/filing.txt` | sec.gov/Archives/edgar/data/64978/0000950130-96-000896.txt | 0000950130-96-000896 | 1996-03-20 | 1995-12-31 | pre-2001 txt, **pharmaceutical** (the sector jnj-2016 took with it when H1 burned it); form 10-K405; earliest filing in either set that predates Item 7A, so the 14-code taxonomy is exercised by a real document; **no table of contents at all** | 322,618 |
+| ~~`mrk-1995/filing.txt`~~ | **BURNED AND MOVED 2026-08-29 (D24)** — case and fixture now adversarial | 0000950130-96-000896 | 1996-03-20 | 1995-12-31 | Same-submission EX-13 Annual Report outcome influenced D24 | 322,618 |
 | ~~`axp-2008/filing.htm`~~ | sec.gov/Archives/edgar/data/4962/000119312509041008/d10k.htm | 0001193125-09-041008 | 2009-02-27 | 2008-12-31 | **BURNED AND MOVED 2026-08-19 (T12, ADR-020)** — now `evals/fixtures/axp-2008/filing.htm`, case now `evals/adversarial/axp-2008-combined-heading-burned.json`. legacy HTML, **crisis-era financial**. It DOES have a table of contents — raw bytes carry `<A NAME="toc"></A>TABLE OF CONTENTS` at offset 13689, and the contents page lists Part III's four items individually — but the pipeline's `toc_manifest` comes back **empty** on it, because those entries are bare `10.` / `11.` / `12.` / `13.` with no `Item` prefix and so generate no heading candidates. *(Corrected 2026-08-19, repair round 2: this row and the original case provenance both claimed 'no table of contents', and the stratum rationale — a filing that gives the TOC machinery nothing to work with — was built on it. The machinery does come back empty; the stated reason was wrong.)* The original row here also read "the strings 'Item 10' through 'Item 13' occur **zero** times: Part III is addressed without its item headings" — the first clause is true of the SINGULAR forms and the second does not follow from it. There is one combined heading, at raw offset 1225493: `<B>ITEMS&nbsp;10,&nbsp;11,&nbsp;12&nbsp;and&nbsp;13.</B>` plus the four-item title. See the burn note below. Replaced `wfc-2008`, moved to the dev set before its first run | 1,296,375 |
 | `spg-2019/filing.htm` | sec.gov/Archives/edgar/data/1063761/000155837020001135/spg-20191231x10k.htm | 0001558370-20-001135 | 2020-02-21 | 2019-12-31 | iXBRL, **REIT** — Item 2 Properties runs ~101K chars of mall-by-mall tables, an order of magnitude past any other Item 2; the FY2017–FY2020 window; the first filing in either set with a **present and substantive Item 16**; 9.8 MB — third-largest committed filing anywhere in the repo since D6 added `c-2025` (16.15 MB); `jpm-2024` (12.85 MB, dev set) is second. It was second-largest when this row was written; the clause was corrected under PR #52 R3 | 9,812,403 |
 | ~~`intc-2025/filing.htm`~~ | sec.gov/Archives/edgar/data/50863/000005086326000011/intc-20251227.htm | 0000050863-26-000011 | 2026-01-23 | 2025-12-27 | **BURNED AND MOVED 2026-08-27 (D11, PR #58)** — now `evals/fixtures/intc-2025/filing.htm`, case now `evals/adversarial/intc-2025-collapse-burned.json` (`debt` suite, still red). See the burn note below. iXBRL, **post-2019 Intel reorg layout** — narrative organized by Intel's own section names and mapped to SEC item codes ONLY by a trailing `Form 10-K Cross-Reference Index`. All 23 item codes occur **exactly once each**, all of them index rows in the last 0.63% of the document; there is no body item heading anywhere. Added by **D6** as one of the two 2026-08-24 demo-failing filings; the maximal form of the ADR-015 stub-collapse trap, a layout class no fixture covers (`intc-2002` is pre-reorg) | 3,320,720 |
