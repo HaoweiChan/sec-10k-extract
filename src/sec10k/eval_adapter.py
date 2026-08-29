@@ -522,7 +522,11 @@ def eval_check(result, chk, path=None):
                 {"action": "propose_alternative_regions", "item": "7", "regions": [{
                     "start": destination, "end": min(len(text), destination + 4000), "reference": "Item 7"}]},
             ]
-        elif chk["scenario"] == "exhaustion_negative":
+        elif chk["scenario"] in ("exhaustion_negative", "empty_and_malformed"):
+            items_in.append({"item": "16", "status": "missing", "start": None, "end": None,
+                             "method": "status_keyword", "heading_text": None, "confidence": 0.0,
+                             "part": "IV", "title": "Form 10-K Summary", "evidence": {}, "review_required": False})
+            warnings.append({"code": "internal_pointer_unreached", "item": "16", "message": "mixed missing target"})
             actions = [{"action": "propose_primary_span", "item": "2", "start": 0, "end": 1}] * 3
         elif chk["scenario"] == "quiet_and_xref":
             def _quiet(*args, **kwargs):
@@ -541,10 +545,12 @@ def eval_check(result, chk, path=None):
         else:
             return f"unknown agent_loop scenario {chk['scenario']!r}"
 
+        if chk["scenario"] == "empty_and_malformed":
+            actions = ["", "[]", "{"]
         def _stub(model, system, user, max_tokens, budget, **kw):
             calls.append(user)
             action = actions.pop(0)
-            return {"cached": True, "text": _json.dumps(action),
+            return {"cached": True, "text": action if isinstance(action, str) else _json.dumps(action),
                     "usage": {"input_tokens": 0, "output_tokens": 0}, "usd": 0.0,
                     "model": model}
 
@@ -565,9 +571,14 @@ def eval_check(result, chk, path=None):
                 return "exact search/read observation did not reach the next model prompt"
         else:
             if len(tiers) != 3 or any(x["outcome"] != "rejected" for x in tiers):
-                return f"agent exhaustion did not use exactly three rejected turns: {tiers}"
+                if chk["scenario"] != "empty_and_malformed" or len(tiers) != 3 or any(x["outcome"] != "unparseable" for x in tiers):
+                    return f"agent exhaustion did not use three bounded turns: {tiers}"
+            if set(routing["trigger"]["target_items"]) != {"2", "16"}:
+                return "mixed missing and bad-primary targets did not both reach route planning"
             if not extra or not items_in[[i["item"] for i in items_in].index("2")]["review_required"]:
                 return "exhaustion did not leave the target review_required"
+            if not items_in[[i["item"] for i in items_in].index("16")]["review_required"]:
+                return "mixed missing target lost review_required"
             from src.sec10k.web.view import build_view
             view_item = next(i for i in build_view({"normalized_text": result["normalized_text"], "items": items_in})["items"]
                              if i["item"] == "2")

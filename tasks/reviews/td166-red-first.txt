@@ -4,3 +4,8 @@ Before this coverage addition, removing either `observation =` hand-off in
 `_agent_loop` left d22-agent-loop green: it inspected tiers, not next-call
 payloads. The new cached route assertion fails when either serialized search
 or read-window observation is absent from the following call.
+
+Additional pre-fix probes: mixed Item 2/16 planning lost the missing target;
+cached empty text, `[]`, and malformed `{` crashed or escaped parser coverage.
+The expanded route replay now asserts three bounded turns and review_required
+for both targets. These probes use the committed CVX fixture and no live call.

@@ -7,6 +7,7 @@
     "checks": [
       {"type": "agent_loop", "scenario": "replan_positive"},
       {"type": "agent_loop", "scenario": "exhaustion_negative"},
+      {"type": "agent_loop", "scenario": "empty_and_malformed"},
       {"type": "agent_loop", "scenario": "quiet_and_xref"}
     ]
   },
