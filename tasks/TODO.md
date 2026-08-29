@@ -205,8 +205,33 @@ pass at 100% with zero paid calls and no baseline move; full/cached replay and
 one bounded live run record calls, tokens, dollars, latency, and verifier
 decisions; a fresh cold review is disposed; the deployed inspector proves the
 clean, positive, and negative paths against the merged build SHA.
-Status: plan authored; ADR, red-first cases, implementation, live evidence,
-cold review, gates, and deployment are UNRUN.
+Status: MERGED (`177fa06`), but acceptance is NOT complete: the only allowed
+CVX live run rejected all three actions and produced no positive recovery;
+positive live proof and authorized agentic deployed paths remain pending.
+`tasks/reviews/d22-live-proof.json` and `d22-live-run-report.md` preserve the
+negative result; the public tokenless deployment checks are not agentic replays.
+
+### D23 — Preserve bounded-agent context across re-plans [status: pr]
+Priority: P1
+Origin: D22's one allowed CVX live run, 2026-08-29
+Spec: In the existing maximum-three-turn agent loop, repeat immutable explicit
+`target_items` and a compact item/warning outline on every prompt, while the
+immediately preceding search, bounded read, or verifier observation changes.
+Keep the existing bounded actions, model, cache, Budget, and deterministic
+verification boundary; do not retry the live run or introduce an issuer/content
+heuristic.
+Acceptance: A minimal cached end-to-end route case is observed red first and
+then proves every follow-up prompt carries target_items, outline, and the exact
+preceding observation; invariant and fast pass at 100% with no API key, $0,
+and no baseline move. The D22 negative live result remains honestly recorded;
+this task does not claim a positive live recovery.
+Status: implementation and focused cached replay PASS; invariant 99/99 and
+fast 170/170 PASS with `OPENROUTER_API_KEY` removed, $0, and no baseline move.
+Cold-review repairs R1–R3/O1 are recorded in `tasks/reviews/d23-cold-review*.json`;
+PR82 R1 evidence-wording repair is recorded in `tasks/reviews/pr82-r1*.json`;
+PR82 R2 independently VERIFIED R1 at confidence 0.99 with no new findings
+(`tasks/reviews/pr82-r2-verification.json`). This approval verifies evidence
+wording only; D23 still does not claim a positive live recovery.
 
 ## Debt
 

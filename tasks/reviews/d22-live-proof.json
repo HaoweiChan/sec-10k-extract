@@ -1,0 +1,58 @@
+{
+  "fixture": "evals/fixtures/cvx-2015/filing.htm",
+  "main_sha": "acadbedb159675aa2f223ac2c4caf819d6d65ec3",
+  "pre": {"coverage": 0.2718, "doc_status": "success_with_warning"},
+  "before_targets": [
+    {"item": "2", "status": "extracted", "start": 107079, "end": 107613, "method": "heading_strict", "review_required": true},
+    {"item": "6", "status": "extracted", "start": 112301, "end": 112420, "method": "heading_strict", "review_required": true},
+    {"item": "7A", "status": "extracted", "start": 112700, "end": 113153, "method": "heading_strict", "review_required": true}
+  ],
+  "after_targets": [
+    {"item": "2", "status": "extracted", "start": 107079, "end": 107613, "method": "heading_strict", "review_required": true},
+    {"item": "6", "status": "extracted", "start": 112301, "end": 112420, "method": "heading_strict", "review_required": true},
+    {"item": "7A", "status": "extracted", "start": 112700, "end": 113153, "method": "heading_strict", "review_required": true}
+  ],
+  "warning_code_item_pairs": [
+    {"code": "unattributed_content", "item": null},
+    {"code": "item_span_near_empty", "item": "7"},
+    {"code": "item_span_near_empty", "item": "8"},
+    {"code": "internal_pointer_unreached", "item": "2"},
+    {"code": "internal_pointer_unreached", "item": "6"},
+    {"code": "internal_pointer_unreached", "item": "7A"}
+  ],
+  "budget": {"llm_calls": 3, "tokens": 4578, "usd": 0.004122},
+  "wall_seconds": 21.710292,
+  "routing": {
+    "trigger": {
+      "class": "agentic_repair", "route": "agent_loop",
+      "reason": "internal_pointer_unreached", "fired": true,
+      "target_items": ["2", "6", "7A"]
+    },
+    "tiers": [
+      {
+        "turn": 1, "action": "propose_alternative_regions", "item": "1",
+        "outcome": "rejected",
+        "rejections": ["item 1: not an admissible alternative target"],
+        "cost": {"llm_calls": 1, "tokens": 2205, "usd": 0.00173}
+      },
+      {
+        "turn": 2, "action": "propose_alternative_regions", "item": "item 1",
+        "outcome": "rejected",
+        "rejections": ["item item 1: not an admissible alternative target"],
+        "cost": {"llm_calls": 1, "tokens": 1078, "usd": 0.001108}
+      },
+      {
+        "turn": 3, "action": "finish", "outcome": "rejected",
+        "rejections": ["agent finished without evidence"],
+        "cost": {"llm_calls": 1, "tokens": 1295, "usd": 0.001284}
+      }
+    ],
+    "resolved": [],
+    "alternative": []
+  },
+  "extra_warnings": [
+    {"code": "escalation_unresolved", "item": null,
+     "message": "agent loop exhausted without verified evidence"}
+  ],
+  "sanitization": "Copied from /private/tmp/d22-live-proof.json by D23. Credentials and full prompts are intentionally omitted."
+}

@@ -1,0 +1,33 @@
+{
+  "task": "D23",
+  "review": "cold",
+  "result": "OPEN",
+  "date": "2026-08-29",
+  "resolutions": [
+    {
+      "id": "R1",
+      "status": "implemented",
+      "fix": "The routing strip now labels agent_loop's compact outline separately and says whether a filing-text window was supplied; other tiers retain their existing clipped-window wording.",
+      "evidence": "The new routing-provenance pin was red before the UI edit and the known-bad fixture catches 14 exact failures."
+    },
+    {
+      "id": "R2",
+      "status": "implemented",
+      "fix": "The cached CVX replay checks every prompt on both search/read and verifier-rejection plans, including turns 1 and 3, for exact immutable context and exact preceding observation.",
+      "evidence": "A temporary third-turn context-drop mutation failed both persistent-context and malformed-continuation checks."
+    },
+    {
+      "id": "R3",
+      "status": "implemented",
+      "fix": "The existing empty/malformed real route now checks all prompts retain the immutable context and each continuation carries the exact preceding parse rejection.",
+      "evidence": "A temporary parse-observation-drop mutation failed the targeted case."
+    },
+    {
+      "id": "O1",
+      "status": "implemented",
+      "fix": "ADR-047 and the live report now call the pre-D23 prompt loss an inference and state the supporting code path, input-token drop, and repeated action without claiming retained prompt text.",
+      "evidence": "tasks/reviews/d22-live-proof.json remains the sanitized artifact of record and contains no full prompts."
+    }
+  ],
+  "verification_status": "awaiting independent review; no approval claimed"
+}

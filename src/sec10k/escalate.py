@@ -449,18 +449,20 @@ AGENT_SYSTEM = (
 
 
 def _agent_loop(text, items, warnings, budget, call):
-    """A three-turn action loop; verifier output is the next turn's observation."""
+    """A three-turn loop with fixed context and a changing last observation."""
     import json
     from src.sec10k.llm import EscalationUnavailable
     tr = trigger(warnings, items, agentic=True)
     targets = tr["target_items"]
     record = {"trigger": tr, "tiers": [], "resolved": [], "alternative": [],
               "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0}}
-    observation = {"items": [{"item": i["item"], "status": i["status"],
-                              "start": i.get("start"), "end": i.get("end")}
-                             for i in items],
-                   "warnings": [{"code": w.get("code"), "item": w.get("item")}
-                                for w in warnings]}
+    context = {"target_items": targets,
+               "outline": {"items": [{"item": i["item"], "status": i["status"],
+                                        "start": i.get("start"), "end": i.get("end")}
+                                       for i in items],
+                           "warnings": [{"code": w.get("code"), "item": w.get("item")}
+                                        for w in warnings]}}
+    observation = {"initial": True}
     prompt_range = (0, 0)
     for turn in range(1, AGENT_TURNS + 1):
         offset, end = prompt_range
@@ -470,7 +472,8 @@ def _agent_loop(text, items, warnings, budget, call):
                  "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0},
                  "actions": [], "observations": []}
         try:
-            got = call(AGENT_MODEL, AGENT_SYSTEM, json.dumps(observation), MAX_TOKENS, budget)
+            got = call(AGENT_MODEL, AGENT_SYSTEM,
+                       json.dumps({**context, "observation": observation}), MAX_TOKENS, budget)
         except EscalationUnavailable as e:
             entry.update(outcome="unavailable", error=str(e)); record["tiers"].append(entry); break
         entry["cost"] = {"llm_calls": 0 if got["cached"] else 1,

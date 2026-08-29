@@ -1,0 +1,16 @@
+{
+  "pr": 82,
+  "round": 1,
+  "result": "REQUEST_CHANGES",
+  "date": "2026-08-29",
+  "source": "fresh review finding supplied to the repair pass",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "route": "repair",
+      "claim": "prompts/033-d23-persistent-agent-context.md directly asserts the live turn-2 prompt contained only rejection even though the committed artifact omitted full prompts.",
+      "acceptance": "State this as an inference supported by the pre-D23 runtime path, input-token drop 727→87, and repeated item-1 action; say that full prompts were not retained."
+    }
+  ]
+}

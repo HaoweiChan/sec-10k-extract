@@ -2923,6 +2923,8 @@ ROUTING_UI = [
     # RANGE from the record's own `offset`, which is what makes it true.
     ("the strip says what each rung actually saw when its input was clipped",
      "t.truncated ? ` · saw chars ${Number(t.offset).toLocaleString()}"),
+    ("agent-loop compact outlines are not described as empty filing windows",
+     't.tier === "agent_loop" ? ` · compact outline${t.input_chars ?'),
     ("...and the item pane shows what the deterministic path had said",
      "it.evidence && it.evidence.deterministic"),
     ("...naming the tier that replaced it", "<b>${esc(it.method)}</b>"),

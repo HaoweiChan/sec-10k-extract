@@ -1,0 +1,16 @@
+D23 cold-review red-first — 2026-08-29
+
+All commands removed OPENROUTER_API_KEY and used cached/stubbed routes only.
+
+R1: after adding the routing-provenance pin but before changing index.html,
+ui-routing-provenance failed: "agent-loop compact outlines are not described as
+empty filing windows" (expected one expression, found 0). Its known-bad routing
+fixture then reported exactly 14 caught failures.
+
+R2: an uncommitted, temporary mutation removed target_items/outline only from
+turn 3. d22-agent-loop failed "turn 3 lost target_items or compact outline".
+The same mutation also failed the malformed path's continuation-context check.
+
+R3: an uncommitted, temporary mutation replaced the parse-error observation
+with {}. d22-agent-loop failed "malformed-response continuation lost exact parse
+rejection". Both temporary mutations were restored before the green run.

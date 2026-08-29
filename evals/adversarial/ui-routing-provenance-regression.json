@@ -12,8 +12,8 @@
     "file": "evals/fixtures/repo_hygiene/routing-strip-missing.html"
   },
   "expect": {
-    "min_failures": 13,
-    "max_failures": 13
+    "min_failures": 14,
+    "max_failures": 14
   },
   "triage": {
     "class": "no-mechanical-check",
