@@ -1,0 +1,12 @@
+{
+ "finish_reason": "stop",
+ "max_tokens": 4096,
+ "model": "deepseek/deepseek-v4-pro",
+ "text": "{\n  \"action\": \"propose_item_dispositions\",\n  \"proposals\": [\n    {\"item\": \"10\", \"status\": \"incorporated_by_reference\"},\n    {\"item\": \"11\", \"status\": \"incorporated_by_reference\"},\n    {\"item\": \"12\", \"status\": \"incorporated_by_reference\"},\n    {\"item\": \"13\", \"status\": \"incorporated_by_reference\"},\n    {\"item\": \"14\", \"status\": \"incorporated_by_reference\"},\n    {\"item\": \"16\", \"status\": \"omitted\"},\n    {\"item\": \"1B\", \"status\": \"omitted\"},\n    {\"item\": \"4\", \"status\": \"omitted\"},\n    {\"item\": \"6\", \"status\": \"omitted\"},\n    {\"item\": \"9\", \"status\": \"omitted\"},\n    {\"item\": \"9C\", \"status\": \"omitted\"}\n  ]\n}",
+ "usage": {
+  "input_tokens": 2128,
+  "output_tokens": 775,
+  "reasoning_tokens": 586
+ },
+ "usd": 0.002094
+}

@@ -1,0 +1,33 @@
+D31 cold review, 2026-08-30.
+
+F1: an inspected alternative was applied before a rejecting post-graph vision
+verdict, allowing `graph.complete` and the resolved UI state to survive.
+F2: vision accepted any SEC Archives image, including a different accession.
+F3: root-relative iframe images bypassed the token proxy, while external/base
+references could bypass asset caps.
+
+Case-scaffolding output before the checks existed (not behavioral proof):
+
+- `d31-vision-reject-gate`: `unknown d31 scenario 'vision_reject'`.
+- `d31-vision-accession`: `unknown d31 scenario 'vision_accession'`.
+- `d31-source-root-images`: `unknown d31 scenario 'source_root_images'`.
+
+All runs were offline with stubbed/cached responses only.
+
+Behavioral red-first mutations after the checks existed:
+
+- F1: temporarily omitted cleanup of the rejected item's
+  `evidence.alternative_regions`; `d31-vision-reject-gate` failed with
+  `vision rejection still permits a complete alternative resolution`. Restored
+  cleanup before the green run.
+- F3: temporarily passed a root-relative image candidate without the
+  `_sec_root/` marker; `d31-source-root-images` failed with
+  `root-relative source image accession boundary is wrong`. Restored the marker
+  before the green run.
+
+Localhost follow-up: the source viewer is not Vision. It needs up to 14 Intel
+assets, so its independently named cap is 32 × 512 KiB (16 MiB per cached
+filing); Vision remains capped at two images. The offline concurrency case
+temporarily ignored pending reservations and failed with `concurrent source
+viewer assets exceed the 32-asset reservation cap`; restored the lock-backed
+reservation before the green run. Failed or invalid fetches release the slot.

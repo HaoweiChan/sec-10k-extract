@@ -1,0 +1,12 @@
+{
+ "finish_reason": "stop",
+ "max_tokens": 2048,
+ "model": "deepseek/deepseek-v4-flash-0731",
+ "text": " {\"evidence\":[{\"item\":\"10\",\"document\":\"primary\",\"start\":515636,\"end\":515714},{\"item\":\"11\",\"document\":\"primary\",\"start\":515714,\"end\":515751},{\"item\":\"12\",\"document\":\"primary\",\"start\":515751,\"end\":515860},{\"item\":\"13\",\"document\":\"primary\",\"start\":515860,\"end\":515948},{\"item\":\"14\",\"document\":\"primary\",\"start\":515948,\"end\":516010},{\"item\":\"16\",\"document\":\"primary\",\"start\":516085,\"end\":516116},{\"item\":\"1B\",\"document\":\"primary\",\"start\":514573,\"end\":514614},{\"item\":\"4\",\"document\":\"primary\",\"start\":514722,\"end\":514769},{\"item\":\"6\",\"document\":\"primary\",\"start\":514897,\"end\":514917},{\"item\":\"9\",\"document\":\"primary\",\"start\":515287,\"end\":515386},{\"item\":\"9C\",\"document\":\"primary\",\"start\":515543,\"end\":515636}]}",
+ "usage": {
+  "input_tokens": 811,
+  "output_tokens": 1119,
+  "reasoning_tokens": 912
+ },
+ "usd": 0.000254
+}

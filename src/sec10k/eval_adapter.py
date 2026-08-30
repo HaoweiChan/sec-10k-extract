@@ -9,6 +9,7 @@ Case shape:
     "expect": {"checks": [{"type": ..., ...}, ...]}
 """
 from pathlib import Path
+import subprocess
 
 from src.sec10k.markdown import blocks_in, to_markdown as md_to_markdown
 from src.sec10k.tables import grid, to_markdown
@@ -1934,6 +1935,168 @@ def eval_check(result, chk, path=None):
                        for fact in _json.loads(calls[1]["user"]).get("evidence", []))
                 or sum(t["cost"]["llm_calls"] for t in routing["tiers"]) != 0):
             return "production planner/Flash role policy is not wired into the cached route"
+    elif t == "d31":
+        import copy
+        import json as _json
+        scenario = chk.get("scenario")
+        if scenario == "presentation":
+            page = (ROOT / "src/sec10k/web/static/index.html").read_text()
+            start, end = page.find("function coverageStrip("), page.find("// D11", page.find("function coverageStrip("))
+            if start < 0 or end < 0 or "coverageStrip(w, v.meta || {}, routeComplete(v.routing))" not in page:
+                return "resolved escalation still renders primary-span diagnostics as the main warning failure"
+            script = "const esc=x=>String(x);\n" + page[start:end] + "\n" + r'''
+const warnings=[{code:"unattributed_content",message:"42% lies outside every item"}];
+const completed=coverageStrip(warnings,{coverage:.58321},true);
+const incomplete=coverageStrip(warnings,{},false);
+const done=routeComplete({trigger:{fired:true,target_items:["7"]},graph:{complete:true},alternative:["7"]});
+const pending=routeComplete({trigger:{fired:true,target_items:["7"]},graph:{complete:false},alternative:["7"]});
+if(!done || pending || !completed.includes("primary-span coverage: <b>58.32%</b>")
+ || !completed.includes("residual targets resolved by verified evidence")
+ || completed.includes("unattributed content:") || !incomplete.includes("unattributed content:")) process.exit(1);
+'''
+            rendered = subprocess.run(["node", "-e", script], capture_output=True, text=True)
+            if rendered.returncode:
+                return "complete and incomplete presentation branches do not render their distinct confidence statements"
+        elif scenario == "agent_vision":
+            import src.sec10k.llm as _llm
+            from src.sec10k.escalate import route
+            from src.sec10k.extract import extract_items
+            source = extract_items("evals/fixtures/xom-2021/filing.htm")
+            text, items = source["normalized_text"], copy.deepcopy(source["items"])
+            target = next(i for i in items if i["item"] == "7")
+            at = text.find("Item 7", target["end"])
+            if at < 0:
+                return "fixture lacks D31 alternative evidence target"
+            actions = [{"action": "search", "query": "Item 7"},
+                       {"action": "read_window", "start": at, "end": at + 4000},
+                       {"action": "propose_alternative_regions", "item": "7", "regions": [{"start": at, "end": min(len(text), at + 4000), "reference": "Item 7"}]}]
+            def stub(model, system, user, max_tokens, budget, **kw):
+                return {"cached": True, "text": _json.dumps(actions.pop(0)),
+                        "usage": {"input_tokens": 0, "output_tokens": 0}, "usd": 0.0, "model": model}
+            real, _llm.call = _llm.call, stub
+            try:
+                rec, _ = route(text, items, [{"code": "internal_pointer_unreached", "item": "7", "message": "D31"}],
+                               images=[], source_url="https://www.sec.gov/Archives/edgar/data/1/a.htm", vision_cached="confirm")
+            finally:
+                _llm.call = real
+            if rec["vision"].get("reason") != "no alternative image evidence" or rec["vision"]["cost"]["llm_calls"]:
+                return f"terminal/alternative agent route spent or misreported vision: {rec['vision']}"
+            items, actions = copy.deepcopy(source["items"]), [{"action": "search", "query": "Item 7"},
+                {"action": "read_window", "start": at, "end": at + 4000},
+                {"action": "propose_alternative_regions", "item": "7", "regions": [{"start": at, "end": min(len(text), at + 4000), "reference": "Item 7"}]}]
+            def live_stub(model, system, user, max_tokens, budget, **kw):
+                if actions:
+                    text_out, cached, usage, dollars = _json.dumps(actions.pop(0)), True, {"input_tokens": 0, "output_tokens": 0}, 0.0
+                else:
+                    text_out, cached, usage, dollars = '{"verdict":"confirm"}', False, {"input_tokens": 3, "output_tokens": 4}, 0.001
+                return {"cached": cached, "text": text_out, "usage": usage, "usd": dollars, "model": model}
+            real, _llm.call = _llm.call, live_stub
+            try:
+                rec, _ = route(text, items, [{"code": "internal_pointer_unreached", "item": "7", "message": "D31"}],
+                               images=[{"src": "https://www.sec.gov/Archives/edgar/data/1/a.jpg", "offset": at}],
+                               source_url="https://www.sec.gov/Archives/edgar/data/1/a.htm")
+            finally:
+                _llm.call = real
+            if rec["vision"]["cost"] != {"llm_calls": 1, "tokens": 7, "usd": 0.001} or rec["cost"] != rec["vision"]["cost"]:
+                return f"agent vision cost was not included in aggregate trace: {rec['vision']}, {rec['cost']}"
+            items, actions = copy.deepcopy(source["items"]), [{"action": "search", "query": "Item 7"},
+                {"action": "read_window", "start": at, "end": at + 4000},
+                {"action": "propose_alternative_regions", "item": "7", "regions": [{"start": at, "end": min(len(text), at + 4000), "reference": "Item 7"}]}]
+            def reject_stub(model, system, user, max_tokens, budget, **kw):
+                if actions:
+                    text_out, cached, usage, dollars = _json.dumps(actions.pop(0)), True, {"input_tokens": 0, "output_tokens": 0}, 0.0
+                else:
+                    text_out, cached, usage, dollars = '{"verdict":"reject"}', False, {"input_tokens": 3, "output_tokens": 4}, 0.001
+                return {"cached": cached, "text": text_out, "usage": usage, "usd": dollars, "model": model}
+            real, _llm.call = _llm.call, reject_stub
+            try:
+                rec, _ = route(text, items, [{"code": "internal_pointer_unreached", "item": "7", "message": "D31"}],
+                               images=[{"src": "https://www.sec.gov/Archives/edgar/data/1/a.jpg", "offset": at}],
+                               source_url="https://www.sec.gov/Archives/edgar/data/1/a.htm")
+            finally:
+                _llm.call = real
+            if (rec["vision"].get("verdict") != "reject" or rec["vision"]["cost"] != {"llm_calls": 1, "tokens": 7, "usd": 0.001}
+                    or rec["cost"] != rec["vision"]["cost"]):
+                return f"rejected agent vision cost was not included in aggregate trace: {rec['vision']}, {rec['cost']}"
+        elif scenario == "source_assets":
+            from src.sec10k.web.source_asset import asset_url, release_asset, reserve_asset
+            from threading import Barrier, Lock, Thread
+            base = "https://www.sec.gov/Archives/edgar/data/1/a.htm"
+            if asset_url(base, "photo.jpg") != "https://www.sec.gov/Archives/edgar/data/1/photo.jpg":
+                return "same-accession image URL was not retained"
+            if asset_url(base, "photo.jpg", "https://evil.example/photo.jpg") is not None:
+                return "redirected off-origin source asset was accepted"
+            if asset_url(base, "../secret.jpg") is not None:
+                return "source asset traversal was accepted"
+            cached, pending, lock, outcomes = {}, set(), Lock(), []
+            barrier = Barrier(34)
+            def reserve(i):
+                barrier.wait()
+                outcomes.append(reserve_asset(cached, pending, "t", ("t", f"{i}.jpg"), 32, lock))
+            threads = [Thread(target=reserve, args=(i,)) for i in range(34)]
+            for thread in threads: thread.start()
+            for thread in threads: thread.join()
+            if outcomes.count("reserved") != 32 or outcomes.count(None) != 2 or len(pending) != 32:
+                return "concurrent source viewer assets exceed the 32-asset reservation cap"
+            for key in tuple(pending): release_asset(pending, key, lock)
+            if reserve_asset(cached, pending, "t", ("t", "retry.jpg"), 32, lock) != "reserved":
+                return "failed source asset reservation did not release its slot"
+            api = (ROOT / "src/sec10k/web/app.py").read_text()
+            page = (ROOT / "src/sec10k/web/static/index.html").read_text()
+            required = ("SOURCE_BASES", "SOURCE_VIEWER_ASSET_MAX = 32", "SOURCE_ASSET_PENDING", "SOURCE_ASSET_LOCK", "reserve_asset(", "release_asset(", "finally:", "api_source_asset",
+                        "asset_url(base, asset, final_url)", "response.geturl()", "source_asset_not_image",
+                        'src="/api/source/${encodeURIComponent(token)}/"')
+            if any(part not in api + page for part in required):
+                return "same-accession source asset path lacks its bounded SEC-only guard"
+        elif scenario == "vision_accession":
+            from src.sec10k.escalate import _vision_urls
+            base = "https://www.sec.gov/Archives/edgar/data/1/a.htm"
+            alternatives = {"7": [{"start": 5, "end": 10}]}
+            foreign, _, why = _vision_urls([{"src": "https://www.sec.gov/Archives/edgar/data/2/x.jpg", "offset": 6}], alternatives, base)
+            local, _, _ = _vision_urls([{"src": "https://www.sec.gov/Archives/edgar/data/1/x.jpg", "offset": 6}], alternatives, base)
+            if foreign or not local or why != "no eligible SEC Archives image annotations":
+                return "vision image accession boundary is not enforced"
+        elif scenario == "source_root_images":
+            from src.sec10k.web.source_asset import asset_url
+            base = "https://www.sec.gov/Archives/edgar/data/1/a.htm"
+            root = "_sec_root/Archives/edgar/data/1/x.jpg"
+            if (asset_url(base, root) != "https://www.sec.gov/Archives/edgar/data/1/x.jpg"
+                    or asset_url(base, "_sec_root/Archives/edgar/data/2/x.jpg") is not None):
+                return "root-relative source image accession boundary is wrong"
+            page, api = ((ROOT / "src/sec10k/web/static/index.html").read_text(),
+                         (ROOT / "src/sec10k/web/app.py").read_text())
+            if ("_sec_root${raw}" not in page or "raw.startsWith(\"https://www.sec.gov/Archives/\")" not in page
+                    or "new URL(raw).pathname" not in page or "image.removeAttribute(\"src\")" not in page
+                    or "bindSourceScroll(document.getElementById(\"src-frame\"), token)" not in page
+                    or "img-src 'self'" not in api):
+                return "iframe does not proxy root-relative images or block direct origins"
+        elif scenario == "vision_reject":
+            import src.sec10k.llm as _llm
+            from src.sec10k.escalate import route
+            from src.sec10k.extract import extract_items
+            source = extract_items("evals/fixtures/xom-2021/filing.htm")
+            text, items = source["normalized_text"], copy.deepcopy(source["items"])
+            target = next(i for i in items if i["item"] == "7")
+            at = text.find("Item 7", target["end"])
+            actions = [{"action": "search", "query": "Item 7"}, {"action": "read_window", "start": at, "end": at + 4000},
+                       {"action": "propose_alternative_regions", "item": "7", "regions": [{"start": at, "end": min(len(text), at + 4000), "reference": "Item 7"}]}]
+            def stub(model, system, user, max_tokens, budget, **kw):
+                return {"cached": True, "text": _json.dumps(actions.pop(0)), "usage": {"input_tokens": 0, "output_tokens": 0}, "usd": 0.0, "model": model}
+            real, _llm.call = _llm.call, stub
+            try:
+                rec, _ = route(text, items, [{"code": "internal_pointer_unreached", "item": "7", "message": "D31"}],
+                               images=[{"src": "https://www.sec.gov/Archives/edgar/data/1/a.jpg", "offset": at}],
+                               source_url="https://www.sec.gov/Archives/edgar/data/1/a.htm", vision_cached="reject")
+            finally:
+                _llm.call = real
+            rejected_item = next(i for i in items if i["item"] == "7")
+            if (rec["graph"]["complete"] or rec["alternative"] or rec["vision"]["cost"]["llm_calls"]
+                    or rejected_item.get("evidence", {}).get("alternative_regions")
+                    or any(t.get("outcome") == "resolved" and "7" in t.get("alternative", []) for t in rec["tiers"])
+                    or not any("vision rejected" in x for t in rec["tiers"] for x in t.get("rejections", []))):
+                return "vision rejection still permits a complete alternative resolution"
+        else:
+            return f"unknown d31 scenario {scenario!r}"
     else:
         return f"unknown check type {t!r}"
     return None

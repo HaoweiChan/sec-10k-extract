@@ -345,15 +345,37 @@ call plus three Pro planning calls, stops when spent cost reaches $0.10, records
 tokens/cost/latency, and must never be part of `fast`. Final gates:
 `python3 -m evals.run --suite invariant` = 100% and
 `python3 -m evals.run --suite fast` >= baseline, with no baseline move.
-Status: Cached route proof uses one Flash evidence call plus three
-policy-parameterized Pro plans at $0. Flash is presently bounded to
-cross-reference-residual routes. One durable Intel FY2025 Pro cache entry proves
-1,756 input / 1,610 output (1,529 reasoning) tokens and $0.002833 after the
-system-prompt budget correction. Flash provenance/cache was lost before audit,
-so the live aggregate, replay, and resolution are **UNRUN** rather than
-claimed; see `tasks/reviews/d30-live-intc-2025.json`.
-Final gate: invariant 116/116 and fast 187/187, both 100%; table and
-structure fidelity 1.0, no baseline move, and fast made no paid calls.
+Status: Intel FY2025 live proof used one Flash evidence call and one Pro plan,
+resolved all 11 residual targets, and recorded 2 calls / 4,833 tokens /
+$0.002348 / 52.8 s. Both sanitized cache entries are committed; the final
+localhost replay used 0 live calls and $0. Flash remains bounded to
+cross-reference-residual routes. Evidence:
+`tasks/reviews/d31-localhost-live-proof.json`. Final gate after D31:
+invariant 122/122 and fast 193/193, both 100%; table and structure fidelity
+1.0, no baseline move, and fast made no paid calls.
+
+### D31 — Present resolved escalation and repair authenticated source assets [status: pr]
+Priority: P1
+Origin: owner localhost presentation review, 2026-08-30
+Spec: When every risky target has a verified terminal disposition, keep raw
+validator warnings and provenance but present a concise resolved summary rather
+than treating primary-span diagnostics as unresolved failure. Preserve an honest
+primary-span coverage diagnostic and keep full validator detail collapsed. Carry
+the existing authenticated SEC-only vision context through the agent loop, run
+vision only for verified alternative image evidence, and otherwise say no
+alternative image evidence. Serve only bounded same-accession SEC image assets
+for the original-filing iframe, rejecting traversal, off-origin and non-image
+requests without exposing an LLM access key. The source viewer allows at most
+32 cached 512 KiB assets (16 MiB per filing), independently of Vision's
+two-image cap. Reuse D28's existing pinned
+LangGraph install/import gate rather than duplicate it.
+Acceptance: red-first adversarial cases for presentation/vision context/source
+asset plus the D28 dependency gate; targeted invariant + fast gate; localhost proof
+with an authenticated source and resolved escalation; cold review; no paid
+model call. Localhost proof: `tasks/reviews/d31-localhost-live-proof.json`.
+Validation: localhost **PASS**; final invariant **122/122** and fast **193/193**
+after the source-cap edit, both 100%, $0, with no baseline move. Table and
+structure fidelity remain 1.0.
 
 ## Debt
 

@@ -809,10 +809,16 @@ function mdToHtml(md){
   return out.join("");
 }
 
-function bindSourceScroll(frame){
+function bindSourceScroll(frame, token){
   frame.addEventListener("load", () => {
     let doc; try{ doc = frame.contentDocument; }catch(e){ return; }
     if(!doc) return;
+    for(const image of doc.images){
+      const raw = image.getAttribute("src") || "";
+      if(raw.startsWith("/Archives/")) image.src = `/api/source/${encodeURIComponent(token)}/_sec_root${raw}`;
+      else if(raw.startsWith("https://www.sec.gov/Archives/")) image.src = `/api/source/${encodeURIComponent(token)}/_sec_root${new URL(raw).pathname}`;
+      else if(/^[a-z][a-z0-9+.-]*:/i.test(raw)) image.removeAttribute("src");
+    }
     buildItemAnchors(doc);
     if(SEL === -1){
       (doc.scrollingElement || doc.documentElement).scrollTop = 0;
@@ -841,8 +847,8 @@ async function loadSource(token){
       return;
     }
     box.innerHTML = `<iframe id="src-frame" sandbox="allow-same-origin" ` +
-      `title="original filing source" src="/api/source/${encodeURIComponent(token)}"></iframe>`;
-    bindSourceScroll(document.getElementById("src-frame"));
+      `title="original filing source" src="/api/source/${encodeURIComponent(token)}/"></iframe>`;
+    bindSourceScroll(document.getElementById("src-frame"), token);
   }catch(e){
     box.innerHTML = `<div class="none" style="padding:12px">Original source is no longer cached — re-run the extraction.</div>`;
   }
@@ -1063,14 +1069,21 @@ function itemQual(it){
 // one here is the envelope change D8 owns. If the message wording ever
 // drifts the regex misses and the whole message is shown verbatim instead,
 // so the figure degrades to less emphasis, never to silence.
-function coverageStrip(warns){
+function coverageStrip(warns, meta, resolved){
   const u = warns.find(x => x.code === "unattributed_content");
   if(!u) return "";
+  if(resolved) return ` <span class="src" id="coverage">primary-span coverage: <b>${esc(String(meta && meta.coverage != null ? Math.round(meta.coverage * 10000) / 100 : "not measured"))}%</b> — residual targets resolved by verified evidence; validator diagnostics available in details</span>`;
   const m = /^(\d+)%/.exec(u.message || "");
-  return ` <span class="src" id="coverage">unattributed content: ${
+  return ` <span class="src" id="coverage">primary-span diagnostic — unattributed content: ${
     m ? `<b>${esc(m[1])}%</b> of the document lies outside every item`
       : esc(u.message)
   } — interior gaps are not counted, so true non-coverage can be up to 9.7 points higher (ADR-019 §d)</span>`;
+}
+
+function routeComplete(r){
+  if(!(r && r.trigger && r.trigger.fired && r.graph && r.graph.complete)) return false;
+  const accepted = [...(r.resolved || []), ...(r.alternative || []), ...(r.external || []), ...(r.dispositions || [])];
+  return (r.trigger.target_items || []).every(item => accepted.includes(item));
 }
 
 // D11 (ADR-036 §i). Routing is USER-VISIBLE, NEVER SILENT — the doc-level half.
@@ -1154,12 +1167,16 @@ function render(v){
   $("#banner").innerHTML = `doc_status: ${esc(st)}` +
     (n ? ` <span class="src">— ${esc(n)}</span>` : "") +
     (src ? ` <span class="src">${esc(src)}</span>` : "") +
-    coverageStrip(w) +
+    coverageStrip(w, v.meta || {}, routeComplete(v.routing)) +
     highAssuranceStrip(v.escalation, v.routing) +
     routingStrip(v.routing);
 
   $("#warnings").innerHTML = w.length
-    ? w.map(x => `<div class="warn"><code>${esc(x.code)}</code>${
+    ? routeComplete(v.routing)
+      ? `<div class="none">Resolved escalation: every risky target has verified evidence. Primary-span diagnostics are available in details.</div><details><summary>Validator diagnostics (${w.length})</summary>${w.map(x => `<div class="warn"><code>${esc(x.code)}</code>${
+        x.item ? ` <span class="hint">item ${esc(x.item)}</span>` : ""
+      }<div class="msg">${esc(x.message)}</div></div>`).join("")}</details>`
+      : w.map(x => `<div class="warn"><code>${esc(x.code)}</code>${
         x.item ? ` <span class="hint">item ${esc(x.item)}</span>` : ""
       }<div class="msg">${esc(x.message)}</div></div>`).join("")
     : `<div class="none">No warnings — every validator stayed silent.</div>`;

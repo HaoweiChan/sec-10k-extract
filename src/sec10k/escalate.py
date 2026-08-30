@@ -753,7 +753,8 @@ def _finish_graph(record):
     graph["complete"] = not graph["items"] or all(x["next_route"] == "complete" for x in graph["items"])
 
 
-def _agent_loop(text, items, warnings, budget, call, tr=None, documents=(), acquisition=None):
+def _agent_loop(text, items, warnings, budget, call, tr=None, documents=(), acquisition=None,
+                images=None, source_url=None, vision_cached=None):
     """One bounded action per real StateGraph plan/act/evaluate turn."""
     import json
     import time
@@ -1080,7 +1081,30 @@ def _agent_loop(text, items, warnings, budget, call, tr=None, documents=(), acqu
                               "done": False, "history": []}, config)
     for entry in record["tiers"]:
         for k in record["cost"]: record["cost"][k] = round(record["cost"][k] + entry["cost"][k], 6)
-    record["vision"] = vision_verify(None, {}, None, None, None, text)
+    alternatives = {item["item"]: (item.get("evidence") or {}).get("alternative_regions", [])
+                    for item in items if (item.get("evidence") or {}).get("alternative_regions")}
+    has_alternative_image = bool(images and any(any(region["start"] <= image.get("offset", -1) < region["end"]
+                                                     for region in regions)
+                                               for regions in alternatives.values() for image in images))
+    record["vision"] = (vision_verify(images, alternatives, vision_cached, source_url, budget, text)
+                        if has_alternative_image else {"model": VISION_MODEL, "cap": VISION_CAP, "images": [],
+                                              "items": [], "status": "skipped",
+                                              "reason": "no alternative image evidence",
+                                              "cost": {"llm_calls": 0, "tokens": 0, "usd": 0.0}})
+    if record["vision"].get("verdict") == "reject":
+        rejected = set(record["vision"].get("items", []))
+        record["alternative"] = [code for code in record["alternative"] if code not in rejected]
+        for item in items:
+            if item["item"] in rejected:
+                (item.get("evidence") or {}).pop("alternative_regions", None)
+        for tier in record["tiers"]:
+            if rejected & set(tier.get("alternative", [])):
+                tier["alternative"] = [code for code in tier["alternative"] if code not in rejected]
+                tier.setdefault("rejections", []).append("vision rejected inspected alternative evidence")
+                if tier.get("outcome") == "resolved" and not any(tier.get(key) for key in ("resolved", "alternative", "external", "dispositions")):
+                    tier.update(outcome="rejected", next_route="review_required")
+    for key in record["cost"]:
+        record["cost"][key] = round(record["cost"][key] + record["vision"]["cost"][key], 6)
     record["stages"] = _stages(tr, record, record["vision"]); _finish_graph(record)
     graph = record["graph"]
     graph.update({"engine": {"name": "langgraph", "version": "1.2.11", "checkpointer": "InMemorySaver",
@@ -1125,7 +1149,8 @@ def _vision_urls(images, alternatives, source_url):
     urls, inspected = [], set()
     for im in related:
         u = urlsplit(urljoin(source_url, im.get("src") or ""))
-        if (u.scheme == "https" and u.netloc == "www.sec.gov" and u.path.startswith("/Archives/")
+        directory = base.path.rsplit("/", 1)[0] + "/"
+        if (u.scheme == "https" and u.netloc == "www.sec.gov" and u.path.startswith(directory)
                 and u.path.lower().endswith(IMAGE_SUFFIXES)):
             urls.append(u.geturl())
             inspected.update(code for code, regions in alternatives.items()
@@ -1293,7 +1318,8 @@ def route(text, items, warnings, budget=None, images=None, vision_cached=None,
     elif budget is None:
         budget = Budget(max_calls=2, max_usd=1.00)
     if tr["route"] == "agent_loop":
-        return _agent_loop(text, items, warnings, budget, call, tr, package, acquisition)
+        return _agent_loop(text, items, warnings, budget, call, tr, package, acquisition,
+                           images, source_url, vision_cached)
     codes = tr["target_items"] or tr["items"] or [i["item"] for i in items
                             if i.get("start") is not None]
     extra, vision = [], None
