@@ -335,9 +335,9 @@ footer a{color:var(--accent)}
       <span class="hint">Best-effort: EDGAR can block datacenter IPs. Upload is the reliable path.</span>
     </div>
   </div>
-  <label class="opt"><input type="checkbox" id="exclude-bp"> exclude boilerplate
+  <label class="opt"><input type="checkbox" id="exclude-bp" checked> exclude boilerplate
     <span class="hint">Hide repeated page headers, page numbers, and EDGAR table chrome.</span></label>
-  <label class="opt"><input type="checkbox" id="render-md"> render as Markdown
+  <label class="opt"><input type="checkbox" id="render-md" checked> render as Markdown
     <span class="hint">Show headings, paragraphs, and tables instead of flat text.</span></label>
   <!-- ADR-043. The door of ADR-036 lock 4 shipped with no way for this page
        to open it and was deleted for that reason (ADR-041). This field is the
@@ -386,7 +386,9 @@ footer a{color:var(--accent)}
   <div id="source">
     <div class="src-hdr"><span>original filing</span>
       <span id="anchor-status"></span>
-      <label><input type="checkbox" id="sync-scroll" checked> sync scroll<span id="sync-state"></span></label>
+      <span class="hint">verified heading anchor</span>
+      <button type="button" id="vision-table" hidden>Verify visible table</button>
+      <span id="vision-status" class="hint"></span>
     </div>
     <div id="source-body"><div class="none" style="padding:12px">Extract a filing to see its original source.</div></div>
   </div>
@@ -401,6 +403,7 @@ footer a{color:var(--accent)}
   <div class="cap" id="cap-content"><div class="none">Loading…</div></div>
 </details>
 <details id="trace-box"><summary>Pipeline trace (JSON)</summary><pre id="trace"></pre></details>
+<details id="agentic-flow-box"><summary>Agentic routing evidence</summary><pre id="agentic-flow"></pre></details>
 <details id="meta-box"><summary>meta &amp; timings</summary>
   <div class="meta-chrome"><span class="sha" id="sha">…</span>
     <span class="sha"><a href="/edgar-check" target="_blank">/edgar-check</a></span></div>
@@ -415,7 +418,7 @@ footer a{color:var(--accent)}
 
 <script>
 const $ = s => document.querySelector(s);
-let VIEW = null, SEL = null;
+let VIEW = null, SEL = null, VISION_AUTO_TOKEN = "";
 
 const esc = s => String(s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
 
@@ -744,39 +747,19 @@ function scrollSourceToItem(i){
   SYNC_GUARD = false;
 }
 
-// Scroll sync between the extracted-text pane and the original-filing
-// iframe: proportional within the SELECTED ITEM's own [start, end) region
-// (V2 — mapping across the whole document showed unrelated content), behind
-// a re-entrancy guard so the two listeners don't fight each other. Falls
-// back to whole-document proportional only when the item has no anchor.
+// A source location is a verified heading anchor, not an estimated pixel map.
+// Scrolling either pane independently is honest; proportional mapping between
+// rendered Markdown and source layout would look precise without being so.
 let SYNC_GUARD = false;
-
-function syncOn(){ const c = $("#sync-scroll"); return !!(c && c.checked && !c.disabled); }
-// D5 (debt row V5). Below the width where .split stacks #source under #pane
-// the two panes are never on screen together, so there is nothing to sync:
-// the control is disabled AND says why, rather than staying a live-looking
-// checkbox over a layout that cannot honour it. 1000px is the same number the
-// stylesheet stacks at — ui-split-breakpoint pins the two to each other.
-const STACKED = matchMedia("(max-width:1000px)");
-function syncStacked(){
-  const c = $("#sync-scroll"); if(!c) return;
-  c.disabled = STACKED.matches;
-  $("#sync-state").textContent = STACKED.matches ? " — inactive: panes stacked" : "";
-}
-STACKED.addEventListener("change", syncStacked);
-syncStacked();
 // S8. Read at REQUEST time, not render time: the pane labels itself from the
 // response's own `boilerplate_excluded`, so toggling the box after an
 // extraction cannot make the label lie about the text on screen.
 function excludeBp(){ const c = $("#exclude-bp"); return !!(c && c.checked); }
 // S9. Same rule: the pane renders from the response's own `markdown` flag.
 function renderMd(){ const c = $("#render-md"); return !!(c && c.checked); }
-// D11 / owner 2026-08-27: there is no escalate control any more. The SERVER
-// decides, and since ADR-041 it decides on its own off-switch alone — the
-// `X-Escalation-Token` door of PR #61 R10 lasted a day and was removed because
-// a tier the audience cannot open is a tier the audience never sees. So
-// nothing here decides whether to; `escalationStrip` and `routingStrip` below
-// report what the response says actually happened, which is the page's job now.
+// The server alone decides whether a verified escalation key may spend. The
+// page presents that key only through the shared request helper and reports
+// the returned high-assurance/routing record without re-deriving it.
 
 // S9: the smallest honest renderer for exactly the Markdown subset
 // src/sec10k/markdown.py emits — ATX headings, paragraphs (a whole-paragraph
@@ -832,38 +815,11 @@ function bindSourceScroll(frame){
       (doc.scrollingElement || doc.documentElement).scrollTop = 0;
       anchorStatus("showing cover");
     }else if(SEL != null) scrollSourceToItem(SEL);
-    const scroller = doc.scrollingElement || doc.documentElement;
-    scroller.addEventListener("scroll", () => {
-      if(SYNC_GUARD || !syncOn()) return;
-      const pre = document.querySelector("#pane .text");
-      if(!pre) return;
-      const region = selectedRegion(doc);
-      const frac = region
-        ? (scroller.scrollTop - region.start) / Math.max(1, region.end - region.start)
-        : scroller.scrollTop / Math.max(1, scroller.scrollHeight - scroller.clientHeight);
-      SYNC_GUARD = true;
-      pre.scrollTop = Math.min(1, Math.max(0, frac)) * Math.max(1, pre.scrollHeight - pre.clientHeight);
-      SYNC_GUARD = false;
-    });
   });
 }
 
 function bindPaneScroll(pre){
-  pre.addEventListener("scroll", () => {
-    if(SYNC_GUARD || !syncOn()) return;
-    const frame = document.getElementById("src-frame");
-    if(!frame) return;
-    let doc; try{ doc = frame.contentDocument; }catch(e){ return; }
-    if(!doc) return;
-    const scroller = doc.scrollingElement || doc.documentElement;
-    const frac = pre.scrollTop / Math.max(1, pre.scrollHeight - pre.clientHeight);
-    const region = selectedRegion(doc);
-    SYNC_GUARD = true;
-    scroller.scrollTop = region
-      ? region.start + frac * Math.max(1, region.end - region.start)
-      : frac * Math.max(1, scroller.scrollHeight - scroller.clientHeight);
-    SYNC_GUARD = false;
-  });
+  // Kept as the single pane hookup: navigation uses the source heading anchor.
 }
 
 // A token miss (cache evicted — the LRU holds at most 3 documents) renders
@@ -912,6 +868,7 @@ function verifiedKey(){ const k = escalationKey(); return k === VERIFIED_KEY ? k
 function keyStatus(text, ok=false){
   const s = $("#key-status");
   s.textContent = text; s.classList.toggle("verified", ok);
+  const b = $("#vision-table"); if(b) b.hidden = !ok;
 }
 async function verifyKey(){
   const generation = ++VERIFY_GENERATION;
@@ -943,6 +900,111 @@ async function call(url, opts){
     render({doc_status:"failed", items:[], counts:{}, warnings:[
       {code:"network", item:null, message:String(e)}], meta:{}, trace:[]});
   }finally{ busy(false); }
+}
+
+async function sha256(text){
+  const bytes = new TextEncoder().encode(text);
+  const hash = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(hash)].map(x => x.toString(16).padStart(2, "0")).join("");
+}
+
+function boundedSourceTable(t){
+  const text = (t.innerText || "").trim();
+  return t.rows.length >= 2 && t.rows.length <= 32 && text.length >= 64 && text.length <= 12000 &&
+    [...t.rows].every(row => row.cells.length <= 16);
+}
+
+function visibleSourceTable(){
+  const frame = $("#src-frame"); let doc;
+  try{ doc = frame && frame.contentDocument; }catch(e){ return null; }
+  if(!doc) return null;
+  const mid = (frame.clientHeight || 0) / 2;
+  return [...doc.querySelectorAll("table")].map(t => ({t, r:t.getBoundingClientRect()}))
+    .filter(x => boundedSourceTable(x.t) && x.r.width > 20 && x.r.height > 10)
+    .sort((a,b) => Math.abs(a.r.top + a.r.height / 2 - mid) - Math.abs(b.r.top + b.r.height / 2 - mid))[0]?.t || null;
+}
+
+function selectedSourceTable(){
+  const frame = $("#src-frame"); let doc;
+  try{ doc = frame && frame.contentDocument; }catch(e){ return null; }
+  if(!doc || SEL == null || SEL < 0) return null;
+  const region = itemRegion(doc, SEL), scroller = doc.scrollingElement || doc.documentElement;
+  if(!region) return null;
+  return [...doc.querySelectorAll("table")].map(t => ({t, r:t.getBoundingClientRect(), text:(t.innerText || "").trim()}))
+    .filter(x => boundedSourceTable(x.t) &&
+      x.r.bottom + scroller.scrollTop > region.start && x.r.top + scroller.scrollTop < region.end)
+    .sort((a,b) => b.r.width * b.r.height - a.r.width * a.r.height)[0]?.t || null;
+}
+
+function scheduleTableVision(){
+  if(!verifiedKey() || !VIEW?.source?.token || VISION_AUTO_TOKEN === VIEW.source.token) return;
+  setTimeout(() => {
+    if(selectedSourceTable()){
+      VISION_AUTO_TOKEN = VIEW.source.token;
+      verifyVisibleTable(true);
+    }
+  }, 0);
+}
+
+function tableRaster(table){
+  const rect = table.getBoundingClientRect(), scale = Math.min(1, 900 / Math.max(1, rect.width), 800 / Math.max(1, rect.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.min(900, Math.ceil(rect.width * scale)));
+  canvas.height = Math.max(1, Math.ceil(rect.height * scale));
+  const ctx = canvas.getContext("2d"), font = Math.max(6, 11 * scale), line = Math.max(7, 13 * scale);
+  ctx.fillStyle = "white"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.font = `${font}px sans-serif`; ctx.fillStyle = "#111"; ctx.strokeStyle = "#777";
+  [...table.rows].forEach(row => [...row.cells].forEach(cell => {
+    const r = cell.getBoundingClientRect();
+    const x = (r.left - rect.left) * scale, y = (r.top - rect.top) * scale;
+    const w = r.width * scale, h = r.height * scale;
+    if(x + w < 0 || y + h < 0 || x > canvas.width || y > canvas.height) return;
+    ctx.strokeRect(x, y, w, h);
+    const words = (cell.innerText || "").trim().replace(/\s+/g, " ").slice(0, 220).split(" ");
+    let wordsLine = "", at = y + line;
+    for(const word of words){
+      const next = wordsLine ? wordsLine + " " + word : word;
+      if(ctx.measureText(next).width > Math.max(8, w - 6) && wordsLine){ ctx.fillText(wordsLine, x + 3, at); at += line; wordsLine = word; }
+      else wordsLine = next;
+      if(at > y + h - 2) break;
+    }
+    if(wordsLine && at <= y + h - 2) ctx.fillText(wordsLine, x + 3, at);
+  }));
+  return canvas.toDataURL("image/png");
+}
+
+function showVisionVerdict(result){
+  const top = $("#escalation"); if(!top) return;
+  const verdict = result.verdict == null ? "inconclusive" : result.verdict;
+  if(result.status === "verified" && result.verdict === "confirm"){
+    top.innerHTML = `high assurance: <b>1 sampled table raster confirmed</b> — ${esc(result.model)} checked ${result.images || 0} bounded source table`;
+  }else{
+    top.innerHTML = `high assurance: <b>partial</b> — table raster ${esc(verdict)}; deterministic Markdown retained`;
+  }
+}
+
+async function verifyVisibleTable(auto=false){
+  const key = verifiedKey(), status = $("#vision-status");
+  if(!key){ status.textContent = "verify the escalation key first"; return; }
+  const table = auto ? selectedSourceTable() : visibleSourceTable();
+  if(!table || !VIEW?.source?.token){ status.textContent = "no visible cached source table"; return; }
+  const tableText = (table.innerText || "").trim();
+  if(tableText.length < 16){ status.textContent = "visible table has too little text"; return; }
+  try{
+    status.textContent = "rasterizing visible table…";
+    const result = await (await fetch("/api/extract/vision-table", {method:"POST",
+      headers:{"Content-Type":"application/json", "X-Escalation-Token":key},
+      body:JSON.stringify({token:VIEW.source.token, image:tableRaster(table), table_text:tableText,
+        table_sha256:await sha256(tableText)})})).json();
+    const verdict = result.verdict == null ? "inconclusive" : result.verdict;
+    status.textContent = `vision: ${result.status} · ${result.model || "no model"} · ${result.images || 0} raster · ${verdict}`;
+    if(result.verdict !== "confirm") status.textContent += " — fidelity partial; deterministic Markdown retained";
+    showVisionVerdict(result);
+    $("#agentic-flow").textContent += "\n\n" + JSON.stringify({vision_table:result}, null, 1);
+  }catch(e){
+    status.textContent = "vision table verification failed";
+    showVisionVerdict({status:"failed", verdict:null});
+  }
 }
 
 // D7 (postmortem §2, "The UI amplified both"). doc_status and the warnings
@@ -1018,9 +1080,8 @@ function coverageStrip(warns){
 // so it is null and not absent — means escalation was never asked for at all;
 // a routing record with `fired:false` means it WAS asked for and the
 // deterministic answer needed no help, which is the $0 claim, on screen.
-// PR #61 R10 / TD-158: `routing: null` is now the COMMON case, because the
-// paid tier is behind a token, so it can no longer be left to say nothing —
-// `escalationStrip` below prints the server's own reason next to it.
+// A missing routing record is distinguished from a quiet trigger; the
+// high-assurance strip prints the server's gate reason beside it.
 function routingStrip(r){
   if(!r) return "";
   const c = r.cost || {};
@@ -1058,25 +1119,21 @@ function routingStrip(r){
 }
 
 function flowStrip(r){
-  if(!r || !Array.isArray(r.stages)) return "";
-  const stages = r.stages.map(s => `${esc(s.stage)}: <b>${esc(s.status)}</b> — targets ${esc((s.targets || []).join(", ") || "none")}; ${esc(s.reason || "")}${s.skipped ? `; skipped: ${esc(s.skipped)}` : ""}`).join("; ");
-  const trace = (r.tiers || []).map(t => `turn ${esc(t.turn || "?")} action ${esc(JSON.stringify(t.actions || []))}; observation ${esc(JSON.stringify(t.observations || []))}; rejections ${esc(JSON.stringify(t.rejections || []))}; cost $${Number((t.cost || {}).usd || 0).toFixed(4)}`).join("; ");
-  const v = r.stages.find(s => s.stage === "verify")?.vision;
-  const vision = v ? `; vision: <b>${esc(v.status)}</b> ${esc(v.source || "skipped")} · ${esc(v.model)} · images ${Number((v.images || []).length)} · items ${esc((v.items || []).join(", "))} · $${Number((v.cost || {}).usd || 0).toFixed(4)}` : "";
-  return ` <span class="src" id="agentic-flow">agentic flow: ${stages}${trace ? `; ${trace}` : ""}${vision}</span>`;
+  if(!r) return JSON.stringify({});
+  return JSON.stringify({stages: r.stages || [], turns: (r.tiers || []).map(t => ({
+    turn: t.turn, actions: t.actions || [], observations: t.observations || [],
+    rejections: t.rejections || [], cost: t.cost || {}
+  }))}, null, 1);
 }
 
-// ADR-041. The paid tier is open to every request now (the token door of
-// TD-158 lasted one day), so this strip is the DISARMED case only — and "did
-// not run" must still be SAID, not left as an absent strip. `v.escalation.reason` is the server's own sentence,
-// printed verbatim: the page does not re-derive why, because a second
-// explanation here is a second thing that can disagree with the envelope.
-// The `ran: true` case prints nothing of its own — `routingStrip` above then
-// has a record to show, and two strips saying the same thing is noise.
-function escalationStrip(e){
-  if(!e || e.ran) return "";
-  return ` <span class="src" id="escalation">model tier: <b>did not run</b>
-    — ${esc(e.reason || "")}</span>`;
+function highAssuranceStrip(e, r){
+  const t = r && r.trigger;
+  if(!e || !e.ran) return ` <span class="src" id="escalation">high assurance: <b>deterministic only</b> — ${esc((e || {}).reason || "authentication was not verified")}</span>`;
+  if(!t || !t.fired) return ` <span class="src" id="escalation">high assurance: <b>authenticated; trigger quiet</b> — ${esc((t || {}).reason || e.reason || "no routing record")}</span>`;
+  const accepted = [...(r.resolved || []), ...(r.alternative || []), ...(r.external || []), ...(r.dispositions || [])];
+  const unresolved = (t.target_items || []).filter(x => !accepted.includes(x));
+  const result = unresolved.length ? `accepted ${accepted.join(", ") || "no targets"}; review required for ${unresolved.join(", ")}` : `accepted ${accepted.join(", ") || "no targets"}`;
+  return ` <span class="src" id="escalation">high assurance: <b>authenticated route</b> — ${esc(result)}</span>`;
 }
 
 function render(v){
@@ -1090,9 +1147,8 @@ function render(v){
     (n ? ` <span class="src">— ${esc(n)}</span>` : "") +
     (src ? ` <span class="src">${esc(src)}</span>` : "") +
     coverageStrip(w) +
-    escalationStrip(v.escalation) +
-    routingStrip(v.routing) +
-    flowStrip(v.routing);
+    highAssuranceStrip(v.escalation, v.routing) +
+    routingStrip(v.routing);
 
   $("#warnings").innerHTML = w.length
     ? w.map(x => `<div class="warn"><code>${esc(x.code)}</code>${
@@ -1145,7 +1201,9 @@ function render(v){
   $("#pane").innerHTML = `<div class="src-hdr"><span class="lbl">extracted text</span></div>
     <div class="none" style="padding:12px">Select an item to read its extracted text.</div>`;
   $("#trace").textContent = JSON.stringify({pipeline: v.trace || [], routing: v.routing}, null, 1);
-  $("#trace-box").open = !!(v.routing && (v.routing.trigger?.fired || v.routing.trigger?.route === "suppressed"));
+  $("#trace-box").open = false;
+  $("#agentic-flow").textContent = flowStrip(v.routing);
+  $("#agentic-flow-box").open = false;
   $("#meta").textContent = JSON.stringify(
     {meta: v.meta, timings: v.timings, cost: v.cost, normalized_chars: v.norm_chars}, null, 1);
   loadSource(v.source && v.source.token);
@@ -1254,6 +1312,7 @@ function show(i){
   const pre = $("#pane pre.text") || $("#pane .text.md");
   if(pre) bindPaneScroll(pre);
   scrollSourceToItem(i);
+  scheduleTableVision();
 }
 
 $("#sidebar").addEventListener("click", e => {
@@ -1274,6 +1333,7 @@ $("#go-up").onclick = () => {
        (excludeBp() ? "&exclude_boilerplate=1" : "") + (renderMd() ? "&markdown=1" : ""),
        {method:"POST", body: f});
 };
+$("#vision-table").onclick = verifyVisibleTable;
 boot();
 </script>
 </body>

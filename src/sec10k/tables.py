@@ -17,6 +17,7 @@ import re
 from src.sec10k.boilerplate import strip_chrome
 
 _WS = re.compile(r"\s+")
+_YEAR = re.compile(r"(?:19|20)\d{2}$")
 
 
 def cell_text(text, cell, omit=()):
@@ -44,19 +45,54 @@ def grid(text, table, omit=()):
 
 
 def to_markdown(text, table, omit=()):
-    """GitHub-flavoured Markdown for one table record. Header = the first
-    visible row (Markdown has exactly one header row, whatever `header`
-    says). Rows and columns that are empty in EVERY cell — iXBRL filers'
+    """GitHub-flavoured Markdown for one table record. Markdown has one
+    header row, so consecutive source header rows are combined per logical
+    column (a colspan label carries across its padded cells). Rows and columns
+    that are empty in EVERY cell — iXBRL filers'
     column-width and spacer rows, and (with `omit`) a row whose only text
     was a chrome run — are dropped from the VIEW only; the record keeps
     them. `|` in a cell is escaped."""
     g = [r for r in grid(text, table, omit) if any(r)]
     if not g:
         return ""
+    header_n = table.get("header", 0)
+    inferred_header = not header_n
+    if inferred_header:
+        # Some inline-XBRL tables use td for visual headers. Their leading
+        # rows are still a header when they end before the first multi-value,
+        # non-year data row; this is a rendering inference, never an envelope
+        # rewrite.
+        for n, row in enumerate(g):
+            numeric = [v for v in row if re.search(r"\d", v or "")]
+            if len(numeric) >= 2 and any(not _YEAR.fullmatch(v.strip()) for v in numeric):
+                header_n = n
+                break
+    header_n = max(1, min(header_n, len(g)))
+    header_rows = []
+    for row in g[:header_n if inferred_header else 1]:
+        carried, last = [], ""
+        for value in row:
+            if value:
+                last = value
+            elif inferred_header and header_n > 1 and last:
+                value = last
+            carried.append(value)
+        header_rows.append(carried)
     keep = [j for j in range(len(g[0])) if any(r[j] for r in g)]
     g = [[r[j].replace("|", "\\|") for j in keep] for r in g]
+    header = []
+    for col in keep:
+        parts = []
+        for row in header_rows:
+            value = row[col]
+            if inferred_header and header_n > 1 and not value and col:
+                value = row[col - 1]
+            if value and value not in parts:
+                parts.append(value.replace("|", "\\|"))
+        header.append(" / ".join(parts))
     line = lambda r: "| " + " | ".join(r) + " |"  # noqa: E731
-    return "\n".join([line(g[0]), "|" + "---|" * len(keep)] + [line(r) for r in g[1:]])
+    body_start = header_n if inferred_header else 1
+    return "\n".join([line(header), "|" + "---|" * len(keep)] + [line(r) for r in g[body_start:]])
 
 
 def tables_in(tables, start, end):
@@ -87,6 +123,13 @@ def _demo():
     md = to_markdown(text, t)
     assert md == ("| Years |  | % |\n|---|---|---|\n| Net sales | $ | 1,234 |\n"
                   "| a\\|b |  | 5 |"), md              # the all-empty 4th row is not shown
+    multi = ("<table><tr><td colspan=36>Years Ended</td></tr>"
+             "<tr><td colspan=12>2024</td><td colspan=12>2023</td><td colspan=12>2022</td></tr>"
+             "<tr><td colspan=12>Earnings</td><td colspan=12>Earnings</td><td colspan=12>Earnings</td></tr>"
+             "<tr><td colspan=12>10</td><td colspan=12>9</td><td colspan=12>8</td></tr></table>")
+    mt, mtab, *_ = normalize(multi, "html", tables=True)
+    assert to_markdown(mt, mtab[0]) == ("| Years Ended / 2024 / Earnings | Years Ended / 2023 / Earnings | Years Ended / 2022 / Earnings |\n"
+                                        "|---|---|---|\n| 10 | 9 | 8 |")
     # a column empty in every row is dropped from the VIEW only
     t2 = {"start": 0, "end": 0, "header": 0,
           "rows": [[[0, 0], t["rows"][1][2]], [[0, 0], t["rows"][2][2]]]}

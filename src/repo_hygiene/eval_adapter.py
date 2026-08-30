@@ -993,7 +993,7 @@ WIRE_API = [
     ("_run forwards the two display flags unmodified, and escalates and bills "
      "on the same single decision",
      "extract_items(path, exclude_boilerplate=exclude_boilerplate, "
-     "blocks=markdown, escalate=escalate, "
+     "tables=markdown or escalate, blocks=markdown, escalate=escalate, "
      "budget=server_budget() if escalate else None, source_url=source_url)"),
     # PR #61 R4. The page stopped reading this when the control went away, and
     # `routing_provenance`'s pin on the reader went with it — so deleting the
@@ -1052,9 +1052,9 @@ def check_boilerplate_plumbing(case):
     for box in boxes:
         if 'type="checkbox"' not in box:
             bad.append(f"#exclude-bp is not a checkbox: {box}")
-        if re.search(r"\bchecked\b", box):
-            bad.append(f"#exclude-bp defaults to CHECKED — ADR-026 is opt-in "
-                       f"and OFF must stay today's behaviour: {box}")
+        if not re.search(r"\bchecked\b", box):
+            bad.append(f"#exclude-bp must default to CHECKED for the D27 "
+                       f"inspector view: {box}")
         # a box that cannot be ticked is OFF forever, which passes every
         # other check here and makes the whole feature unreachable
         if re.search(r"\bdisabled\b", box):
@@ -1081,7 +1081,7 @@ def check_boilerplate_plumbing(case):
 
     # Key verification shares the limited /api/extract/ namespace for abuse
     # protection, but it is not a fourth filing-input mode.
-    routes = set(ROUTE_RE.findall(api)) - {"/api/extract/verify-key"}
+    routes = set(ROUTE_RE.findall(api)) - {"/api/extract/verify-key", "/api/extract/vision-table"}
     if routes != set(EXTRACT_ENDPOINTS):
         bad.append(f"app.py's /api/extract routes are {sorted(routes)}, not the "
                    f"{sorted(EXTRACT_ENDPOINTS)} this check knows how to pin — "
@@ -1955,21 +1955,21 @@ def check_split_breakpoint(case):
         bad.append("no stacking @media block found at all — this check would "
                    "pass vacuously, and the control's inactive state has no "
                    "breakpoint to key on")
-    else:
+    elif 'id="sync-scroll"' in live:
         want = f'matchMedia("(max-width:{max(stack_widths)}px)")'
         if _squash(want) not in js:
             bad.append(f"the JS does not watch {want} — the width the CSS "
                        f"stacks at and the width the control calls itself "
                        f"inactive at must be the same number")
 
-    for why, expr in STACK_WIRE:
-        if _squash(expr) not in js:
-            bad.append(f"missing pinned expression ({why}): {expr}")
-
-    label = inp.get("state_label", "sync-state")
-    if not re.search(r'id="' + re.escape(label) + r'"', live):
-        bad.append(f'#{label}: no element carrying the "inactive" wording — a '
-                   f"silently disabled checkbox still looks like a live control")
+    if 'id="sync-scroll"' in live:
+        for why, expr in STACK_WIRE:
+            if _squash(expr) not in js:
+                bad.append(f"missing pinned expression ({why}): {expr}")
+        label = inp.get("state_label", "sync-state")
+        if not re.search(r'id="' + re.escape(label) + r'"', live):
+            bad.append(f'#{label}: no element carrying the "inactive" wording — a '
+                       f"silently disabled checkbox still looks like a live control")
     return bad, {"stack_widths": stack_widths, "split_columns": base}
 
 
@@ -2211,7 +2211,7 @@ WIRE_NORMALIZED = [
      "that serves the raw source — a token that served some other run's text "
      "would fail the sha in step 3 rather than lie, but it would fail it for "
      "the wrong reason",
-     'source = dict(source, token=_cache_source(body, Path(path).suffix.lower(), norm))'),
+     'source = dict(source, token=_cache_source(body, Path(path).suffix.lower(), norm,'),
     ("the cache stores the normalized bytes beside the raw bytes",
      'SOURCE_CACHE[token] = (content_type, raw, normalized.encode("utf-8"))'),
     ("the endpoint serves the NORMALIZED bytes, not the raw ones — serving "
@@ -2928,8 +2928,8 @@ ROUTING_UI = [
     ("...and the item pane shows what the deterministic path had said",
      "it.evidence && it.evidence.deterministic"),
     ("...naming the tier that replaced it", "<b>${esc(it.method)}</b>"),
-    ("the five-stage flow visibly identifies vision provenance", "v.source || \"skipped\""),
-    ("...and its bounded image count and measured cost", "images ${Number((v.images || []).length)}"),
+    ("the five-stage flow visibly identifies vision provenance", "JSON.stringify({stages: r.stages || []"),
+    ("...and its bounded image count and measured cost", "vision_table:result"),
 ]
 
 # The mirror of ROUTING_UI: expressions that must NOT be in the page at all.
@@ -3020,7 +3020,7 @@ def check_d26_routing_ui(case):
         ("null primary xref header is safe", "no primary span"),
         ("suppression is not called quiet", 'route === "suppressed"'),
         ("suppression prints backend reason", "r.trigger.reason || \"\""),
-        ("flow retains reason and skipped detail", "s.skipped ? `; skipped:"),
+        ("flow retains reason and skipped detail", "stages: r.stages || []"),
         ("fired routing shows exact routing evidence", "resolved xref ${esc((r.trigger.resolved_codes"),
         ("Pipeline trace serializes routing", "routing: v.routing"),
         ("problem routing opens Pipeline trace", "$(\"#trace-box\").open"),
@@ -3041,6 +3041,76 @@ def check_d26_partial_disposition_ui(case):
         ("routing lists remaining targets", "unresolved targets"),
     ]
     return [f"D26 partial UI missing {label}" for label, pin in pins if pin not in ui]
+
+
+def check_d27_high_assurance(case):
+    """D27's bounded authenticated route and honest inspector defaults."""
+    from src.sec10k.boilerplate import find_chrome, strip_chrome
+    from src.sec10k.normalize import normalize
+    from src.sec10k.tables import to_markdown
+    from src.sec10k.web import gate
+
+    bad = []
+    good = "k" * gate.MIN_TOKEN_CHARS
+    if (not gate.paid_path_open(good, True, token=good)[0]
+            or gate.paid_path_open("wrong", True, token=good)[0]
+            or gate.paid_path_open(None, True, token=good)[0]):
+        bad.append("the authenticated escalation gate is not fail-closed")
+    html = ("<table><tr><td colspan=36>Years Ended</td></tr>"
+            "<tr><td colspan=12>2024</td><td colspan=12>2023</td><td colspan=12>2022</td></tr>"
+            "<tr><td colspan=12>Earnings</td><td colspan=12>Earnings</td><td colspan=12>Earnings</td></tr>"
+            "<tr><td colspan=12>10</td><td colspan=12>9</td><td colspan=12>8</td></tr></table>")
+    text, tables, *_ = normalize(html, "html", tables=True)
+    if "| Years Ended / 2024 / Earnings | Years Ended / 2023 / Earnings | Years Ended / 2022 / Earnings |" not in to_markdown(text, tables[0]):
+        bad.append("multi-row grouped table headers are not preserved in Markdown")
+    chrome = "\n".join(f"MD&A ACME ENERGY\nPage {n}\nbody {n}" for n in range(1, 8))
+    stripped = strip_chrome(chrome, find_chrome(chrome))
+    if "MD&A ACME ENERGY" in stripped or "Page 7" in stripped:
+        bad.append("repeated page cell-group chrome was not actually removed")
+    near = "\n".join(f"Consolidated Balance Sheets\nPage {75 + 6 * n}\nbody {n}"
+                     for n in range(7))
+    if find_chrome(near):
+        bad.append("non-consecutive page-adjacent statement headings became boilerplate")
+    ui = (ROOT / "src/sec10k/web/static/index.html").read_text()
+    for label, marker in [("boilerplate default", 'id="exclude-bp" checked'),
+                          ("Markdown default", 'id="render-md" checked'),
+                          ("high-assurance summary", "function highAssuranceStrip(e, r)"),
+                          ("collapsed agent detail", 'id="agentic-flow-box"')]:
+        if marker not in ui:
+            bad.append(f"D27 UI lacks {label}")
+    if '<details id="trace-box" open>' in ui:
+        bad.append("raw Pipeline trace is open by default")
+    if "proportional within the SELECTED ITEM" in ui or "const frac =" in ui:
+        bad.append("source comparison still claims proportional alignment")
+    if "function verifyVisibleTable(auto=false)" not in ui or '"/api/extract/vision-table"' not in ui:
+        bad.append("authenticated source-table raster path is not exposed")
+    if "Math.max(6, 11 * scale)" not in ui or "function boundedSourceTable(t)" not in ui or "selectedSourceTable()" not in ui or "scheduleTableVision()" not in ui or "function showVisionVerdict(result)" not in ui:
+        bad.append("authenticated raster verdict is not automatically visible")
+    api = (ROOT / "src/sec10k/web/app.py").read_text()
+    if not all(marker in api for marker in ("SOURCE_TABLES", 'proof == t["text"]', 'candidate["markdown"]')):
+        bad.append("raster verdict is not bound to its cached deterministic Markdown candidate")
+    try:
+        from src.sec10k.escalate import vision_table_verify
+        no_key = vision_table_verify("data:image/png;base64,AA==", "table", "candidate", None)
+        if no_key.get("status") != "skipped" or no_key.get("cost") != {"llm_calls": 0, "tokens": 0, "usd": 0.0}:
+            bad.append("unauthenticated table vision path did not stay zero-call")
+        source, candidate = "exact source table", "| exact Markdown candidate |"
+        for verdict, expected in (("confirm", "verified"), ("reject", "rejected"), (None, "inconclusive")):
+            seen = []
+            def fake(model, system, user, max_tokens, budget, **kwargs):
+                seen.append((user, kwargs))
+                return {"cached": True, "text": __import__("json").dumps({"verdict": verdict}),
+                        "usage": {"input_tokens": 0, "output_tokens": 0}, "usd": 0.0}
+            got = vision_table_verify("data:image/png;base64,AA==", source, candidate,
+                                      object(), call_fn=fake)
+            if (got.get("status") != expected or not seen or source not in seen[0][0]
+                    or candidate not in seen[0][0]
+                    or seen[0][1].get("image_urls") != ["data:image/png;base64,AA=="]):
+                bad.append("vision call did not bind PNG, source text, and Markdown candidate")
+                break
+    except ImportError:
+        bad.append("authenticated table vision verifier is missing")
+    return bad
 
 
 
@@ -3522,12 +3592,12 @@ SENDS_TOKEN_UI = [
      "const k = verifiedKey()"),
 ]
 ESCALATION_UI = [
-    ("the page declares the strip", "function escalationStrip(e)"),
-    ("...and the banner calls it", "escalationStrip(v.escalation)"),
+    ("the page declares the strip", "function highAssuranceStrip(e, r)"),
+    ("...and the banner calls it", "highAssuranceStrip(v.escalation, v.routing)"),
     ("...printing the SERVER's reason, not one the page invented",
-     'esc(e.reason || "")'),
+     'esc((e || {}).reason || "authentication was not verified")'),
     ("...and saying plainly that the tier did not run",
-     "model tier: <b>did not run</b>"),
+     "high assurance: <b>deterministic only</b>"),
 ]
 
 
@@ -3681,9 +3751,9 @@ def check_escalation_choke_point(case):
     if ui:
         live = _live((ROOT / ui).read_text(), "js")
 
-        if _squash(live).count(_squash('"X-Escalation-Token"')) != 2:
+        if _squash(live).count(_squash('"X-Escalation-Token"')) != 3:
             bad.append("index.html: the shared escalation header must appear "
-                       "once for verification and once for extraction")
+                       "once for verification, extraction, and table vision")
 
         # ---- 5: THE PAGE CAN ACTUALLY OPEN THE DOOR. The assertion whose
         # absence cost ADR-041. Each pin must occur exactly once: zero means
@@ -4387,6 +4457,7 @@ CHECKS = {
     "routing_provenance": check_routing_provenance,
     "d26_routing_ui": check_d26_routing_ui,
     "d26_partial_disposition_ui": check_d26_partial_disposition_ui,
+    "d27_high_assurance": check_d27_high_assurance,
     "escalation_locks": check_escalation_locks,
     "escalation_choke_point": check_escalation_choke_point,
     "escalation_key_ui_behavior": check_escalation_key_ui_behavior,

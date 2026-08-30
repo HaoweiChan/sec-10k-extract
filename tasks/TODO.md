@@ -299,6 +299,13 @@ Spec: A cross-reference index is evidence per item, not a document-wide paid-wor
 Validation: `python3 -m evals.run --suite invariant` then `python3 -m evals.run --suite fast` — invariant 111/111; fast 182/182; $0; snapshot matches `origin/main`.
 Status: root+cold audit approved; A14–A18 repaired; ready for PR.
 
+### D27 — Verify high-assurance source-table fidelity [status: pr]
+Priority: P1
+Origin: owner recovery request, 2026-08-30
+Spec: Keep deterministic extraction free and default. A verified escalation key may unlock a bounded, cached agent loop and one browser-rasterized public source-table verdict: the browser sends only one visible table's DOM text, SHA-256, and capped PNG; the server binds the text to that run's cached normalized source before a vision-capable model can confirm, reject, or abstain. Vision never authors offsets or Markdown. Intel FY2025 must make bounded agent progress rather than repeat rejected actions; Duke-style tables must preserve grouped header labels and page-adjacent repeated chrome must be removed only when the group is actually proved. The inspector defaults to boilerplate exclusion and Markdown, shows a short high-assurance result, and keeps raw routing detail collapsed.
+Validation: `python3 -m evals.run --suite invariant` then `python3 -m evals.run --suite fast` — invariant 113/113; fast 184/184; $0 cached; snapshot dev `2ee159156017cde5f37b2012ef9f6d566813c6baef9b9f2cf796fb2b8f932119` and heldout `0abb59e694c44381626e1a6e4e11d0624193a6204bf7c89630d9b73481025d06`.
+Status: red-first and audit repairs complete; ready for review/PR.
+
 ## Debt
 
 Each block is a decision not to build something, not a forgotten task. Every

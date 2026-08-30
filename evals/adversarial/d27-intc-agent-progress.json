@@ -1,0 +1,12 @@
+{
+  "id": "d27-intc-agent-progress",
+  "task": "sec10k",
+  "suites": ["invariant", "fast"],
+  "input": {"path": "evals/fixtures/intc-2025/filing.htm", "escalate": true},
+  "expect": {"checks": [{"type": "d26_xref", "scenario": "repeated_action"}]},
+  "triage": {
+    "class": "invariant-gap",
+    "note": "The bounded Intel residual loop must not spend a turn silently repeating an already rejected action. The cached replay repeats an exact search, then supplies the existing verifier-acceptable disposition batch; the rejection and persistent context must be visible while accepted terminal outcomes remain exact and $0."
+  },
+  "provenance": "D27 red-first cached replay over the committed Intel FY2025 fixture; no live model call or network access."
+}

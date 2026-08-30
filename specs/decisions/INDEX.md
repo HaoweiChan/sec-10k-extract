@@ -80,3 +80,6 @@ index only cross-references it for scanning.
   routes only unresolved or footnote-backed disposition work through the
   bounded loop, and publishes terminal omissions/IBR with immutable row
   provenance — enforced by `evals/adversarial/d26-intc-xref-residual-routing.json`.
+- ADR-052 — a verified escalation key permits one capped public-source table
+  raster verdict; vision confirms/rejects deterministic Markdown but never
+  authors text or offsets — enforced by `d27-high-assurance.json`.
