@@ -301,6 +301,15 @@ Spec: Use pinned `langgraph==1.2.11` (Python 3.11 compatible) and its real `Stat
 Validation: Red-first `d28-per-item-agent-graph` captured in `20260830-132541-invariant.json`, then final `python3 -m evals.run --suite invariant` 114/114 (`20260830-140102-invariant.json`) and `python3 -m evals.run --suite fast` 185/185 (`20260830-140228-fast.json`); $0 cached; snapshot self-check passed.
 Status: root audit A1–A3 and partial-loop repairs complete; ready for PR.
 
+### D29 — Put LLM access before filing input [status: pr]
+Origin: owner interface review, 2026-08-30
+Spec: Show the existing LLM access-key verification row first inside the filing
+input panel so an interviewer sees the prerequisite before choosing a filing.
+Keep the row hidden when no key is configured and preserve verification,
+browser storage, green enabled state, and shared request-header behavior.
+Acceptance: `#esc-key-row` precedes `.modes`; the existing key behavior probe
+still passes; invariant and fast gates stay at 100% with no baseline move.
+
 ## Debt
 
 Each block is a decision not to build something, not a forgotten task. Every

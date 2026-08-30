@@ -92,3 +92,6 @@ index only cross-references it for scanning.
   fallback second; transport refuses every other model above DeepSeek's input
   or output price, and Claude Opus 5 is explicitly disabled — enforced by
   `src/sec10k/llm.py::_demo` and `token-proxy-bound`.
+- ADR-055 — the configured LLM access-key row appears before every filing input
+  while retaining the existing verified-key state machine — enforced by
+  `escalation-key-ui-behavior.json`.

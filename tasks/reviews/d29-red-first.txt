@@ -1,0 +1,19 @@
+D29 red-first — 2026-08-30
+
+Command:
+  run evals/adversarial/escalation-key-ui-behavior.json through repo_hygiene
+
+Observed before implementation:
+  passed: false
+  - LLM access key appears after filing inputs
+
+The existing verification-state probe was unchanged; the missing invariant was
+only visual order.
+
+Terra audit red-first:
+  passed: false
+  - missing `#esc-key-row` mutation was not rejected
+  - `.key-row` did not wrap before overflow
+  - `.key-row` forced one unbreakable line
+
+The 821px live viewport measured `scrollWidth=1109` against `clientWidth=821`.
