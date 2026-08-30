@@ -789,6 +789,177 @@ def eval_check(result, chk, path=None):
         import src.sec10k.llm as _llm
         from src.sec10k.extract import extract_items
         from src.sec10k.escalate import route
+        if chk["scenario"] == "d28_graph":
+            import hashlib
+            from importlib.metadata import PackageNotFoundError, version
+            from src.sec10k.llm import EscalationUnavailable
+
+            try:
+                import langgraph  # noqa: F401
+                installed = version("langgraph")
+            except (ModuleNotFoundError, PackageNotFoundError):
+                return "D28 requires pinned langgraph==1.2.11, but langgraph is not installed"
+            if installed != "1.2.11":
+                return f"D28 requires langgraph==1.2.11, got {installed!r}"
+            ui = Path("src/sec10k/web/static/index.html").read_text()
+            if ("LangGraph · diagnose → plan → act → evaluate → decide" not in ui
+                    or "checkpoint_count" not in ui
+                    or 'id="agentic-flow-box"' not in ui
+                    or '<details id="agentic-flow-box">' not in ui):
+                return "D28 UI does not show compact graph sequence/count with collapsed raw history"
+
+            source = extract_items("evals/fixtures/xom-2021/filing.htm")
+            target = next(i for i in source["items"] if i["item"] == "7")
+            text, warnings = source["normalized_text"], [{"code": "internal_pointer_unreached", "item": "7", "message": "D28 risk manifest"}]
+            destination = text.find("Item 7", target["end"])
+            if destination < 0:
+                return "XOM has no bounded D28 alternative-evidence destination"
+            actions = [
+                {"action": "search", "query": "Item 7"},
+                {"action": "read_window", "start": destination, "end": destination + 4000},
+                {"action": "propose_alternative_regions", "item": "7", "regions": [{
+                    "start": destination, "end": min(len(text), destination + 4000), "reference": "Item 7"}]},
+            ]
+            calls = []
+            def _graph_stub(model, system, user, max_tokens, budget, **kw):
+                calls.append((system, _json.loads(user)))
+                return {"cached": True, "text": _json.dumps(actions.pop(0)),
+                        "usage": {"input_tokens": 0, "output_tokens": 0}, "usd": 0.0,
+                        "model": model}
+            cached_items = copy.deepcopy(source["items"])
+            next(i for i in cached_items if i["item"] == "7")["confidence"] = 0.99
+            real, _llm.call = _llm.call, _graph_stub
+            try:
+                routed, extra = route(text, cached_items, warnings)
+            finally:
+                _llm.call = real
+            graph, state, faults = routed["graph"], routed["graph"]["items"][0], []
+            engine = graph.get("engine") or {}
+            if engine != {"name": "langgraph", "version": "1.2.11", "checkpointer": "InMemorySaver",
+                          "persistence": "process_local", "nodes": ["diagnose", "plan", "act", "evaluate", "decide"],
+                          "conditional": "decide->plan|END"}:
+                faults.append("engine/version/topology metadata is not the pinned compiled graph")
+            history = graph.get("checkpoint_history")
+            if not isinstance(history, list) or not {x.get("role") for x in history} >= set(graph["roles"]):
+                faults.append("InMemorySaver checkpoint history is absent or incomplete")
+            expected_history = ["diagnose", *(["plan", "act", "evaluate", "decide"] * 3)]
+            if [x.get("role") for x in history or []] != expected_history:
+                faults.append("StateGraph did not traverse decide-to-plan for each bounded action")
+            first = (history or [{}])[0]
+            if first.get("targets") != ["7"] or first.get("risk") != [{"item": "7", "signals": [{"kind": "warning", "code": "internal_pointer_unreached"}]}]:
+                faults.append("diagnose did not publish the manifest into graph state")
+            if any({"text", "image", "credential", "callback", "secret"} & set(x) for x in history or []):
+                faults.append("checkpoint history retains prohibited payload")
+            if (extra or routed["cost"] != {"llm_calls": 0, "tokens": 0, "usd": 0.0}
+                    or graph["source_sha256"] != hashlib.sha256(text.encode()).hexdigest()
+                    or state["risk"]["signals"] != [{"kind": "warning", "code": "internal_pointer_unreached"}]
+                    or len(state["attempts"]) != 3 or state["next_route"] != "complete"
+                    or [x["role"] for x in state["checkpoints"]] != graph["roles"]
+                    or state["checkpoints"][3]["status"] != "done"
+                    or any("observations" not in x for x in state["attempts"])
+                    or calls[0][1].get("source", {}).get("normalized_sha256") != graph["source_sha256"]
+                    or "untrusted data" not in calls[0][0].lower()):
+                faults.append("cached graph lacks evidence, bounded observations, or strict action context")
+            dual_actions = [{"action": "search", "query": "Item 7"},
+                            {"action": "propose_primary_span", "item": "7", "start": 0, "end": 1},
+                            {"action": "finish"}]
+            def _dual_stub(model, system, user, max_tokens, budget, **kw):
+                return {"cached": True, "text": _json.dumps(dual_actions.pop(0)),
+                        "usage": {"input_tokens": 0, "output_tokens": 0}, "usd": 0.0, "model": model}
+            dual_warnings = [{"code": "internal_pointer_unreached", "item": code, "message": "D28 attribution"}
+                             for code in ("2", "7")]
+            real, _llm.call = _llm.call, _dual_stub
+            try:
+                dual, _ = route(text, copy.deepcopy(source["items"]), dual_warnings)
+            finally:
+                _llm.call = real
+            dual_states = {x["item"]: x for x in dual["graph"]["items"]}
+            if any(a.get("item") == "7" for x in dual_states["2"]["attempts"] for a in x["actions"]):
+                faults.append("item-specific proposal was attributed to every target")
+            batch_actions = [{"action": "propose_item_dispositions", "proposals": [
+                {"item": "2", "status": "omitted", "start": 0, "end": 1},
+                {"item": "7", "status": "omitted", "start": 0, "end": 1}]}, {"action": "finish"}, {"action": "finish"}]
+            def _batch_stub(model, system, user, max_tokens, budget, **kw):
+                return {"cached": True, "text": _json.dumps(batch_actions.pop(0)), "usage": {"input_tokens": 0, "output_tokens": 0}, "usd": 0.0, "model": model}
+            real, _llm.call = _llm.call, _batch_stub
+            try:
+                batched, _ = route(text, copy.deepcopy(source["items"]), dual_warnings)
+            finally:
+                _llm.call = real
+            batch_states = {x["item"]: x for x in batched["graph"]["items"]}
+            if ([p.get("item") for attempt in batch_states["2"]["attempts"] for a in attempt["actions"]
+                 for p in a.get("proposals", [])] != ["2"] or
+                [p.get("item") for attempt in batch_states["7"]["attempts"] for a in attempt["actions"]
+                 for p in a.get("proposals", [])] != ["7"]):
+                faults.append("batch proposal was attributed to every target")
+            if any("item 7:" in str(v) for attempt in batch_states["2"]["attempts"]
+                   for v in [attempt["rejections"], attempt["observations"]]) or any(
+                    "item 2:" in str(v) for attempt in batch_states["7"]["attempts"]
+                    for v in [attempt["rejections"], attempt["observations"]]):
+                faults.append("batch verifier evidence leaked a peer item reason")
+            partial_actions = [
+                {"action": "propose_alternative_regions", "item": "7", "regions": [{
+                    "start": destination, "end": min(len(text), destination + 4000), "reference": "Item 7"}]},
+                {"action": "finish"}, {"action": "finish"}]
+            partial_prompts = []
+            def _partial_stub(model, system, user, max_tokens, budget, **kw):
+                partial_prompts.append(_json.loads(user))
+                return {"cached": True, "text": _json.dumps(partial_actions.pop(0)),
+                        "usage": {"input_tokens": 0, "output_tokens": 0}, "usd": 0.0, "model": model}
+            real, _llm.call = _llm.call, _partial_stub
+            try:
+                partial_items = copy.deepcopy(source["items"])
+                partial, partial_extra = route(text, partial_items, dual_warnings)
+            finally:
+                _llm.call = real
+            if (partial["alternative"] != ["7"] or len(partial["tiers"]) != 3
+                    or [p["target_items"] for p in partial_prompts] != [["2", "7"], ["2"], ["2"]]
+                    or not next(i for i in partial_items if i["item"] == "2")["review_required"]
+                    or not any(w["item"] == "2" for w in partial_extra)):
+                faults.append("partial acceptance did not repair only unresolved item targets")
+            unsafe_actions = [{"action": "search", "query": "Item 7", "secret": "do-not-store"}] * 3
+            def _unsafe_stub(model, system, user, max_tokens, budget, **kw):
+                return {"cached": True, "text": _json.dumps(unsafe_actions.pop(0)),
+                        "usage": {"input_tokens": 0, "output_tokens": 0}, "usd": 0.0, "model": model}
+            real, _llm.call = _llm.call, _unsafe_stub
+            try:
+                unsafe, _ = route(text, copy.deepcopy(source["items"]), warnings)
+            finally:
+                _llm.call = real
+            unsafe_checkpoint = _json.dumps(unsafe["graph"].get("checkpoint_history", []))
+            unsafe_trace = _json.dumps(unsafe["tiers"])
+            if (any(t["outcome"] != "unparseable" or t.get("actions") for t in unsafe["tiers"])
+                    or "do-not-store" in unsafe_checkpoint or "do-not-store" in unsafe_trace):
+                faults.append("undeclared model action payload reached checkpoint or published trace")
+            no_key_items = copy.deepcopy(source["items"])
+            def _refuse(*args, **kwargs):
+                raise EscalationUnavailable("no verified escalation key")
+            real, _llm.call = _llm.call, _refuse
+            try:
+                refused, refused_extra = route(text, no_key_items, warnings)
+            finally:
+                _llm.call = real
+            untouched = [(i["status"], i["start"], i["end"], i["method"]) for i in source["items"]]
+            now = [(i["status"], i["start"], i["end"], i["method"]) for i in no_key_items]
+            if (refused["cost"] != {"llm_calls": 0, "tokens": 0, "usd": 0.0}
+                    or refused["graph"]["complete"]
+                    or refused["graph"]["items"][0]["next_route"] != "review_required"
+                    or not no_key_items[[i["item"] for i in no_key_items].index("7")]["review_required"]
+                    or untouched != now or not any(w["code"] == "escalation_unavailable" for w in refused_extra)):
+                faults.append("direct no-key refusal changed deterministic output or hid review")
+            real, _llm.call = _llm.call, _refuse
+            try:
+                published = extract_items("evals/fixtures/intc-2025/filing.htm", escalate=True)
+            finally:
+                _llm.call = real
+            unresolved = [x["item"] for x in published["routing"]["graph"]["items"]
+                          if x["next_route"] == "review_required"]
+            published_items = {i["item"]: i for i in published["items"]}
+            if not unresolved or any(not published_items[code]["review_required"] for code in unresolved):
+                faults.append("published Intel unresolved graph target lost review_required after scoring")
+            if faults:
+                return "D28 graph failures: " + "; ".join(faults)
+            return None
         positive = chk["scenario"] == "replan_positive"
         source = (extract_items("evals/fixtures/xom-2021/filing.htm") if positive else result)
         target_code = "7" if positive else "2"
@@ -1690,7 +1861,7 @@ def _routing_shape(result):
       the fabricated-output failure repo rule 4 forbids.
     """
     r = result["routing"]
-    if not isinstance(r, dict) or not {"trigger", "tiers", "resolved", "cost", "stages"} <= set(r):
+    if not isinstance(r, dict) or not {"trigger", "tiers", "resolved", "cost", "stages", "graph"} <= set(r):
         return f"keys {sorted(r) if isinstance(r, dict) else type(r).__name__}"
     t = r["trigger"]
     if not isinstance(t, dict) or not {"fired", "codes", "items", "route", "reason",
@@ -1712,6 +1883,48 @@ def _routing_shape(result):
             return f"flow stage invalid status/targets: {stage!r}"
         if not COST_KEYS <= set(stage["cost"]):
             return f"flow stage cost missing keys: {stage!r}"
+    graph = r["graph"]
+    base_graph_keys = {"roles", "source_sha256", "items", "complete"}
+    graph_keys = base_graph_keys | {"engine", "checkpoint_history", "checkpoint_count"}
+    if not isinstance(graph, dict) or set(graph) != (graph_keys if t["route"] == "agent_loop" else base_graph_keys):
+        return "routing.graph missing pinned engine/checkpoint provenance"
+    if t["route"] == "agent_loop" and graph["engine"] != {
+            "name": "langgraph", "version": "1.2.11", "checkpointer": "InMemorySaver",
+            "persistence": "process_local", "nodes": ["diagnose", "plan", "act", "evaluate", "decide"],
+            "conditional": "decide->plan|END"}:
+        return "routing.graph engine metadata is not the pinned StateGraph"
+    if graph["roles"] != ["diagnose", "plan", "act", "evaluate", "decide"]:
+        return "routing.graph does not preserve the fixed control roles"
+    if not isinstance(graph["complete"], bool) or not isinstance(graph["items"], list):
+        return "routing.graph complete/items malformed"
+    if t["route"] == "agent_loop":
+        history = graph["checkpoint_history"]
+        if (not isinstance(history, list) or not isinstance(graph["checkpoint_count"], int)
+                or graph["checkpoint_count"] < len(graph["roles"])
+                or {x.get("role") for x in history if isinstance(x, dict)} < set(graph["roles"])):
+            return "routing.graph checkpoint history is incomplete"
+        if any({"text", "image", "credential", "callback", "secret"} & set(x)
+               for x in history if isinstance(x, dict)):
+            return "routing.graph checkpoint history retained prohibited payload"
+    targets = set(t["target_items"])
+    if {x.get("item") for x in graph["items"]} != targets:
+        return "routing.graph item states do not match route targets"
+    for state in graph["items"]:
+        if not isinstance(graph["source_sha256"], str) or len(graph["source_sha256"]) != 64:
+            return "routing.graph source hash malformed"
+        if not isinstance(state, dict) or set(state) != {"item", "risk", "candidate", "checkpoints", "attempts", "next_route"}:
+            return f"routing.graph item state malformed: {state!r}"
+        if not isinstance(state["candidate"], dict) or set(state["candidate"]) != {"status", "start", "end", "method"}:
+            return f"routing.graph item candidate malformed: {state!r}"
+        if not isinstance(state["risk"], dict) or not isinstance(state["risk"].get("signals"), list):
+            return f"routing.graph item risk lacks evidence signals: {state!r}"
+        checkpoints = state["checkpoints"]
+        if not isinstance(checkpoints, list) or [x.get("role") for x in checkpoints if isinstance(x, dict)] != graph["roles"]:
+            return f"routing.graph item checkpoints are not fixed roles: {state!r}"
+        if not isinstance(state["attempts"], list) or state["next_route"] not in {"complete", "review_required", "quiet"}:
+            return f"routing.graph item attempt/next-route malformed: {state!r}"
+        if any("observations" not in attempt for attempt in state["attempts"]):
+            return f"routing.graph item attempts omit bounded observations: {state!r}"
     total = {k: 0 for k in COST_KEYS}
     prior_window = None
     for tier in r["tiers"]:

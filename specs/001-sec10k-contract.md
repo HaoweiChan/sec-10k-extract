@@ -266,7 +266,17 @@ them all); the example once showed `lenient_match`, which nothing emits.
   URLs; `source` is `live`, `cache`, or `cached_test` (never a claim that a
   test replay ran live). Vision can only strict-confirm/reject/null already
   verified alternative evidence for its listed inspected `items`; it cannot create/move offsets or turn a
-  failed text extraction into success. The inspector exposes status, source,
+  failed text extraction into success. ADR-053 adds `routing.graph`: pinned
+  LangGraph engine/version and process-local `InMemorySaver` metadata, the
+  fixed `diagnose`, `plan`, `act`, `evaluate`, `decide` roles and conditional
+  `decide → plan|END` path, one normalized-text source SHA-256, compact
+  checkpoint history, `complete`, and one item-scoped state for each target.
+  Checkpoint history excludes filing bodies/images, credentials, callbacks and
+  secrets. Each state snapshots the deterministic candidate, evidence/failure-
+  manifest risk signals, bounded attempts/rejections, role checkpoints, and
+  `next_route` (`complete`, `review_required`, or `quiet`). The graph is
+  process-local provenance only: agents still propose declared evidence/actions
+  and deterministic verification alone may publish a mutation. The inspector exposes status, source,
   model, image count, and measured cost without displaying the URLs.
   ADR-047 adds `agent_loop`: at most three turns, each carrying the compact
   action and its deterministic observation as `actions` and `observations`.

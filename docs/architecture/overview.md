@@ -296,6 +296,12 @@ default path is still stdlib-only and still $0.00; `requirements.txt` is
 unchanged and the eval gate loads no network module, which `escalation_seam`
 measures rather than asserts.)**
 
+**(2026-08-30: D28 qualifies the dependency statement, not the deterministic
+claim.)** Parsing and no-key extraction remain stdlib-only and $0.00; the
+bounded authenticated routing control path uses pinned `langgraph==1.2.11`
+with process-local `InMemorySaver` audit checkpoints (ADR-053). It does not
+add a parser, persistent store, or another model-call path.
+
 **11. Assembly** — derive `doc_status`, attach trace/timings/meta, emit the
 contract-v2 envelope.
 

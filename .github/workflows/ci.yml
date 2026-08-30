@@ -19,11 +19,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'   # the floor declared in pyproject, so CI tests it
-      # no pip install: the extraction pipeline and the eval harness are
-      # stdlib-only by decision (ADR-003). fastapi/uvicorn are needed by the
-      # web layer alone and nothing under test imports them. If a dependency
-      # ever creeps into this path, this job fails on the import — which is
-      # the cheapest possible enforcement of that decision.
+      # Parsing remains stdlib-only (ADR-003); the bounded routing graph is a
+      # pinned project dependency and this job exercises it offline.
+      - run: pip install -e .
       - run: python3 -m src.sec10k.test_eval_adapter
       - run: python3 -m src.sec10k.normalize
       - run: python3 -m src.sec10k.segment
@@ -71,6 +69,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - run: pip install -e .
       # invariants are absolute: the runner requires 100%, no baseline involved
       - run: python3 -m evals.run --suite invariant
 
@@ -81,6 +80,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - run: pip install -e .
       # compares against .eval-baseline.json — the same gate as .githooks/pre-commit.
       # --report (ADR-025): this is the report-of-record run for main at head,
       # so it writes the full per-case report even though the gate is green.

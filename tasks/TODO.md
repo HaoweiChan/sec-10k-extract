@@ -294,6 +294,13 @@ Spec: Keep deterministic extraction free and default. A verified escalation key 
 Validation: `python3 -m evals.run --suite invariant` then `python3 -m evals.run --suite fast` — invariant 113/113; fast 184/184; $0 cached; snapshot dev `2ee159156017cde5f37b2012ef9f6d566813c6baef9b9f2cf796fb2b8f932119` and heldout `0abb59e694c44381626e1a6e4e11d0624193a6204bf7c89630d9b73481025d06`.
 Status: red-first and audit repairs complete; ready for review/PR.
 
+### D28 — Evidence-driven per-item agent graph [status: pr]
+Priority: P1
+Origin: owner design request, 2026-08-30
+Spec: Use pinned `langgraph==1.2.11` (Python 3.11 compatible) and its real `StateGraph` + `InMemorySaver`, not post-hoc labels, for `diagnose → plan → act → evaluate → decide` nodes with conditional repair-loop/`END` routing. Checkpoint state is compact and process-local/in-run only—not restart-durable—and excludes filing text/images, credentials, callback functions, model secrets, and Budget; it keeps only source hash, targets/risk, bounded actions/observations, verifier results, and decisions for routing replay/audit history. Cost remains in the routing record. Deterministic extraction supplies immutable candidates/source hashes and the existing deterministic verifier remains the sole mutation/publish authority; no extra model calls. Risk derives from an evidence/failure manifest, never confidence alone. No key remains $0; default deterministic extraction and stdlib parsing remain unchanged. Unresolved substantive targets must be review-required and must not yield a complete document/UI claim. During implementation add the pinned dependency in requirements/pyproject and update CI/install docs. Root-audit acceptance includes end-to-end `review_required` preservation, truthful Intel no-key plus XOM cached-positive provenance, item-specific attempts, and bounded observations.
+Validation: Red-first `d28-per-item-agent-graph` captured in `20260830-132541-invariant.json`, then final `python3 -m evals.run --suite invariant` 114/114 (`20260830-140102-invariant.json`) and `python3 -m evals.run --suite fast` 185/185 (`20260830-140228-fast.json`); $0 cached; snapshot self-check passed.
+Status: root audit A1–A3 and partial-loop repairs complete; ready for PR.
+
 ### D29 — Put LLM access before filing input [status: pr]
 Origin: owner interface review, 2026-08-30
 Spec: Show the existing LLM access-key verification row first inside the filing

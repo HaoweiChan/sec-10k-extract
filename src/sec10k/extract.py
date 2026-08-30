@@ -450,7 +450,10 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
         # do with this item", so the review signal is its own boolean rather
         # than a fifth status. Derived from the same item-targeted hits that
         # already move the confidence, so the two can never disagree.
-        i["review_required"] = bool(i["evidence"]["warnings"])
+        graph_routes = {(x.get("item"), x.get("next_route"))
+                        for x in ((routing or {}).get("graph", {}).get("items", []))}
+        i["review_required"] = (bool(i["evidence"]["warnings"])
+                                or (i["item"], "review_required") in graph_routes)
     if ambiguous:
         doc_status = "ambiguous"
     elif warnings:
