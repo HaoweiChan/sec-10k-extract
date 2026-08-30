@@ -1204,7 +1204,7 @@ def vision_table_verify(image_url, table_text, markdown, budget=None, call_fn=No
         return {**base, "status": "failed", "reason": "invalid table raster"}
     if not isinstance(table_text, str) or not table_text.strip() or not isinstance(markdown, str) or not markdown.strip():
         return {**base, "status": "failed", "reason": "empty source table text"}
-    from src.sec10k.llm import EscalationUnavailable, call, token_total
+    from src.sec10k.llm import CredentialUnavailable, EscalationUnavailable, call, token_total
     import json
     try:
         got = (call_fn or call)(VISION_MODEL, VISION_SYSTEM,
@@ -1215,6 +1215,9 @@ def vision_table_verify(image_url, table_text, markdown, budget=None, call_fn=No
                    + markdown[:VISION_TEXT_CAP] + "\n</markdown-candidate>", VISION_MAX_TOKENS, budget,
                    image_urls=[image_url])
         verdict = _vision_verdict(got.get("text"))
+    except CredentialUnavailable:
+        return {**base, "status": "skipped", "reason": "provider credential unavailable",
+                "preflight": True}
     except (EscalationUnavailable, ValueError, TypeError, json.JSONDecodeError) as e:
         return {**base, "status": "failed", "reason": f"vision unavailable: {e}"}
     cost = {"llm_calls": 0 if got["cached"] else 1,

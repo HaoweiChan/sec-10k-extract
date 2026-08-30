@@ -1,0 +1,9 @@
+{
+  "id": "d33-compact-banner",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/intc-2025/filing.htm"},
+  "expect": {"checks": [{"type": "d33", "scenario": "compact_banner"}]},
+  "triage": {"class": "invariant-gap", "note": "The main result banner repeated raw routing provenance and technical trace details that belong in the expandable routing audit, obscuring the human extraction result."},
+  "provenance": "D33 localhost inspection; synthetic view only, no provider call."
+}

@@ -1,0 +1,9 @@
+{
+  "id": "d33-intel-xref-warning-resolution",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/intc-2025/filing.htm", "escalate": true},
+  "expect": {"checks": [{"type": "d33", "scenario": "intel_xref_warning_resolution"}]},
+  "triage": {"class": "invariant-gap", "note": "A primary index-row span remains honestly near-empty, but its item already has deterministic verified cross-reference content; penalizing confidence and requiring review again misstates the completed route."},
+  "provenance": "Intel FY2025 cached Flash+Pro replay and fixture evidence; no provider call."
+}

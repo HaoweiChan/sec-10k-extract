@@ -14,7 +14,7 @@
     "min_conf_sites": 2,
     "wire": [
       "const QUALIFIED = [\"success_with_warning\", \"ambiguous\"];",
-      "$(\"#banner\").innerHTML = `doc_status: ${esc(st)}` +\n    (n ? ` <span class=\"src\">— ${esc(n)}</span>` : \"\") +\n    (src ? ` <span class=\"src\">${esc(src)}</span>` : \"\") +\n    coverageStrip(w, v.meta || {}, routeComplete(v.routing)) +\n    highAssuranceStrip(v.escalation, v.routing) +\n    routingStrip(v.routing);",
+      "$(\"#banner\").textContent = `${bannerResult(v)} — ${bannerContent(v)}${compactRoutingSummary(v.routing)}`;",
       "const flag = (it.evidence && (it.evidence.warnings || []).length) ? \" lo\"\n               : (docQual() ? \" docw\" : \"\");"
     ],
     "coverage_fn": "coverageStrip",

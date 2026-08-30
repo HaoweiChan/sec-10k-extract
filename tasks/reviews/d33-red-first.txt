@@ -1,0 +1,161 @@
+D33 red-first, 2026-08-30
+
+`d33-routing-audit` was added before any UI implementation and run through the
+normal sec10k adapter. It failed:
+
+`unknown check type 'd33'`
+
+Triage: invariant-gap. The existing `#agentic-flow-box` only rendered a raw
+JSON outline, so it could not make path modes, agent/verifier authority,
+outer-versus-inner flow, counters, per-item outcomes, or output sanitization
+observable. The replacement case uses synthetic routing records only; no
+provider call, prompt, filing excerpt, credential, or secret is involved.
+
+After the check existed, a reversible mutation set the evidence-pass counter to
+zero. The same case failed with `routing audit does not distinguish all
+routes/counters or safely render synthetic agent records`. The role-derived
+counter was restored before the green run.
+
+Cold-review cases were added before their repairs and run through the normal
+adapter:
+
+- `d33-trace-sanitize`: `unknown d33 scenario 'trace_sanitize'`.
+- `d33-verifier-accept`: `unknown d33 scenario 'verifier_accept'`.
+- `d33-partial-item-outcomes`: `unknown d33 scenario 'partial_item_outcomes'`.
+
+Behavioral mutations after those checks existed, each restored before green:
+
+- F1 restored raw `routing:v.routing` in the Pipeline trace; `d33-trace-sanitize`
+  failed: `Pipeline trace still serializes raw routing`.
+- F2 restored the empty-verifier "0 results" wording; `d33-verifier-accept`
+  failed: `D33 verifier_accept does not preserve the required safe decision evidence`.
+- F3 copied the batch outcome into every item attempt; `d33-partial-item-outcomes`
+  failed: `D33 partial_item_outcomes does not preserve the required safe decision evidence`.
+
+Intel counter-consistency case was added before the repair and run through the
+normal adapter. It failed:
+
+`unknown d33 scenario 'intel_counter_consistency'`
+
+Localhost cached Intel replay supplied the behavioral repro: the readable audit
+correctly reported 1 evidence pass, 1 planning iteration, 2 model steps, 2
+cache replays, 0 live provider calls, and 7 checkpoints; the banner instead
+said `2 turns`, while every item showed `2 attempts` by including the evidence
+tier. Triage: invariant-gap. Evidence passes are model steps, not LangGraph
+planning turns or per-item planning attempts.
+
+After the scenario was wired, before the UI repair, it failed with:
+
+`D33 intel_counter_consistency does not preserve the required safe decision evidence`
+
+Compact-banner case was added before the presentation repair and run through
+the normal adapter. It failed:
+
+`unknown d33 scenario 'compact_banner'`
+
+Triage: invariant-gap. The main result banner repeated URL/provenance, target
+lists, tier/model trace, token and checkpoint detail that the expandable audit
+already exposes, rather than leading with the extraction result and review
+state.
+
+After the scenario was wired, before the UI repair, it failed with:
+
+`main banner still renders the raw routing strip`
+
+Intel cross-reference composite case was added before the repair and run
+through the normal adapter. It failed:
+
+`unknown d33 scenario 'intel_xref_composite'`
+
+Triage: invariant-gap. Intel FY2025's primary item rows are the trailing
+cross-reference index, while `evidence.cross_reference` already names verified
+non-contiguous filing regions; the primary row must remain provenance, not mask
+the multi-region item answer.
+
+After the Intel fixture/API assertion was wired, before the repair, it failed:
+
+`Intel index-row primary still masks its verified composite evidence`
+
+The same Intel case was extended for the final display-options audit before
+repair and failed:
+
+`composite cross-reference regions bypass display options or pointer-only guard`
+
+D33 formal invariant gate repair, 2026-08-30: **129/132 RED**. The three
+failures were presentation-contract pins, not lost extractor semantics:
+
+- `d32-presentation` still required `coverageStrip` in the main banner, which
+  conflicts with the owner-approved compact banner. Coverage diagnostics remain
+  in the collapsed validator details and retain their complete/incomplete
+  branches.
+- `ui-boilerplate-exclusion` pinned the old fixed aria label. Composite xref
+  evidence now has a more specific label while the rendered value remains
+  `display_text ?? text`, preserving the boilerplate/Markdown wire.
+- `ui-routing-provenance-regression` is the deliberate known-bad fixture. D33
+  replaces two old banner-strip pins with compact-summary pins, changing its
+  exact caught-failure count from 14 to 15; the missing-mode/cost/audit and
+  client-escalation-absence guarantees remain covered.
+
+Second D33 formal invariant repair, 2026-08-30: **131/132 RED** only on
+`ui-boilerplate-wire-values`. Its deliberately poisoned fixture now has 11,
+not 10, failures because the composite-aware pane-label pin correctly catches
+its old fixed label. The healthy checkbox, request, handler, and plain/Markdown
+display paths remain separately exercised; the fixture count is re-derived
+rather than relaxed.
+
+Intel xref warning-resolution case was added before the scoring repair and run
+through the normal adapter. It failed:
+
+`unknown d33 scenario 'intel_xref_warning_resolution'`
+
+Triage: invariant-gap. The primary index rows for items 1, 7, and 8 remain
+near-empty diagnostics, but each has verified cross-reference content and a
+complete cached route; that one warning must not double as an actionable item
+review signal.
+
+After the Intel cached fixture assertion was wired, before the repair, it
+failed:
+
+`verified Intel xref content still loses confidence or creates actionable review`
+
+Intel xref compare-anchor case was added before the source-anchor repair and
+failed:
+
+`unknown d33 scenario 'intel_xref_compare_anchor'`
+
+After its assertion was wired, before the view/browser repair, the same
+fixture failed behaviorally:
+
+`composite Item 7 has no bounded verified-page source anchor`
+
+Green after the minimal repair: the cached Intel replay retains the three
+document-level `item_span_near_empty` diagnostics, records each under the
+corresponding item's `resolved_warnings`, and has zero actionable item reviews.
+Item 7 publishes a 512-character bounded `source_anchor` for pages 18-29,29-32
+(`Management's Discussion and Analysis` plus body agreement); pointer-only
+Item 11 publishes none.
+
+Vision-table preflight case was added before the repair and first failed while
+its adapter assertion was absent:
+
+`unknown d33 scenario 'vision_table_preflight'`
+
+With the assertion wired, a no-provider-credential, zero-cost local call then
+failed behaviorally:
+
+`zero-call table preflight is reported as provider failure`
+
+Green after repair: missing provider credential is checked after a cache miss
+but before budget reservation or network work, and table vision returns
+`skipped` + `preflight: true` with a zero cost. The UI says `not run · provider
+access unavailable`; a synthetic provider failure remains `failed` and is
+rendered as a provider verification failure.
+
+The same table-preflight case was extended for the localhost-observed 401
+toolbar wording before its UI repair and failed:
+
+`vision toolbar status does not distinguish provider failures`
+
+Green after repair: the toolbar renders a genuine failed provider response as
+`failed · provider verification unavailable`; a null model verdict still reads
+`inconclusive · inconclusive`, and the zero-call preflight wording is unchanged.

@@ -1,0 +1,9 @@
+{
+  "id": "d33-intel-counter-consistency",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/intc-2025/filing.htm"},
+  "expect": {"checks": [{"type": "d33", "scenario": "intel_counter_consistency"}]},
+  "triage": {"class": "invariant-gap", "note": "Intel cached replay showed evidence and planning model steps counted as generic turns and per-item attempts, overstating actual LangGraph planning work."},
+  "provenance": "D33 localhost Intel cached replay: 1 Flash evidence tier plus 1 Pro planning tier, both cached; synthetic routing record only, no provider call."
+}

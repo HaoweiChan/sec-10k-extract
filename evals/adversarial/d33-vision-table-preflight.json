@@ -1,0 +1,9 @@
+{
+  "id": "d33-vision-table-preflight",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/intc-2025/filing.htm"},
+  "expect": {"checks": [{"type": "d33", "scenario": "vision_table_preflight"}]},
+  "triage": {"class": "invariant-gap", "note": "An authenticated cached extraction can have no provider credential for a new table-raster request; a zero-call preflight refusal must not render as a provider failure."},
+  "provenance": "Intel FY2025 localhost observation, 2026-08-30; no key value or provider request retained."
+}

@@ -8,6 +8,7 @@ Case shape:
                "images": false}                # optional, ADR-033
     "expect": {"checks": [{"type": ..., ...}, ...]}
 """
+import json
 from pathlib import Path
 import subprocess
 
@@ -1942,8 +1943,10 @@ def eval_check(result, chk, path=None):
         if scenario == "presentation":
             page = (ROOT / "src/sec10k/web/static/index.html").read_text()
             start, end = page.find("function coverageStrip("), page.find("// D11", page.find("function coverageStrip("))
-            if start < 0 or end < 0 or "coverageStrip(w, v.meta || {}, routeComplete(v.routing))" not in page:
-                return "resolved escalation still renders primary-span diagnostics as the main warning failure"
+            if (start < 0 or end < 0
+                    or '$("#banner").textContent = `${bannerResult(v)} — ${bannerContent(v)}${compactRoutingSummary(v.routing)}`;' not in page
+                    or '<details><summary>Validator diagnostics (${w.length})</summary>' not in page):
+                return "resolved escalation lacks compact banner or collapsed primary-span diagnostics"
             script = "const esc=x=>String(x);\n" + page[start:end] + "\n" + r'''
 const warnings=[{code:"unattributed_content",message:"42% lies outside every item"}];
 const completed=coverageStrip(warnings,{coverage:.58321},true);
@@ -2097,6 +2100,200 @@ if(!done || pending || !completed.includes("primary-span coverage: <b>58.32%</b>
                 return "vision rejection still permits a complete alternative resolution"
         else:
             return f"unknown d32 scenario {scenario!r}"
+    elif t == "d33":
+        scenario = chk.get("scenario")
+        if scenario == "intel_xref_warning_resolution":
+            from src.sec10k.extract import extract_items
+
+            result = extract_items("evals/fixtures/intc-2025/filing.htm", escalate=True)
+            expected = {"1": 142571, "7": 119881, "8": 205692}
+            by_code = {x["item"]: x for x in result["items"]}
+            if (result["routing"]["cost"]["llm_calls"] or result["routing"]["cost"]["usd"]
+                    or not result["routing"]["graph"].get("complete")
+                    or result["doc_status"] not in {"success_with_warning", "success"}
+                    or not all(any(w.get("code") == "item_span_near_empty" and w.get("item") == code
+                                   for w in result["warnings"]) for code in expected)):
+                return "Intel primary-span diagnostics or cached complete route changed unexpectedly"
+            if any(sum(r["end"] - r["start"] for r in by_code[c]["evidence"].get("cross_reference", [])) != size
+                    or by_code[c]["confidence"] != 0.95 or by_code[c]["review_required"]
+                    or "item_span_near_empty" not in by_code[c]["evidence"].get("resolved_warnings", [])
+                    or by_code[c]["evidence"].get("warnings") for c, size in expected.items()):
+                return "verified Intel xref content still loses confidence or creates actionable review"
+            if any(x["review_required"] for x in result["items"]):
+                return "completed Intel route retains actionable review items"
+            return None
+        if scenario == "intel_xref_compare_anchor":
+            from src.sec10k.extract import extract_items
+            from src.sec10k.web.view import build_view
+
+            view = build_view(extract_items(
+                "evals/fixtures/intc-2025/filing.htm", escalate=True))
+            by_code = {x["item"]: x for x in view["items"]}
+            anchor = by_code["7"].get("source_anchor") or {}
+            if (not anchor.get("label", "").startswith("pages ")
+                    or anchor.get("heading") == "Table of Contents"
+                    or not anchor.get("text")
+                    or {"start", "end"} & set(anchor)):
+                return "composite Item 7 has no bounded verified-page source anchor"
+            if by_code["11"].get("source_anchor"):
+                return "pointer-only Item 11 was given a composite source anchor"
+            page = (ROOT / "src/sec10k/web/static/index.html").read_text()
+            if "it.source_anchor ? findAnchor(SOURCE_INDEX, it.source_anchor.heading, it.source_anchor.text)" not in page:
+                return "source compare still anchors composite items on primary index text"
+            return None
+        if scenario == "vision_table_preflight":
+            from src.sec10k.escalate import vision_table_verify
+            from src.sec10k.llm import Budget, EscalationUnavailable
+
+            budget = Budget()
+            result = vision_table_verify("data:image/png;base64,AA==",
+                                         "preflight source table", "| preflight markdown |", budget)
+            if (result.get("status") != "skipped" or not result.get("preflight")
+                    or budget.calls or result.get("cost") != {"llm_calls": 0, "tokens": 0, "usd": 0.0}):
+                return "zero-call table preflight is reported as provider failure"
+            def provider_failure(*args, **kwargs):
+                raise EscalationUnavailable("synthetic provider failure")
+            failed = vision_table_verify("data:image/png;base64,AA==", "source", "markdown",
+                                         Budget(), call_fn=provider_failure)
+            if failed.get("status") != "failed" or failed.get("preflight"):
+                return "provider failure was hidden as a preflight skip"
+            page = (ROOT / "src/sec10k/web/static/index.html").read_text()
+            if 'if(result.preflight) return "not run · provider access unavailable";' not in page:
+                return "table preflight is not rendered as not run"
+            start = page.find("function visionStatusText(")
+            end = page.find("async function verifyVisibleTable(", start)
+            if start < 0 or end < 0:
+                return "vision toolbar status does not distinguish provider failures"
+            script = page[start:end] + r'''
+if(visionStatusText({preflight:true}) !== "not run · provider access unavailable"
+ || visionStatusText({status:"failed",verdict:null}) !== "failed · provider verification unavailable"
+ || visionStatusText({status:"inconclusive",verdict:null}) !== "inconclusive · inconclusive") process.exit(1);
+'''
+            rendered = subprocess.run(["node", "-e", script], capture_output=True, text=True)
+            if rendered.returncode:
+                return "vision toolbar conflates provider failure with an inconclusive verdict"
+            return None
+        if scenario == "intel_xref_composite":
+            from src.sec10k.extract import extract_items
+            from src.sec10k.web.view import build_view
+
+            result = extract_items("evals/fixtures/intc-2025/filing.htm", escalate=True)
+            view = build_view(result)
+            item = next(x for x in view["items"] if x["item"] == "7")
+            if result["routing"]["cost"]["llm_calls"] or result["routing"]["cost"]["usd"]:
+                return "Intel composite presentation spent a provider call"
+            if (item.get("display_kind") != "verified_cross_reference"
+                    or item.get("composite_regions", 0) < 2
+                    or not (item.get("display_text") or "").startswith("———— verified cross-reference evidence")
+                    or item["text"] in (item.get("display_text") or "")):
+                return "Intel index-row primary still masks its verified composite evidence"
+            markdown = next(x for x in build_view(extract_items(
+                "evals/fixtures/intc-2025/filing.htm", escalate=True, blocks=True))["items"] if x["item"] == "7")
+            excluded_view = build_view(extract_items(
+                "evals/fixtures/intc-2025/filing.htm", escalate=True, exclude_boilerplate=True))
+            excluded = next(x for x in excluded_view["items"] if x["item"] == "7")
+            if (markdown.get("display_text") == item.get("display_text")
+                    or not excluded.get("display_text")
+                    or not excluded_view.get("boilerplate_applied")):
+                return "Intel composite evidence ignores Markdown or boilerplate display options"
+            by_code = {x["item"]: x for x in view["items"]}
+            if any(by_code[c]["status"] != "incorporated_by_reference"
+                   or not by_code[c]["evidence"].get("cross_reference_pointer")
+                   or by_code[c].get("display_kind") == "verified_cross_reference"
+                   for c in ("11", "12", "13", "14")):
+                return "Intel Part III proxy pointers were presented as local composite content"
+            view_source = (ROOT / "src/sec10k/web/view.py").read_text()
+            if ("xref_composite = bool(ev.get(\"cross_reference_entry\") and ev.get(\"cross_reference\"))" not in view_source
+                    or "to_markdown(text, blocks, tables, a, b, omit=spans or ())" not in view_source
+                    or "strip_chrome(text, spans, a, b) if spans is not None else text[a:b]" not in view_source):
+                return "composite cross-reference regions bypass display options or pointer-only guard"
+            page = (ROOT / "src/sec10k/web/static/index.html").read_text()
+            if ("verified cross-reference evidence — multiple regions/pages" not in page
+                    or "cross-reference index detected → evidence map followed → deterministic page/bounds verifier accepted" not in page):
+                return "UI does not label composite evidence and its deterministic verifier path"
+            start = page.find("function routingCounts(")
+            end = page.find("function highAssuranceStrip", start)
+            audit = subprocess.run(["node", "-e", "const esc=x=>String(x);\n" + page[start:end]
+                                    + "\nconst out=routingAudit(" + json.dumps(result["routing"]) + ");"
+                                    + "if(!out.includes('cross-reference index detected → evidence map followed → deterministic page/bounds verifier accepted')) process.exit(1);"],
+                                   capture_output=True, text=True)
+            if audit.returncode:
+                return "Intel agent audit did not explain accepted cross-reference evidence"
+            return None
+        if scenario in {"trace_sanitize", "verifier_accept", "partial_item_outcomes", "intel_counter_consistency", "compact_banner"}:
+            page = (ROOT / "src/sec10k/web/static/index.html").read_text()
+            start = page.find("function routingCounts(")
+            end = page.find("function highAssuranceStrip", start)
+            if start < 0 or end < 0:
+                return "routing audit helpers are absent"
+            script = "const esc=x=>String(x);\n" + page[start:end]
+            if scenario == "trace_sanitize":
+                if '$("#trace").textContent = JSON.stringify(tracePayload(v), null, 1);' not in page:
+                    return "Pipeline trace still serializes raw routing"
+                script += r'''
+const output = JSON.stringify(tracePayload({trace:["pipeline checkpoint"],routing:{trigger:{fired:true},tiers:[{actions:[{action:"search",query:"TOP SECRET PROMPT"}],observations:[{text:"FILING EXCERPT"}],rejections:["API KEY"]}],graph:{items:[]}}}));
+if(!output.includes("pipeline checkpoint") || /TOP SECRET|FILING EXCERPT|API KEY|query|text/.test(output)) process.exit(1);
+'''
+            elif scenario == "verifier_accept":
+                script += 'if(auditObservation({verifier:[]}) !== "deterministic verifier accepted") process.exit(1);'
+            elif scenario == "intel_counter_consistency":
+                script += r'''
+const intel = {trigger:{fired:true,target_items:["10","11"]},cost:{llm_calls:0,tokens:4833,usd:0},tiers:[{tier:"evidence",role:"evidence",outcome:"resolved",model:"flash",cached:true,cost:{}},{tier:"agent_loop",role:"plan",turn:1,outcome:"resolved",model:"pro",cached:true,cost:{}}],graph:{engine:{name:"langgraph"},checkpoint_count:7,items:[{item:"10",attempts:[{tier:"evidence",outcome:"resolved",actions:[],rejections:[]},{tier:"agent_loop",turn:1,outcome:"resolved",actions:[],rejections:[]}],next_route:"complete"},{item:"11",attempts:[{tier:"evidence",outcome:"resolved",actions:[],rejections:[]},{tier:"agent_loop",turn:1,outcome:"resolved",actions:[],rejections:[]}],next_route:"complete"}]}};
+const banner = routingStrip(intel), audit = routingAudit(intel);
+if(!banner.includes("1 LangGraph planning iteration") || !banner.includes("2 model steps") || !banner.includes("2 cache replays") || !banner.includes("0 live provider calls") || banner.includes("2 turns") || banner.includes("0 calls") || !audit.includes("item 10 · 1 attempt:") || !audit.includes("item 11 · 1 attempt:")) process.exit(1);
+'''
+            elif scenario == "compact_banner":
+                if '$("#banner").textContent = `${bannerResult(v)} — ${bannerContent(v)}${compactRoutingSummary(v.routing)}`;' not in page:
+                    return "main banner still renders the raw routing strip"
+                script += r'''
+const view = {doc_status:"success_with_warning",items:[{item:"1",status:"extracted"},{item:"2",status:"extracted",review_required:true},{item:"10",status:"omitted"},{item:"11",status:"incorporated_by_reference",review_required:true}],routing:{trigger:{fired:true,target_items:["2","10"],reason:"https://secret.example/long trigger prose"},cost:{llm_calls:0,tokens:4833,usd:0},tiers:[{tier:"evidence",role:"evidence",model:"flash",cached:true},{tier:"agent_loop",role:"plan",turn:1,model:"pro",cached:true}],graph:{checkpoint_count:7,items:[{item:"2",next_route:"review_required"}]}}};
+const banner = `${bannerResult(view)} — ${bannerContent(view)}${compactRoutingSummary(view.routing)}`;
+if(!banner.includes("Extraction needs review") || !banner.includes("2 extracted") || !banner.includes("1 omitted") || !banner.includes("1 incorporated by reference") || !banner.includes("review needed: 2") || !banner.includes("Agent-assisted") || !banner.includes("1 planning iteration") || !banner.includes("0 live / 2 cached") || !banner.includes("$0.0000") || /https:|secret|target|flash|pro|trigger|4,833|checkpoint|token/.test(banner)) process.exit(1);
+'''
+            else:
+                script += r'''
+const partial = {trigger:{fired:true},cost:{},tiers:[{tier:"agent_loop",role:"plan",turn:1,items:["4","5"],outcome:"resolved",actions:[],observations:[{verifier:[]}],rejections:[]}],graph:{engine:{name:"langgraph"},items:[{item:"4",attempts:[{turn:1,outcome:"resolved",actions:[],rejections:["item 4: offsets rejected"]}],next_route:"review_required"},{item:"5",attempts:[{turn:1,outcome:"resolved",actions:[],rejections:[]}],next_route:"complete"}]}};
+const safe = auditSafe(partial), audit = routingAudit(partial);
+if(safe.graph.items[0].attempts[0].outcome !== "rejected" || safe.graph.items[1].attempts[0].outcome !== "resolved" || !audit.includes("item 4 · 1 attempt: turn 1 rejected") || !audit.includes("item 5 · 1 attempt: turn 1 resolved")) process.exit(1);
+'''
+            rendered = subprocess.run(["node", "-e", script], capture_output=True, text=True)
+            if rendered.returncode:
+                return f"D33 {scenario} does not preserve the required safe decision evidence"
+            return None
+        if scenario != "routing_audit":
+            return f"unknown d33 scenario {scenario!r}"
+        page = (ROOT / "src/sec10k/web/static/index.html").read_text()
+        start, end = page.find("function routingCounts("), page.find("function highAssuranceStrip", page.find("function routingCounts("))
+        required = ("Sanitized routing JSON", "#agentic-flow-box\").open = !!(v.routing?.trigger?.fired && v.routing?.graph?.engine)",
+                    "agent-proposed; deterministic verifier final authority", "outer routing stages",
+                    "inner LangGraph loop", "per-item outcomes")
+        if start < 0 or end < 0 or any(part not in page for part in required):
+            return "routing audit UI lacks its readable/sanitized route boundary"
+        script = "const esc=x=>String(x);\n" + page[start:end] + r'''
+const quiet = routingAudit(null);
+const suppressed = routingAudit({trigger:{fired:false,route:"suppressed"},cost:{},stages:[{stage:"plan",status:"skipped",skipped:"all cross-reference rows have verified content",cost:{}}]});
+const fixed = routingAudit({trigger:{fired:true},cost:{},stages:[],tiers:[],graph:{items:[]}});
+const agent = {trigger:{fired:true,target_items:["7","8"]},cost:{llm_calls:3,tokens:77,usd:.012},
+ stages:[{stage:"classify",status:"done",reason:"cross-reference rows without verified content",cost:{}},{stage:"plan",status:"done",reason:"agent_loop",next_route:"act",cost:{llm_calls:3,tokens:77,usd:.012}}],
+ tiers:[{tier:"evidence",role:"evidence",items:["7","8"],outcome:"resolved",model:"flash",cached:true,cost:{}},
+ {tier:"agent_loop",role:"plan",turn:1,items:["7"],outcome:"rejected",next_route:"plan",model:"pro",cached:true,latency_ms:4,cost:{},actions:[{action:"search",query:"TOP SECRET PROMPT"}],observations:[{text:"FILING EXCERPT"}],rejections:["API KEY"]},
+ {tier:"agent_loop",role:"plan",turn:2,items:["7"],outcome:"resolved",next_route:"decide",model:"pro",cached:false,latency_ms:5,cost:{llm_calls:1,tokens:7,usd:.001},actions:[{action:"propose_item_dispositions",proposals:[{item:"7",status:"omitted"}]}],observations:[{verifier:["accepted"]}],rejections:[]}],
+ graph:{engine:{name:"langgraph"},checkpoint_count:9,complete:false,items:[{item:"7",attempts:[{turn:1,outcome:"rejected",actions:[{action:"search",query:"TOP SECRET PROMPT"}],rejections:["API KEY"]},{turn:2,outcome:"resolved",actions:[{action:"propose_item_dispositions",proposals:[{item:"7",status:"omitted"}]}],rejections:[]}],next_route:"complete"},{item:"8",attempts:[{turn:1,outcome:"rejected",actions:[],rejections:["agent finished without evidence"]}],next_route:"review_required"}]}};
+const audit = routingAudit(agent), raw = JSON.stringify(auditSafe(agent));
+const unsafe = JSON.stringify(auditSafe({trigger:{fired:false},stages:[{stage:"classify",reason:"API KEY",cost:{}}]}));
+if(!quiet.includes("deterministic-only") || !suppressed.includes("deterministically suppressed") || !suppressed.includes("all cross-reference rows have verified content")
+ || !fixed.includes("fixed escalation") || !audit.includes("LangGraph agentic — agent-proposed; deterministic verifier final authority")
+ || !audit.includes("evidence passes <b>1</b>") || !audit.includes("LangGraph planning iterations <b>2</b>")
+ || !audit.includes("live provider calls <b>3</b>") || !audit.includes("cache replays <b>2</b>") || !audit.includes("model steps <b>3</b>") || !audit.includes("checkpoints <b>9</b>")
+ || !audit.includes("outer routing stages") || !audit.includes("cross-reference rows without verified content") || !audit.includes("inner LangGraph loop")
+ || !audit.includes("item 7 · 2 attempts:") || !audit.includes("next route <b>complete</b>")
+ || !audit.includes("item 8 · 1 attempt:") || !audit.includes("next route <b>review_required</b>")
+ || !audit.includes("rejection: verifier rejection") || !audit.includes("evidence passes</b><ul><li><b>resolved</b> · flash · cache") || !audit.includes("turn 1 rejected search verifier rejection") || !audit.includes("cache")
+ || /TOP SECRET|FILING EXCERPT|API KEY|query|text/.test(audit + raw + unsafe)) process.exit(1);
+'''
+        rendered = subprocess.run(["node", "-e", script], capture_output=True, text=True)
+        if rendered.returncode:
+            return "routing audit does not distinguish all routes/counters or safely render synthetic agent records"
     else:
         return f"unknown check type {t!r}"
     return None

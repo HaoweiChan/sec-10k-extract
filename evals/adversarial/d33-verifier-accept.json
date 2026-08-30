@@ -1,0 +1,9 @@
+{
+  "id": "d33-verifier-accept",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/intc-2025/filing.htm"},
+  "expect": {"checks": [{"type": "d33", "scenario": "verifier_accept"}]},
+  "triage": {"class": "invariant-gap", "note": "A real accepted proposal records an empty verifier list, which the UI rendered as zero results instead of deterministic verifier acceptance."},
+  "provenance": "D33 cold-review F2; synthetic routing record only, no provider call."
+}

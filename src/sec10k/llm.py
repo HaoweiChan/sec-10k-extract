@@ -85,6 +85,10 @@ class EscalationUnavailable(RuntimeError):
     """
 
 
+class CredentialUnavailable(EscalationUnavailable):
+    """No provider credential was available, so no provider call was made."""
+
+
 class BudgetExceeded(EscalationUnavailable):
     """The budget's call or dollar ceiling is spent. A subclass because a
     caller that already handles "the slow path could not run" handles this."""
@@ -252,7 +256,7 @@ def _credential():
     """
     key = (os.environ.get("OPENROUTER_API_KEY") or "").strip()
     if not key:
-        raise EscalationUnavailable(
+        raise CredentialUnavailable(
             "OPENROUTER_API_KEY is not set — the slow path refuses rather than "
             "degrading. The deterministic result above stands on its own; no "
             "tier ran and nothing was inferred.")
@@ -343,7 +347,7 @@ def call(model, system, user, max_tokens, budget, timeout=120,
     Returns {"text", "usage", "usd", "model", "cached"}.
 
     Model policy first, then cache (free, and touches neither the budget nor
-    the credential), budget, credential, and finally the socket. A disabled or
+    the credential), credential, budget, and finally the socket. A disabled or
     over-ceiling model stays unusable even when a cached response exists.
     """
     _enforce_model_policy(model)
@@ -360,10 +364,11 @@ def call(model, system, user, max_tokens, budget, timeout=120,
     # A character may expand to multiple tokens.  Count both messages and
     # deliberately overestimate them so the dollar ceiling is a real pre-call
     # cap. A refused/failed attempted request remains a consumed call: it may
-    # already have reached the paid provider, while only a cache hit is free.
+    # already have reached the paid provider; an absent credential is checked
+    # first because it cannot have reached one.
     projected = usd(model, (len(system) + len(user)) * 4, max_tokens)
-    budget.take(projected)
     api_key = _credential()
+    budget.take(projected)
     body = _body(model, system, user, max_tokens, reasoning_tokens, image_urls,
                  response_format, reasoning_effort)
     base = os.environ.get("OPENROUTER_BASE_URL") or DEFAULT_BASE_URL
@@ -531,9 +536,8 @@ def _demo():
                 raise AssertionError("a keyless call must refuse, not proceed")
             except EscalationUnavailable as e:
                 assert "OPENROUTER_API_KEY" in str(e), e
-            # the budget is decremented BEFORE the credential check, so a
-            # keyless run cannot loop forever pretending it never tried
-            assert b.calls == 1, b.calls
+            # Credential absence is preflight, not an attempted provider call.
+            assert b.calls == 0, b.calls
 
             # an exported-but-empty variable is not a credential
             os.environ["OPENROUTER_API_KEY"] = "   "
@@ -544,7 +548,8 @@ def _demo():
                 pass
             del os.environ["OPENROUTER_API_KEY"]
 
-            # 3. a zero budget refuses before the credential is even read
+            # 3. a zero budget still refuses before any provider request.
+            os.environ["OPENROUTER_API_KEY"] = "test"
             try:
                 call(model, "s", "u", 64, Budget(max_calls=0))
                 raise AssertionError("a zero budget must refuse")
@@ -577,6 +582,7 @@ def _demo():
                 raise AssertionError("a different prompt must miss the cache")
             except BudgetExceeded:
                 pass
+            del os.environ["OPENROUTER_API_KEY"]
             CACHE_DIR = real_cache
     finally:
         if saved is not None:

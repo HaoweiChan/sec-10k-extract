@@ -92,6 +92,7 @@ def build_view(result, display_max=DISPLAY_MAX):
         ev = i.get("evidence") or {}
         elsewhere = [(f"pages {r['pages']}", r["start"], r["end"])
                      for r in ev.get("cross_reference") or []]
+        xref_composite = bool(ev.get("cross_reference_entry") and ev.get("cross_reference"))
         pointer = ev.get("cross_reference_pointer") or {}
         if pointer:
             elsewhere.append(("verified incorporation pointer", pointer["start"], pointer["end"]))
@@ -101,11 +102,32 @@ def build_view(result, display_max=DISPLAY_MAX):
             cr = ev["collective_reference"]
             elsewhere.append(("the pointer this Part states once, for every "
                               "item it names", cr["start"], cr["end"]))
+        source_anchor = None
+        if xref_composite:
+            label, a, b = elsewhere[0]
+            lines = [line.strip() for line in text[a:b].splitlines() if line.strip()]
+            heading = next((line for line in lines
+                            if line.casefold() != "table of contents"), "")
+            anchor_start = text.find(heading, a, b) if heading else -1
+            if anchor_start >= 0:
+                source_anchor = {"label": label, "heading": heading[:240],
+                                 "text": text[anchor_start:min(b, anchor_start + 512)]}
         if elsewhere:
-            out = [body] if body else []
+            # The index row is still published as `text` and its exact offsets
+            # remain primary provenance. It is not the answer, though: these
+            # verified page ranges are separate regions, never one invented
+            # contiguous span.
+            out = [] if xref_composite else ([body] if body else [])
             for label, a, b in elsewhere:
-                out.append(f"\n\n———— {label} · chars {a:,}–{b:,} ————\n\n"
-                           + text[a:b])
+                lead = "\n\n" if out else ""
+                kind = f"verified cross-reference evidence · {label}" if xref_composite else label
+                if blocks is not None:
+                    region = to_markdown(text, blocks, tables, a, b, omit=spans or ())
+                else:
+                    region = strip_chrome(text, spans, a, b) if spans is not None else text[a:b]
+                if spans is not None and strip_chrome(text, spans, a, b) != text[a:b]:
+                    bp_applied = True
+                out.append(f"{lead}———— {kind} · chars {a:,}–{b:,} ————\n\n" + region)
             joined = "".join(out)
             truncated = len(joined) > display_max
             body = joined[:display_max]
@@ -144,6 +166,11 @@ def build_view(result, display_max=DISPLAY_MAX):
         }
         if body != raw[:display_max]:
             item["display_text"] = body
+        if xref_composite:
+            item["display_kind"] = "verified_cross_reference"
+            item["composite_regions"] = len(elsewhere)
+        if source_anchor:
+            item["source_anchor"] = source_anchor
         if elsewhere:
             # so the pane can say WHY the text it shows is longer than `chars`
             item["elsewhere"] = [{"label": l, "start": a, "end": b}

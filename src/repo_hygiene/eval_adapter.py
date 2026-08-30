@@ -938,8 +938,8 @@ WIRE_UI = [
     # own failure message — the STRIPPED string is still what is rendered,
     # `display_text ?? text` unmodified, and the new attributes are display
     # metadata that touch neither end of the wire.
-    ("the extracted-item pane renders the STRIPPED string",
-     '<pre class="text" role="region" tabindex="0" aria-label="Item ${esc(it.item)} extracted text">'
+    ("the extracted-item pane renders the STRIPPED string with evidence-aware labeling",
+     '<pre class="text" role="region" tabindex="0" aria-label="Item ${esc(it.item)} ${composite ? "verified cross-reference evidence" : "extracted text"}">'
      '${esc(it.display_text ?? it.text)}</pre>'),
     ("the truncation notice counts the STRIPPED string",
      '${(it.display_text ?? it.text).length.toLocaleString()}'),
@@ -2909,12 +2909,12 @@ def check_escalation_seam(case):
 # the pinned expressions are in `index.html`; it does not say a browser renders
 # them, and no static read of one file could.
 ROUTING_UI = [
-    ("the doc-level routing strip is declared", "function routingStrip(r)"),
-    ("...and the banner calls it", "routingStrip(v.routing)"),
+    ("the compact routing summary is declared", "function compactRoutingSummary(r)"),
+    ("...and the banner calls it", "compactRoutingSummary(v.routing)"),
     ("the strip distinguishes a quiet trigger from an absent record",
      'if(!r) return "";'),
-    ("the strip prints the money, not just the outcome",
-     '`$${Number(c.usd || 0).toFixed(4)}'),
+    ("the routing UI prints measured cost, not just outcome",
+     "function auditCost(c={})"),
     ("the strip names each tier's outcome", "<b>${esc(t.outcome)}</b>"),
     # PR #58 R17/R19. The strip's truncation clause was unpinned, so deleting
     # it left the gate green — and while it existed it said "the first N chars"
@@ -2928,8 +2928,8 @@ ROUTING_UI = [
     ("...and the item pane shows what the deterministic path had said",
      "it.evidence && it.evidence.deterministic"),
     ("...naming the tier that replaced it", "<b>${esc(it.method)}</b>"),
-    ("the five-stage flow visibly identifies vision provenance", "JSON.stringify({stages: r.stages || []"),
-    ("...and its bounded image count and measured cost", "vision_table:result"),
+    ("the routing audit visibly separates outer stages", "outer routing stages"),
+    ("...and its bounded image result is retained only in sanitized JSON", "vision_table:{status:result.status"),
 ]
 
 # The mirror of ROUTING_UI: expressions that must NOT be in the page at all.
@@ -3020,9 +3020,9 @@ def check_d26_routing_ui(case):
         ("null primary xref header is safe", "no primary span"),
         ("suppression is not called quiet", 'route === "suppressed"'),
         ("suppression prints backend reason", "r.trigger.reason || \"\""),
-        ("flow retains reason and skipped detail", "stages: r.stages || []"),
+        ("routing audit retains reason and skipped detail", "const stageNote = s => s.reason ? s.reason : s.skipped;"),
         ("fired routing shows exact routing evidence", "resolved xref ${esc((r.trigger.resolved_codes"),
-        ("Pipeline trace serializes routing", "routing: v.routing"),
+        ("Pipeline trace serializes sanitized routing", "routing:auditSafe(v.routing)"),
         ("problem routing opens Pipeline trace", "$(\"#trace-box\").open"),
     ]
     bad = [f"D26 UI missing {label}" for label, pin in pins if pin not in ui and pin not in view]
@@ -3599,12 +3599,10 @@ SENDS_TOKEN_UI = [
      "const k = verifiedKey()"),
 ]
 ESCALATION_UI = [
-    ("the page declares the strip", "function highAssuranceStrip(e, r)"),
-    ("...and the banner calls it", "highAssuranceStrip(v.escalation, v.routing)"),
-    ("...printing the SERVER's reason, not one the page invented",
-     'esc((e || {}).reason || "authentication was not verified")'),
-    ("...and saying plainly that the tier did not run",
-     "high assurance: <b>deterministic only</b>"),
+    ("the page declares a compact routing summary", "function compactRoutingSummary(r)"),
+    ("...and the banner calls it", "compactRoutingSummary(v.routing)"),
+    ("...deriving its mode from the server routing record", 'r?.trigger?.fired ? "Agent-assisted"'),
+    ("...and showing the server-recorded total cost", "const counts = routingCounts(r), cost = r?.cost || {};"),
 ]
 
 

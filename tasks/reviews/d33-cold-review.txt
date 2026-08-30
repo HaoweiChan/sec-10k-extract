@@ -1,0 +1,20 @@
+D33 cold review, 2026-08-30
+
+F1 `render()` still writes `JSON.stringify({pipeline:v.trace||[], routing:v.routing})` to Pipeline trace, leaking tier `actions[].query` and `observations[].text` for D28 XOM search/read_window despite sanitized audit. Correct: no displayed routing disclosure contains query, filing excerpt, prompt/key; pipeline trace must use sanitized routing (pipeline itself may remain). Case must exercise full render assignment or exact output boundary, not only auditSafe.
+
+F2 real accepted proposal records `observations:[{verifier:[]}]`; current auditObservation says `deterministic verifier recorded 0 results` rather than accepted. Case must use real shape and require `deterministic verifier accepted`.
+
+F3 partial batch: tier outcome globally resolved, but Item 4 has scoped rejection and next_route review_required; current per-item attempt copies tier outcome `resolved`. Case must use D26-like state and require rejected/unresolved for rejected item while accepted peer remains resolved. The correct per-item audit can derive effective outcome from scoped rejections/next_route without changing backend.
+
+Red-first output through the sec10k adapter, before the repairs:
+
+- `d33-trace-sanitize`: `unknown d33 scenario 'trace_sanitize'`.
+- `d33-verifier-accept`: `unknown d33 scenario 'verifier_accept'`.
+- `d33-partial-item-outcomes`: `unknown d33 scenario 'partial_item_outcomes'`.
+
+Behavioral proof after the checks existed: restoring raw `routing:v.routing`
+made F1 fail `Pipeline trace still serializes raw routing`; restoring F2's
+empty-verifier "0 results" wording failed `D33 verifier_accept does not
+preserve the required safe decision evidence`; copying the resolved batch
+outcome to F3's rejected item failed `D33 partial_item_outcomes does not
+preserve the required safe decision evidence`. Each mutation was restored.

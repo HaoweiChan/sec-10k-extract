@@ -1,0 +1,9 @@
+{
+  "id": "d33-trace-sanitize",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/xom-2021/filing.htm"},
+  "expect": {"checks": [{"type": "d33", "scenario": "trace_sanitize"}]},
+  "triage": {"class": "invariant-gap", "note": "The Pipeline trace still serialized raw routing even though the new audit was sanitized, allowing action queries and read-window text into a displayed disclosure."},
+  "provenance": "D33 cold-review F1; synthetic render boundary only, no provider call."
+}

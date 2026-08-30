@@ -393,6 +393,50 @@ Validation: localhost **PASS**; after integrating main, final invariant
 **125/125** and fast **196/196**, both 100%, $0, with no baseline move. Table
 and structure fidelity remain 1.0.
 
+### D33 — Render the agentic routing audit trail [status: pr]
+Priority: P1
+Origin: owner demo observability request, 2026-08-30
+Spec: Replace the collapsed JSON-only Agentic routing evidence presentation
+with a compact audit UI driven solely by the existing `routing` record. Always
+identify the execution path as deterministic-only, deterministically
+suppressed, fixed escalation, or LangGraph agentic; when agentic, identify it
+as agent-proposed and deterministically verified. Render the outer routing
+stages separately from the inner `diagnose → plan → act → evaluate →
+decide` loop, including per-turn sanitized actions, observations, verifier
+rejections, next decision, model/cache provenance, latency, tokens, and cost.
+Evidence passes, LangGraph iterations, model calls, and checkpoints are distinct
+counters—`tier` count must not be presented as iteration count. Show per-item
+attempt/final-route summaries, auto-open the compact audit when an agentic route
+fires, and retain raw JSON in a nested provenance disclosure. Never display
+hidden model reasoning, prompts, filing excerpts, credentials, or secrets.
+Acceptance: red-first adversarial UI cases cover deterministic quiet,
+deterministic suppression, fixed escalation, agentic accept, verifier rejection
+and re-plan, exhausted/review-required, counter accuracy, sanitized output, and
+cost reconciliation. Reuse native HTML/CSS/JS; no visualization dependency and
+no model-policy change. Where an index-row or near-empty primary has verified
+cross-reference regions, the item answer must present those regions as labeled
+multi-region evidence without fabricating one contiguous primary span; Part III
+incorporated-by-reference pointers remain external and honest. A verified local
+cross-reference resolves the item's near-empty-primary review signal while
+retaining that diagnostic on the document; source compare anchors the first
+verified region rather than the index row. A zero-call table-vision preflight
+must read as not run, while provider failures remain visible. Localhost Intel FY2025 must authenticate the LLM access
+key, replay the committed cache at $0, visibly identify LangGraph agentic mode,
+separate one evidence pass from actual planning iterations and calls, expose
+11/11 item outcomes, and preserve the source comparison UI.
+Validation: invariant **135/135** and fast **206/206**, both 100%; table fidelity
+**427/427 cells** and **34/34 rows**, structure fidelity **61/61 blocks** and
+**61/61 bounds**. Localhost Intel FY2025 URL **PASS** for authenticated cached
+agent routing at **$0**, with 1 evidence pass, 1 planning iteration, 2 cached
+model steps, 7 checkpoints, 11/11 terminal outcomes, zero actionable item
+reviews, Item 7 anchored to the verified page-18 MD&A rather than the page-116
+index row, and Item 8 rendering 29 tables. The separate table-vision call was
+not verified locally because the host provider credential returned HTTP 401;
+the UI now reports provider verification unavailable rather than implying an
+inconclusive model verdict. Evidence:
+`tasks/reviews/d33-localhost-intel-proof.json`. No baseline move and no paid
+eval call.
+
 ## Debt
 
 Each block is a decision not to build something, not a forgotten task. Every
