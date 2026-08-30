@@ -83,3 +83,7 @@ index only cross-references it for scanning.
 - ADR-052 — a verified escalation key permits one capped public-source table
   raster verdict; vision confirms/rejects deterministic Markdown but never
   authors text or offsets — enforced by `d27-high-assurance.json`.
+- ADR-053 — pinned LangGraph runs the bounded evidence-driven per-item graph
+  with compact process-local checkpoints, deterministic candidates/source
+  hash, attempts, rejections, and explicit completion/review route — enforced by
+  `evals/adversarial/d28-per-item-agent-graph.json`.

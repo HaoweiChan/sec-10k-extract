@@ -26,11 +26,12 @@ the offsets, not a second copy that could drift from them (INV-S2).
 ## Run it
 
 ```bash
-python3 -m evals.run --suite all        # 44 cases, no dependencies
+python3 -m evals.run --suite all
 ```
 
-The extraction pipeline and the eval harness are **stdlib-only** (ADR-003).
-`fastapi`/`uvicorn` are needed only for the web inspector:
+Parsing is **stdlib-only** (ADR-003); the bounded routing graph uses pinned
+`langgraph==1.2.11`. Install the project dependencies before running either
+the inspector or evals:
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt

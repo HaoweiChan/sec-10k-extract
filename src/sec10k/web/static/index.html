@@ -1105,6 +1105,7 @@ function routingStrip(r){
   const dispositions = r.dispositions || [];
   const accepted = [...(r.resolved || []), ...(r.alternative || []), ...(r.external || []), ...dispositions];
   const unresolved = (r.trigger.target_items || []).filter(x => !accepted.includes(x));
+  const graph = r.graph || {};
   const done = dispositions.length
     ? `items ${esc(dispositions.join(", "))} have verified terminal disposition${dispositions.length === 1 ? "" : "s"}`
     : (r.resolved || []).length
@@ -1113,14 +1114,17 @@ function routingStrip(r){
       ? `items ${esc(r.external.join(", "))} gained verified same-accession evidence; primary spans stand`
       : "no item was resolved by a model tier; the deterministic spans stand";
   const unfinished = unresolved.length ? ` — unresolved targets ${esc(unresolved.join(", "))} remain review-required` : "";
+  const graphSummary = graph.engine
+    ? `LangGraph · diagnose → plan → act → evaluate → decide · ${(r.tiers || []).length} turns · ${graph.checkpoint_count || 0} checkpoints`
+    : `graph ${graph.complete ? "complete" : "partial; review required"}`;
   return ` <span class="src" id="routing">routing: <b>trigger fired</b>
     (${esc((r.trigger.codes || []).join(", "))}) — ${esc(r.trigger.reason || "")} — targets ${esc((r.trigger.target_items || []).join(", ") || "none")} — resolved xref ${esc((r.trigger.resolved_codes || []).join(", ") || "none")} — residual xref ${esc((r.trigger.residual_codes || []).join(", ") || "none")} — ${tiers} — ${esc(done)} —
-    ${esc(money)}${unfinished}</span>`;
+    ${esc(money)} — ${esc(graphSummary)}${unfinished}</span>`;
 }
 
 function flowStrip(r){
   if(!r) return JSON.stringify({});
-  return JSON.stringify({stages: r.stages || [], turns: (r.tiers || []).map(t => ({
+  return JSON.stringify({stages: r.stages || [], graph: r.graph && {engine: r.graph.engine, checkpoint_history: r.graph.checkpoint_history}, turns: (r.tiers || []).map(t => ({
     turn: t.turn, actions: t.actions || [], observations: t.observations || [],
     rejections: t.rejections || [], cost: t.cost || {}
   }))}, null, 1);
@@ -1132,7 +1136,8 @@ function highAssuranceStrip(e, r){
   if(!t || !t.fired) return ` <span class="src" id="escalation">high assurance: <b>authenticated; trigger quiet</b> — ${esc((t || {}).reason || e.reason || "no routing record")}</span>`;
   const accepted = [...(r.resolved || []), ...(r.alternative || []), ...(r.external || []), ...(r.dispositions || [])];
   const unresolved = (t.target_items || []).filter(x => !accepted.includes(x));
-  const result = unresolved.length ? `accepted ${accepted.join(", ") || "no targets"}; review required for ${unresolved.join(", ")}` : `accepted ${accepted.join(", ") || "no targets"}`;
+  const partial = !(r.graph && r.graph.complete);
+  const result = unresolved.length || partial ? `partial; accepted ${accepted.join(", ") || "no targets"}; review required for ${unresolved.join(", ") || "remaining targets"}` : `complete; accepted ${accepted.join(", ") || "no targets"}`;
   return ` <span class="src" id="escalation">high assurance: <b>authenticated route</b> — ${esc(result)}</span>`;
 }
 

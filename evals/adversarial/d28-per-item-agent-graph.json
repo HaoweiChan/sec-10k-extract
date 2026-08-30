@@ -1,0 +1,15 @@
+{
+  "id": "d28-per-item-agent-graph",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/intc-2025/filing.htm", "escalate": true},
+  "expect": {"checks": [
+    {"type": "envelope_shape"},
+    {"type": "agent_loop", "scenario": "d28_graph"}
+  ]},
+  "triage": {
+    "class": "invariant-gap",
+    "note": "A post-hoc routing label is not an agent graph. Intel's no-key route and XOM's cached-positive replay need a real pinned StateGraph, compact InMemorySaver history, item-specific bounded observations, and end-to-end review-required preservation."
+  },
+  "provenance": "D28 red-first case: the envelope input is committed Intel FY2025 for the no-key path; the adapter's positive cached replay uses committed XOM FY2021. Neither makes a live model call or network request."
+}
