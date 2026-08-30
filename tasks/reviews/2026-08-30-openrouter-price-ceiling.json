@@ -1,0 +1,16 @@
+{
+  "fetched_utc": "2026-08-30",
+  "source": "GET https://openrouter.ai/api/v1/models (unauthenticated)",
+  "policy": "No model may exceed DeepSeek V4 Pro on either input or output list price.",
+  "model": {
+    "id": "deepseek/deepseek-v4-pro",
+    "canonical_slug": "deepseek/deepseek-v4-pro-20260423",
+    "name": "DeepSeek: DeepSeek V4 Pro 0423",
+    "context_length": 1048576,
+    "pricing": {
+      "prompt": "0.000000569328",
+      "completion": "0.000001138656",
+      "input_cache_read": "0.000000047444"
+    }
+  }
+}

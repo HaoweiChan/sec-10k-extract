@@ -100,18 +100,6 @@ Status: Current-base integration evidence: targeted AIG PASS (Item 1 48,136
 chars); invariant 98/98; fast 169/169; $0; base 69 dev / 6 held-out → integrated
 70 dev / 5 held-out after the AIG move, with all 74 non-AIG filings unchanged.
 
-### D19 — Verify the escalation key before extraction [status: pr]
-Origin: owner request, 2026-08-28
-Spec: Shorten the inspector's boilerplate, Markdown, and escalation-key help
-text. Let a visitor verify the escalation key before extraction and show a
-clear green enabled state only when the server accepts it.
-Reviewer evidence: The key-verification path must agree with the extraction
-gate, remain rate-limited, and never remember or send an unverified key.
-Acceptance: `exclude boilerplate` and `render as Markdown` each have a concise
-one-sentence explanation; a wrong key stays disabled; a valid key shows
-`✓ Enabled`, is remembered, and is the only key sent by extraction; editing the
-field clears verification; invariant and fast gates pass at 100%.
-
 ### D20 — Recognize resolved cross-reference content [status: pr]
 Origin: owner decision, 2026-08-29
 Spec: A filing with a reliable cross-reference-index resolution has successful

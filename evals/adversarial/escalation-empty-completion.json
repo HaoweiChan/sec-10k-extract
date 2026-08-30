@@ -27,16 +27,17 @@
         ],
         "error_contains": [
           "output_tokens=2048",
-          "max_tokens=6144",
+          "max_tokens=2048",
           "finish_reason='length'"
         ],
         "usd": 1.79072,
         "resolved": [],
         "min_max_tokens": {
-          "anthropic/claude-opus-5": 6144
+          "deepseek/deepseek-v4-pro": 2048,
+          "openai/gpt-5-mini": 2048
         },
         "reasoning_tokens": {
-          "anthropic/claude-opus-5": 4096,
+          "deepseek/deepseek-v4-pro": null,
           "openai/gpt-5-mini": null
         }
       }
