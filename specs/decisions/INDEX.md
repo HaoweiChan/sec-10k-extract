@@ -107,3 +107,6 @@ index only cross-references it for scanning.
 - ADR-058 — [live inspector progress](ADR-058-live-inspector-progress.md):
   the inspector polls a fixed backend-authored six-stage projection and keeps
   filing text, prompts, credentials, and model reasoning in the separate result.
+- ADR-059 — [index-first cross-reference alignment](ADR-059-index-first-xref-alignment.md):
+  mapped pages are coarse locators; body evidence aligns to an exact or strict
+  item-title heading before unresolved work reaches LangGraph.

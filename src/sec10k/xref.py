@@ -32,6 +32,10 @@ Self-check: python3 -m src.sec10k.xref
 import bisect
 import re
 
+from src.sec10k.segment import SIM_FLOOR, title_similarity
+
+ALIGN_SIM_FLOOR = max(SIM_FLOOR, 0.70)
+
 INDEX_TITLE_RE = re.compile(
     r"(?im)^[ \t]*(form\s*10-?k\s+)?cross[ -]?reference\s+index[ \t]*$")
 
@@ -200,6 +204,37 @@ def _merge(regions):
     return out
 
 
+def _section_title(row):
+    """Index-row title before its page column, including wrapped text."""
+    m = ENTRY_RE.search(row)
+    if not m:
+        return ""
+    tail = row[m.end():]
+    pages = PAGE_KEYWORD_RE.search(tail)
+    if pages:
+        tail = tail[:pages.start()]
+    else:
+        pages = TRAILING_PAGES_RE.search(tail.rstrip())
+        if pages:
+            tail = tail[:pages.start()]
+    return " ".join(tail.split()).strip(" :")
+
+
+def _align_start(text, code, region, row, first_page_end):
+    """Advance a coarse page start to the mapped body heading."""
+    s, e, label = region
+    window = text[s:min(e, first_page_end)]
+    title = _section_title(row)
+    exact = (list(re.finditer(rf"(?im)^[ \t]*{re.escape(title)}[ \t]*$", window))
+             if title else [])
+    if exact:
+        return s + exact[-1].start(), e, label
+    for line in re.finditer(r"(?m)^[ \t]*(\S[^\n]{0,239}?)[ \t]*$", window):
+        if title_similarity(code, line.group(1)) >= ALIGN_SIM_FLOOR:
+            return s + line.start(), e, label
+    return region
+
+
 def pointer_entries(text, span, entries, parts):
     """Footnote-backed incorporation pointers tied to their marked index rows."""
     tail = text[span[1]:min(len(text), span[1] + 2000)]
@@ -242,7 +277,11 @@ def resolve(text, expected):
         for lo, hi in _pages(text[s:e]):
             r = _region(ladder, lo, hi)
             if r and r[0] < r[1] and (r[1] <= span[0] or r[0] >= span[1]):
-                found.append((*r, f"{lo}-{hi}" if hi != lo else str(lo)))
+                first_page_end = next((ladder[p] for p in sorted(ladder)
+                                       if p >= lo), r[1])
+                found.append(_align_start(
+                    text, code, (*r, f"{lo}-{hi}" if hi != lo else str(lo)),
+                    text[s:e], first_page_end))
         if found:
             regions[code] = [{"pages": ",".join(lab), "start": a, "end": b}
                              for a, b, lab in _merge(found)]

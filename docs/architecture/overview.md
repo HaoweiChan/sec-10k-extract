@@ -302,6 +302,10 @@ bounded authenticated routing control path uses pinned `langgraph==1.2.11`
 with process-local `InMemorySaver` audit checkpoints (ADR-053). It does not
 add a parser, persistent store, or another model-call path.
 
+Cross-reference page ranges are coarse locators rather than section starts.
+The resolver aligns each first mapped page to an exact index title or a strict
+item-title variant before unresolved work reaches LangGraph (ADR-059).
+
 **11. Assembly** — derive `doc_status`, attach trace/timings/meta, emit the
 contract-v2 envelope.
 
