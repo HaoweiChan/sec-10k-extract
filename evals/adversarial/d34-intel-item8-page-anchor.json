@@ -1,0 +1,9 @@
+{
+  "id": "d34-intel-item8-page-anchor",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/intc-2025/filing.htm", "escalate": true, "exclude_boilerplate": true, "blocks": true},
+  "expect": {"checks": [{"type": "d34", "scenario": "item8_page_anchor"}]},
+  "triage": {"class": "invariant-gap", "note": "A verified Item 8 composite displayed its page-56 evidence but source comparison still chose its text heading without the filing's printed-page interval."},
+  "provenance": "Intel FY2025 localhost report, 2026-08-30; cached replay only, no provider call."
+}

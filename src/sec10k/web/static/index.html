@@ -396,7 +396,7 @@ footer a{color:var(--accent)}
     <div class="none" style="padding:12px">Select an item to read its extracted text.</div>
   </div>
   <div id="source">
-    <div class="src-hdr source-toolbar"><span class="lbl">original filing</span>
+    <div class="src-hdr source-toolbar"><span class="lbl">original filing · raw, unstripped</span>
       <span id="anchor-status" role="status" aria-live="polite"></span>
       <button type="button" id="vision-table" aria-label="Verify visible table" hidden>Verify table</button>
       <span id="vision-status" class="hint" role="status" aria-live="polite"></span>
@@ -649,18 +649,18 @@ function targetCore(itemText, needle){
   return core;
 }
 
-function findAnchor(index, headingText, itemText){
+function findAnchor(index, headingText, itemText, floor=0, ceiling=index.text.length, requireAgreement=false){
   const needle = coreOfHeading(headingText);
   if(!needle) return null;
   const occurrences = [];
   for(let from = 0; ; ){
     const i = index.text.indexOf(needle, from);
     if(i < 0) break;
-    occurrences.push(i);
+    if(i >= floor && i < ceiling) occurrences.push(i);
     from = i + 1;
   }
   if(!occurrences.length) return null;
-  if(occurrences.length === 1) return rawOffset(index.nodes, occurrences[0]);  // no ambiguity to break
+  if(occurrences.length === 1 && !requireAgreement) return rawOffset(index.nodes, occurrences[0]);  // no ambiguity to break
   const target = targetCore(itemText, needle);
   if(!target) return null;   // several candidates, no body to disambiguate with — honest miss
   let best = occurrences[0], bestScore = -1;
@@ -675,6 +675,20 @@ function findAnchor(index, headingText, itemText){
   // instead once it is shorter than the floor.
   const required = Math.min(AGREEMENT_MIN, target.length);
   return bestScore >= required ? rawOffset(index.nodes, best) : null;
+}
+
+function folioCores(index, page){
+  return index.nodes.filter(n => String(n.node.nodeValue || "").trim() === String(page)).map(n => n.start);
+}
+
+function findPageAnchor(index, source){
+  const page = Number(source.page);
+  if(Number.isInteger(page)) for(const floor of folioCores(index, page - 1)){
+    const ceiling = folioCores(index, page).find(x => x > floor);
+    const anchor = ceiling != null && findAnchor(index, source.heading, source.text, floor, ceiling, true);
+    if(anchor) return anchor;
+  }
+  return findAnchor(index, source.heading, source.text);
 }
 
 // A cached (node, offset) -> a FRESH document-relative Y, computed against
@@ -697,7 +711,7 @@ function anchorY(doc, anchor){
 function buildItemAnchors(doc){
   SOURCE_INDEX = buildSourceIndex(doc);
   const items = (VIEW && VIEW.items) || [];
-  ITEM_START_ANCHORS = items.map(it => it.source_anchor ? findAnchor(SOURCE_INDEX, it.source_anchor.heading, it.source_anchor.text) : findAnchor(SOURCE_INDEX, it.heading_text, it.text));
+  ITEM_START_ANCHORS = items.map(it => it.source_anchor ? findPageAnchor(SOURCE_INDEX, it.source_anchor) : findAnchor(SOURCE_INDEX, it.heading_text, it.text));
 }
 
 // Item i's [start, end) region in CURRENT pixel space (V2 — mapping across
@@ -1267,6 +1281,10 @@ function highAssuranceStrip(e, r){
   return ` <span class="src" id="escalation">high assurance: <b>authenticated route</b> — ${esc(result)}</span>`;
 }
 
+function compositePreviewNote(it, composite){
+  return composite && it.truncated ? " · preview truncated" : "";
+}
+
 function render(v){
   VIEW = v; SEL = null;
   const st = v.doc_status || "failed";
@@ -1389,6 +1407,7 @@ function show(i){
   const pointerCounts = it.cross_reference_pointer_chars ? `verified IBR pointer ${it.cross_reference_pointer_chars.toLocaleString()} ch · ` : "";
   const hdrRight = (VIEW.markdown ? "markdown · " : "") + (VIEW.boilerplate_excluded ? "boilerplate hidden · " : "") +
     `${xrefCounts}${pointerCounts}Part ${esc(it.part || "—")} · ${esc(it.status)} · conf ${it.confidence ?? "—"}${docQual()}${itemQual(it)} · via ${esc(it.method || "—")}`;
+  const previewNote = compositePreviewNote(it, composite);
   // The truncation notice used to be its own in-flow sibling after
   // pre.text, which is exactly the bug .pane-meta's own move to
   // position:absolute just fixed, reintroduced through a second element: on
@@ -1397,7 +1416,7 @@ function show(i){
   // (already out-of-flow) .pane-meta overlay instead, as one more row of
   // the same "where this text came from" evidence — which is what it is.
   $("#pane").innerHTML = `
-    <div class="src-hdr"><span class="lbl">${composite ? `Item ${esc(it.item)} — verified cross-reference evidence — multiple regions/pages` : `Item ${esc(it.item)} — ${esc(it.title || "")}`}</span>
+    <div class="src-hdr"><span class="lbl">${composite ? `Item ${esc(it.item)} — verified cross-reference evidence — multiple regions/pages${previewNote}` : `Item ${esc(it.item)} — ${esc(it.title || "")}`}</span>${it.full_display_text ? `<button type="button" id="full-toggle" aria-pressed="false">show full verified text</button>` : ""}
       <span class="lbl">${hdrRight}</span></div>
     ${body
       // PR #27 R1: the ONLY consumer of the stripped string. `it.text`
@@ -1439,6 +1458,14 @@ function show(i){
         <dt>evidence</dt><dd>${esc(JSON.stringify(it.evidence || {}))}</dd>
       </dl>
     </details>`;
+  const toggle = $("#full-toggle"), paneText = $("#pane pre.text") || $("#pane .text.md");
+  if(toggle && paneText) toggle.onclick = () => {
+    const full = toggle.getAttribute("aria-pressed") !== "true";
+    const value = full ? it.full_display_text : (it.display_text ?? it.text);
+    if(VIEW.markdown) paneText.innerHTML = mdToHtml(value); else paneText.textContent = value;
+    toggle.setAttribute("aria-pressed", String(full));
+    toggle.textContent = full ? "show preview" : "show full verified text";
+  };
   const pre = $("#pane pre.text") || $("#pane .text.md");
   if(pre) bindPaneScroll(pre);
   scrollSourceToItem(i);

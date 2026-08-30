@@ -1,0 +1,9 @@
+{
+  "id": "d34-intel-item8-composite-view",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/intc-2025/filing.htm", "escalate": true, "exclude_boilerplate": true, "blocks": true},
+  "expect": {"checks": [{"type": "d34", "scenario": "item8_composite_view"}]},
+  "triage": {"class": "invariant-gap", "note": "The raw original pane and a 40,000-character composite preview were not explicitly distinguished, making a truncated extracted Item 8 appear complete."},
+  "provenance": "Intel FY2025 localhost report, 2026-08-30; cached replay only, no provider call."
+}

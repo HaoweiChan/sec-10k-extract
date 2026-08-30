@@ -437,6 +437,33 @@ inconclusive model verdict. Evidence:
 `tasks/reviews/d33-localhost-intel-proof.json`. No baseline move and no paid
 eval call.
 
+### D34 — Align verified composite items to their referenced filing pages [status: pr]
+Priority: P1
+Origin: owner localhost Intel FY2025 Item 8 report, 2026-08-30
+Spec: Treat an Item cross-reference page map as the navigation authority for a
+verified composite item. Intel FY2025 Item 8 must present the financial-
+statement content referenced on pages 56-108 rather than its page-116 index
+row or adjacent non-Item content. With boilerplate exclusion enabled, the
+extracted pane must omit repeated running heads, page numbers, and table-of-
+contents chrome from every composite region; the raw original filing may keep
+them as source evidence. Source compare must use the first referenced filing
+page number as its alignment target, with bounded text agreement as a fallback,
+so selecting Item 8 lands on page 56 instead of the trailing index.
+Acceptance: add red-first Intel cases for Item 8 page bounds, composite
+boilerplate removal, and raw-source alignment; preserve exact normalized
+offset/provenance ranges and Part III incorporation-by-reference behavior.
+Localhost proof must use the Intel FY2025 SEC URL with boilerplate exclusion
+and Markdown enabled and visually confirm Item 8 against the original filing.
+Validation: invariant **141/141**; fast **212/212**; table fidelity **427/427
+cells, 34/34 rows**; structure fidelity **61/61 blocks and bounds**. Localhost
+Intel FY2025 Item 8 passed against the SEC URL with boilerplate exclusion and
+Markdown enabled: the derived pane omitted the p56/p57/p65 footer tables,
+the full verified composite expanded from a 40,000-character preview, and the
+raw source aligned to the p56 `Financial Statements and Supplemental Details`
+heading rather than the p116 cross-reference index. Evidence:
+`tasks/reviews/d34-localhost-intel-proof.json`. No baseline move and no paid
+model call.
+
 ## Debt
 
 Each block is a decision not to build something, not a forgotten task. Every

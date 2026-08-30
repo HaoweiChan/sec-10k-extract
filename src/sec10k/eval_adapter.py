@@ -2132,13 +2132,13 @@ if(!done || pending || !completed.includes("primary-span coverage: <b>58.32%</b>
             anchor = by_code["7"].get("source_anchor") or {}
             if (not anchor.get("label", "").startswith("pages ")
                     or anchor.get("heading") == "Table of Contents"
-                    or not anchor.get("text")
+                    or not anchor.get("text") or anchor.get("page") != 18
                     or {"start", "end"} & set(anchor)):
                 return "composite Item 7 has no bounded verified-page source anchor"
             if by_code["11"].get("source_anchor"):
                 return "pointer-only Item 11 was given a composite source anchor"
             page = (ROOT / "src/sec10k/web/static/index.html").read_text()
-            if "it.source_anchor ? findAnchor(SOURCE_INDEX, it.source_anchor.heading, it.source_anchor.text)" not in page:
+            if "it.source_anchor ? findPageAnchor(SOURCE_INDEX, it.source_anchor)" not in page:
                 return "source compare still anchors composite items on primary index text"
             return None
         if scenario == "vision_table_preflight":
@@ -2204,8 +2204,10 @@ if(visionStatusText({preflight:true}) !== "not run · provider access unavailabl
                 return "Intel Part III proxy pointers were presented as local composite content"
             view_source = (ROOT / "src/sec10k/web/view.py").read_text()
             if ("xref_composite = bool(ev.get(\"cross_reference_entry\") and ev.get(\"cross_reference\"))" not in view_source
-                    or "to_markdown(text, blocks, tables, a, b, omit=spans or ())" not in view_source
-                    or "strip_chrome(text, spans, a, b) if spans is not None else text[a:b]" not in view_source):
+                    or "xref_pages = {(r[\"start\"], r[\"end\"]): r[\"pages\"]" not in view_source
+                    or "_footer_tables(text, tables, a, b," not in view_source
+                    or "to_markdown(text, blocks, tables, a, b, omit=region_omit)" not in view_source
+                    or "strip_chrome(text, region_omit, a, b) if spans is not None else text[a:b]" not in view_source):
                 return "composite cross-reference regions bypass display options or pointer-only guard"
             page = (ROOT / "src/sec10k/web/static/index.html").read_text()
             if ("verified cross-reference evidence — multiple regions/pages" not in page
@@ -2294,6 +2296,116 @@ if(!quiet.includes("deterministic-only") || !suppressed.includes("deterministica
         rendered = subprocess.run(["node", "-e", script], capture_output=True, text=True)
         if rendered.returncode:
             return "routing audit does not distinguish all routes/counters or safely render synthetic agent records"
+    elif t == "d34":
+        from src.sec10k.extract import extract_items
+        from src.sec10k.web.view import build_view
+
+        scenario = chk.get("scenario")
+        result = extract_items("evals/fixtures/intc-2025/filing.htm", escalate=True,
+                               exclude_boilerplate=True, blocks=True)
+        item = next(x for x in build_view(result)["items"] if x["item"] == "8")
+        def footer_fixture(entries):
+            text, tables = "", []
+            for label, page_no in entries:
+                start, cells = len(text), []
+                if label:
+                    a = len(text); text += label; cells.append([a, len(text)])
+                    text += " "
+                a = len(text); text += str(page_no); cells.append([a, len(text)])
+                tables.append({"start": start, "end": len(text), "rows": [[], cells]})
+                text += "\n"
+            return text, tables
+
+        if scenario == "page_anchor_decoy":
+            page = (ROOT / "src/sec10k/web/static/index.html").read_text()
+            start, end = page.find("function coreOf("), page.find("function anchorY(")
+            script = r'''const document={createElement:()=>({innerHTML:"",get value(){return this.innerHTML;}})};
+''' + page[start:end] + r'''
+let cursor=0;
+function makeNode(raw){const rawIndexOf=[], chars=[]; for(let i=0;i<raw.length;i++)if(!/\s/.test(raw[i])){rawIndexOf.push(i);chars.push(raw[i].toLowerCase());} const node={nodeValue:raw}; const out={node,start:cursor,coreLen:chars.length,rawIndexOf}; cursor+=chars.length; return [out,chars.join("")];}
+const made=["55", "Financial Statements decoy", "56", "55", "Financial Statements body agreement", "56", "Other global body"].map(makeNode);
+const index={nodes:made.map(x=>x[0]),text:made.map(x=>x[1]).join("")};
+const source={page:56,heading:"Financial Statements",text:"Financial Statements body agreement"};
+const anchor=findPageAnchor(index,source), fallback=findPageAnchor(index,{page:99,heading:"Other",text:"Other global body"});
+if(!anchor || anchor.node!==index.nodes[4].node || !fallback || fallback.node!==index.nodes[6].node) process.exit(1);
+'''
+            if start < 0 or end < 0 or subprocess.run(["node", "-e", script], capture_output=True).returncode:
+                return "page-bound source anchor accepts a heading-only decoy or loses global fallback"
+            return None
+        if scenario in {"footer_substantive_run", "footer_missing_folio"}:
+            from inspect import signature
+            from src.sec10k.web.view import _footer_tables
+
+            if scenario == "footer_substantive_run":
+                entries = [("Supporting schedule", 56), ("Supporting schedule", 57)] + [
+                    (f"Substantive table {n}", n) for n in range(58, 63)]
+                expected = 0
+            else:
+                entries = [("Repeated footer", n) for n in (56, 57, 58, 60, 61, 62, 63, 64, 65)]
+                expected = len(entries)
+            text, tables = footer_fixture(entries)
+            pages = set(range(56, 66))
+            args = (text, tables, 0, len(text))
+            got = list(_footer_tables(*args, pages) if "pages" in signature(_footer_tables).parameters
+                       else _footer_tables(*args))
+            if len(got) != expected:
+                return ("substantive two-row tables with only two repeated labels were removed as footers"
+                        if scenario == "footer_substantive_run"
+                        else "repeated footer run with one missing folio was not removed")
+            return None
+        if scenario == "full_composite_toggle":
+            page = (ROOT / "src/sec10k/web/static/index.html").read_text()
+            show_start = page.find("function show(i){")
+            template_start = page.find('$("#pane").innerHTML', show_start)
+            template_end = page.find('const pre = $("#pane pre.text")', template_start)
+            template = page[template_start:template_end]
+            if ("it.full_display_text ? `<details" in template
+                    or 'id="full-toggle"' not in template
+                    or "toggle.textContent" not in template):
+                return "full composite creates a second in-flow pane child"
+            return None
+        if scenario == "item8_page_anchor":
+            anchor = item.get("source_anchor") or {}
+            if (anchor.get("page") != 56 or anchor.get("label") != "pages 56-108"
+                    or not anchor.get("heading") or not anchor.get("text")
+                    or {"start", "end"} & set(anchor)):
+                return "Item 8 source anchor has no first verified page"
+            page = (ROOT / "src/sec10k/web/static/index.html").read_text()
+            if "findPageAnchor(SOURCE_INDEX, it.source_anchor)" not in page:
+                return "source compare does not bind Item 8 to its printed page interval"
+            start, end = page.find("function coreOf("), page.find("function anchorY(")
+            script = r'''const document={createElement:()=>({innerHTML:"",get value(){return this.innerHTML;}})};
+''' + page[start:end] + r'''
+let cursor=0;
+function makeNode(raw){const rawIndexOf=[], chars=[]; for(let i=0;i<raw.length;i++)if(!/\s/.test(raw[i])){rawIndexOf.push(i);chars.push(raw[i].toLowerCase());} const node={nodeValue:raw}; const out={node,start:cursor,coreLen:chars.length,rawIndexOf}; cursor+=chars.length; return [out,chars.join("")];}
+const made=["55", "56", "Financial Statements and Supplemental Details index", "55", "Financial Statements and Supplemental Details body agreement", "56", "Financial Statements and Supplemental Details trailing index"].map(makeNode);
+const index={nodes:made.map(x=>x[0]),text:made.map(x=>x[1]).join("")};
+const source={page:56,heading:"Financial Statements and Supplemental Details",text:"Financial Statements and Supplemental Details body agreement"};
+const anchor=findPageAnchor(index,source), fallback=findPageAnchor(index,{...source,page:999});
+if(!anchor || anchor.node!==index.nodes[4].node || !fallback || fallback.node!==index.nodes[4].node) process.exit(1);
+'''
+            if start < 0 or end < 0 or subprocess.run(["node", "-e", script], capture_output=True).returncode:
+                return "page-bound source anchor does not prefer the first verified folio interval"
+            return None
+        if scenario == "item8_composite_view":
+            if (item.get("start"), item.get("end"), item.get("cross_reference_chars")) != (515221, 515287, 205692):
+                return "Intel Item 8 composite bounds or truncation changed unexpectedly"
+            regions = next(x for x in result["items"] if x["item"] == "8")["evidence"]["cross_reference"]
+            footer = "| Financial Statements | Notes to Consolidated Financial Statements | 65 |\n|---|---|---|"
+            if ("| 56 |\n|---|" in (item.get("display_text") or "")
+                    or "| Auditor's Reports | 57 |\n|---|---|" in (item.get("display_text") or "")
+                    or footer in (item.get("display_text") or "")):
+                return "boilerplate-excluded Item 8 composite still displays table footer chrome"
+            if "Financial Statements\nNotes to Consolidated Financial Statements\n\n65" not in result["normalized_text"]:
+                return "Item 8 raw source evidence no longer retains its table footer"
+            page = (ROOT / "src/sec10k/web/static/index.html").read_text()
+            if (not item.get("truncated") or not item.get("full_display_text")
+                    or len(item["full_display_text"]) <= len(item.get("display_text") or "")
+                    or 'id="full-toggle"' not in page
+                    or "original filing · raw, unstripped" not in page or "preview truncated" not in page):
+                return "raw original filing and composite truncation are not both explicit"
+            return None
+        return f"unknown d34 scenario {scenario!r}"
     else:
         return f"unknown check type {t!r}"
     return None

@@ -24,6 +24,45 @@ DISPLAY_MAX = 40_000
 TRACE_MAX = 400  # rejected-candidate lists on a bad filing can run to thousands
 
 
+def _footer_tables(text, tables, start, end, pages):
+    """Repeated two-row footer tables within this verified printed-page map."""
+    if isinstance(pages, (set, list, tuple)):
+        allowed = {int(page) for page in pages}
+    else:
+        allowed = set()
+        for part in str(pages or "").split(","):
+            bits = part.strip().split("-", 1)
+            if not bits[0].isdigit():
+                continue
+            first = int(bits[0])
+            if len(bits) == 2 and bits[1].strip().isdigit():
+                allowed.update(range(first, int(bits[1].strip()) + 1))
+            else:
+                allowed.add(first)
+    if not allowed:
+        return
+    candidates = []
+    for table in tables:
+        if not (start <= table.get("start", -1) < table.get("end", -1) <= end):
+            continue
+        rows = table.get("rows") or []
+        cells = [text[cell[0]:cell[1]].strip() for row in rows for cell in row
+                 if cell[1] > cell[0] and text[cell[0]:cell[1]].strip()]
+        if (len(rows) == 2 and 1 <= len(cells) <= 3 and cells[-1].isdigit()
+                and int(cells[-1]) in allowed):
+            candidates.append((int(cells[-1]), " ".join(cells[:-1]).casefold(), table))
+    run = []
+    for candidate in candidates + [(None, None, None)]:
+        if run and (candidate[0] is None or not (run[-1][0] < candidate[0] <= run[-1][0] + 2)):
+            labels = Counter(label for _page, label, _table in run if label)
+            if len(run) >= 7 and any(count >= 3 for count in labels.values()):
+                yield from ({"start": table["start"], "end": table["end"]}
+                            for _page, _label, table in run)
+            run = []
+        if candidate[0] is not None:
+            run.append(candidate)
+
+
 def build_view(result, display_max=DISPLAY_MAX):
     """Envelope -> UI payload. Never raises on a well-formed envelope.
 
@@ -92,6 +131,8 @@ def build_view(result, display_max=DISPLAY_MAX):
         ev = i.get("evidence") or {}
         elsewhere = [(f"pages {r['pages']}", r["start"], r["end"])
                      for r in ev.get("cross_reference") or []]
+        xref_pages = {(r["start"], r["end"]): r["pages"]
+                      for r in ev.get("cross_reference") or []}
         xref_composite = bool(ev.get("cross_reference_entry") and ev.get("cross_reference"))
         pointer = ev.get("cross_reference_pointer") or {}
         if pointer:
@@ -110,8 +151,11 @@ def build_view(result, display_max=DISPLAY_MAX):
                             if line.casefold() != "table of contents"), "")
             anchor_start = text.find(heading, a, b) if heading else -1
             if anchor_start >= 0:
+                page = label.removeprefix("pages ").split("-", 1)[0].split(",", 1)[0]
                 source_anchor = {"label": label, "heading": heading[:240],
-                                 "text": text[anchor_start:min(b, anchor_start + 512)]}
+                                 "text": text[anchor_start:min(b, anchor_start + 512)],
+                                 "page": int(page) if page.isdigit() else None}
+        full_display = None
         if elsewhere:
             # The index row is still published as `text` and its exact offsets
             # remain primary provenance. It is not the answer, though: these
@@ -121,16 +165,22 @@ def build_view(result, display_max=DISPLAY_MAX):
             for label, a, b in elsewhere:
                 lead = "\n\n" if out else ""
                 kind = f"verified cross-reference evidence · {label}" if xref_composite else label
+                region_omit = list(spans or ())
+                if spans is not None:
+                    region_omit += list(_footer_tables(text, tables, a, b,
+                                                       xref_pages.get((a, b))))
+                    region_omit.sort(key=lambda x: x["start"])
                 if blocks is not None:
-                    region = to_markdown(text, blocks, tables, a, b, omit=spans or ())
+                    region = to_markdown(text, blocks, tables, a, b, omit=region_omit)
                 else:
-                    region = strip_chrome(text, spans, a, b) if spans is not None else text[a:b]
-                if spans is not None and strip_chrome(text, spans, a, b) != text[a:b]:
+                    region = strip_chrome(text, region_omit, a, b) if spans is not None else text[a:b]
+                if spans is not None and strip_chrome(text, region_omit, a, b) != text[a:b]:
                     bp_applied = True
                 out.append(f"{lead}———— {kind} · chars {a:,}–{b:,} ————\n\n" + region)
             joined = "".join(out)
             truncated = len(joined) > display_max
             body = joined[:display_max]
+            full_display = joined if truncated and xref_composite else None
         external = ev.get("external_regions") or []
         if external:
             notes = []
@@ -171,6 +221,8 @@ def build_view(result, display_max=DISPLAY_MAX):
             item["composite_regions"] = len(elsewhere)
         if source_anchor:
             item["source_anchor"] = source_anchor
+        if full_display:
+            item["full_display_text"] = full_display
         if elsewhere:
             # so the pane can say WHY the text it shows is longer than `chars`
             item["elsewhere"] = [{"label": l, "start": a, "end": b}
