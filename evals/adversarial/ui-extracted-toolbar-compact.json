@@ -1,0 +1,12 @@
+{
+  "id": "ui-extracted-toolbar-compact",
+  "task": "repo_hygiene",
+  "suites": ["invariant", "fast"],
+  "input": {"checks": ["extracted_toolbar_compact", "sync_scroll_control"]},
+  "expect": {},
+  "triage": {
+    "class": "responsive-layout",
+    "note": "Owner screenshot review, 2026-08-30: the extracted header squeezed a long composite title, diagnostic metadata, and a wrapping full-text button into one narrow row. Keep only the readable item title, compact view state, and short action in a dedicated two-track toolbar."
+  },
+  "provenance": "Authored against the screenshot-reproducing D34 UI before implementation and watched red."
+}

@@ -150,7 +150,7 @@ button:disabled{opacity:.5;cursor:default}
 #bp-note{border:1px solid var(--line);border-left:3px solid var(--amb);
   border-radius:var(--r);padding:8px 11px;margin-bottom:12px;background:var(--panel);
   font-size:13px;color:var(--dim)}
-#bp-note code{font:12px var(--mono);color:var(--amber-ink)}
+#bp-note strong{color:var(--ink)}
 
 .split{display:grid;grid-template-columns:290px 1fr 1fr;gap:14px;align-items:start}
 /* D5 (debt row V5): the SIDEBAR narrows first, so #pane and #source stay in
@@ -287,7 +287,13 @@ details pre{margin:0;padding:0 13px 13px;font:12px/1.5 var(--mono);
    eventually would. */
 .src-hdr{padding:9px 13px;border-bottom:1px solid var(--line);font-size:12px;font-weight:600;
   color:var(--dim);text-transform:uppercase;letter-spacing:.1em;display:flex;
-  justify-content:space-between;align-items:center;gap:10px}
+  justify-content:space-between;align-items:center;gap:10px;min-height:43px}
+.extracted-toolbar{display:grid;grid-template-columns:minmax(0,1fr) max-content;
+  text-transform:none;letter-spacing:0}
+.extracted-actions,.source-actions{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.view-state{font-size:11px;color:var(--dim)}
+#full-toggle{padding:4px 8px;background:transparent;color:var(--accent);border-color:var(--accent);
+  font-size:11px;text-transform:none;letter-spacing:0;white-space:nowrap}
 .source-toolbar{display:grid;grid-template-columns:max-content minmax(0,1fr) max-content;
   text-transform:none;letter-spacing:0}
 .source-toolbar #anchor-status{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -372,22 +378,10 @@ footer a{color:var(--accent)}
      doc_status belongs to something instead of to an anonymous `generic`. -->
 <div id="banner" class="s-idle" role="status" aria-label="doc_status">No filing extracted yet.</div>
 <div id="warnings"></div>
-<!-- D5: shown only while the response on screen actually HAD something hidden
-     — render() assigns .hidden from `v.boilerplate_applied` (PR #46 R1). That
-     is deliberately NOT the field the pane header reads: `hdrRight` and the
-     .pane-meta boilerplate <dd> below key on `boilerplate_excluded`, which is
-     True whenever the flag was merely asked for. This note ASSERTS the two
-     panes differ, so it needs the field that says one of them changed. It
-     states the limit; it does not fix it, and must not read as if it did. -->
-<div id="bp-note" hidden>Boilerplate exclusion applies to the
-  derived <code>normalized_text</code> only. The compare pane serves the raw
-  filing bytes, so it still shows every page break and running head the
-  extracted pane drops — the two panes will not agree while this is on. That is
-  what exclusion accounts for, and only that: with Markdown rendering on the
-  extracted pane also differs in form, which is ADR-032's separate derived view
-  and is stated in the pane's own evidence. There is
-  no raw-to-normalized offset map in this pipeline (ADR-026 §a), so this is a
-  known limit of the compare view, not a fault in either pane.</div>
+<!-- Shown only when exclusion actually changed the extracted text. -->
+<div id="bp-note" hidden><strong>Why the panes differ:</strong> Extracted hides
+  headers and page numbers and may use Markdown; Original Filing stays
+  unchanged, so alignment may differ.</div>
 
 <div class="split">
   <div id="sidebar"><div style="padding:11px" class="none">Items appear here.</div></div>
@@ -396,9 +390,12 @@ footer a{color:var(--accent)}
     <div class="none" style="padding:12px">Select an item to read its extracted text.</div>
   </div>
   <div id="source">
-    <div class="src-hdr source-toolbar"><span class="lbl">original filing · raw, unstripped</span>
+    <div class="src-hdr source-toolbar"><span class="lbl" title="original filing · raw, unstripped">original filing</span>
       <span id="anchor-status" role="status" aria-live="polite"></span>
-      <button type="button" id="vision-table" aria-label="Verify visible table" hidden>Verify table</button>
+      <span class="source-actions">
+        <label><input type="checkbox" id="sync-scroll" checked> Sync scroll<span id="sync-state"></span></label>
+        <button type="button" id="vision-table" aria-label="Verify visible table" hidden>Verify table</button>
+      </span>
       <span id="vision-status" class="hint" role="status" aria-live="polite"></span>
     </div>
     <div id="source-body"><div class="none" style="padding:12px">Extract a filing to see its original source.</div></div>
@@ -774,10 +771,16 @@ function scrollSourceToItem(i){
   SYNC_GUARD = false;
 }
 
-// A source location is a verified heading anchor, not an estimated pixel map.
-// Scrolling either pane independently is honest; proportional mapping between
-// rendered Markdown and source layout would look precise without being so.
 let SYNC_GUARD = false;
+function syncOn(){ const c = $("#sync-scroll"); return !!(c && c.checked && !c.disabled); }
+const STACKED = matchMedia("(max-width:1000px)");
+function syncStacked(){
+  const c = $("#sync-scroll"); if(!c) return;
+  c.disabled = STACKED.matches;
+  $("#sync-state").textContent = STACKED.matches ? " — inactive: panes stacked" : "";
+}
+STACKED.addEventListener("change", syncStacked);
+syncStacked();
 // S8. Read at REQUEST time, not render time: the pane labels itself from the
 // response's own `boilerplate_excluded`, so toggling the box after an
 // extraction cannot make the label lie about the text on screen.
@@ -848,11 +851,38 @@ function bindSourceScroll(frame, token){
       (doc.scrollingElement || doc.documentElement).scrollTop = 0;
       anchorStatus("Cover");
     }else if(SEL != null) scrollSourceToItem(SEL);
+    const scroller = doc.scrollingElement || doc.documentElement;
+    scroller.addEventListener("scroll", () => {
+      if(SYNC_GUARD || !syncOn()) return;
+      const pane = document.querySelector("#pane .text, #pane .front-text");
+      if(!pane) return;
+      const region = selectedRegion(doc);
+      const frac = region
+        ? (scroller.scrollTop - region.start) / Math.max(1, region.end - region.start)
+        : scroller.scrollTop / Math.max(1, scroller.scrollHeight - scroller.clientHeight);
+      SYNC_GUARD = true;
+      pane.scrollTop = Math.min(1, Math.max(0, frac)) * Math.max(1, pane.scrollHeight - pane.clientHeight);
+      SYNC_GUARD = false;
+    });
   });
 }
 
 function bindPaneScroll(pre){
-  // Kept as the single pane hookup: navigation uses the source heading anchor.
+  pre.addEventListener("scroll", () => {
+    if(SYNC_GUARD || !syncOn()) return;
+    const frame = document.getElementById("src-frame");
+    if(!frame) return;
+    let doc; try{ doc = frame.contentDocument; }catch(e){ return; }
+    if(!doc) return;
+    const scroller = doc.scrollingElement || doc.documentElement;
+    const frac = pre.scrollTop / Math.max(1, pre.scrollHeight - pre.clientHeight);
+    const region = selectedRegion(doc);
+    SYNC_GUARD = true;
+    scroller.scrollTop = region
+      ? region.start + frac * Math.max(1, region.end - region.start)
+      : frac * Math.max(1, scroller.scrollHeight - scroller.clientHeight);
+    SYNC_GUARD = false;
+  });
 }
 
 // A token miss (cache evicted — the LRU holds at most 3 documents) renders
@@ -1403,10 +1433,10 @@ function show(i){
   // the qualifier has to sit on the surviving side of that cut, not appended
   // past it. `via` is the part that may be lost; what the number is worth
   // is not.
-  const xrefCounts = it.cross_reference_chars ? `${it.primary_chars != null ? `primary ${it.primary_chars.toLocaleString()} ch · ` : "no primary span · "}index row ${it.index_entry_chars?.toLocaleString() || "—"} ch · verified xref ${it.cross_reference_chars.toLocaleString()} ch · ` : "";
-  const pointerCounts = it.cross_reference_pointer_chars ? `verified IBR pointer ${it.cross_reference_pointer_chars.toLocaleString()} ch · ` : "";
-  const hdrRight = (VIEW.markdown ? "markdown · " : "") + (VIEW.boilerplate_excluded ? "boilerplate hidden · " : "") +
-    `${xrefCounts}${pointerCounts}Part ${esc(it.part || "—")} · ${esc(it.status)} · conf ${it.confidence ?? "—"}${docQual()}${itemQual(it)} · via ${esc(it.method || "—")}`;
+  const xrefCounts = it.cross_reference_chars ? `${it.primary_chars != null ? `primary ${it.primary_chars.toLocaleString()} ch · ` : "no primary span · "}index row ${it.index_entry_chars?.toLocaleString() || "—"} ch · verified xref ${it.cross_reference_chars.toLocaleString()} ch` : "";
+  const pointerCounts = it.cross_reference_pointer_chars ? ` · verified IBR pointer ${it.cross_reference_pointer_chars.toLocaleString()} ch` : "";
+  const viewState = (VIEW.markdown ? "Markdown" : "Text") + (VIEW.boilerplate_excluded ? " · Cleaned" : "");
+  const viewStateTitle = (VIEW.boilerplate_excluded ? "boilerplate hidden · " : "") + "Item view";
   const previewNote = compositePreviewNote(it, composite);
   // The truncation notice used to be its own in-flow sibling after
   // pre.text, which is exactly the bug .pane-meta's own move to
@@ -1416,8 +1446,8 @@ function show(i){
   // (already out-of-flow) .pane-meta overlay instead, as one more row of
   // the same "where this text came from" evidence — which is what it is.
   $("#pane").innerHTML = `
-    <div class="src-hdr"><span class="lbl">${composite ? `Item ${esc(it.item)} — verified cross-reference evidence — multiple regions/pages${previewNote}` : `Item ${esc(it.item)} — ${esc(it.title || "")}`}</span>${it.full_display_text ? `<button type="button" id="full-toggle" aria-pressed="false">show full verified text</button>` : ""}
-      <span class="lbl">${hdrRight}</span></div>
+    <div class="src-hdr extracted-toolbar"><span class="lbl">${composite ? `Item ${esc(it.item)} — verified cross-reference evidence — multiple regions/pages${previewNote}` : `Item ${esc(it.item)} — ${esc(it.title || "")}`}</span>
+      <div class="extracted-actions"><span class="view-state" title="${viewStateTitle}">${viewState}</span>${it.full_display_text ? `<button type="button" id="full-toggle" aria-pressed="false" aria-label="Show full verified text">Full text</button>` : ""}</div></div>
     ${body
       // PR #27 R1: the ONLY consumer of the stripped string. `it.text`
       // stays the verbatim slice because findAnchor above matches it
@@ -1434,6 +1464,8 @@ function show(i){
       : `<div class="none" style="padding:12px">Status <b>${esc(it.status)}</b> carries no span: the item is reported as absent rather than silently dropped (INV-S4).</div>`}
     <details class="pane-meta"><summary>where this text came from</summary>
       <dl class="ev">
+        <dt>item</dt><dd>Part ${esc(it.part || "—")} · ${esc(it.status)} · conf ${it.confidence ?? "—"}${docQual()}${itemQual(it)} · via ${esc(it.method || "—")}</dd>
+        ${xrefCounts ? `<dt>regions</dt><dd>${xrefCounts}${pointerCounts}</dd>` : ""}
         ${it.truncated ? `<dt>shown</dt><dd>first ${(it.display_text ?? it.text).length.toLocaleString()} of ${renderableChars(it).toLocaleString()} characters</dd>` : ""}
         ${it.elsewhere ? `<dt>content elsewhere</dt><dd>this item's own span is
           ${it.chars == null ? "null — the filing states this Part's pointer once, for every item it names" : `${it.chars.toLocaleString()} characters`},
@@ -1464,7 +1496,8 @@ function show(i){
     const value = full ? it.full_display_text : (it.display_text ?? it.text);
     if(VIEW.markdown) paneText.innerHTML = mdToHtml(value); else paneText.textContent = value;
     toggle.setAttribute("aria-pressed", String(full));
-    toggle.textContent = full ? "show preview" : "show full verified text";
+    toggle.textContent = full ? "Preview" : "Full text";
+    toggle.setAttribute("aria-label", full ? "Show verified text preview" : "Show full verified text");
   };
   const pre = $("#pane pre.text") || $("#pane .text.md");
   if(pre) bindPaneScroll(pre);
