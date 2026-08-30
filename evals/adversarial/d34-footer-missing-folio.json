@@ -1,0 +1,9 @@
+{
+  "id": "d34-footer-missing-folio",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/intc-2025/filing.htm"},
+  "expect": {"checks": [{"type": "d34", "scenario": "footer_missing_folio"}]},
+  "triage": {"class": "invariant-gap", "note": "A repeated footer run may have one missing printed folio and must remain removable within its verified page map."},
+  "provenance": "D34 cold review R3 synthetic table blocks; no provider call."
+}

@@ -1,0 +1,9 @@
+{
+  "id": "d34-footer-substantive-run",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/intc-2025/filing.htm"},
+  "expect": {"checks": [{"type": "d34", "scenario": "footer_substantive_run"}]},
+  "triage": {"class": "invariant-gap", "note": "Seven substantive two-row tables with unique labels and consecutive numeric tails are content, not repeated footer furniture."},
+  "provenance": "D34 cold review R2 synthetic table blocks; no provider call."
+}

@@ -1,0 +1,9 @@
+{
+  "id": "d33-intel-xref-composite",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/intc-2025/filing.htm"},
+  "expect": {"checks": [{"type": "d33", "scenario": "intel_xref_composite"}]},
+  "triage": {"class": "invariant-gap", "note": "Intel's trailing cross-reference index leaves short primary rows while the resolver has verified multiple real-content regions; the item answer must not let the row mask those separate regions."},
+  "provenance": "Intel FY2025 committed fixture and real build_view API shape; no provider call."
+}

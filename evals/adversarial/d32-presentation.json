@@ -1,0 +1,9 @@
+{
+  "id": "d32-presentation",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/intc-2025/filing.htm"},
+  "expect": {"checks": [{"type": "d32", "scenario": "presentation"}]},
+  "triage": {"class": "invariant-gap", "note": "A complete agent route must not present retained primary-span diagnostics as unresolved failure."},
+  "provenance": "D32 red-first UI contract; no LLM access key or provider call."
+}

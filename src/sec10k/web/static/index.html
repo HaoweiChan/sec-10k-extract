@@ -275,6 +275,9 @@ summary{padding:9px 13px;cursor:pointer;font-size:12px;font-weight:600;color:var
 summary:hover{color:var(--accent)}
 details pre{margin:0;padding:0 13px 13px;font:12px/1.5 var(--mono);
   white-space:pre-wrap;word-break:break-word;max-height:440px;overflow:auto}
+.routing-audit{padding:0 13px 13px;font-size:12px}.routing-audit p{margin:8px 0}
+.routing-audit section{border-top:1px solid var(--line);padding-top:7px;margin-top:7px}
+.routing-audit ul{margin:4px 0 0;padding-left:20px}.routing-audit li{margin:3px 0}
 .meta-chrome{display:flex;gap:14px;flex-wrap:wrap;align-items:baseline;
   padding:9px 13px 0}
 #source{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);
@@ -393,7 +396,7 @@ footer a{color:var(--accent)}
     <div class="none" style="padding:12px">Select an item to read its extracted text.</div>
   </div>
   <div id="source">
-    <div class="src-hdr source-toolbar"><span class="lbl">original filing</span>
+    <div class="src-hdr source-toolbar"><span class="lbl">original filing · raw, unstripped</span>
       <span id="anchor-status" role="status" aria-live="polite"></span>
       <button type="button" id="vision-table" aria-label="Verify visible table" hidden>Verify table</button>
       <span id="vision-status" class="hint" role="status" aria-live="polite"></span>
@@ -411,7 +414,9 @@ footer a{color:var(--accent)}
   <div class="cap" id="cap-content"><div class="none">Loading…</div></div>
 </details>
 <details id="trace-box"><summary>Pipeline trace (JSON)</summary><pre id="trace"></pre></details>
-<details id="agentic-flow-box"><summary>Agentic routing evidence</summary><pre id="agentic-flow"></pre></details>
+<details id="agentic-flow-box"><summary>Routing audit</summary><div id="agentic-flow"></div>
+  <details><summary>Sanitized routing JSON</summary><pre id="agentic-flow-json"></pre></details>
+</details>
 <details id="meta-box"><summary>meta &amp; timings</summary>
   <div class="meta-chrome"><span class="sha" id="sha">…</span>
     <span class="sha"><a href="/edgar-check" target="_blank">/edgar-check</a></span></div>
@@ -644,18 +649,18 @@ function targetCore(itemText, needle){
   return core;
 }
 
-function findAnchor(index, headingText, itemText){
+function findAnchor(index, headingText, itemText, floor=0, ceiling=index.text.length, requireAgreement=false){
   const needle = coreOfHeading(headingText);
   if(!needle) return null;
   const occurrences = [];
   for(let from = 0; ; ){
     const i = index.text.indexOf(needle, from);
     if(i < 0) break;
-    occurrences.push(i);
+    if(i >= floor && i < ceiling) occurrences.push(i);
     from = i + 1;
   }
   if(!occurrences.length) return null;
-  if(occurrences.length === 1) return rawOffset(index.nodes, occurrences[0]);  // no ambiguity to break
+  if(occurrences.length === 1 && !requireAgreement) return rawOffset(index.nodes, occurrences[0]);  // no ambiguity to break
   const target = targetCore(itemText, needle);
   if(!target) return null;   // several candidates, no body to disambiguate with — honest miss
   let best = occurrences[0], bestScore = -1;
@@ -670,6 +675,20 @@ function findAnchor(index, headingText, itemText){
   // instead once it is shorter than the floor.
   const required = Math.min(AGREEMENT_MIN, target.length);
   return bestScore >= required ? rawOffset(index.nodes, best) : null;
+}
+
+function folioCores(index, page){
+  return index.nodes.filter(n => String(n.node.nodeValue || "").trim() === String(page)).map(n => n.start);
+}
+
+function findPageAnchor(index, source){
+  const page = Number(source.page);
+  if(Number.isInteger(page)) for(const floor of folioCores(index, page - 1)){
+    const ceiling = folioCores(index, page).find(x => x > floor);
+    const anchor = ceiling != null && findAnchor(index, source.heading, source.text, floor, ceiling, true);
+    if(anchor) return anchor;
+  }
+  return findAnchor(index, source.heading, source.text);
 }
 
 // A cached (node, offset) -> a FRESH document-relative Y, computed against
@@ -692,7 +711,7 @@ function anchorY(doc, anchor){
 function buildItemAnchors(doc){
   SOURCE_INDEX = buildSourceIndex(doc);
   const items = (VIEW && VIEW.items) || [];
-  ITEM_START_ANCHORS = items.map(it => findAnchor(SOURCE_INDEX, it.heading_text, it.text));
+  ITEM_START_ANCHORS = items.map(it => it.source_anchor ? findPageAnchor(SOURCE_INDEX, it.source_anchor) : findAnchor(SOURCE_INDEX, it.heading_text, it.text));
 }
 
 // Item i's [start, end) region in CURRENT pixel space (V2 — mapping across
@@ -814,10 +833,16 @@ function mdToHtml(md){
   return out.join("");
 }
 
-function bindSourceScroll(frame){
+function bindSourceScroll(frame, token){
   frame.addEventListener("load", () => {
     let doc; try{ doc = frame.contentDocument; }catch(e){ return; }
     if(!doc) return;
+    for(const image of doc.images){
+      const raw = image.getAttribute("src") || "";
+      if(raw.startsWith("/Archives/")) image.src = `/api/source/${encodeURIComponent(token)}/_sec_root${raw}`;
+      else if(raw.startsWith("https://www.sec.gov/Archives/")) image.src = `/api/source/${encodeURIComponent(token)}/_sec_root${new URL(raw).pathname}`;
+      else if(/^[a-z][a-z0-9+.-]*:/i.test(raw)) image.removeAttribute("src");
+    }
     buildItemAnchors(doc);
     if(SEL === -1){
       (doc.scrollingElement || doc.documentElement).scrollTop = 0;
@@ -846,8 +871,8 @@ async function loadSource(token){
       return;
     }
     box.innerHTML = `<iframe id="src-frame" sandbox="allow-same-origin" ` +
-      `title="original filing source" src="/api/source/${encodeURIComponent(token)}"></iframe>`;
-    bindSourceScroll(document.getElementById("src-frame"));
+      `title="original filing source" src="/api/source/${encodeURIComponent(token)}/"></iframe>`;
+    bindSourceScroll(document.getElementById("src-frame"), token);
   }catch(e){
     box.innerHTML = `<div class="none" style="padding:12px">Original source is no longer cached — re-run the extraction.</div>`;
   }
@@ -981,11 +1006,22 @@ function tableRaster(table){
   return canvas.toDataURL("image/png");
 }
 
+function visionStatusText(result){
+  if(result.preflight) return "not run · provider access unavailable";
+  if(result.status === "failed") return "failed · provider verification unavailable";
+  const verdict = result.verdict == null ? "inconclusive" : result.verdict;
+  return `${result.status} · ${verdict}`;
+}
+
 function showVisionVerdict(result){
   const top = $("#escalation"); if(!top) return;
   const verdict = result.verdict == null ? "inconclusive" : result.verdict;
-  if(result.status === "verified" && result.verdict === "confirm"){
+  if(result.preflight){
+    top.innerHTML = "high assurance: <b>not run</b> — provider access is unavailable; deterministic Markdown retained";
+  }else if(result.status === "verified" && result.verdict === "confirm"){
     top.innerHTML = `high assurance: <b>1 sampled table raster confirmed</b> — ${esc(result.model)} checked ${result.images || 0} bounded source table`;
+  }else if(result.status === "failed"){
+    top.innerHTML = "high assurance: <b>provider verification failed</b> — deterministic Markdown retained";
   }else{
     top.innerHTML = `high assurance: <b>partial</b> — table raster ${esc(verdict)}; deterministic Markdown retained`;
   }
@@ -1004,10 +1040,10 @@ async function verifyVisibleTable(auto=false){
       headers:{"Content-Type":"application/json", "X-Escalation-Token":key},
       body:JSON.stringify({token:VIEW.source.token, image:tableRaster(table), table_text:tableText,
         table_sha256:await sha256(tableText)})})).json();
-    const verdict = result.verdict == null ? "inconclusive" : result.verdict;
-    status.textContent = `${result.status} · ${verdict}`;
+    status.textContent = visionStatusText(result);
     showVisionVerdict(result);
-    $("#agentic-flow").textContent += "\n\n" + JSON.stringify({vision_table:result}, null, 1);
+    $("#agentic-flow-json").textContent += "\n\n" + JSON.stringify({vision_table:{status:result.status,
+      verdict:result.verdict, model:result.model, images:result.images, cost:result.cost}}, null, 1);
   }catch(e){
     status.textContent = "Verification failed";
     showVisionVerdict({status:"failed", verdict:null});
@@ -1067,14 +1103,21 @@ function itemQual(it){
 // one here is the envelope change D8 owns. If the message wording ever
 // drifts the regex misses and the whole message is shown verbatim instead,
 // so the figure degrades to less emphasis, never to silence.
-function coverageStrip(warns){
+function coverageStrip(warns, meta, resolved){
   const u = warns.find(x => x.code === "unattributed_content");
   if(!u) return "";
+  if(resolved) return ` <span class="src" id="coverage">primary-span coverage: <b>${esc(String(meta && meta.coverage != null ? Math.round(meta.coverage * 10000) / 100 : "not measured"))}%</b> — residual targets resolved by verified evidence; validator diagnostics available in details</span>`;
   const m = /^(\d+)%/.exec(u.message || "");
-  return ` <span class="src" id="coverage">unattributed content: ${
+  return ` <span class="src" id="coverage">primary-span diagnostic — unattributed content: ${
     m ? `<b>${esc(m[1])}%</b> of the document lies outside every item`
       : esc(u.message)
   } — interior gaps are not counted, so true non-coverage can be up to 9.7 points higher (ADR-019 §d)</span>`;
+}
+
+function routeComplete(r){
+  if(!(r && r.trigger && r.trigger.fired && r.graph && r.graph.complete)) return false;
+  const accepted = [...(r.resolved || []), ...(r.alternative || []), ...(r.external || []), ...(r.dispositions || [])];
+  return (r.trigger.target_items || []).every(item => accepted.includes(item));
 }
 
 // D11 (ADR-036 §i). Routing is USER-VISIBLE, NEVER SILENT — the doc-level half.
@@ -1089,10 +1132,36 @@ function coverageStrip(warns){
 // deterministic answer needed no help, which is the $0 claim, on screen.
 // A missing routing record is distinguished from a quiet trigger; the
 // high-assurance strip prints the server's gate reason beside it.
+function routingCounts(r={}){
+  const tiers = r?.tiers || [], plans = new Set(tiers.filter(t => t.role === "plan" && Number.isInteger(t.turn)).map(t => t.turn));
+  return {plans:plans.size, modelSteps:tiers.filter(t => t.model).length, replays:tiers.filter(t => t.cached).length};
+}
+function bannerReviewCount(v={}){
+  const review = new Set((v.items || []).filter(i => i.review_required && i.item != null).map(i => String(i.item)));
+  (v.routing?.graph?.items || []).filter(i => i.next_route === "review_required" && i.item != null).forEach(i => review.add(String(i.item)));
+  return review.size;
+}
+function bannerResult(v={}){
+  const status = v.doc_status || "failed", review = bannerReviewCount(v);
+  if(status === "failed") return "Extraction failed";
+  if(status === "unsupported") return "Unsupported filing";
+  if(review || status === "ambiguous") return "Extraction needs review";
+  return status === "success" ? "Extraction complete" : "Extraction complete with warnings";
+}
+function bannerContent(v={}){
+  const labels = {extracted:"extracted", omitted:"omitted", incorporated_by_reference:"incorporated by reference", missing:"missing"};
+  const counts = Object.keys(labels).map(status => [status, (v.items || []).filter(i => i.status === status).length]).filter(([, count]) => count);
+  const review = bannerReviewCount(v);
+  return [...counts.map(([status, count]) => `${count} ${labels[status]}`), ...(review ? [`review needed: ${review}`] : [])].join(" · ") || "no content items";
+}
+function compactRoutingSummary(r){
+  const counts = routingCounts(r), cost = r?.cost || {};
+  return ` · ${r?.trigger?.fired ? "Agent-assisted" : "Deterministic"} · ${counts.plans} planning iteration${counts.plans === 1 ? "" : "s"} · ${Number(cost.llm_calls || 0)} live / ${counts.replays} cached · $${Number(cost.usd || 0).toFixed(4)}`;
+}
 function routingStrip(r){
   if(!r) return "";
-  const c = r.cost || {};
-  const money = `$${Number(c.usd || 0).toFixed(4)} · ${c.llm_calls || 0} call${
+  const c = r.cost || {}, counts = routingCounts(r);
+  const money = `$${Number(c.usd || 0).toFixed(4)} · ${c.llm_calls || 0} live provider call${
     (c.llm_calls || 0) === 1 ? "" : "s"} · ${(c.tokens || 0).toLocaleString()} tokens`;
   if(!(r.trigger && r.trigger.fired)){
     if(r.trigger && r.trigger.route === "suppressed") return ` <span class="src" id="routing">routing: <b>explicitly suppressed</b>
@@ -1122,19 +1191,83 @@ function routingStrip(r){
       : "no item was resolved by a model tier; the deterministic spans stand";
   const unfinished = unresolved.length ? ` — unresolved targets ${esc(unresolved.join(", "))} remain review-required` : "";
   const graphSummary = graph.engine
-    ? `LangGraph · diagnose → plan → act → evaluate → decide · ${(r.tiers || []).length} turns · ${graph.checkpoint_count || 0} checkpoints`
+    ? `LangGraph · diagnose → plan → act → evaluate → decide · ${counts.plans} LangGraph planning iteration${counts.plans === 1 ? "" : "s"} · ${counts.modelSteps} model steps · ${counts.replays} cache replays · ${graph.checkpoint_count || 0} checkpoints`
     : `graph ${graph.complete ? "complete" : "partial; review required"}`;
   return ` <span class="src" id="routing">routing: <b>trigger fired</b>
     (${esc((r.trigger.codes || []).join(", "))}) — ${esc(r.trigger.reason || "")} — targets ${esc((r.trigger.target_items || []).join(", ") || "none")} — resolved xref ${esc((r.trigger.resolved_codes || []).join(", ") || "none")} — residual xref ${esc((r.trigger.residual_codes || []).join(", ") || "none")} — ${tiers} — ${esc(done)} —
     ${esc(money)} — ${esc(graphSummary)}${unfinished}</span>`;
 }
 
-function flowStrip(r){
-  if(!r) return JSON.stringify({});
-  return JSON.stringify({stages: r.stages || [], graph: r.graph && {engine: r.graph.engine, checkpoint_history: r.graph.checkpoint_history}, turns: (r.tiers || []).map(t => ({
-    turn: t.turn, actions: t.actions || [], observations: t.observations || [],
-    rejections: t.rejections || [], cost: t.cost || {}
-  }))}, null, 1);
+// D33 reads the existing routing record only. It deliberately omits model
+// prompts, reasoning, filing text and arbitrary error strings: the audit is
+// about decisions and evidence boundaries, not a second disclosure channel.
+function auditCost(c={}){ return `$${Number(c.usd || 0).toFixed(4)} · ${Number(c.llm_calls || 0)} live calls · ${Number(c.tokens || 0).toLocaleString()} tokens`; }
+function auditAction(a={}){
+  const items = a.item ? [a.item] : (a.proposals || []).map(p => p.item).filter(Boolean);
+  return `${a.action || "no action"}${items.length ? ` · item ${items.join(", ")}` : ""}`;
+}
+function auditObservation(o={}){
+  if(Array.isArray(o.matches)) return `matches ${o.matches.length}`;
+  if(Number.isInteger(o.start) && Number.isInteger(o.end)) return `bounded window ${o.start}–${o.end}${o.chars != null ? ` · ${o.chars} chars` : ""}`;
+  if(Array.isArray(o.verifier)) return o.verifier.length ? `deterministic verifier recorded ${o.verifier.length} result${o.verifier.length === 1 ? "" : "s"}` : "deterministic verifier accepted";
+  if(o.verified != null) return o.verified ? "deterministic verifier accepted" : "deterministic verifier did not accept";
+  return "bounded observation recorded";
+}
+function auditStageReason(v){
+  const safe = new Set(["trigger quiet or deterministically resolved", "no verified proposal",
+    "accepted verified evidence", "deterministic result retained", "no alternative image evidence",
+    "cross-reference rows without verified content", "all cross-reference rows have verified content",
+    "missing primary spans", "same-accession Annual Report reference", "no trigger", "low_item_coverage",
+    "internal_pointer_unreached", "agent_loop", "alternative_regions", "contiguous_span_repair", "suppressed", "none"]), s = String(v || "");
+  return safe.has(s) ? s : "bounded deterministic reason";
+}
+function auditRejection(v){
+  const s = String(v || "");
+  if(/^item\s+[0-9A-Z]+:/i.test(s)) return s.replace(/:.*/, ": verifier rejected proposal");
+  if(/^repeated action/i.test(s)) return "repeated action";
+  if(/bounds/i.test(s)) return "bounds rejected";
+  if(/^agent finished/i.test(s)) return "agent finished without verified evidence";
+  return "verifier rejection";
+}
+function auditPath(r){
+  if(!r) return "deterministic-only — no routing record";
+  const t = r.trigger || {};
+  if(!t.fired) return t.route === "suppressed"
+    ? "deterministically suppressed — no model call"
+    : "deterministic-only — trigger quiet";
+  return r.graph && r.graph.engine
+    ? "LangGraph agentic — agent-proposed; deterministic verifier final authority"
+    : "fixed escalation — deterministic verifier final authority";
+}
+function auditSafe(r){
+  if(!r) return {};
+  const pickCost = c => ({llm_calls:Number((c || {}).llm_calls || 0), tokens:Number((c || {}).tokens || 0), usd:Number((c || {}).usd || 0)});
+  const stageNote = s => s.reason ? s.reason : s.skipped;
+  return {trigger:{class:r.trigger?.class, route:r.trigger?.route, fired:!!r.trigger?.fired,
+    targets:r.trigger?.target_items || [], codes:r.trigger?.codes || []}, cost:pickCost(r.cost),
+    stages:(r.stages || []).map(s => ({stage:s.stage, status:s.status, next_route:s.next_route, targets:s.targets || [],
+      reason:auditStageReason(stageNote(s)), skipped:!!s.skipped, cost:pickCost(s.cost)})),
+    tiers:(r.tiers || []).map(t => ({tier:t.tier, role:t.role, turn:t.turn, items:t.items || [], outcome:t.outcome,
+      next_route:t.next_route, model:t.model, cached:t.cached, latency_ms:t.latency_ms, cost:pickCost(t.cost),
+      actions:(t.actions || []).map(auditAction), observations:(t.observations || []).map(auditObservation),
+      rejections:(t.rejections || []).slice(0, 3).map(auditRejection)})), graph:{engine:!!r.graph?.engine, complete:!!r.graph?.complete,
+      checkpoint_count:Number(r.graph?.checkpoint_count || 0), items:(r.graph?.items || []).map(i => ({item:i.item,
+        attempts:(i.attempts || []).filter(a => a.tier !== "evidence").map(a => { const rejected = (a.rejections || []).length > 0; return {turn:a.turn, tier:a.tier,
+          outcome:rejected ? "rejected" : (i.next_route === "review_required" ? "unresolved" : a.outcome),
+          actions:(a.actions || []).map(auditAction), rejections:(a.rejections || []).slice(0, 2).map(auditRejection)};}),
+        next_route:i.next_route}))}};
+}
+function tracePayload(v){ return {pipeline:v.trace || [], routing:auditSafe(v.routing)}; }
+function routingAudit(r){
+  const safe = auditSafe(r), tiers = safe.tiers || [], graph = safe.graph || {};
+  const counts = routingCounts(safe);
+  const evidence = tiers.filter(t => t.role === "evidence").length;
+  const stages = (safe.stages || []).map(s => `<li>${esc(s.stage)}: <b>${esc(s.status || "—")}</b>${s.next_route ? ` → ${esc(s.next_route)}` : ""} · ${s.skipped ? "skip: " : "reason: "}${esc(s.reason)} · ${esc(auditCost(s.cost))}</li>`).join("") || "<li>no routing stages recorded</li>";
+  const evidenceRows = tiers.filter(t => t.role === "evidence").map(t => `<li><b>${esc(t.outcome || "—")}</b> · ${esc(t.model || "—")} · ${t.cached ? "cache" : "not cached"} · ${t.latency_ms == null ? "latency unavailable" : `${Number(t.latency_ms).toFixed(0)} ms`} · ${esc(auditCost(t.cost))}</li>`).join("") || "<li>no evidence pass</li>";
+  const xrefVerified = r?.trigger?.class === "cross_reference_residual" && tiers.some(t => t.role === "evidence" && t.outcome === "resolved");
+  const turns = tiers.filter(t => t.role === "plan").map(t => `<li><b>turn ${esc(t.turn)}</b> · ${esc(t.actions.join("; ") || "no action")} · observation: ${esc(t.observations.join("; ") || "none")} · rejection: ${esc(t.rejections.join("; ") || "none")} · decision: <b>${esc(t.next_route || t.outcome || "—")}</b> · ${esc(t.model || "—")} · ${t.cached ? "cache" : "not cached"} · ${t.latency_ms == null ? "latency unavailable" : `${Number(t.latency_ms).toFixed(0)} ms`} · ${esc(auditCost(t.cost))}</li>`).join("") || "<li>no LangGraph planning iteration</li>";
+  const items = (graph.items || []).map(i => `<li>item ${esc(i.item)} · ${esc(i.attempts.length)} attempt${i.attempts.length === 1 ? "" : "s"}: ${esc(i.attempts.map(a => `turn ${a.turn || "—"} ${a.outcome || "—"} ${a.actions.join(",") || "no action"} ${a.rejections.join(",") || ""}`).join("; ") || "none")} · next route <b>${esc(i.next_route || "—")}</b></li>`).join("") || "<li>no per-item routing state</li>";
+  return `<div class="routing-audit"><p><b>${esc(auditPath(r))}</b></p><p>evidence passes <b>${evidence}</b> · LangGraph planning iterations <b>${counts.plans}</b> · live provider calls <b>${safe.cost?.llm_calls || 0}</b> · cache replays <b>${counts.replays}</b> · model steps <b>${counts.modelSteps}</b> · checkpoints <b>${graph.checkpoint_count || 0}</b> · ${esc(auditCost(safe.cost))}</p><section><b>outer routing stages</b><ul>${stages}</ul></section><section><b>evidence passes</b>${xrefVerified ? "<p>cross-reference index detected → evidence map followed → deterministic page/bounds verifier accepted</p>" : ""}<ul>${evidenceRows}</ul></section>${graph.engine ? `<section><b>inner LangGraph loop — diagnose → plan → act → evaluate → decide</b><ul>${turns}</ul></section>` : ""}<section><b>per-item outcomes</b><ul>${items}</ul></section></div>`;
 }
 
 function highAssuranceStrip(e, r){
@@ -1148,22 +1281,23 @@ function highAssuranceStrip(e, r){
   return ` <span class="src" id="escalation">high assurance: <b>authenticated route</b> — ${esc(result)}</span>`;
 }
 
+function compositePreviewNote(it, composite){
+  return composite && it.truncated ? " · preview truncated" : "";
+}
+
 function render(v){
   VIEW = v; SEL = null;
   const st = v.doc_status || "failed";
-  const src = v.source ? `${v.source.mode}: ${v.source.name}` : "";
-  const n = Object.entries(v.counts || {}).map(([k,c]) => `${c} ${k}`).join(" · ");
   const w = v.warnings || [];
   $("#banner").className = "s-" + st;
-  $("#banner").innerHTML = `doc_status: ${esc(st)}` +
-    (n ? ` <span class="src">— ${esc(n)}</span>` : "") +
-    (src ? ` <span class="src">${esc(src)}</span>` : "") +
-    coverageStrip(w) +
-    highAssuranceStrip(v.escalation, v.routing) +
-    routingStrip(v.routing);
+  $("#banner").textContent = `${bannerResult(v)} — ${bannerContent(v)}${compactRoutingSummary(v.routing)}`;
 
   $("#warnings").innerHTML = w.length
-    ? w.map(x => `<div class="warn"><code>${esc(x.code)}</code>${
+    ? routeComplete(v.routing)
+      ? `<div class="none">Resolved escalation: every risky target has verified evidence. Primary-span diagnostics are available in details.</div><details><summary>Validator diagnostics (${w.length})</summary>${w.map(x => `<div class="warn"><code>${esc(x.code)}</code>${
+        x.item ? ` <span class="hint">item ${esc(x.item)}</span>` : ""
+      }<div class="msg">${esc(x.message)}</div></div>`).join("")}</details>`
+      : w.map(x => `<div class="warn"><code>${esc(x.code)}</code>${
         x.item ? ` <span class="hint">item ${esc(x.item)}</span>` : ""
       }<div class="msg">${esc(x.message)}</div></div>`).join("")
     : `<div class="none">No warnings — every validator stayed silent.</div>`;
@@ -1212,10 +1346,11 @@ function render(v){
 
   $("#pane").innerHTML = `<div class="src-hdr"><span class="lbl">extracted text</span></div>
     <div class="none" style="padding:12px">Select an item to read its extracted text.</div>`;
-  $("#trace").textContent = JSON.stringify({pipeline: v.trace || [], routing: v.routing}, null, 1);
+  $("#trace").textContent = JSON.stringify(tracePayload(v), null, 1);
   $("#trace-box").open = false;
-  $("#agentic-flow").textContent = flowStrip(v.routing);
-  $("#agentic-flow-box").open = false;
+  $("#agentic-flow").innerHTML = routingAudit(v.routing);
+  $("#agentic-flow-json").textContent = JSON.stringify(auditSafe(v.routing), null, 1);
+  $("#agentic-flow-box").open = !!(v.routing?.trigger?.fired && v.routing?.graph?.engine);
   $("#meta").textContent = JSON.stringify(
     {meta: v.meta, timings: v.timings, cost: v.cost, normalized_chars: v.norm_chars}, null, 1);
   loadSource(v.source && v.source.token);
@@ -1246,7 +1381,8 @@ function show(i){
   // ADR-042 §f: with `elsewhere` the render string is the span PLUS the
   // regions the filing points at, so "first N of M" must count both or it
   // reports 40,000 of 226.
-  const renderableChars = (x) => (x.chars ?? 0) +
+  const composite = it.display_kind === "verified_cross_reference";
+  const renderableChars = (x) => x.display_kind === "verified_cross_reference" ? (x.cross_reference_chars || 0) : (x.chars ?? 0) +
     (x.elsewhere || []).reduce((n, e) => n + (e.end - e.start), 0);
   // The header line and the evidence panel are the same item metadata S4
   // used to stack above pre.text; they still exist, just moved. The header
@@ -1271,6 +1407,7 @@ function show(i){
   const pointerCounts = it.cross_reference_pointer_chars ? `verified IBR pointer ${it.cross_reference_pointer_chars.toLocaleString()} ch · ` : "";
   const hdrRight = (VIEW.markdown ? "markdown · " : "") + (VIEW.boilerplate_excluded ? "boilerplate hidden · " : "") +
     `${xrefCounts}${pointerCounts}Part ${esc(it.part || "—")} · ${esc(it.status)} · conf ${it.confidence ?? "—"}${docQual()}${itemQual(it)} · via ${esc(it.method || "—")}`;
+  const previewNote = compositePreviewNote(it, composite);
   // The truncation notice used to be its own in-flow sibling after
   // pre.text, which is exactly the bug .pane-meta's own move to
   // position:absolute just fixed, reintroduced through a second element: on
@@ -1279,7 +1416,7 @@ function show(i){
   // (already out-of-flow) .pane-meta overlay instead, as one more row of
   // the same "where this text came from" evidence — which is what it is.
   $("#pane").innerHTML = `
-    <div class="src-hdr"><span class="lbl">Item ${esc(it.item)} — ${esc(it.title || "")}</span>
+    <div class="src-hdr"><span class="lbl">${composite ? `Item ${esc(it.item)} — verified cross-reference evidence — multiple regions/pages${previewNote}` : `Item ${esc(it.item)} — ${esc(it.title || "")}`}</span>${it.full_display_text ? `<button type="button" id="full-toggle" aria-pressed="false">show full verified text</button>` : ""}
       <span class="lbl">${hdrRight}</span></div>
     ${body
       // PR #27 R1: the ONLY consumer of the stripped string. `it.text`
@@ -1292,8 +1429,8 @@ function show(i){
       // mode regress the fix. The label interpolates the item's own code; a
       // constant one would name all 23 items identically.
       ? (VIEW.markdown
-          ? `<div class="text md" role="region" tabindex="0" aria-label="Item ${esc(it.item)} extracted text">${mdToHtml(it.display_text ?? it.text)}</div>`
-          : `<pre class="text" role="region" tabindex="0" aria-label="Item ${esc(it.item)} extracted text">${esc(it.display_text ?? it.text)}</pre>`)
+          ? `<div class="text md" role="region" tabindex="0" aria-label="Item ${esc(it.item)} ${composite ? "verified cross-reference evidence" : "extracted text"}">${mdToHtml(it.display_text ?? it.text)}</div>`
+          : `<pre class="text" role="region" tabindex="0" aria-label="Item ${esc(it.item)} ${composite ? "verified cross-reference evidence" : "extracted text"}">${esc(it.display_text ?? it.text)}</pre>`)
       : `<div class="none" style="padding:12px">Status <b>${esc(it.status)}</b> carries no span: the item is reported as absent rather than silently dropped (INV-S4).</div>`}
     <details class="pane-meta"><summary>where this text came from</summary>
       <dl class="ev">
@@ -1321,6 +1458,14 @@ function show(i){
         <dt>evidence</dt><dd>${esc(JSON.stringify(it.evidence || {}))}</dd>
       </dl>
     </details>`;
+  const toggle = $("#full-toggle"), paneText = $("#pane pre.text") || $("#pane .text.md");
+  if(toggle && paneText) toggle.onclick = () => {
+    const full = toggle.getAttribute("aria-pressed") !== "true";
+    const value = full ? it.full_display_text : (it.display_text ?? it.text);
+    if(VIEW.markdown) paneText.innerHTML = mdToHtml(value); else paneText.textContent = value;
+    toggle.setAttribute("aria-pressed", String(full));
+    toggle.textContent = full ? "show preview" : "show full verified text";
+  };
   const pre = $("#pane pre.text") || $("#pane .text.md");
   if(pre) bindPaneScroll(pre);
   scrollSourceToItem(i);

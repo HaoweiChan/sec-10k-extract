@@ -1,0 +1,50 @@
+{
+  "date": "2026-08-30",
+  "url": "https://www.sec.gov/Archives/edgar/data/50863/000005086326000011/intc-20251227.htm",
+  "localhost": "http://127.0.0.1:8033/",
+  "options": {
+    "exclude_boilerplate": true,
+    "markdown": true,
+    "llm_access": false
+  },
+  "banner": {
+    "route": "Deterministic",
+    "planning_iterations": 0,
+    "live_calls": 0,
+    "cached_calls": 0,
+    "usd": 0.0
+  },
+  "item8": {
+    "status": "extracted",
+    "primary_chars": 66,
+    "verified_cross_reference_chars": 205692,
+    "pages": "56-108",
+    "preview_chars": 40000,
+    "full_markdown_chars": 220185,
+    "preview_toggle_worked": true,
+    "removed_from_derived_view": [
+      "| 56 |",
+      "| Auditor's Reports | 57 |",
+      "| Financial Statements | Notes to Consolidated Financial Statements | 65 |"
+    ],
+    "raw_source_retained_footer": true
+  },
+  "source_alignment": {
+    "printed_page": 56,
+    "iframe_scroll_y": 83971,
+    "top_heading": "Financial Statements and Supplemental Details",
+    "top_heading_y": 20,
+    "body_agreement_y": 55,
+    "cross_reference_index_page": 116,
+    "aligned_to_trailing_index": false
+  },
+  "gates": {
+    "invariant": "141/141",
+    "fast": "212/212",
+    "table_cells": "427/427",
+    "table_rows": "34/34",
+    "structure_blocks": "61/61",
+    "structure_bounds": "61/61"
+  },
+  "cost_usd": 0.0
+}

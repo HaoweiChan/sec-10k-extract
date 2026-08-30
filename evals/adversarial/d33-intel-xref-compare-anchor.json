@@ -1,0 +1,9 @@
+{
+  "id": "d33-intel-xref-compare-anchor",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/intc-2025/filing.htm", "escalate": true},
+  "expect": {"checks": [{"type": "d33", "scenario": "intel_xref_compare_anchor"}]},
+  "triage": {"class": "invariant-gap", "note": "Composite xref display started on a verified page region, but the source compare still anchored on the trailing index-row primary text."},
+  "provenance": "Intel FY2025 localhost cached replay; no provider call."
+}

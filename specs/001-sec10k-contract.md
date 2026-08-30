@@ -283,6 +283,13 @@ them all); the example once showed `lenient_match`, which nothing emits.
   It may publish a verified primary span or existing-item alternative region;
   a rejected/malformed/exhausted action leaves the deterministic result and
   target `review_required` intact.
+  ADR-056 specializes the non-publishing roles: at most one Flash evidence
+  packet and at most three Pro plans share one Budget. A trace names each
+  role/model/cost/latency/action/rejection/next route without prompt bodies,
+  filing bodies, credentials, or the LLM access key. Evidence carries source
+  identity and verbatim ranges only; terminal model decisions are exactly
+  `{item,status}`, and the deterministic verifier binds their offsets from
+  existing cross-reference evidence.
 
 ## Envelope rules (v2, normative)
 

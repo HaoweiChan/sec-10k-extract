@@ -1,0 +1,12 @@
+{
+  "id": "d30-multimodel-policy",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/intc-2025/filing.htm", "escalate": true},
+  "expect": {"checks": [{"type": "d30_wiring"}]},
+  "triage": {
+    "class": "invariant-gap",
+    "note": "Cached route proves one bounded Flash evidence call followed by policy-parameterized Pro planning; no provider request is made."
+  },
+  "provenance": "D30 cached route proof. It uses deterministic stubs only; no LLM access key, network request, or paid model call is permitted."
+}

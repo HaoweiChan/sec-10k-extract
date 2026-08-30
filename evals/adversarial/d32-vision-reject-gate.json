@@ -1,0 +1,9 @@
+{
+  "id": "d32-vision-reject-gate",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/xom-2021/filing.htm"},
+  "expect": {"checks": [{"type": "d32", "scenario": "vision_reject"}]},
+  "triage": {"class": "invariant-gap", "note": "A rejected inspected alternative must not remain a complete verified resolution."},
+  "provenance": "D32 cold-review F1; cached/stubbed only, no provider call."
+}

@@ -1,0 +1,9 @@
+{
+  "id": "d34-full-composite-toggle",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/intc-2025/filing.htm"},
+  "expect": {"checks": [{"type": "d34", "scenario": "full_composite_toggle"}]},
+  "triage": {"class": "invariant-gap", "note": "The full verified composite must remain reachable without adding an in-flow details sibling that steals the single text pane's flex height."},
+  "provenance": "D34 UI cold-review finding; static render-boundary proof, no browser or provider call."
+}

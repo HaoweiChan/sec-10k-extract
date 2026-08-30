@@ -1,0 +1,33 @@
+{
+  "date": "2026-08-30",
+  "scope": "localhost proof after D32 source-viewer repair",
+  "source": {
+    "intel_url": "https://www.sec.gov/Archives/edgar/data/50863/000005086326000011/intc-20251227.htm",
+    "llm_access_key": "authenticated; value omitted",
+    "options_checked": {"exclude_boilerplate": true, "markdown": "default"}
+  },
+  "result": {
+    "doc_status": "success_with_warning",
+    "items": {"extracted": 12, "omitted": 6, "incorporated_by_reference": 5},
+    "residual_targets": {"accepted": 11, "total": 11},
+    "presentation": {
+      "primary_span_coverage_label": "0.2%",
+      "main_screen": "does not say '100% outside every item'",
+      "warnings": {"details_closed": true, "diagnostic_count": 6, "raw_preserved": true}
+    }
+  },
+  "routing": {
+    "prior_live": {"calls": 2, "tokens": 4833, "usd": 0.002348, "latency_ms": 52808.7,
+      "flash_usd": 0.000254, "pro_usd": 0.002094},
+    "replay": {"flash": "cached", "pro": "cached", "live_calls": 0, "recorded_tokens": 4833, "usd": 0},
+    "langgraph": {"tier_records": 2, "checkpoints": 7},
+    "verify_stage": {"vision": "skipped", "reason": "no alternative image evidence", "llm_calls": 0, "usd": 0}
+  },
+  "source_assets": {
+    "endpoint": "/api/source/<token>/... (placeholder only; value omitted)",
+    "http_200": ["g1", "g3-g14"],
+    "http_415": {"asset": "g2", "reason": "direct SEC inspection returned HTTP 403 text/html", "bytes": 4818},
+    "after_fix": {"http_404": 0, "http_429": 0}
+  },
+  "sanitization": "No token, LLM access key value, prompt, filing body, or provider response body is retained in this proof. The final browser walk records a cached replay, not a new provider call."
+}

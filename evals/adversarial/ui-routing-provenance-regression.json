@@ -12,12 +12,12 @@
     "file": "evals/fixtures/repo_hygiene/routing-strip-missing.html"
   },
   "expect": {
-    "min_failures": 14,
-    "max_failures": 14
+    "min_failures": 15,
+    "max_failures": 15
   },
   "triage": {
     "class": "no-mechanical-check",
-    "note": "The counterpart PR #21 R1/R2/R3 established: a check that asserts the real file is clean also passes vacuously once it regresses, so a known-bad fixture has to prove the miss is actually caught. Exact counts matter because `min_failures` alone would let an over-firing check pass. D21 re-derived the fixture at thirteen failures: the prior eleven plus two new visible-flow omissions—vision provenance and its bounded image-count/measured-cost evidence. The older eleven still cover the removed escalation control creeping back, the banner dropping routing, missing total cost and truncation range, and item panes dropping deterministic evidence or replacement tier."
+    "note": "The counterpart PR #21 R1/R2/R3 established: a check that asserts the real file is clean also passes vacuously once it regresses, so a known-bad fixture has to prove the miss is actually caught. Exact counts matter because `min_failures` alone would let an over-firing check pass. D33 re-derived this fixture at fifteen failures: the compact-banner routing summary adds two missing-summary failures while preserving the missing mode/cost/audit and client-escalation-absence failures."
   },
   "provenance": "D11, created 2026-08-26 alongside the check it falsifies, per hard rule 2. Extended 2026-08-27 in the PR #58 round-1 repair with the arming shape; count 7 -> 10. Extended 2026-08-27 (PR #58 round 3) with the truncation-clause shape; count 10 -> 11. Re-derived 2026-08-27 on the owner's control removal; count 11 -> 11. D21 adds two vision-flow display pins and re-derives 11 -> 13."
 }

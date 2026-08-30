@@ -1,0 +1,59 @@
+2026-08-30 — D34 Intel Item 8 red-first
+
+Both Intel FY2025 cases were added before implementation and run through the
+normal adapter. Before their check handlers existed, each failed with:
+
+`unknown check type 'd34'`
+
+Triage: invariant-gap. The verified cross-reference page map was present in
+the result, but the source browser had no page-bound navigation contract; the
+raw original and the truncated composite preview also lacked explicit labels.
+
+The first composite-chrome assertion was an eval bug, not a boilerplate
+failure: it searched for the running head `Supplemental Details` as an
+arbitrary substring and matched the legitimate heading `Financial Statements
+and Supplemental Details`. It was replaced by the concrete Intel table-footer
+rows observed in the 40,000-character Markdown preview: `| 56 |\n|---|` at
+offset 1,906 and `| Auditor's Reports | 57 |\n|---|---|` at offset 5,386.
+Those rows are not detected by the line-based boilerplate detector, so this is
+a genuine extracted-chrome case rather than a raw-source distinction.
+
+After the handlers were added, the two intended behavior checks were watched
+red before the repair:
+
+`Item 8 source anchor has no first verified page`
+
+`raw original filing and composite truncation are not both explicit`
+
+The strengthened concrete composite case was also run cleanly against the
+pre-product-code footer behavior and failed with:
+
+`boilerplate-excluded Item 8 composite still displays table footer chrome`
+
+That failure is the red proof for the exact observed `| 56 |`, `Auditor's
+Reports | 57 |`, and the later three-cell `Financial Statements | Notes to
+Consolidated Financial Statements | 65 |` table rows. It is separate from the
+earlier raw/truncation presentation failure; both are retained as evidence.
+
+Green repair: page anchors now test every ordered `page-1`/`page` folio pair
+and accept a bounded text agreement before using the old global text fallback.
+The exclusion path removes only runs of at least seven two-row, one-to-three
+cell numeric footer tables inside a verified cross-reference region. The
+original source remains raw; the 40,000-character composite preview is marked
+as truncated and exposes a disclosure containing the full verified composite.
+
+Cold-review extensions were added as four separate D34 adversarial scenarios
+and each was observed red before its repair; their verbatim findings and red
+output are retained in `d34-cold-review.txt`.
+
+Cold-review repair: page-bounded anchors now require body agreement, while the
+global fallback keeps its prior single-heading behavior. Footer omission is
+limited to a verified region's page map, a run of at least seven candidates
+with at most one missing folio, and repeated nonnumeric label evidence; unique
+substantive tables remain. Full composite text now swaps the one pane region
+through a header toggle instead of adding an in-flow details sibling.
+
+Follow-up red proof: a seven-table substantive run with exactly two repeated
+labels was still removed at the former threshold. The evidence threshold is
+therefore three exact repeated nonnumeric labels; Intel's repeated footer
+labels and the missing-folio synthetic both meet it.

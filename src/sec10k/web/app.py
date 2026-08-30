@@ -21,6 +21,7 @@ import hashlib
 import re
 import secrets
 import tempfile
+import threading
 import urllib.error
 import urllib.request
 import os
@@ -37,6 +38,8 @@ from src.sec10k.web.build_id import git_sha
 from src.sec10k.web.fixtures import (FIXTURES, ROOT, deployed_fixtures,
                                      fixture_file)
 from src.sec10k.web.edgar_url import canonical_edgar_url
+from src.sec10k.web.source_asset import (IMAGE_SUFFIXES, asset_url, release_asset,
+                                         reserve_asset)
 from src.sec10k.web.view import build_view
 
 STATIC = Path(__file__).resolve().parent / "static"
@@ -96,6 +99,12 @@ app = FastAPI(title="sec10k-extract inspector")
 # spill, not a smaller cap.
 SOURCE_CACHE: "OrderedDict[str, tuple[str, bytes, bytes]]" = OrderedDict()
 SOURCE_CACHE_MAX = 3
+SOURCE_BASES: "dict[str, str]" = {}
+SOURCE_ASSETS: "dict[tuple[str, str], tuple[str, bytes]]" = {}
+SOURCE_ASSET_PENDING: "set[tuple[str, str]]" = set()
+SOURCE_ASSET_LOCK = threading.Lock()
+SOURCE_VIEWER_ASSET_MAX = 32  # 32 × 512 KiB = at most 16 MiB per cached filing, not Vision's cap of 2.
+SOURCE_ASSET_BYTES = 512 * 1024
 VISION_TABLE_TEXT_CAP = 12_000
 VISION_TABLE_IMAGE_CAP = 512 * 1024
 SOURCE_TABLES: "dict[str, list[dict]]" = {}
@@ -175,7 +184,7 @@ async def free_tier_limit(request: Request, call_next):
     return await call_next(request)
 
 
-def _cache_source(raw: bytes, suffix: str, normalized: str, tables=(), omit=()) -> str:
+def _cache_source(raw: bytes, suffix: str, normalized: str, tables=(), omit=(), source_url=None) -> str:
     """Store the original filing bytes AND the run's normalized text under a
     fresh opaque token, evicting the oldest entry once the LRU is over its
     3-document cap.
@@ -190,6 +199,8 @@ def _cache_source(raw: bytes, suffix: str, normalized: str, tables=(), omit=()) 
                      else "text/html; charset=utf-8")
     token = secrets.token_urlsafe(16)
     SOURCE_CACHE[token] = (content_type, raw, normalized.encode("utf-8"))
+    if canonical_edgar_url(source_url or ""):
+        SOURCE_BASES[token] = source_url
     from src.sec10k.tables import to_markdown
     SOURCE_TABLES[token] = [{"text": re.sub(r"\s+", "", normalized[t["start"]:t["end"]]).lower(),
                              "markdown": to_markdown(normalized, t, omit=omit)} for t in tables]
@@ -197,6 +208,12 @@ def _cache_source(raw: bytes, suffix: str, normalized: str, tables=(), omit=()) 
     while len(SOURCE_CACHE) > SOURCE_CACHE_MAX:
         stale, _ = SOURCE_CACHE.popitem(last=False)
         SOURCE_TABLES.pop(stale, None)
+        SOURCE_BASES.pop(stale, None)
+        with SOURCE_ASSET_LOCK:
+            for key in [key for key in SOURCE_ASSETS if key[0] == stale]:
+                SOURCE_ASSETS.pop(key)
+            for key in [key for key in SOURCE_ASSET_PENDING if key[0] == stale]:
+                SOURCE_ASSET_PENDING.discard(key)
     return token
 
 
@@ -248,7 +265,7 @@ def _run(path: str, source: dict, raw: bytes = None,
     if body is not None:
         norm = result.get("normalized_text") or ""
         source = dict(source, token=_cache_source(body, Path(path).suffix.lower(), norm,
-                                                   result.get("tables") or (), result.get("boilerplate") or ()))
+                                                   result.get("tables") or (), result.get("boilerplate") or (), source_url))
     view["source"] = source
     return JSONResponse(view)
 
@@ -405,6 +422,7 @@ def extract_url(body: dict, request: Request):
 
 
 @app.get("/api/source/{token}")
+@app.get("/api/source/{token}/")
 def api_source(token: str):
     """Original filing bytes for the compare pane. A miss — bad token, or
     evicted from the 3-document LRU — is a plain refusal, never a 500 and
@@ -422,9 +440,46 @@ def api_source(token: str):
             "message": "original source is no longer cached — re-run the extraction"})
     content_type, raw, _ = hit
     return Response(content=raw, media_type=content_type, headers={
-        "Content-Security-Policy": "sandbox allow-same-origin",
+        "Content-Security-Policy": "sandbox allow-same-origin; img-src 'self'",
         "X-Content-Type-Options": "nosniff",
     })
+
+
+@app.get("/api/source/{token}/{asset:path}")
+def api_source_asset(token: str, asset: str):
+    """Serve bounded same-accession SEC images for a cached source frame."""
+    hit, base = SOURCE_CACHE.get(token), SOURCE_BASES.get(token)
+    key = (token, asset)
+    if hit is None or base is None or not asset or "/" == asset[:1] or ".." in asset.split("/"):
+        return JSONResponse(status_code=404, content={"error": "source_asset_unavailable"})
+    if Path(asset).suffix.lower() not in IMAGE_SUFFIXES:
+        return JSONResponse(status_code=415, content={"error": "source_asset_not_image"})
+    url = asset_url(base, asset)
+    if url is None:
+        return JSONResponse(status_code=404, content={"error": "source_asset_unavailable"})
+    slot = reserve_asset(SOURCE_ASSETS, SOURCE_ASSET_PENDING, token, key,
+                         SOURCE_VIEWER_ASSET_MAX, SOURCE_ASSET_LOCK)
+    if slot is None:
+        return JSONResponse(status_code=429, content={"error": "source_asset_cap"})
+    if slot == "cached":
+        return Response(content=SOURCE_ASSETS[key][1], media_type=SOURCE_ASSETS[key][0],
+                        headers={"X-Content-Type-Options": "nosniff"})
+    try:
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": EDGAR_UA}), timeout=15) as response:
+                raw = response.read(SOURCE_ASSET_BYTES + 1)
+                media_type = response.headers.get_content_type()
+                final_url = response.geturl()
+        except (urllib.error.URLError, urllib.error.HTTPError, OSError):
+            return JSONResponse(status_code=502, content={"error": "source_asset_fetch_failed"})
+        if (asset_url(base, asset, final_url) is None or len(raw) > SOURCE_ASSET_BYTES
+                or not media_type.startswith("image/")):
+            return JSONResponse(status_code=415, content={"error": "source_asset_not_image"})
+        with SOURCE_ASSET_LOCK:
+            cached = SOURCE_ASSETS.setdefault(key, (media_type, raw))
+        return Response(content=cached[1], media_type=cached[0], headers={"X-Content-Type-Options": "nosniff"})
+    finally:
+        release_asset(SOURCE_ASSET_PENDING, key, SOURCE_ASSET_LOCK)
 
 
 @app.get("/api/normalized/{token}")

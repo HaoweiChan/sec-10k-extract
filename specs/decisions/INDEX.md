@@ -99,3 +99,6 @@ index only cross-references it for scanning.
   gives navigation status the only shrinkable first-row track, and shows table
   verification output on a second row only when present — enforced by
   `ui-source-toolbar-compact.json`.
+- ADR-057 — [bounded multi-model role policy](ADR-057-multi-model-policy.md):
+  one Flash evidence pass and up to three Pro plans are production-wired with
+  deterministic offset binding and cached-route coverage.

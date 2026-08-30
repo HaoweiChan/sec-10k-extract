@@ -442,16 +442,28 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
     if "cross_reference_index" in codes:
         codes.discard("low_item_coverage")
     ambiguous = not extracted or bool(codes & set(AMBIGUOUS_CODES))
+    graph_routes = {(x.get("item"), x.get("next_route"))
+                    for x in ((routing or {}).get("graph", {}).get("items", []))}
     for i in items:
-        i["confidence"], i["evidence"] = score(i, warnings, doc_ambiguous=ambiguous)
+        # A short primary index row remains a document diagnostic, but once
+        # the verifier attached local cross-reference content it is no longer
+        # an unresolved item failure. Keep that resolution on the evidence so
+        # callers can distinguish it from a validator that never fired.
+        resolved = [w for w in warnings
+                    if (w.get("code") == "item_span_near_empty"
+                        and w.get("item") == i["item"]
+                        and (i.get("evidence") or {}).get("cross_reference"))]
+        resolved_ids = {id(w) for w in resolved}
+        i["confidence"], i["evidence"] = score(
+            i, [w for w in warnings if id(w) not in resolved_ids], doc_ambiguous=ambiguous)
+        if resolved:
+            i["evidence"]["resolved_warnings"] = [w["code"] for w in resolved]
         # ADR-035 §e: the consumer-facing half. A validator that fires on an
         # item must not leave that item reading like any other `extracted` one
         # (postmortem §8 gap 2) — `status` still answers "what did the filing
         # do with this item", so the review signal is its own boolean rather
         # than a fifth status. Derived from the same item-targeted hits that
         # already move the confidence, so the two can never disagree.
-        graph_routes = {(x.get("item"), x.get("next_route"))
-                        for x in ((routing or {}).get("graph", {}).get("items", []))}
         i["review_required"] = (bool(i["evidence"]["warnings"])
                                 or (i["item"], "review_required") in graph_routes)
     if ambiguous:

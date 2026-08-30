@@ -1,0 +1,9 @@
+{
+  "id": "d34-page-anchor-decoy",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/intc-2025/filing.htm"},
+  "expect": {"checks": [{"type": "d34", "scenario": "page_anchor_decoy"}]},
+  "triage": {"class": "invariant-gap", "note": "A duplicated heading inside a verified printed-page interval is not sufficient: source alignment must still require its item body to agree."},
+  "provenance": "D34 cold review R1 synthetic DOM index; no provider call."
+}

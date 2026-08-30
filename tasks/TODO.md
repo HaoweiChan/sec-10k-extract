@@ -310,7 +310,51 @@ browser storage, green enabled state, and shared request-header behavior.
 Acceptance: `#esc-key-row` precedes `.modes`; the existing key behavior probe
 still passes; invariant and fast gates stay at 100% with no baseline move.
 
-### D31 — Compact the original-filing toolbar [status: in-progress]
+### D30 — Specialize LangGraph roles with a bounded multi-model policy [status: pr]
+Priority: P1
+Origin: owner architecture request and Intel FY2025 live evidence, 2026-08-30
+Spec: Keep acquisition, normalization, risk routing, offset/hash binding,
+verification, budget enforcement, final status, and publication deterministic.
+Call the verified credential the **LLM access key** in every new or active
+user-facing surface; legacy header/storage identifiers remain compatibility
+details and must not leak back into displayed terminology.
+On an evidence-triggered route, add one bounded structured-evidence pass using
+`deepseek/deepseek-v4-flash-0731`, then use
+`deepseek/deepseek-v4-pro` only for compact planning/re-planning inside the
+LangGraph loop. Centralize each role's model, input cap, completion cap,
+reasoning setting, response schema, and call/cost record in one policy rather
+than scattering model conditionals. Flash evidence must preserve source
+document identity and verbatim ranges; a summary alone is never publishable.
+Simplify terminal disposition proposals to semantic `{item,status}` decisions;
+the deterministic verifier—not either model—must bind the exact existing
+cross-reference entry/pointer offsets and may reject the decision. Retain
+process-local checkpoints, per-item attempts, cache replay, the shared Budget,
+zero-call clean/unverified-LLM-access-key paths, and `review_required` on every
+unresolved target.
+The initial milestone does not move the separate authenticated table-vision
+endpoint into the graph and does not add another framework, agent hierarchy,
+confidence-only routing rule, or model-authored SEC text.
+Validation: add red-first adversarial cases for role/model assignment,
+structured response parameters and cache-key separation, bounded aggregate
+calls, semantic-disposition offset binding, partial rejection/re-plan, zero-call
+$0 behavior for an unverified LLM access key, and truthful per-node trace/cost.
+Cached Intel FY2025 must resolve
+the 11 cross-reference residual targets or leave each unresolved item explicitly
+`review_required`; a bounded live Intel run may use at most one Flash evidence
+call plus three Pro planning calls, stops when spent cost reaches $0.10, records
+tokens/cost/latency, and must never be part of `fast`. Final gates:
+`python3 -m evals.run --suite invariant` = 100% and
+`python3 -m evals.run --suite fast` >= baseline, with no baseline move.
+Status: Intel FY2025 live proof used one Flash evidence call and one Pro plan,
+resolved all 11 residual targets, and recorded 2 calls / 4,833 tokens /
+$0.002348 / 52.8 s. Both sanitized cache entries are committed; the final
+localhost replay used 0 live calls and $0. Flash remains bounded to
+cross-reference-residual routes. Evidence:
+`tasks/reviews/d32-localhost-live-proof.json`. Final integration gate after D32:
+invariant 125/125 and fast 196/196, both 100%; table and structure fidelity
+1.0, no baseline move, and fast made no paid calls.
+
+### D31 — Compact the original-filing toolbar [status: done]
 Origin: owner MacBook Air interface review, 2026-08-30
 Spec: Keep the original-filing title, navigation status, and table action
 legible at the narrowest side-by-side width. Remove repeated hints, shorten
@@ -322,10 +366,103 @@ gates stay at 100% with no baseline move.
 Validation: browser-verified at the narrowest side-by-side viewport (1001x800);
 `python3 -m evals.run --suite invariant` 117/117; fast 188/188; table and
 structure fidelity 1.0000; $0; no baseline move.
-Status: owner directed PR and merge if CI is green after the three-round Terra
-review breaker. R1/R2 and both supplied R3 cascade regressions are verified;
-review approval remains withheld on the documented full-specificity parser
-ceiling (`tasks/reviews/d31-terra-audit.json`).
+Status: merged by PR #91 after the three-round Terra review breaker. R1/R2 and
+both supplied R3 cascade regressions are verified; the documented full-
+specificity parser ceiling remains in `tasks/reviews/d31-terra-audit.json`.
+
+### D32 — Present resolved escalation and repair authenticated source assets [status: pr]
+Priority: P1
+Origin: owner localhost presentation review, 2026-08-30
+Spec: When every risky target has a verified terminal disposition, keep raw
+validator warnings and provenance but present a concise resolved summary rather
+than treating primary-span diagnostics as unresolved failure. Preserve an honest
+primary-span coverage diagnostic and keep full validator detail collapsed. Carry
+the existing authenticated SEC-only vision context through the agent loop, run
+vision only for verified alternative image evidence, and otherwise say no
+alternative image evidence. Serve only bounded same-accession SEC image assets
+for the original-filing iframe, rejecting traversal, off-origin and non-image
+requests without exposing an LLM access key. The source viewer allows at most
+32 cached 512 KiB assets (16 MiB per filing), independently of Vision's
+two-image cap. Reuse D28's existing pinned
+LangGraph install/import gate rather than duplicate it.
+Acceptance: red-first adversarial cases for presentation/vision context/source
+asset plus the D28 dependency gate; targeted invariant + fast gate; localhost proof
+with an authenticated source and resolved escalation; cold review; no paid
+model call. Localhost proof: `tasks/reviews/d32-localhost-live-proof.json`.
+Validation: localhost **PASS**; after integrating main, final invariant
+**125/125** and fast **196/196**, both 100%, $0, with no baseline move. Table
+and structure fidelity remain 1.0.
+
+### D33 — Render the agentic routing audit trail [status: pr]
+Priority: P1
+Origin: owner demo observability request, 2026-08-30
+Spec: Replace the collapsed JSON-only Agentic routing evidence presentation
+with a compact audit UI driven solely by the existing `routing` record. Always
+identify the execution path as deterministic-only, deterministically
+suppressed, fixed escalation, or LangGraph agentic; when agentic, identify it
+as agent-proposed and deterministically verified. Render the outer routing
+stages separately from the inner `diagnose → plan → act → evaluate →
+decide` loop, including per-turn sanitized actions, observations, verifier
+rejections, next decision, model/cache provenance, latency, tokens, and cost.
+Evidence passes, LangGraph iterations, model calls, and checkpoints are distinct
+counters—`tier` count must not be presented as iteration count. Show per-item
+attempt/final-route summaries, auto-open the compact audit when an agentic route
+fires, and retain raw JSON in a nested provenance disclosure. Never display
+hidden model reasoning, prompts, filing excerpts, credentials, or secrets.
+Acceptance: red-first adversarial UI cases cover deterministic quiet,
+deterministic suppression, fixed escalation, agentic accept, verifier rejection
+and re-plan, exhausted/review-required, counter accuracy, sanitized output, and
+cost reconciliation. Reuse native HTML/CSS/JS; no visualization dependency and
+no model-policy change. Where an index-row or near-empty primary has verified
+cross-reference regions, the item answer must present those regions as labeled
+multi-region evidence without fabricating one contiguous primary span; Part III
+incorporated-by-reference pointers remain external and honest. A verified local
+cross-reference resolves the item's near-empty-primary review signal while
+retaining that diagnostic on the document; source compare anchors the first
+verified region rather than the index row. A zero-call table-vision preflight
+must read as not run, while provider failures remain visible. Localhost Intel FY2025 must authenticate the LLM access
+key, replay the committed cache at $0, visibly identify LangGraph agentic mode,
+separate one evidence pass from actual planning iterations and calls, expose
+11/11 item outcomes, and preserve the source comparison UI.
+Validation: invariant **135/135** and fast **206/206**, both 100%; table fidelity
+**427/427 cells** and **34/34 rows**, structure fidelity **61/61 blocks** and
+**61/61 bounds**. Localhost Intel FY2025 URL **PASS** for authenticated cached
+agent routing at **$0**, with 1 evidence pass, 1 planning iteration, 2 cached
+model steps, 7 checkpoints, 11/11 terminal outcomes, zero actionable item
+reviews, Item 7 anchored to the verified page-18 MD&A rather than the page-116
+index row, and Item 8 rendering 29 tables. The separate table-vision call was
+not verified locally because the host provider credential returned HTTP 401;
+the UI now reports provider verification unavailable rather than implying an
+inconclusive model verdict. Evidence:
+`tasks/reviews/d33-localhost-intel-proof.json`. No baseline move and no paid
+eval call.
+
+### D34 — Align verified composite items to their referenced filing pages [status: pr]
+Priority: P1
+Origin: owner localhost Intel FY2025 Item 8 report, 2026-08-30
+Spec: Treat an Item cross-reference page map as the navigation authority for a
+verified composite item. Intel FY2025 Item 8 must present the financial-
+statement content referenced on pages 56-108 rather than its page-116 index
+row or adjacent non-Item content. With boilerplate exclusion enabled, the
+extracted pane must omit repeated running heads, page numbers, and table-of-
+contents chrome from every composite region; the raw original filing may keep
+them as source evidence. Source compare must use the first referenced filing
+page number as its alignment target, with bounded text agreement as a fallback,
+so selecting Item 8 lands on page 56 instead of the trailing index.
+Acceptance: add red-first Intel cases for Item 8 page bounds, composite
+boilerplate removal, and raw-source alignment; preserve exact normalized
+offset/provenance ranges and Part III incorporation-by-reference behavior.
+Localhost proof must use the Intel FY2025 SEC URL with boilerplate exclusion
+and Markdown enabled and visually confirm Item 8 against the original filing.
+Validation: invariant **141/141**; fast **212/212**; table fidelity **427/427
+cells, 34/34 rows**; structure fidelity **61/61 blocks and bounds**. Localhost
+Intel FY2025 Item 8 passed against the SEC URL with boilerplate exclusion and
+Markdown enabled: the derived pane omitted the p56/p57/p65 footer tables,
+the full verified composite expanded from a 40,000-character preview, and the
+raw source aligned to the p56 `Financial Statements and Supplemental Details`
+heading rather than the p116 cross-reference index. Evidence:
+`tasks/reviews/d34-localhost-intel-proof.json`. No baseline move and no paid
+model call.
 
 ## Debt
 

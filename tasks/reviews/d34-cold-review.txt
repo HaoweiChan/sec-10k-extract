@@ -1,0 +1,32 @@
+2026-08-30 — D34 cold review evidence
+
+R1 (verbatim): numeric table-cell decoy: bounded page interval contains a
+duplicate heading but wrong body; current `findAnchor` single-occurrence fast
+path accepts it. Correct = real page heading with body agreement.
+
+R2 (verbatim): seven substantive two-row tables with unique labels and
+consecutive trailing integers are wrongly deleted.
+
+R3 (verbatim): footer page sequence with one missing folio
+(56,57,58,60..65) is not removed.
+
+Additional UI finding (verbatim): `show full verified...` is an in-flow
+`<details>` sibling inside flex `#pane`; it steals the text pane's height and
+breaks side-by-side bottom alignment.
+
+Red-first adapter output, after each minimal scenario and its handler existed,
+before product repair:
+
+`page-bound source anchor accepts a heading-only decoy or loses global fallback`
+
+`unique substantive two-row tables were removed as footers`
+
+`repeated footer run with one missing folio was not removed`
+
+`full composite creates a second in-flow pane child`
+
+Follow-up audit strengthened R2: the substantive run contains exactly two
+`Supporting schedule` labels and otherwise unique labels. It was run before
+the threshold repair and failed with:
+
+`substantive two-row tables with only two repeated labels were removed as footers`
