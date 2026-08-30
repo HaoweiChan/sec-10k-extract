@@ -52,6 +52,8 @@ MAX_GAP_CV = 0.60  # measured: chrome tops out at 0.58, nearest non-chrome is 0.
                    # boilerplate-near-miss goes red at exactly 0.84 (PR #25 R4).
 MIN_SPREAD = 0.70  # measured: chrome bottoms out at 0.82, nearest non-chrome is 0.64
 PAGE_DIGITS = 3    # judgment call, NOT measured — see ADR-026 §c4
+PAGE_GROUP_REPEATS = 7  # a short, regular printed-page run can live inside one item
+PAGE_GROUP_MIN_CHARS = 12
 
 # ponytail: no max-line-length gate. One was written and deleted — no line over
 # 35 chars passes the other three gates anywhere in the corpus, so the gate
@@ -96,18 +98,60 @@ def _running_head_lines(lines, n_chars):
         if s:
             occ[s].append((start, i))
     hits = set()
-    for places in occ.values():
-        if len(places) < MIN_REPEATS:
+    for label, places in occ.items():
+        if len(places) < PAGE_GROUP_REPEATS:
             continue
         starts = [p for p, _ in places]
         gaps = [b - a for a, b in zip(starts, starts[1:])]
         mean = statistics.mean(gaps)
         if not mean or statistics.pstdev(gaps) / mean > MAX_GAP_CV:
             continue
-        if (starts[-1] - starts[0]) / n_chars < MIN_SPREAD:
+        spread = (starts[-1] - starts[0]) / n_chars
+        global_head = len(places) >= MIN_REPEATS and spread >= MIN_SPREAD
+        local_hits = _consecutive_page_group(lines, places)
+        local_page_group = len(label) >= PAGE_GROUP_MIN_CHARS and len(local_hits) >= PAGE_GROUP_REPEATS
+        if not (global_head or local_page_group):
             continue
-        hits.update(i for _, i in places)
+        hits.update(i for _, i in places) if global_head else hits.update(local_hits)
     return hits
+
+
+def _adjacent_page(lines, i):
+    """A printed page number adjoining a header makes a local repeat chrome."""
+    for step in (-1, 1):
+        j = i + step
+        while 0 <= j < len(lines) and not lines[j][2]:
+            j += step
+        if 0 <= j < len(lines) and PAGE_NUMBER.fullmatch(lines[j][2]):
+            return True
+    return False
+
+
+def _consecutive_page_group(lines, places):
+    """Header indices in a locally consecutive printed-page run only."""
+    numbered = []
+    for _, i in places:
+        page = None
+        for step in (-1, 1):
+            j = i + step
+            while 0 <= j < len(lines) and not lines[j][2]:
+                j += step
+            if 0 <= j < len(lines) and PAGE_NUMBER.fullmatch(lines[j][2]):
+                digits = re.search(r"\d+", lines[j][2])
+                page = int(digits.group()) if digits else None
+                break
+        if page is not None:
+            numbered.append((i, page))
+    runs, run = [], []
+    for point in numbered:
+        if run and point[1] != run[-1][1] + 1:
+            if len(run) >= PAGE_GROUP_REPEATS:
+                runs.extend(i for i, _ in run)
+            run = []
+        run.append(point)
+    if len(run) >= PAGE_GROUP_REPEATS:
+        runs.extend(i for i, _ in run)
+    return set(runs)
 
 
 def find_chrome(text):
@@ -200,6 +244,12 @@ def _demo():
     # under MIN_REPEATS nothing fires, however regular it looks
     few = "\n".join("HEAD\nprose %d here\n%d" % (i, i) for i in range(MIN_REPEATS - 1))
     assert find_chrome(few) == [], find_chrome(few)[:3]
+
+    # Page-adjacent is insufficient: recurring statement headings at 75, 81,
+    # 87… are not a consecutive page run and must remain substantive.
+    near = "\n".join("Consolidated Balance Sheets\nPage %d\nbody %d" % (75 + 6 * i, i)
+                     for i in range(PAGE_GROUP_REPEATS))
+    assert find_chrome(near) == [], find_chrome(near)
 
     # EDGAR txt furniture, including the <S>/<C> column-marker line shape
     got = [(s["kind"], s) for s in find_chrome(

@@ -13,8 +13,8 @@
     "api_file": "evals/fixtures/repo_hygiene/boilerplate-wire-values.py"
   },
   "expect": {
-    "min_failures": 9,
-    "max_failures": 9
+    "min_failures": 10,
+    "max_failures": 10
   },
   "triage": {
     "class": "no-mechanical-check",

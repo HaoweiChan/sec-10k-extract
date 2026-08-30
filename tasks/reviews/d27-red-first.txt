@@ -1,0 +1,43 @@
+D27 red-first, 2026-08-30
+
+Command:
+python3 -c "import json; from pathlib import Path; from evals.run import run_case; p=Path('evals/adversarial/d27-high-assurance.json'); c=json.loads(p.read_text()); c['_file']=str(p); c['_kind']='adversarial'; print(run_case(c))"
+
+Observed before production changes: FAIL. The grouped-table repro rendered only
+the first header row; boilerplate and Markdown were opt-in; no high-assurance
+summary or collapsed agent-detail container existed; and the source pane still
+called its proportional scroll mapping a comparison. The gate's valid/wrong/
+absent credential checks and the generic repeated page-cell-group removal were
+already green, so they are retained as regression coverage rather than claimed
+as new repairs.
+
+The local Duke FY2024 source subsequently showed the same bounded page-group
+shape: seven regular `MD&A DUKE ENERGY` headers, each adjacent to a printed
+page number, inside Item 7 but not spread across the whole document. The
+seven-page generic repro was reduced to that structural minimum and was run
+before the boilerplate repair: it failed `repeated page cell-group chrome was
+not actually removed` while the grouped-header repair was green.
+
+`d27-intc-agent-progress` was also watched red before its loop repair. Its
+second cached turn repeated the exact pointer search and was silently executed
+again (`outcome: rejected`, no `rejections`), before the third turn supplied
+the valid terminal-disposition batch. The D27 repair records the repeated
+action as a verifier rejection, retains it in persistent context, and leaves
+the third-turn batch as the only accepted outcome; cost remains zero.
+
+The raster acceptance was added before the raster implementation and watched
+red with the focused D27 case: `authenticated source-table raster path is not
+exposed; authenticated table vision verifier is missing`. The green repair
+uses the same-origin source iframe to rasterize visible DOM table cells, then
+requires a verified gate, PNG cap/signature, table SHA-256, and cached
+normalized-source membership before the bounded vision call. Its no-budget
+check returns `skipped` with exactly zero calls/tokens/USD.
+
+Audit follow-up: the behavioral D27 verifier now injects cached confirm,
+reject, and null verdicts and pins the actual `image_urls` PNG plus both the
+exact source-table text and deterministic Markdown candidate in the prompt.
+Only confirm reports `verified`; the other outcomes are `rejected` or
+`inconclusive`. The Intel replay also pins that turn three receives both the
+prior action and turn-two repeated-action rejection. Duke's positive seven
+page MD&A run remains removed, while a seven-occurrence 75/81/87… statement
+title near-miss remains intact.

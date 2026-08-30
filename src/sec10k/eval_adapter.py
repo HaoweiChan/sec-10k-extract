@@ -1004,7 +1004,7 @@ def eval_check(result, chk, path=None):
             got = pointer_entries(row + pointer, (0, len(row)), {"1": (0, len(row))}, {"1": "I"})
             if got:
                 return f"explicitly cross-Part incorporation pointer was bound: {got}"
-        elif chk["scenario"] in {"cached_dispositions", "partial_batch"}:
+        elif chk["scenario"] in {"cached_dispositions", "partial_batch", "repeated_action"}:
             items = copy.deepcopy(baseline["items"])
             by_item = {i["item"]: i for i in items}
             def proposal(code, status, end_shift=0):
@@ -1020,6 +1020,8 @@ def eval_check(result, chk, path=None):
                 {"action": "read_window", "start": pointer["start"], "end": pointer["end"]},
                 {"action": "propose_item_dispositions", "proposals": proposals},
             ]
+            if chk["scenario"] == "repeated_action":
+                actions[1] = dict(actions[0])
             calls, queued = [], copy.deepcopy(actions)
             def _stub(model, system, user, max_tokens, budget, **kw):
                 calls.append(_json.loads(user))
@@ -1041,6 +1043,13 @@ def eval_check(result, chk, path=None):
                 if not ev["warnings"]:
                     return "partial disposition target would lose review_required after final scoring"
                 return None
+            if chk["scenario"] == "repeated_action" and not any(
+                    "repeated action" in rejection for rejection in routing["tiers"][1].get("rejections", [])):
+                return f"repeated agent action was silently re-run: {routing['tiers'][1]}"
+            if chk["scenario"] == "repeated_action" and (
+                    calls[2].get("prior_actions") != [actions[0]] or
+                    calls[2].get("observation") != {"verifier_rejections": routing["tiers"][1]["rejections"]}):
+                return "third Intel turn lost the repeated-action context or rejection"
             if (extra or routing["dispositions"] != sorted(omitted | ibr) or len(calls) != 3
                     or any(by_code[c]["status"] != "omitted" or by_code[c]["start"] is not None
                            for c in omitted)):

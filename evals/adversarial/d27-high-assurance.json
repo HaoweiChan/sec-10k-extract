@@ -1,0 +1,12 @@
+{
+  "id": "d27-high-assurance",
+  "task": "repo_hygiene",
+  "suites": ["invariant", "fast"],
+  "input": {"checks": ["d27_high_assurance"]},
+  "expect": {},
+  "triage": {
+    "class": "invariant-gap",
+    "note": "D27: the authenticated door already fails closed, but the inspector defaults to flat, chrome-full text, reports a proportional source sync as comparison, and exposes raw routing detail inline. A generic grouped-header/page-chrome repro makes the Duke FY2024 viewer shape executable without an issuer exception; the source URL fixture is canonicalization-only and no raster source has been committed."
+  },
+  "provenance": "D27 red-first case. It uses only synthetic generic HTML and cached/offline gate behavior; no SEC fetch or paid model call occurs."
+}

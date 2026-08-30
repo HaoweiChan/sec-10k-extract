@@ -16,7 +16,9 @@ of tempfile does. The UI posts the File object straight as the body.
 
 Run: uvicorn src.sec10k.web.app:app --reload
 """
+import base64
 import hashlib
+import re
 import secrets
 import tempfile
 import urllib.error
@@ -42,80 +44,11 @@ EDGAR_UA = "Haowei Chan hwchan42@gmail.com"   # SEC fair-access: declare a conta
 MAX_BYTES = 25 * 1024 * 1024                  # provisional cap, both upload and URL
 ALLOWED_SUFFIX = (".htm", ".html", ".txt")
 
-# ---------------------------------------------------------------- ADR-036 §h2
-# The deployed inspector is PUBLIC and UNAUTHENTICATED. It escalates BY
-# DEFAULT — owner decision, 2026-08-27, "make it default on, remove the
-# button": there is no `escalate` flag on any endpoint and no control on the
-# page, because a capability the viewer has to find and tick is a capability
-# most viewers never see.
-#
-# Lock 1 is therefore INVERTED, not removed. It used to arm paid work
-# (`== "1"`, off until someone opts in); it now DISARMS it, on until the
-# operator says stop. An off-switch costs nothing, does not contradict
-# "default on", and means a runaway is stopped by an env var on the host
-# rather than by a code change and a redeploy.
-#
-# PR #61 R3: it takes a documented FALSY SET, not the single literal "0".
-# `SEC10K_ESCALATION_ENABLED=false` is what an operator actually types into a
-# Zeabur variable, and a stop button that silently ignores it is worse than no
-# stop button, because someone will believe it. Compared after `.strip()` and
-# `.lower()`, so `FALSE`, `Off` and `"0 "` all disarm. UNSET and EMPTY both
-# ARM — that is the owner's default-on, and `os.environ.get(VAR, "")` makes
-# the two states identical on purpose. Anything not in the set arms.
-#
-# Lock 2 is UNTOUCHED and now matters more, because it is the only ceiling
-# left: one `Budget` for the life of the server process, shared by every
-# request, so the bound is on the DEPLOYMENT and not on each document. When it
-# is spent the tier refuses like any other `EscalationUnavailable` and says so
-# in the routing record. It does not reset on its own; restarting the process
-# is the deliberate act that refills it — which also means a redeploy refills
-# it. Lock 3 (ADR-036 §h2, `EXTRACT_WINDOW`) lives in `escalate.route` and is
-# untouched too.
-#
-# LOCK 4, THE DOOR — and it is why the paragraph that used to sit here is
-# gone rather than edited (PR #61 R10, owner decision "close it at the door").
-# That paragraph said any anonymous caller could trigger paid work by UPLOADING
-# a collapsing document, and that an upload was the only route. Both halves
-# were wrong. PR #61 R1 had already found that two committed fixtures made the
-# dropdown a one-click paid button and `?fixture=<name>&run=1` a paid PAGE
-# LOAD; R10 then found that excluding those fixtures still did not close the
-# money path, because `POST /api/extract/url` extracts ANY
-# `https://www.sec.gov/Archives/…` URL — and `intc-2025` is a real Intel EDGAR
-# filing whose own Archives URL bills. Excluding fixtures could never fix that:
-# extracting arbitrary EDGAR URLs is the feature, and every collapsing filing
-# on EDGAR is one.
-#
-# A door was built for exactly that on 2026-08-28 (TD-158) and REMOVED the
-# same day (ADR-041, owner: "我就要 default 有 escalation — 面試官不想管這種細節").
-# A tier only the operator can open is a tier the demo's audience never sees,
-# and the audience is the point. So the paid path is open to every request:
-# `ESCALATION_ENABLED` is the operator's only stop, and the process-wide
-# `Budget` — `SEC10K_ESCALATION_MAX_USD`, default $5, REFILLED BY EVERY
-# REDEPLOY — is the only money bound there is. ADR-041 records what that costs
-# and why it was accepted anyway.
-#
-# The decision is still taken ONCE, in `_run`, the single point all three input
-# modes converge on and the only caller of `extract_items` in this file, so
-# fixture, upload and URL are covered by construction rather than by three
-# guards that can drift (PR #61 R13 is that failure: a per-line guard a second
-# endpoint walked around). With no door left, a second entrance is no longer a
-# guard evaded — it is simply an unbudgeted call.
-#
-# Extraction itself is untouched and stays open, free and unauthenticated —
-# that is the product, and an evaluator with no secret still gets every item,
-# every span and every pane. What they do not get is a bill, and the envelope
-# says which of the two happened (`escalation.reason`, on screen in the routing
-# strip) instead of going quiet about it.
-#
-# The fixture exclusion below stays as the second layer: since ADR-041 removed
-# the door it is not what makes the spend bounded either, but a paid button in
-# a public dropdown is worth not shipping regardless.
-#
-# Neither web lock touches a local run: `python3 -m src.sec10k.escalate`, the
-# eval suites and a direct `extract_items(..., escalate=True)` call all bypass
-# this module entirely, and `extract_items`' own `escalate=False` default is
-# deliberately unchanged — flipping it would put paid calls on every
-# `python3 -m evals.run` and in CI, destroying the $0 offline gate.
+# The public deterministic extractor stays free. Paid work is allowed only
+# after `gate.paid_path_open` verifies the configured escalation key; the one
+# process-wide Budget and bounded prompts limit that optional path. `_run` is
+# the only extraction entrance, while D27's separate table-verdict endpoint
+# reuses the same gate and Budget (ADR-043, ADR-052).
 DISARM_VALUES = ("0", "false", "no", "off")
 ESCALATION_ENABLED = (os.environ.get("SEC10K_ESCALATION_ENABLED", "")
                       .strip().lower() not in DISARM_VALUES)
@@ -163,6 +96,9 @@ app = FastAPI(title="sec10k-extract inspector")
 # spill, not a smaller cap.
 SOURCE_CACHE: "OrderedDict[str, tuple[str, bytes, bytes]]" = OrderedDict()
 SOURCE_CACHE_MAX = 3
+VISION_TABLE_TEXT_CAP = 12_000
+VISION_TABLE_IMAGE_CAP = 512 * 1024
+SOURCE_TABLES: "dict[str, list[dict]]" = {}
 
 
 def _fixture_file(name: str) -> Path:
@@ -239,7 +175,7 @@ async def free_tier_limit(request: Request, call_next):
     return await call_next(request)
 
 
-def _cache_source(raw: bytes, suffix: str, normalized: str) -> str:
+def _cache_source(raw: bytes, suffix: str, normalized: str, tables=(), omit=()) -> str:
     """Store the original filing bytes AND the run's normalized text under a
     fresh opaque token, evicting the oldest entry once the LRU is over its
     3-document cap.
@@ -254,9 +190,13 @@ def _cache_source(raw: bytes, suffix: str, normalized: str) -> str:
                      else "text/html; charset=utf-8")
     token = secrets.token_urlsafe(16)
     SOURCE_CACHE[token] = (content_type, raw, normalized.encode("utf-8"))
+    from src.sec10k.tables import to_markdown
+    SOURCE_TABLES[token] = [{"text": re.sub(r"\s+", "", normalized[t["start"]:t["end"]]).lower(),
+                             "markdown": to_markdown(normalized, t, omit=omit)} for t in tables]
     SOURCE_CACHE.move_to_end(token)
     while len(SOURCE_CACHE) > SOURCE_CACHE_MAX:
-        SOURCE_CACHE.popitem(last=False)
+        stale, _ = SOURCE_CACHE.popitem(last=False)
+        SOURCE_TABLES.pop(stale, None)
     return token
 
 
@@ -277,28 +217,18 @@ def _run(path: str, source: dict, raw: bytes = None,
     ADR-032's, the same way: `blocks=True` adds the `blocks` (+ `tables`)
     annotation and build_view renders the pane from it (S9).
 
-    Escalation is NOT a request flag (owner, 2026-08-27) and NOT behind a
-    token either (owner, 2026-08-28, ADR-041 — the door of TD-158 lasted one
-    day). It is one condition taken HERE, for all three input modes: the
-    deployment is armed, or it is not. It then still does nothing unless the D8
-    coverage trigger fires, and with no `OPENROUTER_API_KEY` on the server it
-    produces a routing record whose tier outcome is `unavailable`, never a
-    fabricated item.
+    The shared credential gate is evaluated here for every input mode. With no
+    valid key the extraction is complete, deterministic, and free; with one,
+    the normal trigger and process Budget still decide whether a model runs.
     """
-    # ADR-041. The ONE place the paid path can be entered, and the only
-    # `extract_items` call in this file. There is no token and no header any
-    # more (owner, 2026-08-28: the demo's audience must not configure
-    # anything), so `ESCALATION_ENABLED` is the operator's only stop and the
-    # process-wide budget is not a ceiling BEHIND a door — it is the only
-    # ceiling there is. That is why `escalate=` and `budget=` are the same
-    # name: a request must never be able to escalate on one condition and bill
-    # against another.
+    # The sole extraction call uses the gate verdict for both escalation and
+    # Budget, so all input modes have one paid-path decision.
     escalate, why = gate.paid_path_open(
         request.headers.get(gate.HEADER) if request is not None else None,
         ESCALATION_ENABLED)
     try:
         result = extract_items(path, exclude_boilerplate=exclude_boilerplate,
-                               blocks=markdown, escalate=escalate,
+                               tables=markdown or escalate, blocks=markdown, escalate=escalate,
                                budget=server_budget() if escalate else None,
                                source_url=source_url)
     except Exception as e:                       # refuse loudly, hard rule 4
@@ -317,7 +247,8 @@ def _run(path: str, source: dict, raw: bytes = None,
             body = None
     if body is not None:
         norm = result.get("normalized_text") or ""
-        source = dict(source, token=_cache_source(body, Path(path).suffix.lower(), norm))
+        source = dict(source, token=_cache_source(body, Path(path).suffix.lower(), norm,
+                                                   result.get("tables") or (), result.get("boilerplate") or ()))
     view["source"] = source
     return JSONResponse(view)
 
@@ -331,27 +262,8 @@ def index():
 def api_meta():
     return {"git_sha": git_sha(ROOT), "fixtures": deployed_fixtures(),
             "max_bytes": MAX_BYTES, "allowed_suffix": list(ALLOWED_SUFFIX),
-            # ADR-036 §h2 — the deployment's behaviour stays inspectable
-            # without a control on the page. ONE fact again since ADR-041
-            # removed the door: `escalation_enabled` is now both the operator's
-            # off-switch AND the whole answer to "can this request reach the
-            # paid tier", because nothing else gates it.
-            #
-            # It reads
-            # false where SEC10K_ESCALATION_ENABLED is set to any member of
-            # DISARM_VALUES — `0`, `false`, `no`, `off`, compared after
-            # `.strip().lower()`, so `FALSE`, `Off` and `"0 "` all disarm.
-            # PR #61 R17: this comment used to describe a single-literal `0`,
-            # which stopped being true in R3 and would have sent an operator
-            # looking for a switch that had already widened.
-            #
-            # `escalation_token_required` was published here until ADR-041 and
-            # is deliberately GONE rather than hardcoded false: there is no
-            # token, so a key still answering the question would invite a
-            # client to branch on a door that no longer exists.
-            #
-            # This does not publish the budget's remaining balance — that is a
-            # fact about other people's requests.
+            # Publish configuration state, never the credential or shared
+            # budget balance.
             "escalation_enabled": ESCALATION_ENABLED,
             # ADR-043. The page shows its key field only when a secret is
             # configured — a field that cannot open anything is worse than
@@ -365,6 +277,58 @@ def verify_escalation_key(request: Request):
     valid, _ = gate.paid_path_open(request.headers.get(gate.HEADER),
                                    ESCALATION_ENABLED)
     return {"valid": valid}
+
+
+@app.post("/api/extract/vision-table")
+async def verify_source_table_raster(request: Request):
+    """Check one bounded public-filing table raster after the shared paid gate.
+
+    The browser sends only a source-table PNG and matching DOM text/hash: no
+    key, browser state, or unrelated filing content. The verdict never edits
+    extraction output; reject/null leaves the deterministic render partial.
+    """
+    may_call, reason = gate.paid_path_open(request.headers.get(gate.HEADER),
+                                           ESCALATION_ENABLED)
+    zero = {"llm_calls": 0, "tokens": 0, "usd": 0.0}
+    if not may_call:
+        return {"status": "skipped", "reason": reason, "images": 0, "cost": zero}
+    try:
+        too_large = int(request.headers.get("content-length", "0")) > (
+            VISION_TABLE_IMAGE_CAP * 2 + VISION_TABLE_TEXT_CAP + 4096)
+    except ValueError:
+        too_large = True
+    if too_large:
+        return JSONResponse(status_code=413, content={"status": "failed", "reason": "table request exceeds cap", "images": 0, "cost": zero})
+    try:
+        body = await request.json()
+    except ValueError:
+        return JSONResponse(status_code=400, content={"status": "failed", "reason": "invalid JSON", "images": 0, "cost": zero})
+    token = body.get("token") if isinstance(body, dict) else None
+    image = body.get("image") if isinstance(body, dict) else None
+    table_text = body.get("table_text") if isinstance(body, dict) else None
+    table_hash = body.get("table_sha256") if isinstance(body, dict) else None
+    hit = SOURCE_CACHE.get(token) if isinstance(token, str) else None
+    if hit is None or not isinstance(table_text, str) or not isinstance(table_hash, str):
+        return JSONResponse(status_code=400, content={"status": "failed", "reason": "source token or table proof is invalid", "images": 0, "cost": zero})
+    if len(table_text) > VISION_TABLE_TEXT_CAP or hashlib.sha256(table_text.encode()).hexdigest() != table_hash:
+        return JSONResponse(status_code=400, content={"status": "failed", "reason": "table text hash is invalid", "images": 0, "cost": zero})
+    proof = re.sub(r"\s+", "", table_text).lower()
+    candidate = next((t for t in SOURCE_TABLES.get(token, ()) if proof == t["text"]), None)
+    if len(proof) < 16 or candidate is None:
+        return JSONResponse(status_code=400, content={"status": "failed", "reason": "table text is not bound to cached source", "images": 0, "cost": zero})
+    prefix = "data:image/png;base64,"
+    if not isinstance(image, str) or not image.startswith(prefix) or len(image) > VISION_TABLE_IMAGE_CAP * 2:
+        return JSONResponse(status_code=400, content={"status": "failed", "reason": "table raster is invalid", "images": 0, "cost": zero})
+    try:
+        png = base64.b64decode(image[len(prefix):], validate=True)
+    except (ValueError, TypeError):
+        png = b""
+    if len(png) > VISION_TABLE_IMAGE_CAP or not png.startswith(b"\x89PNG\r\n\x1a\n"):
+        return JSONResponse(status_code=400, content={"status": "failed", "reason": "table raster is invalid", "images": 0, "cost": zero})
+    from src.sec10k.escalate import vision_table_verify
+    verdict = vision_table_verify(image, table_text, candidate["markdown"], server_budget())
+    return {**verdict, "verifier": {"source_token": True, "table_sha256": True,
+                                      "source_text": True}}
 
 
 @app.post("/api/extract/fixture")
