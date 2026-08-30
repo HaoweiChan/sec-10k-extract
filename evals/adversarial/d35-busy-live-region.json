@@ -1,0 +1,12 @@
+{
+  "id": "d35-busy-live-region",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/aapl-2025/filing.htm"},
+  "expect": {"checks": [{"type": "d35", "scenario": "busy_live_region"}]},
+  "triage": {
+    "class": "invariant-gap",
+    "note": "PR #93 R2: busy(true) reset the graph but left the role=status banner announcing the previous completed extraction until the first progress poll."
+  },
+  "provenance": "PR #93 round 1 R2, added and observed red before the generic request-start announcement was restored."
+}

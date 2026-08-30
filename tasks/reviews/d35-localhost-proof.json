@@ -42,6 +42,29 @@
     "usd": 0.0,
     "budget": "max_calls=0, max_usd=0; any cache miss fails before transport"
   },
-  "paid_route": "UNRUN — no credential was entered or exposed; an authenticated localhost request was not authorized because it could trigger a paid external call.",
-  "scope": "This proves the final implementation's visible Intel fixture wait/final states, its real cached Intel routing callback sequence, and the separate result/polling contract at zero cost. It is not an authenticated or live-model proof."
+  "paid_route": "NO LIVE PROVIDER RUN — PR #93 repair used a local inspector token while OPENROUTER_API_KEY was explicitly absent; committed cache responses produced 0 live calls and $0.0000.",
+  "pr93_repair": {
+    "browser_runtime": "The repair author could not obtain a browser runtime; the owner-requested direct review subsequently verified the final branch in the Codex in-app browser.",
+    "localhost": "Real server request for intc-2025 with X-Progress and a valid local inspector token; OPENROUTER_API_KEY was explicitly removed from the server environment.",
+    "poll_snapshots": [
+      "prepare:active",
+      "classify:active",
+      "plan:active",
+      "route:active",
+      "verify:active",
+      "decide:active",
+      "complete"
+    ],
+    "automated_render": "d35-progress-event-queue passes only when the real route snapshot renders class=active and the live region says Extracting — route; the web contract waits for backend completion before polling and still observes the same six active snapshots in order.",
+    "final": "success_with_warning; response-authored classify/plan/route/verify/decide all done; 0 live calls; $0.0000"
+  },
+  "direct_review": {
+    "localhost": "http://127.0.0.1:8766 on the final PR worktree, Codex in-app browser",
+    "intel_keyless_visible_sequence": ["decide:active", "complete"],
+    "intel_keyless_final": ["prepare:done", "classify:skipped", "plan:skipped", "route:skipped", "verify:skipped", "decide:done"],
+    "terminal_refusal": ["prepare:failed", "classify:skipped", "plan:skipped", "route:skipped", "verify:skipped", "decide:skipped"],
+    "responsive": "At 390 px the flow container remained inside the viewport (31.7–358.3 px) and exposed its own horizontal scroll (325 px client / 678 px content).",
+    "race_found_and_fixed": "Polling the initial snapshot could empty the queue before the next backend callback; the following callback then indexed snapshots[-1] and converted the run to a 500. The web contract now drains the queue while the worker is paused, resumes the worker, and requires classify:active plus a successful result."
+  },
+  "scope": "This proves the final implementation's Intel progress sequence, browser-visible terminal and active states, responsive flow containment, and separate result/polling contract at zero cost. Cached routing snapshots plus the renderer contract cover the agentic route without a live provider call. It is not a live-model proof."
 }

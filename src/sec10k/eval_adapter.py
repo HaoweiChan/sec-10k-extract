@@ -2104,6 +2104,56 @@ if(!done || pending || !completed.includes("primary-span coverage: <b>58.32%</b>
         page = (ROOT / "src/sec10k/web/static/index.html").read_text()
         server = (ROOT / "src/sec10k/web/app.py").read_text()
         scenario = chk.get("scenario")
+        start = page.find("const FLOW_LABELS")
+        end = page.find("// ADR-043", start)
+        if scenario == "terminal_refusal":
+            script = page[start:end] + r'''
+const stages = flowStages({doc_status:"failed"});
+if(stages[0].status !== "failed" || stages.slice(1).some(x => x.status !== "skipped")) process.exit(1);
+'''
+            if start < 0 or end < 0 or subprocess.run(
+                    ["node", "-e", script], capture_output=True).returncode:
+                return "terminal refusal leaves the completed progress graph pending"
+            return None
+        if scenario == "busy_live_region":
+            script = r'''
+const banner={textContent:"Previous result",className:"s-success"};
+const list={innerHTML:""};
+const box={hidden:true,querySelector:()=>list};
+const document={querySelectorAll:()=>[]};
+function $(selector){return selector==="#banner" ? banner : box;}
+''' + page[start:end] + r'''
+busy(true);
+if(banner.textContent !== "Starting extraction…" || banner.className !== "s-idle") process.exit(1);
+'''
+            if start < 0 or end < 0 or subprocess.run(
+                    ["node", "-e", script], capture_output=True).returncode:
+                return "request start leaves the extraction live region stale"
+            return None
+        if scenario == "event_queue":
+            if ('job["snapshots"] = [dict(job["stages"])]' not in server
+                    or 'snapshot = job["snapshots"].pop(0)' not in server
+                    or 'if status != "active":' not in server
+                    or 'if not job["snapshots"] or job["snapshots"][-1] != snapshot:' not in server):
+                return "backend progress transitions can finish between polls without a visible snapshot"
+            script = r'''
+const banner={textContent:"",className:""};
+const list={innerHTML:""};
+const box={hidden:true,querySelector:()=>list};
+function $(selector){return selector==="#banner" ? banner : box;}
+''' + page[start:end] + r'''
+const live={stages:[
+ {stage:"prepare",status:"done"},{stage:"classify",status:"done"},
+ {stage:"plan",status:"done"},{stage:"route",status:"active"},
+ {stage:"verify",status:"pending"},{stage:"decide",status:"pending"}]};
+renderProgress(flowStages({},live),true);
+if(banner.textContent !== "Extracting — route"
+ || !list.innerHTML.includes('class="active"')
+ || !list.innerHTML.includes('route<span class="progress-state">active')) process.exit(1);
+'''
+            if subprocess.run(["node", "-e", script], capture_output=True).returncode:
+                return "backend route snapshot is not rendered as the visible active node"
+            return None
         if scenario == "live_skips":
             extract = (ROOT / "src/sec10k/extract.py").read_text()
             route = (ROOT / "src/sec10k/escalate.py").read_text()
@@ -2157,7 +2207,7 @@ if(stages.map(x=>x.stage).join(",") !== "prepare,classify,plan,route,verify,deci
         rendered = subprocess.run(["node", "-e", script], capture_output=True, text=True)
         if rendered.returncode:
             return "completed progress graph does not retain response stage outcomes"
-        if ('return {"status": job["status"], "stages":' not in server
+        if ('return {"status": status, "stages": stages,' not in server
                 or any(secret in server[server.find('def progress_status('):server.find('def progress_result(')]
                        for secret in ('normalized_text', 'prompt', 'credential', 'reasoning'))):
             return "progress polling is not a fixed sanitized projection"

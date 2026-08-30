@@ -940,6 +940,13 @@ function flowStages(response={}, live=null){
     })];
   }
   const current = live?.stages || [];
+  if(response?.doc_status === "failed"){
+    return Object.keys(FLOW_LABELS).map((stage, index) => {
+      const own = current.find(x => x.stage === stage)?.status;
+      return {stage, status:own === "active" ? "failed" : own === "pending" ? "skipped" :
+        FLOW_STATUSES.has(own) ? own : index ? "skipped" : "failed"};
+    });
+  }
   return Object.keys(FLOW_LABELS).map(stage => {
     const own = current.find(x => x.stage === stage);
     return {stage, status:FLOW_STATUSES.has(own?.status) ? own.status : "pending"};
@@ -974,7 +981,8 @@ function busy(on, msg){
   if(on){
     LAST_PROGRESS = null;
     renderProgress(flowStages(), false);
-    if(msg) $("#banner").textContent = msg;
+    $("#banner").className = "s-idle";
+    $("#banner").textContent = msg || "Starting extraction…";
   }
 }
 

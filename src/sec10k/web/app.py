@@ -127,17 +127,23 @@ def _progress_advance(job_id, stage, status="active"):
         job = PROGRESS_JOBS.get(job_id)
         if not job or job["status"] != "running":
             return
-        if status == "active":
-            for name, prior in job["stages"].items():
-                if prior == "active":
-                    job["stages"][name] = "done"
+        for name, prior in job["stages"].items():
+            if name != stage and prior == "active":
+                job["stages"][name] = "done"
         job["stages"][stage] = status
+        if status != "active":
+            return
+        snapshot = dict(job["stages"])
+        if not job["snapshots"] or job["snapshots"][-1] != snapshot:
+            job["snapshots"].append(snapshot)
+            del job["snapshots"][:-len(PROGRESS_STAGES)]
 
 
 def _start_progress(run):
     job_id = secrets.token_urlsafe(18)
     job = {"status": "running", "stages": dict.fromkeys(PROGRESS_STAGES, "pending")}
     job["stages"]["prepare"] = "active"
+    job["snapshots"] = [dict(job["stages"])]
     with PROGRESS_LOCK:
         for stale in list(PROGRESS_JOBS):
             if len(PROGRESS_JOBS) < PROGRESS_MAX:
@@ -188,10 +194,12 @@ def progress_status(job_id: str):
         job = PROGRESS_JOBS.get(job_id)
         if job is None:
             return JSONResponse(status_code=404, content={"error": "progress_not_found"})
+        snapshot = job["snapshots"].pop(0) if job["snapshots"] else None
+        status = "running" if snapshot is not None else job["status"]
         stages = [{"stage": name, "status": status if status in PROGRESS_STATUSES else "failed"}
-                  for name, status in job["stages"].items()]
-        return {"status": job["status"], "stages": stages,
-                "result_url": f"/api/progress/{job_id}/result" if job["status"] == "complete" else None}
+                  for name, status in (snapshot or job["stages"]).items()]
+        return {"status": status, "stages": stages,
+                "result_url": f"/api/progress/{job_id}/result" if status == "complete" else None}
 
 
 @app.get("/api/progress/{job_id}/result")

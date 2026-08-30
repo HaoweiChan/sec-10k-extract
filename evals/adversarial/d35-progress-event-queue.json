@@ -1,0 +1,12 @@
+{
+  "id": "d35-progress-event-queue",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/intc-2025/filing.htm"},
+  "expect": {"checks": [{"type": "d35", "scenario": "event_queue"}]},
+  "triage": {
+    "class": "invariant-gap",
+    "note": "PR #93 R3: latest-state polling can miss every synchronous Intel routing transition, so the browser proof captured preparation and terminal outcomes but no intermediate routing node."
+  },
+  "provenance": "PR #93 round 1 R3, added and observed red before bounded backend event snapshots made the visible sequence deterministic."
+}

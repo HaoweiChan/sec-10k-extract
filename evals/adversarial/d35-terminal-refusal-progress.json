@@ -1,0 +1,12 @@
+{
+  "id": "d35-terminal-refusal-progress",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/aapl-2025/filing.htm"},
+  "expect": {"checks": [{"type": "d35", "scenario": "terminal_refusal"}]},
+  "triage": {
+    "class": "invariant-gap",
+    "note": "PR #93 R1: a progress-opted validation refusal has no routing record, so the completed failed UI rendered all six stages as pending."
+  },
+  "provenance": "PR #93 round 1 R1, added and observed red before terminal failure mapping was repaired."
+}

@@ -4,7 +4,7 @@ Date: 2026-08-30. Status: accepted.
 
 **Ruling**: the inspector polls a fixed process-local background extraction; the normal API stays synchronous.
 **Because**: a blocking response cannot truthfully expose cached, skipped, failed, and slow backend stages.
-**Enforced by**: `d35-live-progress-flowchart`, `d35-live-skipped-stages`, and the web contract test.
+**Enforced by**: `d35-live-progress-flowchart`, `d35-live-skipped-stages`, `d35-busy-live-region`, `d35-progress-event-queue`, `d35-terminal-refusal-progress`, and the web contract test.
 
 ---
 
@@ -14,6 +14,9 @@ only from `extract_items` and `escalate.route`. Polling publishes only the fixed
 stage names and bounded statuses. The completed classify-through-decide graph
 is replaced by the extraction response's own `routing.stages`, preserving its
 skipped and failed outcomes; the result remains available at a separate URL.
+Each job retains at most one sanitized snapshot per fixed stage so fast real
+transitions are delivered in backend order instead of disappearing between
+browser polls.
 
 No progress response includes filing text, prompts, model output/reasoning,
 credentials, targets, errors, or cost. The existing status live region

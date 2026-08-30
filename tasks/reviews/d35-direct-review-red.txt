@@ -1,0 +1,22 @@
+D35 direct-review regression, 2026-08-30
+
+Observed on localhost in the Codex in-app browser before the fix:
+- POST /api/extract/fixture returned 202.
+- The browser polled the initial prepare snapshot.
+- The next backend callback indexed an empty snapshots queue.
+- The result endpoint returned 500 and the flow ended prepare:failed with all
+  remaining stages skipped.
+
+Fail-before commands:
+  python3 -c '... run d35-progress-event-queue ...'
+  => passed: False; backend progress transitions can finish between polls
+     without a visible snapshot
+
+  /tmp/sec10k-d35-venv/bin/python -m src.sec10k.test_web_contract
+  => AssertionError: classify:active was never delivered after the initial
+     snapshot was drained and the paused worker resumed
+
+Pass-after:
+- d35-progress-event-queue: passed True
+- src.sec10k.test_web_contract: exit 0
+- Localhost Intel keyless run: decide:active -> complete; HTTP result 200

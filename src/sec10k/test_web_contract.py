@@ -1,5 +1,7 @@
 import asyncio
 import json
+import threading
+import time
 
 from src.sec10k.web import app
 
@@ -54,6 +56,38 @@ def main():
     assert body["routing"]["tiers"][0]["actions"] == []
     assert body["routing"]["tiers"][0]["observations"] == []
 
+    status, refused = asyncio.run(_post("/api/extract/url", {"url": "not-an-edgar-url"},
+                                         headers=[(b"x-progress", b"1")]))
+    assert status == 400 and refused["doc_status"] == "failed" and "progress_id" not in refused
+
+    release = threading.Event()
+    entered = threading.Event()
+    try:
+        def delayed(*args, progress=None, **kwargs):
+            progress("prepare")
+            entered.set()
+            assert release.wait(1)
+            progress("classify")
+            return result
+        app.extract_items = delayed
+        status, started = asyncio.run(_post("/api/extract/fixture", {"fixture": "xom-2021"},
+                                             headers=[(b"x-progress", b"1")]))
+        assert status == 202 and entered.wait(1)
+        status, first = asyncio.run(_get(f"/api/progress/{started['progress_id']}"))
+        assert status == 200 and first["stages"][0]["status"] == "active"
+        release.set()
+        for _ in range(100):
+            status, next_progress = asyncio.run(_get(f"/api/progress/{started['progress_id']}"))
+            if any(s["stage"] == "classify" and s["status"] == "active"
+                   for s in next_progress["stages"]):
+                break
+            time.sleep(.001)
+        assert status == 200 and any(s["stage"] == "classify" and s["status"] == "active"
+                                     for s in next_progress["stages"])
+    finally:
+        release.set()
+        app.extract_items = real
+
     routing["stages"] = [{"stage": stage, "status": status} for stage, status in (
         ("classify", "done"), ("plan", "done"), ("route", "done"),
         ("verify", "failed"), ("decide", "done"))]
@@ -64,11 +98,23 @@ def main():
         status, started = asyncio.run(_post("/api/extract/fixture", {"fixture": "xom-2021"},
                                              headers=[(b"x-progress", b"1")]))
         assert status == 202 and set(started) == {"progress_id"}
+        job_id = started["progress_id"]
         for _ in range(100):
-            status, progress = asyncio.run(_get(f"/api/progress/{started['progress_id']}"))
+            with app.PROGRESS_LOCK:
+                complete = app.PROGRESS_JOBS[job_id]["status"] == "complete"
+            if complete:
+                break
+            time.sleep(.001)
+        with app.PROGRESS_LOCK:
+            assert len(app.PROGRESS_JOBS[job_id]["snapshots"]) <= len(app.PROGRESS_STAGES)
+        active = []
+        for _ in range(100):
+            status, progress = asyncio.run(_get(f"/api/progress/{job_id}"))
+            active += [s["stage"] for s in progress["stages"] if s["status"] == "active"]
             if progress["status"] == "complete":
                 break
         assert status == 200 and set(progress) == {"status", "stages", "result_url"}
+        assert active == ["prepare", "classify", "plan", "route", "verify", "decide"]
         assert {s["stage"]: s["status"] for s in progress["stages"]}["verify"] == "failed"
         status, completed = asyncio.run(_get(progress["result_url"]))
         assert status == 200 and {i["item"] for i in completed["items"]} == {"2", "16"}
