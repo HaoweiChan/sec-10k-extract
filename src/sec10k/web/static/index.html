@@ -134,7 +134,17 @@ button:disabled{opacity:.5;cursor:default}
 .s-idle{color:var(--dim);border-color:var(--line)}
 
 #progress-flow{border:1px solid var(--line);border-radius:var(--r);margin:-4px 0 12px;
-  padding:10px 14px;background:var(--panel);overflow-x:auto}
+  padding:10px 14px;background:var(--panel)}
+#progress-detail{border-left:3px solid var(--amber);padding:2px 0 9px 11px;
+  margin-bottom:10px;border-bottom:1px solid var(--line)}
+#progress-detail[hidden]{display:none}
+.progress-detail-head{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+#progress-title{color:var(--ink);font-size:15px}
+#progress-elapsed{color:var(--amber-ink);font:12px var(--mono);white-space:nowrap}
+#progress-copy{margin:4px 0;color:var(--ink);font-size:13px}
+#progress-meta{color:var(--dim);font:12px var(--mono)}
+#progress-detail.long-wait{border-left-color:var(--warn)}
+.progress-scroll{overflow-x:auto}
 .progress-list{display:flex;min-width:650px;list-style:none;margin:0;padding:0}
 .progress-list li{position:relative;flex:1;text-align:center;color:var(--dim);font-size:11px;
   text-transform:uppercase;letter-spacing:.07em}
@@ -395,7 +405,11 @@ footer a{color:var(--accent)}
      doc_status belongs to something instead of to an anonymous `generic`. -->
 <div id="banner" class="s-idle" role="status" aria-label="doc_status">No filing extracted yet.</div>
 <div id="progress-flow" hidden aria-label="Extraction progress">
-  <ol class="progress-list"></ol>
+  <div id="progress-detail" hidden>
+    <div class="progress-detail-head"><strong id="progress-title"></strong><span id="progress-elapsed"></span></div>
+    <p id="progress-copy"></p><div id="progress-meta"></div>
+  </div>
+  <div class="progress-scroll"><ol class="progress-list"></ol></div>
 </div>
 <div id="warnings"></div>
 <!-- Shown only when exclusion actually changed the extracted text. -->
@@ -930,7 +944,58 @@ async function loadSource(token){
 
 const FLOW_LABELS = {prepare:"prepare filing", classify:"classify", plan:"plan",
   route:"route", verify:"verify", decide:"decide"};
+const FLOW_TITLES = {prepare:"Reading the filing", classify:"Checking extraction quality",
+  plan:"Planning repairs", route:"Routing unresolved items",
+  verify:"Verifying proposed sections", decide:"Finalizing safe results"};
+const FLOW_HELP = {
+  prepare:"Reading and normalizing the filing, then finding item boundaries.",
+  classify:"Checking which extracted items are reliable and which need repair.",
+  plan:"Choosing a bounded repair plan for unresolved items.",
+  route:"Waiting for the selected model or cached result, then applying its proposed repair.",
+  verify:"Checking proposed item sections against the filing and safety rules.",
+  decide:"Keeping only verified results and preparing the final response."
+};
 const FLOW_STATUSES = new Set(["pending", "active", "done", "skipped", "failed"]);
+let FLOW_STARTED_AT = 0, FLOW_UPDATED_AT = 0, FLOW_SIGNATURE = "";
+let FLOW_CURRENT = [], FLOW_RUNNING = false, FLOW_CLOCK = null;
+function flowDuration(seconds){
+  seconds = Math.max(0, Math.floor(seconds));
+  return seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2,"0")}s`;
+}
+function updateProgressDetail(now=performance.now()){
+  const detail = $("#progress-detail");
+  if(!FLOW_STARTED_AT || !detail) return;
+  detail.hidden = false;
+  const active = FLOW_CURRENT.find(s => s.status === "active");
+  const failed = FLOW_CURRENT.find(s => s.status === "failed");
+  const elapsed = (now - FLOW_STARTED_AT) / 1000;
+  const quiet = (now - FLOW_UPDATED_AT) / 1000;
+  let title = active ? FLOW_TITLES[active.stage] : FLOW_RUNNING ? "Starting extraction" : "Extraction finished";
+  let copy = active ? FLOW_HELP[active.stage] : FLOW_RUNNING
+    ? "Waiting for the server to report the first pipeline step."
+    : "The final stage outcomes are shown below.";
+  if(failed?.stage === "verify" && active) copy = `Verification rejected a proposal. ${copy}`;
+  else if(failed && active) copy = `${FLOW_TITLES[failed.stage]} failed. ${copy}`;
+  else if(failed){
+    title = failed.stage === "verify" ? "Verification rejected a proposal" : `${FLOW_TITLES[failed.stage]} failed`;
+    copy = failed.stage === "verify"
+      ? "The proposed repair did not pass evidence checks. The final response keeps only verified content."
+      : "The pipeline stopped safely instead of guessing a result.";
+  }
+  $("#progress-title").textContent = title;
+  $("#progress-copy").textContent = copy;
+  $("#progress-elapsed").textContent = FLOW_RUNNING ? `${flowDuration(elapsed)} elapsed` : `${flowDuration(elapsed)} total`;
+  $("#progress-meta").textContent = FLOW_RUNNING && quiet >= 30
+    ? `No new progress for ${flowDuration(quiet)} · request still running; this step may be waiting on the model/provider.`
+    : FLOW_RUNNING ? `Last progress update ${flowDuration(quiet)} ago · request still running.`
+    : "Finished · see the stage outcomes below.";
+  detail.className = FLOW_RUNNING && quiet >= 30 ? "long-wait" : "";
+}
+function startProgressClock(){
+  if(typeof window === "undefined") return;
+  clearInterval(FLOW_CLOCK);
+  FLOW_CLOCK = setInterval(() => updateProgressDetail(), 1000);
+}
 function flowStages(response={}, live=null){
   const routed = response?.routing?.stages || [];
   if(routed.length){
@@ -955,6 +1020,9 @@ function flowStages(response={}, live=null){
 function renderProgress(stages, running=false){
   const box = $("#progress-flow");
   box.hidden = false;
+  FLOW_CURRENT = stages; FLOW_RUNNING = running;
+  const signature = stages.map(s => `${s.stage}:${s.status}`).join("|");
+  if(running && signature !== FLOW_SIGNATURE){ FLOW_SIGNATURE = signature; FLOW_UPDATED_AT = performance.now(); }
   box.querySelector("ol").innerHTML = stages.map(s => `<li class="${s.status}"${s.status === "active" ? ' aria-current="step"' : ""}>
     <span class="progress-node" aria-hidden="true"></span>${FLOW_LABELS[s.stage]}<span class="progress-state">${s.status}</span></li>`).join("");
   const active = stages.find(s => s.status === "active");
@@ -962,6 +1030,7 @@ function renderProgress(stages, running=false){
     $("#banner").className = "s-idle";
     $("#banner").textContent = `Extracting — ${FLOW_LABELS[active.stage]}`;
   }
+  updateProgressDetail();
 }
 async function followProgress(response){
   const started = await response.json();
@@ -980,10 +1049,11 @@ function busy(on, msg){
   document.querySelectorAll("button").forEach(b => b.disabled = on);
   if(on){
     LAST_PROGRESS = null;
-    renderProgress(flowStages(), false);
+    FLOW_STARTED_AT = FLOW_UPDATED_AT = performance.now(); FLOW_SIGNATURE = "";
+    renderProgress(flowStages(), true); startProgressClock();
     $("#banner").className = "s-idle";
     $("#banner").textContent = msg || "Starting extraction…";
-  }
+  }else{ clearInterval(FLOW_CLOCK); FLOW_CLOCK = null; }
 }
 
 // ADR-043. The escalation key rides EVERY extract request, injected here in
