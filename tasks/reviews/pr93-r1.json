@@ -1,0 +1,45 @@
+{
+  "round": 1,
+  "pr": 93,
+  "task": "D35",
+  "result": "REQUEST_CHANGES",
+  "reviewer": "pr-reviewer subagent (fresh context, full diff origin/main...task/D35-live-progress-flowchart)",
+  "gate": "pass -- invariant 144/144, fast 215/215, fidelity metrics 1.0000",
+  "counts": {"HIGH": 0, "MEDIUM": 3, "LOW": 0},
+  "routed": {"repair": ["R1", "R2", "R3"], "clarify": [], "debt": []},
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "confidence": 0.99,
+      "claim": "Opted-in extraction refusals bypass the progress job and leave the completed UI flowchart showing every stage as pending.",
+      "evidence": "src/sec10k/web/app.py:447,469,495 return validation errors before _start_progress; src/sec10k/web/static/index.html:1027 handles the non-202 response with LAST_PROGRESS null and line 942 maps all stages to pending. Invalid URL, empty upload, unknown fixture, or a full queue triggers it.",
+      "repro": "POST /api/extract/url with X-Progress: 1 and body {\"url\":\"not-an-edgar-url\"}; observe HTTP 400 without progress_id and a failed banner above six pending nodes.",
+      "acceptance": "Every terminal inspector response renders terminal stage outcomes, with a behavioral web-contract case covering the error path.",
+      "route": "repair",
+      "route_reason": "Concrete terminal-state acceptance violation with reproducible UI behavior."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "confidence": 0.98,
+      "claim": "The extraction live region remains stale from request start until the first successful progress poll.",
+      "evidence": "src/sec10k/web/static/index.html:972 resets the graph but updates #banner only when a message is supplied; line 1025 calls busy(true) without one; line 953 updates it only after a polled active stage exists.",
+      "repro": "Delay the initial POST and observe #banner: controls disable and the pending graph appears, but role=status retains the previous result until progress polling succeeds.",
+      "acceptance": "Starting extraction immediately announces a truthful generic busy status, then backend-authored active-stage labels; a case fails if busy(true) leaves the banner unchanged.",
+      "route": "repair",
+      "route_reason": "Concrete accessibility acceptance violation."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM",
+      "confidence": 0.95,
+      "claim": "The localhost proof does not demonstrate that Intel visibly advances through live routing stages.",
+      "evidence": "tasks/reviews/d35-localhost-proof.json records only prepare active then terminal outcomes; its callback probe lists backend events but no browser-visible snapshots. Polling every 250ms can miss synchronous quiet transitions.",
+      "repro": "Record each /api/progress response and rendered-node mutation during the documented localhost Intel fixture run; the current artifact lacks an intermediate rendered routing node.",
+      "acceptance": "Provide a deterministic localhost/browser case showing real non-instant Intel routing work active in the rendered graph before completion, retaining response-authored terminal statuses, or narrow the accepted visible sequence honestly.",
+      "route": "repair",
+      "route_reason": "The committed evidence does not establish the task's explicit localhost acceptance criterion."
+    }
+  ]
+}
