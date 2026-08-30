@@ -1200,11 +1200,14 @@ Origin: `specs/decisions/ADR-033-image-reference-annotation.md` §e row 4 and §
 Spec: **`<svg>`, `<object>`, `<embed>`, `<picture>`/`srcset` and CSS background images are not recorded** (added 2026-08-23, Origin: S10) — ADR-033 §e rules the annotation to `<img>` only. Zero of any other form carries a document graphic in the 42 committed filing fixtures, so nothing can be pinned red today; but an inline `<svg>` chart in a filing outside the corpus would be missed in total silence, which is INV-0's failure class. Named rather than guessed at: adding a tag to the recorder is three lines, and the reason not to is that no committed case could prove it right.
 Not taken because: Shipping a code path no eval case can reach is the sin ADR-010 named; the honest order is a fixture first, then the recorder
 
-### TD-109 — README says the repo has 18 ADRs; it has 34 [status: todo]
+### TD-109 — README says the repo has 18 ADRs; it has 34 [status: done]
 Priority: P2
-Origin: `README.md:92` against `specs/decisions/INDEX.md`
-Spec: **README says the repo has 18 ADRs; it has 34** (added 2026-08-23, Origin: S10) — `README.md:148` reads "Full rationale in `specs/decisions/` (18 ADRs)"; `ls specs/decisions/ADR-*.md` counts 33 at `origin/main` f00b635 and 34 with ADR-033 (32 and 33 respectively when this row was written at 3e16f70; S9's ADR-032 landed in between). Pre-existing and unrelated to S10 — found while adding the ADR-033 line to the capability paragraph twelve lines above it. Not fixed here because a hand-written count that goes stale on every ADR is a check, not an edit: `check_index` already walks `specs/decisions/ADR-*.md` and could assert this number the way `ledger_table_shape` asserts the ledger's, and doing that is a repo-hygiene change outside this PR's spec.
-Not taken because: Out of S10's scope by the debt rule; fixing the number alone re-arms the same trap at the next ADR, and wiring the check is its own task
+Origin: `README.md:180` against `specs/decisions/INDEX.md`
+Spec: ~~**README says the repo has 18 ADRs; it has 34**~~ (added 2026-08-23,
+Origin: S10) — **CLOSED 2026-08-31 by the README refresh**: `README.md:180` reads "Full rationale is indexed in `specs/decisions/INDEX.md`" and carries
+no hand-maintained count to go stale when another ADR lands. The index remains
+the executable source of truth; this takes the row's durable option instead of
+changing 18 to another temporary number.
 
 ### TD-110 — evals/snapshot.py --self-check cannot fail if corpus() regresses [status: todo]
 Priority: P2

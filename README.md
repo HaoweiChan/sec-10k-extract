@@ -7,19 +7,41 @@ offsets, and confidence that does not pretend to be calibrated.
 
 **Live inspector: <https://whaleforce-sec10k.zeabur.app>**
 
-![The sec10k inspector: fixture aapl-2025 extracted, item list on the left with
-per-item status, confidence and method, and Item 1's text on the right rendered
-from its character offsets](docs/assets/inspector.png)
+![The dark-theme inspector running Intel FY2025: the status banner identifies a
+deterministic, zero-cost result and the six-stage progress strip shows which
+agentic stages ran or were skipped](docs/assets/inspector-intc-2025-pipeline-dark.jpg)
+
+*Intel FY2025 takes the deterministic cross-reference path: all six stages are
+visible, but `classify` through `verify` are honestly marked `skipped` because
+verified filing-page evidence already resolved the work at $0.*
 
 The repo is eval-first, and that choice is the point of the project: 10-K
 extraction has no public ground truth, so correctness is encoded as executable
 invariants and hand-labelled cases rather than prose, and every claim below is
 traceable to a committed run in `evals/report/history.jsonl`.
 
-The inspector above is the same pipeline behind a three-mode front end — a
-committed fixture, your own uploaded filing, or an EDGAR URL. Item text is
-sliced from the `start`/`end` offsets at response time, so what you read is
-the offsets, not a second copy that could drift from them (INV-S2).
+The inspector is the same pipeline behind a three-mode front end — a committed
+fixture, your own uploaded filing, or an EDGAR URL. Item text is sliced from
+the `start`/`end` offsets at response time, so what you read is the offsets,
+not a second copy that could drift from them (INV-S2).
+
+## Agentic recovery, with a deterministic boundary
+
+Every request exposes the backend-authored flow
+`prepare filing → classify → plan → route → verify → decide`. Clean filings
+stop on the deterministic path. Risky, item-scoped work can enter a bounded
+LangGraph loop (`diagnose → plan → act → evaluate → decide`, at most three
+planning turns), while cross-reference and same-accession resolvers stay ahead
+of paid work. One Flash evidence pass and up to three Pro plans are allowed;
+each risky document is capped at four calls and $0.10.
+
+Models never publish filing text or offsets. They can propose an action or a
+semantic disposition, but deterministic code must re-bind it to verbatim,
+bounded evidence before anything is accepted. Invalid proposals are recorded
+as rejections, unresolved items remain `review_required`, missing credentials
+make zero model calls, and the inspector shows calls, cache use, tokens, cost,
+actions, verifier observations, and the final route without exposing prompts,
+filing bodies, or credentials (ADR-046/047/053/057/058).
 
 ---
 
@@ -64,6 +86,13 @@ statuses; silence is never how absence is reported (INV-S4):
 | `omitted` | era/filer rules permit the absence (ADR-005) |
 | `missing` | expected, and we did not find it — an admission, not a silence |
 
+![The dark-theme inspector showing Exxon FY2021 Item 6 as MISSING, with no
+fabricated span and an explicit explanation in the extracted-text pane](docs/assets/inspector-xom-2021-missing-dark.jpg)
+
+*A missing expected section stays in the item list. It carries no span and the
+source pane says `No span`; the pipeline does not silently drop it or invent
+content (INV-S4).*
+
 At the document level, `doc_status` ∈ `success` / `success_with_warning` /
 `ambiguous` / `unsupported` / `failed`. **`unsupported` and `failed` mean the
 pipeline refused**; it never emits a best-effort parse of a document it could
@@ -85,8 +114,10 @@ that would have moved. Finally,
 `extract_items(path, images=True)` reports every `<img>` as
 `{offset, src, alt, width, height}` (ADR-033), the offset a point in the same
 text. The image *bytes* are not fetched: every image in a 10-K is an external
-reference to a sibling document in its EDGAR accession, and resolving one is a
-network call this pipeline deliberately does not make (ADR-033 §c).
+reference to a sibling document in its EDGAR accession. The library annotation
+does not fetch those bytes; the authenticated web recovery path may inspect at
+most two allowlisted SEC image references, under the same cache, budget, and
+deterministic-verification boundary (ADR-046/052).
 
 ### Reproducing an item's text from its offsets
 
@@ -146,65 +177,21 @@ serves, and that the raw-bytes slice is not.
 
 ## Key design decisions
 
-Full rationale in `specs/decisions/` (18 ADRs). The ones that shaped the system:
+Full rationale is indexed in `specs/decisions/INDEX.md`. The decisions that
+shape the current system:
 
-- **Deterministic first, and a model tier only on a measured trigger**
-  (ADR-000/003, settled in ADR-020, **superseded 2026-08-26 by ADR-036, D11**).
-  No model is in the DEFAULT extraction path of the LIBRARY, and cost on that
-  path is structurally $0 — not "cheap", zero. ADR-036 adds a slow path
-  (`extract_items(path, escalate=True)`, via OpenRouter) that is entered only when D8's
-  document-level `low_item_coverage` fires — measured on **2 of 38 real dev
-  filings**, the collapsed `intc-2025` — and whose answers are discarded unless
-  a deterministic re-check accepts their offsets. With no API credential it
-  refuses loudly rather than degrading.
-  `extract_items(path)` keeps `escalate=False`, which is what keeps the eval
-  gate and CI at $0 and offline. **The DEPLOYED inspector is different since
-  2026-08-27** (owner: "make it default on, remove the button"): it escalates
-  on every request, there is no checkbox and no request-level flag, and the
-  operator's off-switch is the host variable `SEC10K_ESCALATION_ENABLED`, set
-  to any of `0`, `false`, `no`, `off` (stripped and case-insensitive; unset or
-  empty means ON). **The paid tier is behind a key** (ADR-043, 2026-08-28) — and unlike the door
-  it replaces, the page can present it: paste the key into the `LLM ACCESS KEY`
-  field and it rides every extraction as `X-Escalation-Token`, remembered in
-  the browser so it is typed once. With no `LLM_ACCESS_KEY` on the
-  host the tier runs for *nobody* — unset is closed, not open — and the field
-  stays hidden, because a box that cannot open anything is worse than none.
-  ADR-041 had deleted an earlier door for a real defect (its header was sent by
-  nothing on the page, so it was shut to every human including the owner); the
-  defect was the missing client half, not the door, and `SENDS_TOKEN_UI` is now
-  the check that would have caught it. **Deterministic extraction is likewise open, free and
-  unauthenticated on all three routes**; the envelope always says what the
-  tier did (`escalation.reason`) and the page prints it. Behind the key the spend is
-  bounded by the process-wide budget — `SEC10K_ESCALATION_MAX_USD`, default
-  $10.00, **refilled by every redeploy** (an accepted recurring cost, not a
-  bound) — plus the free-tier rate limit, the 25 MB cap and both rungs' input
-  caps, and ultimately by the credit limit on the API key.
-  `SEC10K_ESCALATION_ENABLED=0` is the operator's stop.
-  One earlier claim here was false and is corrected rather than deleted: until
-  PR #61 R1 the two collapsing fixtures were in the dropdown, so one click —
-  or a `?fixture=…&run=1` link, with no click at all — was enough
-  (`fixtures.DEPLOY_EXCLUDED` closes the listing *and* request-time
-  resolution). The FREE tier stays open to
-  anyone, and since 2026-08-28 (D15, ADR-040) its rate is bounded: a global
-  per-process token bucket (burst 20, 30/minute by default, bounded env
-  config) refuses over-limit `/api/extract/*` requests with 429 +
-  `Retry-After` before any extraction or EDGAR fetch runs — a load ceiling,
-  not a paywall; the 25 MB per-document cap stands. The routing
-  strip reports what each request's tiers did and cost. ADR-036 §h2 states
-  this rather than softening it. The paragraph below
-  is the 2026-08-19 ruling it supersedes, kept because its reasoning about
-  *precision* failures is unchanged and still governs.
-- **Deterministic first, LLM ruled out** (ADR-000/003, settled in ADR-020). No
-  model is in the extraction path. Cost is therefore structurally $0 — not
-  "cheap", zero. The fallback stage was gated on residual-failure data; that
-  data was measured (ADR-019) and the decision taken (ADR-020): **not
-  justified**. Not because deterministic coverage reads 100% — that number is
-  circular while no fallback exists — but because six of the seven residual
-  failures measured here are confidently *wrong* spans, which no honest trigger
-  reaches, and the seventh is a heading-shape gap a regex closes identically at
-  $0. Addressable surface across both eval sets: **4 of 768 items**, one filing,
-  one root cause, all four reachable by that same deterministic change.
-  ADR-020 §e says what would reopen it.
+- **Deterministic first; agentic only for classified residual work**
+  (ADR-036/046/047/051/053/057). `extract_items(path)` remains offline with
+  `escalate=False`, which keeps the eval gate and CI at exactly $0. The deployed
+  inspector enables routing server-side, but deterministic resolvers suppress
+  paid work whenever they already have verified evidence. A verified access
+  key is required before any provider call; each risky document has an
+  independent four-call / $0.10 ceiling, plus the shared process budget.
+- **Models propose; deterministic verifiers publish.** The graph carries
+  item-scoped candidates, evidence, attempts, rejections, checkpoints, and a
+  terminal `complete` or `review_required` route. Model output cannot directly
+  create text, document identity, or offsets. Same-accession attachments and
+  bounded SEC-hosted image/table checks obey the same rule (ADR-048/052/053).
 - **Stdlib-only parsing** (ADR-003). `html.parser`, no dependencies. The
   revisit clause has never fired; malformed HTML normalizes cleanly.
 - **Offsets, not text** (contract + INV-S2). Makes drift structurally
@@ -216,9 +203,9 @@ Full rationale in `specs/decisions/` (18 ADRs). The ones that shaped the system:
   real tail bleed unprompted and made a catastrophic under-extraction loud.
 - **Warn, don't hard-fail** (failure taxonomy F7). Validators emit warnings and
   move confidence; only five may escalate `doc_status` to `ambiguous`.
-- **Held-out discipline** (`evals/heldout/README.md`). Five filings authored
-  frozen, structurally unreachable by the normal suites, results committed
-  before any fix.
+- **Held-out discipline** (`evals/heldout/README.md`). The frozen set is
+  structurally unreachable by the normal suites; a result that influences a
+  fix is burned into the dev set rather than silently reused as held-out proof.
 
 ## What works well
 
@@ -238,7 +225,7 @@ Verified by committed cases; run `python3 -m evals.run --suite all` to reproduce
 | Insurance / bank megafilings | MetLife FY2024 (13.8 MB), Bank of America FY2024 (12.9 MB) | `success`, 98.7% / 98.8% coverage, 0.6 s each, no warnings |
 | Letter-spaced headings | Berkshire FY2024 (`Par t I`, `Busines s`) | `success`, 97.6% — normalization absorbs the visual splitting; the real defect on this filing was Part III (ADR-042 §c) |
 | A Part addressed by ONE collective pointer | Berkshire FY2024 Part III: one sentence names items 10-14 and no per-item heading exists | items 10-14 `incorporated_by_reference` with **null** offsets and the sentence at `evidence.collective_reference` (ADR-042 §c) |
-| Items answered through a cross-reference index | Intel FY2025 (index at the tail; FY2024 shares the layout), Citigroup FY2025 (index at the FRONT, rows written `1. Business 4-36` with neither "Item" nor "Page") | the index's page references resolve against the filing's own pagination to 736 KB / 1.9 MB of content at `evidence.cross_reference`, at **$0.00** (ADR-042 §a) |
+| Items answered through a cross-reference index | Intel FY2025 (index at the tail; FY2024 shares the layout), Citigroup FY2025 (index at the FRONT, rows written `1. Business 4-36` with neither "Item" nor "Page") | page references resolve against the filing's own pagination; Intel publishes 13 verified, body-title-aligned regions totaling 830,085 chars at **$0.00**, while only unresolved item codes remain eligible for agentic routing (ADR-042/051/059) |
 | Asset-backed issuer report | Bridgecrest Auto Securitization Trust 2024-1 — legally a 10-K, substantively Regulation AB | **refused** as `unsupported`; it was returning 18 `extracted` items including a 96-char "Item 7 MD&A" (ADR-042 §b) |
 | Large filings | JPM FY2024, 12.25 MiB | **0.58 s** (median of 3, `evals/report/20260823-185707-bench.json`; 0.72 s with `tables=True`), and it flags its own boundary problem |
 
@@ -306,7 +293,7 @@ table, the population boundaries and the cost counterfactual:
 | Throughput | **14.1 MiB/s** aggregate, 60.54 MiB in 4.307 s; 6.2–32.2 MiB/s per fixture over the 37 the pipeline actually processes (4 are refusals on a shorter code path) |
 | `tables=True` overhead | median **1.19×**, max 1.3× the default path's wall-clock, per fixture |
 | Peak memory | **119–124 MiB** driving all 41 filings in one process — a plateau, not a function of the largest document (that alone reaches **94.6–102.4 MiB** across the seven committed clean-tree runs; v4 said "94.6, stable to 0.1" from three) |
-| Cost per filing | **$0.00** — structural, no paid dependency exists |
+| Deterministic cost per filing | **$0.00** — library default, eval gate, CI, and deterministically resolved web requests make zero provider calls; authenticated agentic work is separately capped at four calls / $0.10 per risky document |
 | Full EDGAR year (~7,000 10-Ks) | **~18 min** single process, embarrassingly parallel — mean over the 33 real EDGAR filings committed, not over the synthetic-diluted dev mean |
 
 *(Re-published 2026-08-23, D2. The previous table was read from
@@ -322,18 +309,21 @@ numbers over 21 fixtures — p95 0.249 s, throughput ~19 MB/s, peak memory
 110 MB — four of which ADR-021 §c shows were wrong rather than stale, and
 said "analysis-report v2 re-measures at T10", which it did not.)*
 
-## Where AI helped
+## Where agents help
 
-The whole system was built in collaboration with Claude; `prompts/` holds the
-curated record (5 documents) and `prompts/README.md` the curation rules. The
-part worth reading is not the code generation — it is the **separation of
-roles**, which is where most of the defects in this repo were found:
+The system was built through AI collaboration, and `prompts/` keeps the curated
+record of decisions that materially changed architecture, evaluation, failure
+handling, or contracts. The important pattern is separation of authority:
 
 - An **implementing** agent wrote the pipeline.
 - A **cold-reviewer** agent read it without the author's reasoning and found
   three silent wrong-output bugs the eval set could not see (ADR-010).
 - An **extraction-auditor** agent independently re-verified anchors and outputs.
 - **Held-out filings** caught what all of them missed (ADR-013).
+- At runtime, a bounded **evidence agent** gathers only declared, item-scoped
+  evidence and a **planning agent** proposes actions; neither can publish until
+  deterministic verification accepts the result. The UI exposes that process,
+  including skipped stages and abstentions, rather than only the final answer.
 
 Four separate times in this project, a check turned out to be unable to fail —
 skipped review gates, an untested `failed` branch, an empty eval baseline, and
@@ -345,7 +335,7 @@ project learned.
 ## Repo map
 
 ```
-specs/            invariants, the output contract, 18 ADRs — binding
+specs/            invariants, the output contract, ADRs — binding
 docs/             product, evals, architecture, audits — descriptive
 tasks/TODO.md     milestone ledger with per-milestone exit gates
 evals/golden/     hand-labelled cases (anchors verified, counts recorded)
