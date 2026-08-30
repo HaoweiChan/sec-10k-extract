@@ -15,7 +15,7 @@ the door is the paid tier, and when it does not open the envelope says WHY
 (`view["escalation"]`, rendered by the routing strip) rather than going quiet.
 
 **Safe when unset, which is the property that matters.** With no
-`SEC10K_ESCALATION_TOKEN` on the host the door is CLOSED, not open — the
+`LLM_ACCESS_KEY` on the host the door is CLOSED, not open — the
 failure mode of a forgotten variable is "the demo is free", never "the demo is
 free to bill me". `MIN_TOKEN_CHARS` is why a token is a bounded default rather
 than an open one: a one-character secret configured by accident is refused in
@@ -43,7 +43,7 @@ import os
 # The request header a caller presents. Lower-case because that is how
 # Starlette's case-insensitive header mapping is keyed and how curl sends it.
 HEADER = "x-escalation-token"
-TOKEN_VAR = "SEC10K_ESCALATION_TOKEN"
+TOKEN_VAR = "LLM_ACCESS_KEY"
 # A floor on the secret, not a policy about its shape: it exists so a secret
 # configured BY ACCIDENT ("x", "test") is refused in the same words an absent
 # one is. Lowered 16 -> 10 on 2026-08-28 (ADR-043 §e).

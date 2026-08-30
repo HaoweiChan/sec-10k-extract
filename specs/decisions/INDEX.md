@@ -83,3 +83,8 @@ index only cross-references it for scanning.
 - ADR-052 — a verified escalation key permits one capped public-source table
   raster verdict; vision confirms/rejects deterministic Markdown but never
   authors text or offsets — enforced by `d27-high-assurance.json`.
+- ADR-054 — [DeepSeek V4 Pro price ceiling](ADR-054-model-price-ceiling.md):
+  the paid ladder is DeepSeek V4 Pro first and the owner-approved GPT-5 Mini
+  fallback second; transport refuses every other model above DeepSeek's input
+  or output price, and Claude Opus 5 is explicitly disabled — enforced by
+  `src/sec10k/llm.py::_demo` and `token-proxy-bound`.

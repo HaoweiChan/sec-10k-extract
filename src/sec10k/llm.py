@@ -43,25 +43,31 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
+# Emergency cost control, owner decision 2026-08-30. Checked before cache and
+# budget so neither production nor a committed response can execute Opus 5.
+DISABLED_MODELS = ("anthropic/claude-opus-5",)
 # bumped whenever a prompt in escalate.py or the request shape changes: it is
 # part of the cache key, so a reworded prompt — or a different provider's
 # request body — cannot be answered from an old response.
 PROMPT_VERSION = "d11.2-openrouter"  # preserve existing text-only cache entries
 IMAGE_PROMPT_VERSION = "d21.1-openrouter"
 
-# The two rungs, as OpenRouter SLUGS. Not guessed: both are present verbatim in
-# the committed catalogue record below, and `usd()` refuses a slug that is not.
-#   openai/gpt-5-mini       $0.25/$2.00 per MTok, 400,000 ctx — the cheap rung.
-#   anthropic/claude-opus-5 $5.00/$25.00 per MTok, 1,000,000 ctx — the strong one,
-#   deliberately the SAME model the pre-swap ADR costed, so every figure in
-#   ADR-036 §d moves for exactly one reason: the cheap rung got cheaper.
-# `escalate.RUNGS` names them; this module only prices and calls them.
+# Active text rungs are DeepSeek V4 Pro first and GPT-5 Mini fallback. Opus 5's
+# historical record remains for reproducible cost evidence, but transport
+# rejects it through `DISABLED_MODELS`. `escalate.RUNGS` names the active pair;
+# this module prices and enforces them.
 
 # Pricing lives in a dated, committed artifact rather than in this file, so the
 # published cost of the ladder is sourced and re-derivable (owner instruction,
 # PR #58). It is read at call time from disk — never fetched — because fetching
 # it would put a network module back on the seam `escalation_seam` protects.
 PRICES_FILE = ROOT / "tasks" / "reviews" / "2026-08-27-openrouter-models.json"
+PRICE_CEILING_FILE = (ROOT / "tasks" / "reviews" /
+                      "2026-08-30-openrouter-price-ceiling.json")
+PRICE_CEILING_MODEL = "deepseek/deepseek-v4-pro"
+# Owner-approved 2026-08-30 fallback exception: GPT-5 Mini's output list price
+# is above the ceiling, but it may run only after DeepSeek V4 Pro fails.
+PRICE_CEILING_EXCEPTIONS = ("openai/gpt-5-mini",)
 
 CACHE_DIR = Path(os.environ.get("SEC10K_LLM_CACHE") or (ROOT / "evals" / "cache" / "llm"))
 
@@ -84,7 +90,10 @@ class BudgetExceeded(EscalationUnavailable):
 def _catalogue():
     """The committed OpenRouter model record. Raises if it is missing."""
     try:
-        return json.loads(PRICES_FILE.read_text())
+        catalogue = json.loads(PRICES_FILE.read_text())
+        ceiling = json.loads(PRICE_CEILING_FILE.read_text())["model"]
+        catalogue["models"][ceiling["id"]] = ceiling
+        return catalogue
     except OSError as e:
         raise EscalationUnavailable(
             f"the OpenRouter pricing record {PRICES_FILE.name} is unreadable ({e}) — "
@@ -118,6 +127,27 @@ def usd(model, input_tokens, output_tokens):
     """Cost of one response in dollars, from its own reported token counts."""
     cin, cout = price(model)
     return round((input_tokens * cin + output_tokens * cout) / 1_000_000, 6)
+
+
+def _enforce_model_policy(model):
+    """Refuse disabled or over-ceiling models before any paid work."""
+    if model in DISABLED_MODELS:
+        raise EscalationUnavailable(f"model {model!r} is disabled")
+    try:
+        ceiling = json.loads(PRICE_CEILING_FILE.read_text())["model"]
+        pricing = ceiling["pricing"]
+        cap = (float(pricing["prompt"]) * 1e6,
+               float(pricing["completion"]) * 1e6)
+    except (OSError, KeyError, TypeError, ValueError) as e:
+        raise EscalationUnavailable(
+            f"the model price ceiling is unreadable ({e}) — refusing paid work") from None
+    actual = price(model)
+    if (model not in PRICE_CEILING_EXCEPTIONS and
+            (actual[0] > cap[0] or actual[1] > cap[1])):
+        raise EscalationUnavailable(
+            f"model {model!r} costs ${actual[0]:g}/${actual[1]:g} per MTok, "
+            f"above the {ceiling['id']!r} price ceiling "
+            f"${cap[0]:g}/${cap[1]:g}")
 
 
 class Budget:
@@ -281,10 +311,11 @@ def call(model, system, user, max_tokens, budget, timeout=120,
 
     Returns {"text", "usage", "usd", "model", "cached"}.
 
-    Cache first (free, and touches neither the budget nor the credential), then
-    budget, then credential, then the socket — cheapest refusal wins, and a
-    cached eval run needs no key at all.
+    Model policy first, then cache (free, and touches neither the budget nor
+    the credential), budget, credential, and finally the socket. A disabled or
+    over-ceiling model stays unusable even when a cached response exists.
     """
+    _enforce_model_policy(model)
     image_urls = tuple(image_urls)
     if image_urls and "image" not in (_catalogue().get("models", {}).get(model, {})
                                        .get("architecture", {}).get("input_modalities") or []):
@@ -344,6 +375,11 @@ def _demo():
     """
     import tempfile
     from src.sec10k.escalate import RUNGS
+
+    assert RUNGS == (
+        ("llm_localize", "deepseek/deepseek-v4-pro", 0),
+        ("llm_extract", "openai/gpt-5-mini", 0),
+    ), RUNGS
 
     # 0. the provider swap is real, not a rename
     assert "openrouter.ai" in DEFAULT_BASE_URL
@@ -415,7 +451,25 @@ def _demo():
         with tempfile.TemporaryDirectory() as td:
             global CACHE_DIR
             real_cache, CACHE_DIR = CACHE_DIR, Path(td)
-            model = RUNGS[0][1]
+            model = PRICE_CEILING_MODEL
+
+            # An operator-disabled model is refused before cache, budget,
+            # credential, or network work. In particular, a committed cached
+            # response must not make a disabled model executable again.
+            blocked = Budget(max_calls=5)
+            try:
+                call("anthropic/claude-opus-5", "disabled-check", "u", 64,
+                     blocked)
+                raise AssertionError("a disabled model must refuse")
+            except EscalationUnavailable as e:
+                assert "disabled" in str(e), e
+            assert blocked.calls == 0, blocked.calls
+
+            # GPT-5 Mini is the owner's explicit fallback exception. It still
+            # sits above the output-price ceiling; the exception is deliberate,
+            # narrow, and tested separately from the price arithmetic.
+            _enforce_model_policy("openai/gpt-5-mini")
+            assert price("openai/gpt-5-mini")[1] > price(PRICE_CEILING_MODEL)[1]
 
             # 2. no credential -> refusal, raised before anything else happens
             b = Budget(max_calls=5)
