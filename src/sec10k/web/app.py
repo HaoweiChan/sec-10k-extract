@@ -18,6 +18,7 @@ Run: uvicorn src.sec10k.web.app:app --reload
 """
 import base64
 import hashlib
+import json
 import re
 import secrets
 import tempfile
@@ -108,6 +109,108 @@ SOURCE_ASSET_BYTES = 512 * 1024
 VISION_TABLE_TEXT_CAP = 12_000
 VISION_TABLE_IMAGE_CAP = 512 * 1024
 SOURCE_TABLES: "dict[str, list[dict]]" = {}
+
+# D35: the progress channel is a fixed, write-only projection of execution
+# state. Jobs may retain the normal response until its separate result request,
+# but polling can see only these six names and their bounded statuses.
+PROGRESS_STAGES = ("prepare", "classify", "plan", "route", "verify", "decide")
+PROGRESS_STATUSES = {"pending", "active", "done", "skipped", "failed"}
+PROGRESS_JOBS: "OrderedDict[str, dict]" = OrderedDict()
+PROGRESS_LOCK = threading.Lock()
+PROGRESS_MAX = 8
+
+
+def _progress_advance(job_id, stage, status="active"):
+    if stage not in PROGRESS_STAGES or status not in PROGRESS_STATUSES:
+        return
+    with PROGRESS_LOCK:
+        job = PROGRESS_JOBS.get(job_id)
+        if not job or job["status"] != "running":
+            return
+        for name, prior in job["stages"].items():
+            if name != stage and prior == "active":
+                job["stages"][name] = "done"
+        job["stages"][stage] = status
+        if status != "active":
+            return
+        snapshot = dict(job["stages"])
+        if not job["snapshots"] or job["snapshots"][-1] != snapshot:
+            job["snapshots"].append(snapshot)
+            del job["snapshots"][:-len(PROGRESS_STAGES)]
+
+
+def _start_progress(run):
+    job_id = secrets.token_urlsafe(18)
+    job = {"status": "running", "stages": dict.fromkeys(PROGRESS_STAGES, "pending")}
+    job["stages"]["prepare"] = "active"
+    job["snapshots"] = [dict(job["stages"])]
+    with PROGRESS_LOCK:
+        for stale in list(PROGRESS_JOBS):
+            if len(PROGRESS_JOBS) < PROGRESS_MAX:
+                break
+            if PROGRESS_JOBS[stale]["status"] != "running":
+                PROGRESS_JOBS.pop(stale)
+        if len(PROGRESS_JOBS) >= PROGRESS_MAX:
+            return _err(503, "progress_busy",
+                        "the shared extraction progress queue is full — try again shortly")
+        PROGRESS_JOBS[job_id] = job
+
+    def work():
+        try:
+            response = run(lambda stage, status="active":
+                           _progress_advance(job_id, stage, status))
+            payload = json.loads(response.body)
+            status_code = response.status_code
+        except Exception:
+            payload = {"doc_status": "failed", "items": [], "counts": {},
+                       "trace": [], "meta": {}, "warnings": [{"code": "extractor_exception",
+                       "item": None, "message": "background extraction failed"}]}
+            status_code = 500
+        with PROGRESS_LOCK:
+            current = PROGRESS_JOBS.get(job_id)
+            if not current:
+                return
+            route_stages = ((payload.get("routing") or {}).get("stages") or [])
+            if route_stages:
+                current["stages"] = {"prepare": "done", **{
+                    name: next((s.get("status") for s in route_stages
+                                if s.get("stage") == name), "skipped")
+                    for name in PROGRESS_STAGES[1:]}}
+            else:
+                for name, status in current["stages"].items():
+                    if status == "active":
+                        current["stages"][name] = ("failed" if payload.get("doc_status") == "failed" else "done")
+                    elif status == "pending":
+                        current["stages"][name] = "skipped"
+            current.update(status="complete", result=(status_code, payload))
+
+    threading.Thread(target=work, daemon=True).start()
+    return JSONResponse(status_code=202, content={"progress_id": job_id})
+
+
+@app.get("/api/progress/{job_id}")
+def progress_status(job_id: str):
+    with PROGRESS_LOCK:
+        job = PROGRESS_JOBS.get(job_id)
+        if job is None:
+            return JSONResponse(status_code=404, content={"error": "progress_not_found"})
+        snapshot = job["snapshots"].pop(0) if job["snapshots"] else None
+        status = "running" if snapshot is not None else job["status"]
+        stages = [{"stage": name, "status": status if status in PROGRESS_STATUSES else "failed"}
+                  for name, status in (snapshot or job["stages"]).items()]
+        return {"status": status, "stages": stages,
+                "result_url": f"/api/progress/{job_id}/result" if status == "complete" else None}
+
+
+@app.get("/api/progress/{job_id}/result")
+def progress_result(job_id: str):
+    with PROGRESS_LOCK:
+        job = PROGRESS_JOBS.get(job_id)
+        result = job.get("result") if job else None
+    if result is None:
+        return JSONResponse(status_code=409 if job else 404,
+                            content={"error": "progress_not_complete" if job else "progress_not_found"})
+    return JSONResponse(status_code=result[0], content=result[1])
 
 
 def _fixture_file(name: str) -> Path:
@@ -219,7 +322,8 @@ def _cache_source(raw: bytes, suffix: str, normalized: str, tables=(), omit=(), 
 
 def _run(path: str, source: dict, raw: bytes = None,
          exclude_boilerplate: bool = False, markdown: bool = False,
-         request: Request = None, source_url: str = None):
+         request: Request = None, source_url: str = None, progress=None,
+         escalation_token: str = None):
     """Extract and shape for the UI. Never leaks a traceback to the browser.
 
     `raw` is the original bytes already in hand for upload/URL; the fixture
@@ -241,13 +345,13 @@ def _run(path: str, source: dict, raw: bytes = None,
     # The sole extraction call uses the gate verdict for both escalation and
     # Budget, so all input modes have one paid-path decision.
     escalate, why = gate.paid_path_open(
-        request.headers.get(gate.HEADER) if request is not None else None,
+        request.headers.get(gate.HEADER) if request is not None else escalation_token,
         ESCALATION_ENABLED)
     try:
         result = extract_items(path, exclude_boilerplate=exclude_boilerplate,
                                tables=markdown or escalate, blocks=markdown, escalate=escalate,
                                budget=server_budget() if escalate else None,
-                               source_url=source_url)
+                               source_url=source_url, progress=progress)
     except Exception as e:                       # refuse loudly, hard rule 4
         return _err(500, "extractor_exception", f"{type(e).__name__}: {e}",
                     source=source)
@@ -355,9 +459,13 @@ def extract_fixture(body: dict, request: Request):
         f = _fixture_file(name)
     except FileNotFoundError as e:
         return _err(404, "bad_input", str(e))
-    return _run(str(f), {"mode": "fixture", "name": name, "file": f.name},
-                exclude_boilerplate=bool((body or {}).get("exclude_boilerplate")),
-                markdown=bool((body or {}).get("markdown")), request=request)
+    def run(progress=None):
+        return _run(str(f), {"mode": "fixture", "name": name, "file": f.name},
+                    exclude_boilerplate=bool((body or {}).get("exclude_boilerplate")),
+                    markdown=bool((body or {}).get("markdown")),
+                    request=request if progress is None else None, progress=progress,
+                    escalation_token=request.headers.get(gate.HEADER))
+    return _start_progress(run) if request.headers.get("X-Progress") == "1" else run()
 
 
 @app.post("/api/extract/upload")
@@ -375,17 +483,20 @@ async def extract_upload(request: Request):
     if len(raw) > MAX_BYTES:
         return _err(413, "too_large",
                     f"{len(raw):,} bytes exceeds the {MAX_BYTES:,} cap")
-    with tempfile.TemporaryDirectory() as td:
-        p = Path(td) / f"upload{suffix}"
-        p.write_bytes(raw)
-        return _run(str(p), {"mode": "upload", "name": name, "bytes": len(raw),
-                             "sha256": hashlib.sha256(raw).hexdigest()[:16]}, raw=raw,
-                    # a query STRING here, not a JSON bool: this mode's body
-                    # is the filing itself, so the flag has nowhere else to ride
-                    exclude_boilerplate=request.query_params.get(
-                        "exclude_boilerplate") == "1",
-                    markdown=request.query_params.get("markdown") == "1",
-                    request=request)
+    def run(progress=None):
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / f"upload{suffix}"
+            p.write_bytes(raw)
+            return _run(str(p), {"mode": "upload", "name": name, "bytes": len(raw),
+                                 "sha256": hashlib.sha256(raw).hexdigest()[:16]}, raw=raw,
+                        # a query STRING here, not a JSON bool: this mode's body
+                        # is the filing itself, so the flag has nowhere else to ride
+                        exclude_boilerplate=request.query_params.get(
+                            "exclude_boilerplate") == "1",
+                        markdown=request.query_params.get("markdown") == "1",
+                        request=request if progress is None else None, progress=progress,
+                        escalation_token=request.headers.get(gate.HEADER))
+    return _start_progress(run) if request.headers.get("X-Progress") == "1" else run()
 
 
 @app.post("/api/extract/url")
@@ -397,28 +508,31 @@ def extract_url(body: dict, request: Request):
     suffix = Path(url).suffix.lower() or ".htm"
     if suffix not in ALLOWED_SUFFIX:
         suffix = ".htm"
-    req = urllib.request.Request(url, headers={"User-Agent": EDGAR_UA})
-    try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            raw = resp.read(MAX_BYTES + 1)
-    except urllib.error.HTTPError as e:
-        return _err(502, "edgar_fetch_failed",
-                    f"EDGAR returned HTTP {e.code}. EDGAR sometimes blocks "
-                    "datacenter IPs — the upload path does not depend on it.")
-    except Exception as e:
-        return _err(502, "edgar_fetch_failed",
-                    f"{type(e).__name__}: {e}. Use the upload path instead.")
-    if len(raw) > MAX_BYTES:
-        return _err(413, "too_large",
-                    f"document exceeds the {MAX_BYTES:,} byte cap")
-    with tempfile.TemporaryDirectory() as td:
-        p = Path(td) / f"edgar{suffix}"
-        p.write_bytes(raw)
-        return _run(str(p), {"mode": "url", "name": url, "bytes": len(raw),
-                             "sha256": hashlib.sha256(raw).hexdigest()[:16]}, raw=raw,
-                    exclude_boilerplate=bool((body or {}).get("exclude_boilerplate")),
-                    markdown=bool((body or {}).get("markdown")), request=request,
-                    source_url=url)
+    def run(progress=None):
+        req = urllib.request.Request(url, headers={"User-Agent": EDGAR_UA})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                raw = resp.read(MAX_BYTES + 1)
+        except urllib.error.HTTPError as e:
+            return _err(502, "edgar_fetch_failed",
+                        f"EDGAR returned HTTP {e.code}. EDGAR sometimes blocks "
+                        "datacenter IPs — the upload path does not depend on it.")
+        except Exception as e:
+            return _err(502, "edgar_fetch_failed",
+                        f"{type(e).__name__}: {e}. Use the upload path instead.")
+        if len(raw) > MAX_BYTES:
+            return _err(413, "too_large",
+                        f"document exceeds the {MAX_BYTES:,} byte cap")
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / f"edgar{suffix}"
+            p.write_bytes(raw)
+            return _run(str(p), {"mode": "url", "name": url, "bytes": len(raw),
+                                 "sha256": hashlib.sha256(raw).hexdigest()[:16]}, raw=raw,
+                        exclude_boilerplate=bool((body or {}).get("exclude_boilerplate")),
+                        markdown=bool((body or {}).get("markdown")),
+                        request=request if progress is None else None, progress=progress,
+                        escalation_token=request.headers.get(gate.HEADER), source_url=url)
+    return _start_progress(run) if request.headers.get("X-Progress") == "1" else run()
 
 
 @app.get("/api/source/{token}")

@@ -994,7 +994,8 @@ WIRE_API = [
      "on the same single decision",
      "extract_items(path, exclude_boilerplate=exclude_boilerplate, "
      "tables=markdown or escalate, blocks=markdown, escalate=escalate, "
-     "budget=server_budget() if escalate else None, source_url=source_url)"),
+     "budget=server_budget() if escalate else None, source_url=source_url, "
+     "progress=progress)"),
     # PR #61 R4. The page stopped reading this when the control went away, and
     # `routing_provenance`'s pin on the reader went with it — so deleting the
     # key reddened nothing, while ADR-036 §h2 had just started claiming it is

@@ -1,0 +1,12 @@
+{
+  "id": "d35-live-skipped-stages",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/aapl-2025/filing.htm"},
+  "expect": {"checks": [{"type": "d35", "scenario": "live_skips"}]},
+  "triage": {
+    "class": "invariant-gap",
+    "note": "Cold review found that a quiet deterministic route briefly rendered Plan as done and Route/Verify as pending even though the backend had already decided those stages were bypassed. Terminal response stages were correct, but the live graph was not."
+  },
+  "provenance": "D35 cold-review finding, added and observed red before teaching live progress to publish skipped backend decisions."
+}

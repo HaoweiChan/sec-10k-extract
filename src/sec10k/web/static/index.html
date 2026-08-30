@@ -133,6 +133,23 @@ button:disabled{opacity:.5;cursor:default}
 .s-unsupported,.s-failed{color:var(--bad);border-color:var(--bad);background:color-mix(in srgb,var(--bad) 10%,var(--bg))}
 .s-idle{color:var(--dim);border-color:var(--line)}
 
+#progress-flow{border:1px solid var(--line);border-radius:var(--r);margin:-4px 0 12px;
+  padding:10px 14px;background:var(--panel);overflow-x:auto}
+.progress-list{display:flex;min-width:650px;list-style:none;margin:0;padding:0}
+.progress-list li{position:relative;flex:1;text-align:center;color:var(--dim);font-size:11px;
+  text-transform:uppercase;letter-spacing:.07em}
+.progress-list li:not(:last-child)::after{content:"";position:absolute;z-index:0;top:8px;
+  left:calc(50% + 10px);right:calc(-50% + 10px);border-top:2px solid var(--line)}
+.progress-node{position:relative;z-index:1;display:block;width:18px;height:18px;margin:0 auto 5px;
+  border:2px solid var(--line);border-radius:50%;background:var(--panel)}
+.progress-list .done{color:var(--ok)}.progress-list .done .progress-node{border-color:var(--ok);background:var(--ok)}
+.progress-list .active{color:var(--amber-ink);font-weight:700}.progress-list .active .progress-node{
+  border-color:var(--amber);animation:progress-pulse 1s ease-in-out infinite}
+.progress-list .skipped{opacity:.65}.progress-list .skipped .progress-node{border-style:dashed}
+.progress-list .failed{color:var(--bad)}.progress-list .failed .progress-node{border-color:var(--bad);background:var(--bad)}
+.progress-state{display:block;font-size:11px;letter-spacing:.04em}
+@keyframes progress-pulse{50%{box-shadow:0 0 0 5px color-mix(in srgb,var(--amber) 20%,transparent)}}
+
 #warnings{margin-bottom:12px}
 .warn{border:1px solid var(--line);border-left:3px solid var(--warn);
   border-radius:var(--r);padding:8px 11px;margin-bottom:6px;background:var(--panel)}
@@ -377,6 +394,9 @@ footer a{color:var(--accent)}
      element actually is, not an agent affordance; the aria-label names it so
      doc_status belongs to something instead of to an anonymous `generic`. -->
 <div id="banner" class="s-idle" role="status" aria-label="doc_status">No filing extracted yet.</div>
+<div id="progress-flow" hidden aria-label="Extraction progress">
+  <ol class="progress-list"></ol>
+</div>
 <div id="warnings"></div>
 <!-- Shown only when exclusion actually changed the extracted text. -->
 <div id="bp-note" hidden><strong>Why the panes differ:</strong> Extracted hides
@@ -908,9 +928,62 @@ async function loadSource(token){
   }
 }
 
+const FLOW_LABELS = {prepare:"prepare filing", classify:"classify", plan:"plan",
+  route:"route", verify:"verify", decide:"decide"};
+const FLOW_STATUSES = new Set(["pending", "active", "done", "skipped", "failed"]);
+function flowStages(response={}, live=null){
+  const routed = response?.routing?.stages || [];
+  if(routed.length){
+    return [{stage:"prepare",status:"done"}, ...Object.keys(FLOW_LABELS).slice(1).map(stage => {
+      const own = routed.find(x => x.stage === stage);
+      return {stage, status:FLOW_STATUSES.has(own?.status) ? own.status : "skipped"};
+    })];
+  }
+  const current = live?.stages || [];
+  if(response?.doc_status === "failed"){
+    return Object.keys(FLOW_LABELS).map((stage, index) => {
+      const own = current.find(x => x.stage === stage)?.status;
+      return {stage, status:own === "active" ? "failed" : own === "pending" ? "skipped" :
+        FLOW_STATUSES.has(own) ? own : index ? "skipped" : "failed"};
+    });
+  }
+  return Object.keys(FLOW_LABELS).map(stage => {
+    const own = current.find(x => x.stage === stage);
+    return {stage, status:FLOW_STATUSES.has(own?.status) ? own.status : "pending"};
+  });
+}
+function renderProgress(stages, running=false){
+  const box = $("#progress-flow");
+  box.hidden = false;
+  box.querySelector("ol").innerHTML = stages.map(s => `<li class="${s.status}"${s.status === "active" ? ' aria-current="step"' : ""}>
+    <span class="progress-node" aria-hidden="true"></span>${FLOW_LABELS[s.stage]}<span class="progress-state">${s.status}</span></li>`).join("");
+  const active = stages.find(s => s.status === "active");
+  if(running && active){
+    $("#banner").className = "s-idle";
+    $("#banner").textContent = `Extracting — ${FLOW_LABELS[active.stage]}`;
+  }
+}
+async function followProgress(response){
+  const started = await response.json();
+  for(;;){
+    const polled = await fetch(`/api/progress/${encodeURIComponent(started.progress_id)}`);
+    if(!polled.ok) throw new Error("Extraction progress is no longer available");
+    LAST_PROGRESS = await polled.json();
+    renderProgress(flowStages({}, LAST_PROGRESS), LAST_PROGRESS.status === "running");
+    if(LAST_PROGRESS.status === "complete")
+      return fetch(LAST_PROGRESS.result_url);
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+}
+
 function busy(on, msg){
   document.querySelectorAll("button").forEach(b => b.disabled = on);
-  if(on){ $("#banner").className = "s-idle"; $("#banner").textContent = msg || "Extracting…"; }
+  if(on){
+    LAST_PROGRESS = null;
+    renderProgress(flowStages(), false);
+    $("#banner").className = "s-idle";
+    $("#banner").textContent = msg || "Starting extraction…";
+  }
 }
 
 // ADR-043. The escalation key rides EVERY extract request, injected here in
@@ -923,6 +996,7 @@ function busy(on, msg){
 const KEY_STORE = "sec10k.escalation-key";
 let VERIFIED_KEY = "";
 let VERIFY_GENERATION = 0;
+let LAST_PROGRESS = null;
 function storedKey(){ try{ return localStorage.getItem(KEY_STORE) || ""; }catch(e){ return ""; } }
 function rememberKey(v){ try{ v ? localStorage.setItem(KEY_STORE, v)
                                 : localStorage.removeItem(KEY_STORE); }catch(e){} }
@@ -954,14 +1028,16 @@ async function verifyKey(){
 
 async function call(url, opts){
   const k = verifiedKey();
-  if(k) opts = {...opts, headers: {...(opts.headers || {}), "X-Escalation-Token": k}};
+  opts = {...opts, headers: {...(opts.headers || {}), "X-Progress": "1"}};
+  if(k) opts.headers["X-Escalation-Token"] = k;
   busy(true);
   try{
-    const r = await fetch(url, opts);
-    render(await r.json());
+    let r = await fetch(url, opts);
+    if(r.status === 202) r = await followProgress(r);
+    render(await r.json(), LAST_PROGRESS);
   }catch(e){
     render({doc_status:"failed", items:[], counts:{}, warnings:[
-      {code:"network", item:null, message:String(e)}], meta:{}, trace:[]});
+      {code:"network", item:null, message:String(e)}], meta:{}, trace:[]}, LAST_PROGRESS);
   }finally{ busy(false); }
 }
 
@@ -1315,12 +1391,13 @@ function compositePreviewNote(it, composite){
   return composite && it.truncated ? " · preview truncated" : "";
 }
 
-function render(v){
+function render(v, progress=null){
   VIEW = v; SEL = null;
   const st = v.doc_status || "failed";
   const w = v.warnings || [];
   $("#banner").className = "s-" + st;
   $("#banner").textContent = `${bannerResult(v)} — ${bannerContent(v)}${compactRoutingSummary(v.routing)}`;
+  renderProgress(flowStages(v, progress), false);
 
   $("#warnings").innerHTML = w.length
     ? routeComplete(v.routing)

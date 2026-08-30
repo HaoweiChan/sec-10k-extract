@@ -464,6 +464,29 @@ heading rather than the p116 cross-reference index. Evidence:
 `tasks/reviews/d34-localhost-intel-proof.json`. No baseline move and no paid
 model call.
 
+### D35 — Show live agentic progress as a flowchart [status: pr]
+Priority: P1
+Origin: owner production Intel FY2025 retry after PR #90, 2026-08-30
+Spec: Replace the text-only `Extracting…` wait state with a connected visual
+flowchart for filing preparation, classify, plan, route, verify, and decide.
+The active animated node must come from live backend progress rather than an
+elapsed-time guess; the completed graph must use the response's own routing
+stages, including skipped and failed states. Preserve reduced-motion and live
+region accessibility, and expose no filing text, prompt, credential, or model
+reasoning through progress polling.
+Acceptance: the adversarial UI case is observed red before implementation;
+invariant and fast gates pass without a baseline move; a localhost Intel run
+visibly advances through real stages and retains final stage outcomes.
+Status: red-first `d35-live-progress-flowchart` captured in
+`evals/report/20260830-211430-invariant.json`; the cold-review skip-state case
+was also observed red in `evals/report/20260830-214123-invariant.json`.
+Invariant **143/143** and fast **214/214**, both 100%, with table/structure
+fidelity 1.0 and no baseline move.
+Localhost Intel fixture proof visibly showed backend-authored preparation and
+retained the final zero-call deterministic outcomes; the authenticated paid
+route remains UNRUN because no provider call was authorized. Evidence:
+`tasks/reviews/d35-localhost-proof.json`.
+
 ### D36 — Tidy Extracted and restore Sync scroll [status: in-progress]
 Priority: P1
 Origin: owner screenshot review, 2026-08-30

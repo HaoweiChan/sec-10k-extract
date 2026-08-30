@@ -754,7 +754,7 @@ def _finish_graph(record):
 
 
 def _agent_loop(text, items, warnings, budget, call, tr=None, documents=(), acquisition=None,
-                images=None, source_url=None, vision_cached=None):
+                images=None, source_url=None, vision_cached=None, progress=None):
     """One bounded action per real StateGraph plan/act/evaluate turn."""
     import json
     import time
@@ -1081,6 +1081,8 @@ def _agent_loop(text, items, warnings, budget, call, tr=None, documents=(), acqu
                               "done": False, "history": []}, config)
     for entry in record["tiers"]:
         for k in record["cost"]: record["cost"][k] = round(record["cost"][k] + entry["cost"][k], 6)
+    if progress:
+        progress("verify")
     alternatives = {item["item"]: (item.get("evidence") or {}).get("alternative_regions", [])
                     for item in items if (item.get("evidence") or {}).get("alternative_regions")}
     has_alternative_image = bool(images and any(any(region["start"] <= image.get("offset", -1) < region["end"]
@@ -1118,6 +1120,8 @@ def _agent_loop(text, items, warnings, budget, call, tr=None, documents=(), acqu
         if item["item"] in targets and item["item"] not in accepted:
             item["review_required"] = True
     unresolved = sorted(set(targets) - accepted)
+    if progress:
+        progress("decide")
     return record, unavailable + ([{"code": "escalation_unresolved", "item": code,
                                     "message": "agent loop left this target without verified evidence"}
                                    for code in unresolved] if accepted else
@@ -1276,7 +1280,8 @@ def _stages(tr, record, vision=None):
 
 
 def route(text, items, warnings, budget=None, images=None, vision_cached=None,
-          source_url=None, raw=None, documents=None, acquisition=None):
+          source_url=None, raw=None, documents=None, acquisition=None,
+          progress=None):
     """Run the ladder. Returns (routing_record, extra_warnings).
 
     `items` is mutated in place when — and only when — a rung's answer
@@ -1287,6 +1292,8 @@ def route(text, items, warnings, budget=None, images=None, vision_cached=None,
     from src.sec10k.llm import Budget, CombinedBudget, EscalationUnavailable, call, token_total  # noqa: E402
     import json
 
+    if progress:
+        progress("classify")
     external_candidates = _external_pointer_targets(text, items, warnings)
     package = [d for d in documents or () if _document_allowed(d, source_url)]
     if external_candidates and raw is not None and not package:
@@ -1308,10 +1315,18 @@ def route(text, items, warnings, budget=None, images=None, vision_cached=None,
         # with the flag off.
         record["stages"] = _stages(tr, record)
         _finish_graph(record)
+        if progress:
+            progress("plan", "skipped")
+            progress("route", "skipped")
+            progress("verify", "skipped")
+            progress("decide")
         extra = ([{"code": "external_source_unavailable", "item": None,
                    "message": acquisition.get("error", tr["reason"])}]
                  if acquisition.get("status") == "unavailable" else [])
         return record, extra
+
+    if progress:
+        progress("plan")
 
     if tr["route"] == "agent_loop":
         # The web server may supply a shared sweep budget; D30 still needs a
@@ -1321,11 +1336,15 @@ def route(text, items, warnings, budget=None, images=None, vision_cached=None,
     elif budget is None:
         budget = Budget(max_calls=2, max_usd=1.00)
     if tr["route"] == "agent_loop":
+        if progress:
+            progress("route")
         return _agent_loop(text, items, warnings, budget, call, tr, package, acquisition,
-                           images, source_url, vision_cached)
+                           images, source_url, vision_cached, progress)
     codes = tr["target_items"] or tr["items"] or [i["item"] for i in items
                             if i.get("start") is not None]
     extra, vision = [], None
+    if progress:
+        progress("route")
     for rung, model, think in RUNGS:
         free = _windows(text, items)
         if rung == "llm_localize":
@@ -1441,6 +1460,8 @@ def route(text, items, warnings, budget=None, images=None, vision_cached=None,
     for t in record["tiers"]:
         for k in record["cost"]:
             record["cost"][k] = round(record["cost"][k] + t["cost"][k], 6)
+    if progress:
+        progress("verify")
     if vision is None:
         vision = vision_verify(images, {i["item"]: (i.get("evidence") or {}).get("alternative_regions", [])
                                         for i in items if (i.get("evidence") or {}).get("alternative_regions")}, vision_cached, source_url, budget, text)
@@ -1449,6 +1470,8 @@ def route(text, items, warnings, budget=None, images=None, vision_cached=None,
         record["cost"][k] = round(record["cost"][k] + vision["cost"][k], 6)
     record["stages"] = _stages(tr, record, vision)
     _finish_graph(record)
+    if progress:
+        progress("decide")
     return record, extra
 
 

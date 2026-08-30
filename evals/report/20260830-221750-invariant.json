@@ -1,0 +1,555 @@
+{
+  "suite": "invariant",
+  "score": 0.0,
+  "git_sha": "6707fb2a1d3d5758848e1659fc5647edd66d080f-dirty",
+  "table_cells_fidelity": null,
+  "table_rows_fidelity": null,
+  "structure_blocks_fidelity": null,
+  "structure_bounds_fidelity": null,
+  "results": [
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "d35",
+            "scenario": "busy_live_region"
+          },
+          "why": "request start leaves the extraction live region stale"
+        }
+      ],
+      "n_items": 23,
+      "n_extracted": 18,
+      "doc_status": "success",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 16053
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 68162
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 43
+        },
+        {
+          "item": "1C",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2704
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 520
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 5408
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 93
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2685
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 54
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 18144
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 3037
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 61402
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 101
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 4511
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 574
+        },
+        {
+          "item": "9C",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 105
+        },
+        {
+          "item": "10",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 11898
+        },
+        {
+          "item": "16",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 69
+        }
+      ],
+      "seconds": 0.15,
+      "id": "d35-busy-live-region",
+      "kind": "pr93-r1-red.E6hgUa"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "d35",
+            "scenario": "event_queue"
+          },
+          "why": "backend progress transitions can finish between polls without a visible snapshot"
+        }
+      ],
+      "n_items": 23,
+      "n_extracted": 23,
+      "doc_status": "success_with_warning",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 147
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 35
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 41
+        },
+        {
+          "item": "1C",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 34
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 33
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 41
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 47
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 128
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 20
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 226
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 78
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 66
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 99
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 43
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 114
+        },
+        {
+          "item": "9C",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 93
+        },
+        {
+          "item": "10",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 78
+        },
+        {
+          "item": "11",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 37
+        },
+        {
+          "item": "12",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 109
+        },
+        {
+          "item": "13",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 88
+        },
+        {
+          "item": "14",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 62
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 75
+        },
+        {
+          "item": "16",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 33
+        }
+      ],
+      "seconds": 0.17,
+      "id": "d35-progress-event-queue",
+      "kind": "pr93-r1-red.E6hgUa"
+    },
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "d35",
+            "scenario": "terminal_refusal"
+          },
+          "why": "terminal refusal leaves the completed progress graph pending"
+        }
+      ],
+      "n_items": 23,
+      "n_extracted": 18,
+      "doc_status": "success",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 16053
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 68162
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 43
+        },
+        {
+          "item": "1C",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2704
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 520
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 5408
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 93
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2685
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 54
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 18144
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 3037
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 61402
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 101
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 4511
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 574
+        },
+        {
+          "item": "9C",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 105
+        },
+        {
+          "item": "10",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 11898
+        },
+        {
+          "item": "16",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 69
+        }
+      ],
+      "seconds": 0.11,
+      "id": "d35-terminal-refusal-progress",
+      "kind": "pr93-r1-red.E6hgUa"
+    }
+  ],
+  "debt": []
+}

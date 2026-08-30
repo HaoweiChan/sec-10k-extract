@@ -291,6 +291,19 @@ them all); the example once showed `lenient_match`, which nothing emits.
   `{item,status}`, and the deterministic verifier binds their offsets from
   existing cross-reference evidence.
 
+- **Inspector progress (ADR-058)**: an inspector request carrying
+  `X-Progress: 1` receives an opaque progress id instead of blocking for the
+  extraction response. `GET /api/progress/{id}` returns only `status`, a fixed
+  ordered list of `{stage,status}` for `prepare`, `classify`, `plan`, `route`,
+  `verify`, `decide`, and a result URL after completion. Stage status is one of
+  `pending`, `active`, `done`, `skipped`, or `failed`. It never returns filing
+  text, prompts, credentials, model reasoning, model output, targets, errors,
+  or costs. `GET /api/progress/{id}/result` is the separate normal extraction
+  response. Completed classify-through-decide outcomes are copied from that
+  response's own `routing.stages`; the preparation node is the web layer's
+  completed acquisition/normalization boundary. Requests without the header
+  keep the existing synchronous API contract.
+
 ## Envelope rules (v2, normative)
 
 - `doc_status` ∈ `success` | `success_with_warning` | `ambiguous` |
