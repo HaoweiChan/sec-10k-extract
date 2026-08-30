@@ -106,8 +106,8 @@ button:disabled{opacity:.5;cursor:default}
    that can disagree. */
 .opt{display:flex;gap:7px;align-items:center;flex-wrap:wrap;cursor:pointer;
   margin-top:13px;font-size:13px}
-.key-row{display:flex;gap:9px;align-items:center;flex-wrap:nowrap;margin-top:13px;
-  font-size:13px;white-space:nowrap}
+.key-row{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:13px;
+  padding-bottom:13px;border-bottom:1px solid var(--line);font-size:13px}
 .key-row label{font-size:11px;color:var(--dim);text-transform:uppercase;
   letter-spacing:.12em;font-weight:600}
 .key-row input{width:282px;max-width:282px}
@@ -321,6 +321,19 @@ footer a{color:var(--accent)}
 <main>
 <fieldset>
   <legend>filing input</legend>
+  <!-- ADR-043. The door of ADR-036 lock 4 shipped with no way for this page
+       to open it and was deleted for that reason (ADR-041). This field is the
+       missing half. Hidden until /api/meta says a secret is configured: a box
+       that cannot open anything only tells a stranger something is being
+       withheld. Only a server-verified value is remembered in localStorage. -->
+  <div class="key-row" id="esc-key-row" hidden>
+    <label for="esc-key">LLM ACCESS KEY</label>
+    <input type="password" id="esc-key" autocomplete="off" spellcheck="false"
+           placeholder="Enter access key">
+    <button type="button" id="verify-key">Verify</button>
+    <span id="key-status" role="status" aria-live="polite">Not enabled</span>
+    <span class="hint">Required for LLM requests. Verify once; saved in this browser.</span>
+  </div>
   <div class="modes">
     <div class="mode">
       <label for="fx">select a committed fixture</label>
@@ -342,19 +355,6 @@ footer a{color:var(--accent)}
     <span class="hint">Hide repeated page headers, page numbers, and EDGAR table chrome.</span></label>
   <label class="opt"><input type="checkbox" id="render-md" checked> render as Markdown
     <span class="hint">Show headings, paragraphs, and tables instead of flat text.</span></label>
-  <!-- ADR-043. The door of ADR-036 lock 4 shipped with no way for this page
-       to open it and was deleted for that reason (ADR-041). This field is the
-       missing half. Hidden until /api/meta says a secret is configured: a box
-       that cannot open anything only tells a stranger something is being
-       withheld. Only a server-verified value is remembered in localStorage. -->
-  <div class="key-row" id="esc-key-row" hidden>
-    <label for="esc-key">LLM ACCESS KEY</label>
-    <input type="password" id="esc-key" autocomplete="off" spellcheck="false"
-           placeholder="Enter access key">
-    <button type="button" id="verify-key">Verify</button>
-    <span id="key-status" role="status" aria-live="polite">Not enabled</span>
-    <span class="hint">Required for LLM requests. Verify once; saved in this browser.</span>
-  </div>
 </fieldset>
 
 <!-- D10: the page's ONE status region. JS rewrites it after every extraction

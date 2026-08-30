@@ -294,6 +294,15 @@ Spec: Keep deterministic extraction free and default. A verified escalation key 
 Validation: `python3 -m evals.run --suite invariant` then `python3 -m evals.run --suite fast` — invariant 113/113; fast 184/184; $0 cached; snapshot dev `2ee159156017cde5f37b2012ef9f6d566813c6baef9b9f2cf796fb2b8f932119` and heldout `0abb59e694c44381626e1a6e4e11d0624193a6204bf7c89630d9b73481025d06`.
 Status: red-first and audit repairs complete; ready for review/PR.
 
+### D29 — Put LLM access before filing input [status: pr]
+Origin: owner interface review, 2026-08-30
+Spec: Show the existing LLM access-key verification row first inside the filing
+input panel so an interviewer sees the prerequisite before choosing a filing.
+Keep the row hidden when no key is configured and preserve verification,
+browser storage, green enabled state, and shared request-header behavior.
+Acceptance: `#esc-key-row` precedes `.modes`; the existing key behavior probe
+still passes; invariant and fast gates stay at 100% with no baseline move.
+
 ## Debt
 
 Each block is a decision not to build something, not a forgotten task. Every
