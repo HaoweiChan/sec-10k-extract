@@ -1985,11 +1985,9 @@ def check_exclusion_note(case):
     this note is an honest statement of the limit, NOT a fix for it.
 
     Pinned: the element exists; it ships `hidden`, so it cannot fire with
-    exclusion off; its visibility is assigned from the response's own
-    `boilerplate_excluded` (the same read-at-request-time field the pane
-    header labels itself from); and its wording says what IS true (raw vs
-    normalized, the panes will not agree) and none of what is not (that the
-    map exists, or that the panes match).
+    exclusion off; its visibility follows the response's applied state; and
+    its short wording explains the visible difference without exposing the
+    normalized-text/offset-map implementation contract.
 
     Text, not render — see the block comment above check_split_breakpoint.
     """
@@ -2019,6 +2017,11 @@ def check_exclusion_note(case):
     for want in inp.get("must_say", []):
         if want not in body:
             bad.append(f"#{ident}: does not say {want!r}")
+    max_words = inp.get("max_words")
+    if max_words is not None and len(body.split()) > max_words:
+        bad.append(f"#{ident}: {len(body.split())} words, want at most {max_words} — "
+                   "the comparison note must explain the visible difference, "
+                   "not expose the implementation contract")
     for nope in inp.get("must_not_say", []):
         if nope in body:
             bad.append(f"#{ident}: says {nope!r} — the panes do NOT agree and "
@@ -3081,8 +3084,6 @@ def check_d27_high_assurance(case):
             bad.append(f"D27 UI lacks {label}")
     if '<details id="trace-box" open>' in ui:
         bad.append("raw Pipeline trace is open by default")
-    if "proportional within the SELECTED ITEM" in ui or "const frac =" in ui:
-        bad.append("source comparison still claims proportional alignment")
     if "function verifyVisibleTable(auto=false)" not in ui or '"/api/extract/vision-table"' not in ui:
         bad.append("authenticated source-table raster path is not exposed")
     if "Math.max(6, 11 * scale)" not in ui or "function boundedSourceTable(t)" not in ui or "selectedSourceTable()" not in ui or "scheduleTableVision()" not in ui or "function showVisionVerdict(result)" not in ui:
@@ -4071,6 +4072,38 @@ def check_source_toolbar_compact(case):
     return bad
 
 
+def check_sync_scroll_control(case):
+    """The compare toolbar must expose the synchronization behavior it implements."""
+    html = (ROOT / case.get("input", {}).get("ui_file", UI_STYLESHEET)).read_text()
+    bad = []
+    if html.count('id="sync-scroll"') != 1:
+        bad.append("Original Filing must contain exactly one Sync scroll checkbox")
+    if html.count('id="sync-state"') != 1:
+        bad.append("Sync scroll must retain one visible state label")
+    return bad
+
+
+def check_extracted_toolbar_compact(case):
+    """Keep item metadata and the full-text action from fighting for one row."""
+    html = (ROOT / case.get("input", {}).get("ui_file", UI_STYLESHEET)).read_text()
+    bad = []
+    if 'class="src-hdr extracted-toolbar"' not in html:
+        bad.append("extracted item header has no dedicated compact toolbar")
+    if '>Full text</button>' not in html or 'toggle.textContent = full ? "Preview" : "Full text"' not in html:
+        bad.append("full-text toggle must use the short Full text / Preview labels")
+    if '${hdrRight}' in html:
+        bad.append("extracted header still renders the overflowing diagnostic metadata row")
+    rule = re.search(r"\.extracted-toolbar\s*\{([^{}]*)\}", html, re.S)
+    css = rule.group(1) if rule else ""
+    for required in ("minmax(0,1fr)", "max-content"):
+        if required not in re.sub(r"\s+", "", css):
+            bad.append(f".extracted-toolbar is missing compact track {required}")
+    toggle = re.search(r"#full-toggle\s*\{([^{}]*)\}", html, re.S)
+    if not toggle or "white-space:nowrap" not in re.sub(r"\s+", "", toggle.group(1)):
+        bad.append("#full-toggle can wrap into a tall button")
+    return bad
+
+
 def check_edgar_viewer_url(case):
     """Accept SEC's documented URL variants without widening the fetch boundary."""
     try:
@@ -4570,6 +4603,8 @@ CHECKS = {
     "escalation_key_ui_behavior": check_escalation_key_ui_behavior,
     "ui_cover_navigation": check_ui_cover_navigation,
     "source_toolbar_compact": check_source_toolbar_compact,
+    "sync_scroll_control": check_sync_scroll_control,
+    "extracted_toolbar_compact": check_extracted_toolbar_compact,
     "edgar_viewer_url": check_edgar_viewer_url,
     "free_tier_limit": check_free_tier_limit,
     "token_proxy_bound": check_token_proxy_bound,

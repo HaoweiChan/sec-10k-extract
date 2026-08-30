@@ -487,6 +487,27 @@ retained the final zero-call deterministic outcomes; the authenticated paid
 route remains UNRUN because no provider call was authorized. Evidence:
 `tasks/reviews/d35-localhost-proof.json`.
 
+### D36 — Tidy Extracted and restore Sync scroll [status: in-progress]
+Priority: P1
+Origin: owner screenshot review, 2026-08-30
+Spec: Keep the Extracted header readable when verified composite evidence is
+shown: one ellipsized item label, compact Markdown/cleaned state, and a short
+non-wrapping Full text action. Move status, confidence, method, and region
+counts into the existing evidence disclosure. Restore a checked Sync scroll
+checkbox to Original Filing and synchronize proportionally inside the selected
+verified source region; when the panes stack, retain but disable the control
+and state why.
+Validation: `ui-extracted-toolbar-compact` was watched red before the change;
+targeted UI, split, confidence, and boilerplate cases pass. Localhost Intel
+FY2025 at 1280 px has no header overflow, equal 43 px panel headers, and an
+Extracted 520 px scroll moved Original Filing from 83,971 px to 85,234 px.
+At 900 px the checked control is disabled with `inactive: panes stacked`.
+The comparison note was reduced from 102 words to 22 user-facing words; its
+30-word ceiling is enforced by `ui-exclusion-note`.
+Invariant **142/142** and fast **213/213**; table fidelity **427/427 cells,
+34/34 rows**; structure fidelity **61/61 blocks and bounds**; no baseline move.
+Status: implementation, localhost proof, and gates complete; ready for PR.
+
 ## Debt
 
 Each block is a decision not to build something, not a forgotten task. Every

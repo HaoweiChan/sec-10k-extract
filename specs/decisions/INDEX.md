@@ -95,10 +95,12 @@ index only cross-references it for scanning.
 - ADR-055 — the configured LLM access-key row appears before every filing input
   while retaining the existing verified-key state machine — enforced by
   `escalation-key-ui-behavior.json`.
-- ADR-056 — the original-filing toolbar keeps its title and table action fixed,
-  gives navigation status the only shrinkable first-row track, and shows table
-  verification output on a second row only when present — enforced by
-  `ui-source-toolbar-compact.json`.
+- ADR-056 — the original-filing toolbar keeps its title and action group fixed,
+  gives navigation status the only shrinkable first-row track, retains checked
+  Sync scroll while panes are side by side, and shows table verification output
+  on a second row only when present; the extracted toolbar keeps diagnostics in
+  its evidence disclosure — enforced by `ui-source-toolbar-compact.json`,
+  `ui-extracted-toolbar-compact.json`, and `ui-split-breakpoint.json`.
 - ADR-057 — [bounded multi-model role policy](ADR-057-multi-model-policy.md):
   one Flash evidence pass and up to three Pro plans are production-wired with
   deterministic offset binding and cached-route coverage.
