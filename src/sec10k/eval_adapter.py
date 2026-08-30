@@ -2248,7 +2248,7 @@ if(stages.map(x=>x.stage).join(",") !== "prepare,classify,plan,route,verify,deci
             from src.sec10k.extract import extract_items
 
             result = extract_items("evals/fixtures/intc-2025/filing.htm", escalate=True)
-            expected = {"1": 142571, "7": 119881, "8": 205692}
+            expected = {"1": 142571, "7": 119881, "8": 205690}
             by_code = {x["item"]: x for x in result["items"]}
             if (result["routing"]["cost"]["llm_calls"] or result["routing"]["cost"]["usd"]
                     or not result["routing"]["graph"].get("complete")
@@ -2530,7 +2530,7 @@ if(!anchor || anchor.node!==index.nodes[4].node || !fallback || fallback.node!==
                 return "page-bound source anchor does not prefer the first verified folio interval"
             return None
         if scenario == "item8_composite_view":
-            if (item.get("start"), item.get("end"), item.get("cross_reference_chars")) != (515221, 515287, 205692):
+            if (item.get("start"), item.get("end"), item.get("cross_reference_chars")) != (515221, 515287, 205690):
                 return "Intel Item 8 composite bounds or truncation changed unexpectedly"
             regions = next(x for x in result["items"] if x["item"] == "8")["evidence"]["cross_reference"]
             footer = "| Financial Statements | Notes to Consolidated Financial Statements | 65 |\n|---|---|---|"
@@ -2548,6 +2548,61 @@ if(!anchor || anchor.node!==index.nodes[4].node || !fallback || fallback.node!==
                 return "raw original filing and composite truncation are not both explicit"
             return None
         return f"unknown d34 scenario {scenario!r}"
+    elif t == "d38_xref_alignment":
+        from src.sec10k import xref
+
+        scenario = chk.get("scenario", "midpage")
+        expected = ["1", "1A", "1B", "2", "3", "4", "5", "7", "8", "9A"]
+        if scenario == "duplicate":
+            page_10 = ("Risk Factors\n\n" + "continued previous section " * 400
+                       + "\n\nRisk Factors\n\n" + "risk evidence " * 120)
+            row = "Item 1A. Risk Factors\nPages 10-12\n\n"
+            code, heading = "1A", "Risk Factors"
+        elif scenario == "beyond_cap":
+            page_10 = ("previous section tail " * 700 + "\n\nRisk Factors\n\n"
+                       + "risk evidence " * 120)
+            row = "Item 1A. Risk Factors\nPages 10-12\n\n"
+            code, heading = "1A", "Risk Factors"
+        elif scenario == "wrapped":
+            page_10 = ("previous section tail " * 100 + "\n\nRisk Factors\n\n"
+                       + "risk evidence " * 120)
+            row = "Item 1A. Risk\nFactors\nPages 10-12\n\n"
+            code, heading = "1A", "Risk Factors"
+        elif scenario == "title_variant":
+            page_10 = ("accounting discussion " * 80
+                       + "\n\nAccounting Changes\n\ncontinued prior content"
+                       + "\n\nDISCLOSURE CONTROLS AND PROCEDURES\n\n"
+                       + "controls evidence " * 120)
+            row = "Item 1A. Risk Factors\nPages 11-12\n\n"
+            code, heading = "9A", "DISCLOSURE CONTROLS AND PROCEDURES"
+        else:
+            page_10 = ("previous section tail " * 80 + "\n\nRisk Factors\n\n"
+                       + "risk evidence " * 120)
+            row = "Item 1A. Risk Factors\nPages 10-12\n\n"
+            code, heading = "1A", "Risk Factors"
+        pages = []
+        for n in range(1, 31):
+            body = page_10 if n == 10 else "page evidence " * 120
+            pages.append(f"{body}\n\n{n}\n\n")
+        index = ("Form 10-K Cross-Reference Index\n\n"
+                 "Item 1. Business\nPages 2-9\n\n" + row
+                 + "Item 1B. Unresolved Staff Comments\nNone\n\n"
+                 "Item 2. Properties\nPage 13\n\n"
+                 "Item 3. Legal Proceedings\nPage 14\n\n"
+                 "Item 4. Mine Safety\nNone\n\n"
+                 "Item 5. Market\nPage 15\n\n"
+                 "Item 7. MD&A\nPages 16-20\n\n"
+                 "Item 8. Financial Statements\nPages 21-29\n\n"
+                 + ("Item 9A. Controls and Procedures\nPages 10-12\n\n"
+                    if scenario == "title_variant" else ""))
+        text = "".join(pages) + index
+        _, _, regions = xref.resolve(text, expected)
+        got = "".join(text[r["start"]:r["end"]]
+                      for r in regions.get(code, ())).lstrip()
+        if not got.startswith(heading + "\n\n") or "previous section" in got \
+                or "accounting discussion" in got:
+            return f"mapped {code} evidence did not align to its body heading"
+        return None
     else:
         return f"unknown check type {t!r}"
     return None
