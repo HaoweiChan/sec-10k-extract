@@ -1,0 +1,12 @@
+{
+  "id": "d37-readable-progress-detail",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/intc-2025/filing.htm"},
+  "expect": {"checks": [{"type": "d35", "scenario": "readable_progress"}]},
+  "triage": {
+    "class": "invariant-gap",
+    "note": "The live flow named only the active stage, so a long route or a failed verify followed by decide did not explain the work, elapsed time, or whether progress had stopped changing."
+  },
+  "provenance": "Owner screenshots after PR #93, 2026-08-30; added and observed red before the readable progress detail panel."
+}

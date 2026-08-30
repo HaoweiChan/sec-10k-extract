@@ -508,6 +508,23 @@ Invariant **142/142** and fast **213/213**; table fidelity **427/427 cells,
 34/34 rows**; structure fidelity **61/61 blocks and bounds**; no baseline move.
 Status: implementation, localhost proof, and gates complete; ready for PR.
 
+### D37 — Explain what live progress is waiting for [status: pr]
+Priority: P1
+Origin: owner screenshots after PR #93, 2026-08-30
+Spec: Keep the connected flowchart, but add a plain-language description of
+the active work, total elapsed time, and time since the last visible progress
+change. After 30 seconds without a new stage or status, explicitly say that the
+request is still running and may be waiting on the model/provider. When verify
+fails and decide continues, explain that the proposal was rejected and safe
+finalization is still in progress. Derive this only from sanitized progress
+and browser time; expose no additional backend content.
+Validation: `d37-readable-progress-detail` was observed red before the change;
+targeted D35/D37 progress cases pass. Invariant **148/148** and fast **219/219**,
+both 100%, with table/structure fidelity 1.0 and no baseline move. Localhost
+Intel fixture proof showed the active plain-language detail, retained final
+stage outcomes, and produced no browser errors; the paid route remains UNRUN
+because no provider call was authorized.
+
 ## Debt
 
 Each block is a decision not to build something, not a forgotten task. Every

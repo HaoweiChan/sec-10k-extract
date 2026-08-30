@@ -2106,6 +2106,37 @@ if(!done || pending || !completed.includes("primary-span coverage: <b>58.32%</b>
         scenario = chk.get("scenario")
         start = page.find("const FLOW_LABELS")
         end = page.find("// ADR-043", start)
+        if scenario == "readable_progress":
+            required = ('id="progress-detail"', 'const FLOW_HELP',
+                        'function updateProgressDetail(', 'No new progress for',
+                        'Verification rejected a proposal')
+            if any(pin not in page for pin in required):
+                return "live flow does not explain the active work, elapsed time, or a failed verification"
+            script = r'''
+const list={innerHTML:""}, box={hidden:true,querySelector:()=>list};
+const nodes={"#banner":{textContent:"",className:""},"#progress-detail":{hidden:true,className:""},
+ "#progress-title":{textContent:""},"#progress-copy":{textContent:""},
+ "#progress-elapsed":{textContent:""},"#progress-meta":{textContent:""}};
+function $(selector){return nodes[selector] || box;}
+''' + page[start:end] + r'''
+FLOW_STARTED_AT=performance.now()-65000;
+renderProgress(flowStages({}, {stages:[
+ {stage:"prepare",status:"done"},{stage:"classify",status:"done"},
+ {stage:"plan",status:"done"},{stage:"route",status:"active"},
+ {stage:"verify",status:"pending"},{stage:"decide",status:"pending"}]}), true);
+FLOW_UPDATED_AT=performance.now()-31000; updateProgressDetail();
+if(nodes["#progress-title"].textContent !== "Routing unresolved items"
+ || !nodes["#progress-copy"].textContent.includes("model or cached result")
+ || !nodes["#progress-meta"].textContent.includes("request still running")) process.exit(1);
+renderProgress([
+ {stage:"prepare",status:"done"},{stage:"classify",status:"done"},
+ {stage:"plan",status:"done"},{stage:"route",status:"done"},
+ {stage:"verify",status:"failed"},{stage:"decide",status:"active"}], true);
+if(!nodes["#progress-copy"].textContent.startsWith("Verification rejected a proposal")) process.exit(1);
+'''
+            if subprocess.run(["node", "-e", script], capture_output=True).returncode:
+                return "readable progress detail does not render route waits or verification failures honestly"
+            return None
         if scenario == "terminal_refusal":
             script = page[start:end] + r'''
 const stages = flowStages({doc_status:"failed"});
