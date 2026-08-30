@@ -164,9 +164,9 @@ Full rationale in `specs/decisions/` (18 ADRs). The ones that shaped the system:
   operator's off-switch is the host variable `SEC10K_ESCALATION_ENABLED`, set
   to any of `0`, `false`, `no`, `off` (stripped and case-insensitive; unset or
   empty means ON). **The paid tier is behind a key** (ADR-043, 2026-08-28) — and unlike the door
-  it replaces, the page can present it: paste the key into the `escalation key`
+  it replaces, the page can present it: paste the key into the `LLM ACCESS KEY`
   field and it rides every extraction as `X-Escalation-Token`, remembered in
-  the browser so it is typed once. With no `SEC10K_ESCALATION_TOKEN` on the
+  the browser so it is typed once. With no `LLM_ACCESS_KEY` on the
   host the tier runs for *nobody* — unset is closed, not open — and the field
   stays hidden, because a box that cannot open anything is worse than none.
   ADR-041 had deleted an earlier door for a real defect (its header was sent by

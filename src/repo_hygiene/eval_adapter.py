@@ -3576,8 +3576,15 @@ GATE_MODULE = "src.sec10k.web.gate"
 # door whose client cannot present a credential is not a door, it is an outage.
 SENDS_TOKEN_UI = [
     ("the page has a field to type the key into", 'id="esc-key"'),
+    ("...labels it as LLM access rather than an internal escalation detail",
+     '<label for="esc-key">LLM ACCESS KEY</label>'),
+    ("...uses the access-key placeholder shown to the visitor",
+     'placeholder="Enter access key"'),
     ("...and a button to verify it before extraction", 'id="verify-key"'),
     ("...and a visible verification status", 'id="key-status"'),
+    ("...starts in the disabled state", '>Not enabled</span>'),
+    ("...explains why the key is required and where it is saved",
+     'Required for LLM requests. Verify once; saved in this browser.'),
     ("...and injects it in the ONE helper all three modes go through",
      "async function call(url, opts)"),
     # A CROSS-REPO CONTRACT, which is why it is pinned rather than left as an
@@ -3810,6 +3817,10 @@ def check_escalation_choke_point(case):
         # three separate evasions that each satisfied a shape and broke the
         # property; a table that is EXECUTED cannot be satisfied that way.
         gate = importlib.import_module(inp.get("gate_module", GATE_MODULE))
+        if gate.TOKEN_VAR != "LLM_ACCESS_KEY":
+            bad.append(f"gate.TOKEN_VAR is {gate.TOKEN_VAR!r}, not "
+                       "'LLM_ACCESS_KEY' — deployment configuration and the "
+                       "visitor-facing control would name different secrets")
         floor = inp.get("min_token_chars", 10)
         if gate.MIN_TOKEN_CHARS < floor:
             bad.append(f"gate.MIN_TOKEN_CHARS is {gate.MIN_TOKEN_CHARS}, under "
@@ -4375,7 +4386,8 @@ def check_token_proxy_bound(case):
     The check binds the SWEEP SCRIPT's own published value (not a copy of it)
     against the committed measurement record, so a hand-edited artifact or a
     reintroduced constant both go red. It also refuses to pass vacuously: every
-    rung's model must carry at least one sample.
+    rung's model must carry a measured sample or an explicitly labeled,
+    conservative unmeasured bound.
 
     What it does NOT establish: that the bound is right for any other corpus.
     Two samples per model, both SEC filings in HTML-derived normalized text.
@@ -4397,27 +4409,36 @@ def check_token_proxy_bound(case):
         observed.setdefault(smp["model"], []).append(smp["chars_per_token"])
     if not observed:
         return [f"{TOKEN_RATIO_FILE} carries no samples — the bound would be vacuous"]
+    conservative = rec.get("conservative_unmeasured", {})
 
     from src.sec10k.escalate import RUNGS
     for _rung, model, _think in RUNGS:
-        if model not in observed:
-            bad.append(f"no measured chars-per-token sample for {model} — a rung "
-                       "whose price nothing measured is a guessed price")
-            continue
         try:
             published = mod.chars_per_token(model)
         except Exception as e:
             bad.append(f"{SWEEP_SCRIPT} cannot publish a ratio for {model} "
                        f"({type(e).__name__}: {e})")
             continue
-        low = min(observed[model])
+        if model in observed:
+            low = min(observed[model])
+        elif model in conservative:
+            low = conservative[model]
+            if (not isinstance(low, (int, float)) or isinstance(low, bool) or
+                    not 0 < low <= 1):
+                bad.append(f"{model}: conservative unmeasured chars/token "
+                           f"bound {low!r} is not inside (0, 1]")
+                continue
+        else:
+            bad.append(f"no measured or conservative chars-per-token bound for {model}")
+            continue
         if published > low:
             bad.append(
                 f"{model}: published chars/token {published} > measured minimum "
                 f"{low} — a proxy above the measured ratio UNDERSTATES tokens and "
                 f"therefore understates every cost figure derived from it "
-                f"(samples: {sorted(observed[model])})")
-    return bad, {"token_proxy_samples": {m: len(v) for m, v in observed.items()}}
+                f"(samples: {sorted(observed.get(model, []))})")
+    return bad, {"token_proxy_samples": {m: len(v) for m, v in observed.items()},
+                 "token_proxy_conservative": sorted(conservative)}
 
 
 CHECKS = {

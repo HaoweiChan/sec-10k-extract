@@ -87,3 +87,8 @@ index only cross-references it for scanning.
   with compact process-local checkpoints, deterministic candidates/source
   hash, attempts, rejections, and explicit completion/review route — enforced by
   `evals/adversarial/d28-per-item-agent-graph.json`.
+- ADR-054 — [DeepSeek V4 Pro price ceiling](ADR-054-model-price-ceiling.md):
+  the paid ladder is DeepSeek V4 Pro first and the owner-approved GPT-5 Mini
+  fallback second; transport refuses every other model above DeepSeek's input
+  or output price, and Claude Opus 5 is explicitly disabled — enforced by
+  `src/sec10k/llm.py::_demo` and `token-proxy-bound`.

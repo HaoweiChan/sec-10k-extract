@@ -63,11 +63,13 @@ def chars_per_token(model):
     """
     rec = json.load(open(TOKEN_RATIO))
     seen = [s["chars_per_token"] for s in rec["samples"] if s["model"] == model]
-    if not seen:
-        raise KeyError(f"no measured chars-per-token sample for {model!r} in "
-                       f"{os.path.basename(TOKEN_RATIO)} — refusing to guess a "
-                       "ratio for a model nothing has measured")
-    return math.floor(min(seen) * 10) / 10
+    if seen:
+        return math.floor(min(seen) * 10) / 10
+    conservative = rec.get("conservative_unmeasured", {})
+    if model in conservative:
+        return conservative[model]
+    raise KeyError(f"no measured or conservative chars-per-token bound for "
+                   f"{model!r} in {os.path.basename(TOKEN_RATIO)}")
 # OUTPUT is the rung's own `max_tokens` CEILING, not a guessed 150 (changed
 # 2026-08-27, after the intc-2025 exam). Reasoning tokens are billed as output
 # and a reasoning rung can spend its whole allowance thinking —

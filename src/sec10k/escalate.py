@@ -71,7 +71,7 @@ from src.sec10k.validate import SPAN_FLOOR
 TRIGGER_CODES = ("low_item_coverage",)
 AGENT_CODES = ("internal_pointer_unreached",)
 AGENT_TURNS = 3
-AGENT_MODEL = "openai/gpt-5-mini"
+AGENT_MODEL = "deepseek/deepseek-v4-pro"
 OBSERVATION_CAP = 4000
 EXTERNAL_TITLE_FLOOR = 0.4
 EXTERNAL_ANNUAL_RE = re.compile(r"(?is)incorporated\b[^.]{0,80}\bby reference"
@@ -91,40 +91,19 @@ SAME_FORM_RE = re.compile(r"(?i)annual report on form 10-k")
 SPAN_STATUSES = ("extracted", "incorporated_by_reference")
 
 # rung -> (model, the `method` an item carries when that rung produced its span)
-# Model choice is the cost-discipline ladder, small before big. These are
-# OpenRouter SLUGS (owner instruction 2026-08-27), both present verbatim in
-# `tasks/reviews/2026-08-27-openrouter-models.json`, which is also where
-# `llm.usd()` reads their per-token price — there is no hand-maintained price
-# table. Per-document estimates: ADR-036 §d.
-# The answer is a small JSON map of offsets — a few hundred tokens at most.
-# `MAX_TOKENS` is what the ANSWER may use; a reasoning rung additionally gets
-# `REASONING_TOKENS` of thinking, and the request's `max_tokens` is the sum, so
-# the two never compete for one allowance.
-#
-# Sized by the intc-2025 exam, 2026-08-27, which billed $0.895360 for exactly
-# this mistake: `max_tokens: 2048` and no reasoning budget sent to
-# `anthropic/claude-opus-5` came back with `completion_tokens: 2048` and EMPTY
-# content — the whole allowance spent thinking, nothing left to answer with.
-# OpenRouter documents the requirement: for Anthropic models `max_tokens` must
-# be strictly higher than the reasoning budget.
-#
-# On cost: of that $0.895360, only $0.0512 was output — the other $0.844160 was
-# the input, paid whatever comes back. So a bigger answer allowance is nearly
-# free (6,144 output tokens at $25/MTok caps one rung-2 call's output at
-# $0.1536) while too small an allowance means paying the input for a guaranteed
-# empty answer. The cost-discipline move here is UP, not down.
-MAX_TOKENS = 2048        # the answer
-REASONING_TOKENS = 4096  # the thinking, for a rung whose model does that
+# Model choice is the cost-discipline ladder: DeepSeek V4 Pro first, GPT-5 Mini
+# only on the wider fallback window (owner instruction 2026-08-30). Their
+# committed OpenRouter records are merged by `llm._catalogue()` and are where
+# `llm.usd()` reads per-token prices. Per-document estimates: ADR-036 §d.
+# The answer is a small JSON map of offsets. Neither active text model gets a
+# reasoning budget; the Opus-specific 4,096-token split is retired with Opus
+# and remains documented in ADR-036's historical measurement.
+MAX_TOKENS = 2048
 
-# (rung, model, reasoning_tokens). The third element is 0 for a rung that must
-# NOT be sent a reasoning budget: `openai/gpt-5-mini` answered the exam
-# correctly at 842 output tokens with none, and changing a rung that demonstrably
-# works — on a provider behaviour this repo cannot test without spending — is the
-# unverified change this PR has been burned by four times. Only the rung the
-# exam proved broken gets the new parameter.
+# (rung, model, reasoning_tokens)
 RUNGS = (
-    ("llm_localize", "openai/gpt-5-mini", 0),
-    ("llm_extract", "anthropic/claude-opus-5", REASONING_TOKENS),
+    ("llm_localize", "deepseek/deepseek-v4-pro", 0),
+    ("llm_extract", "openai/gpt-5-mini", 0),
 )
 LOCALIZE_WINDOW = 60_000  # chars of unattributed text rung 1 is allowed to see
 

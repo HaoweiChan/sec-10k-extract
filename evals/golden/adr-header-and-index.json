@@ -3,5 +3,9 @@
   "task": "repo_hygiene",
   "suites": ["invariant", "fast"],
   "input": {"checks": ["adr_headers", "adr_index"]},
-  "expect": {}
+  "expect": {},
+  "triage": {
+    "class": "eval-bug",
+    "note": "2026-08-30: the new ADR-054 omitted the repository's required **Ruling** block. The checker correctly caught an authoring defect; the ADR was repaired without relaxing this case."
+  }
 }

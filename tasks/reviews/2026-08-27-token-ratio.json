@@ -55,5 +55,9 @@
     "openai/gpt-5-mini": 4.2,
     "anthropic/claude-opus-5": 2.7
   },
+  "conservative_unmeasured": {
+    "deepseek/deepseek-v4-pro": 0.25
+  },
+  "conservative_unmeasured_note": "DeepSeek V4 Pro became the first rung on 2026-08-30 without a paid calibration call. The 0.25 chars/token bound deliberately budgets up to four input tokens per normalized-text character; it is a cost ceiling, not a measured tokenizer estimate. Replace it with the same two-sample measured rule after ordinary billed traffic exists; do not spend a call only to calibrate it.",
   "honesty": "TWO samples per model. That is thin, and it is a bound rather than an estimate precisely because it is thin. Both samples for each model come from the same two documents, both SEC filings in HTML-derived normalized text, so nothing here says what the ratio would be on a different corpus. Re-derive when more billed responses exist."
 }

@@ -113,7 +113,7 @@ async function main() {
 
   field.value = "edited-key-B";
   field.dispatch("input");
-  assert(status.textContent === "Not verified" && !status.classList.contains("verified"), "editing did not clear enabled state");
+  assert(status.textContent === "Not enabled" && !status.classList.contains("verified"), "editing did not clear enabled state");
   assert(!h.storage.has(keyName), "editing did not clear remembered key");
   await h.run('call("/api/extract/upload", {method:"POST"})');
   assert(!h.extract.at(-1).opts.headers?.["X-Escalation-Token"], "edited unverified key was sent to extraction");
@@ -135,7 +135,7 @@ async function main() {
   staleField.dispatch("input");
   late.resolve(response(true, true));
   await pending;
-  assert(stale.elements.get("key-status").textContent === "Not verified", "stale response re-enabled edited input");
+  assert(stale.elements.get("key-status").textContent === "Not enabled", "stale response re-enabled edited input");
   assert(!stale.storage.has(keyName), "stale response remembered the old key");
   await stale.run('call("/api/extract/url", {method:"POST"})');
   assert(!stale.extract.at(-1).opts.headers?.["X-Escalation-Token"], "stale key was sent to extraction");

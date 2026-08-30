@@ -67,7 +67,7 @@ def main():
     token = "probe-token-not-a-real-secret"
     os.environ["OPENROUTER_BASE_URL"] = f"http://127.0.0.1:{port}"
     os.environ["OPENROUTER_API_KEY"] = "probe-not-a-real-key"
-    os.environ["SEC10K_ESCALATION_TOKEN"] = token
+    os.environ[gate.TOKEN_VAR] = token
     os.environ.pop("SEC10K_ESCALATION_ENABLED", None)
 
     import httpx
@@ -122,9 +122,9 @@ def main():
             for label, hdr, configured in bands:
                 for mode in ("fixture", "upload", "url"):
                     if configured is None:
-                        os.environ.pop("SEC10K_ESCALATION_TOKEN", None)
+                        os.environ.pop(gate.TOKEN_VAR, None)
                     else:
-                        os.environ["SEC10K_ESCALATION_TOKEN"] = configured
+                        os.environ[gate.TOKEN_VAR] = configured
                     before = len(HITS)
                     if mode == "fixture":
                         r = await c.post("/api/extract/fixture",
