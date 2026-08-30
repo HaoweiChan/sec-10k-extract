@@ -1,0 +1,22 @@
+{
+  "task": "D29",
+  "reviewer": "Terra",
+  "result": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "MEDIUM",
+      "confidence": 0.99,
+      "claim": "The order check passed when #esc-key-row was absent.",
+      "resolution": "fixed with an explicit present-and-before predicate plus a missing-marker mutation"
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "confidence": 0.98,
+      "claim": "The nowrap key row overflowed the page at 821px.",
+      "resolution": "fixed by allowing the row to wrap at its actual content width"
+    }
+  ],
+  "verification": "APPROVED — R1/R2 VERIFIED; no new findings"
+}

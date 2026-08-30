@@ -3948,14 +3948,32 @@ def check_escalation_choke_point(case):
 def check_escalation_key_ui_behavior(case):
     """Run the escalation credential state machine from the shipped page."""
     ui = ROOT / case.get("input", {}).get("ui_file", UI_STYLESHEET)
+    html = ui.read_text()
+    bad = []
+    def key_first(source):
+        key = source.find('id="esc-key-row"')
+        modes = source.find('<div class="modes">')
+        return key >= 0 and modes >= 0 and key < modes
+
+    if not key_first(html):
+        bad.append("index.html: LLM access key appears after filing inputs — "
+                   "visitors can start extraction before seeing the prerequisite")
+    missing = html.replace('id="esc-key-row"', 'id="renamed-key-row"', 1)
+    if key_first(missing):
+        bad.append("index.html: missing #esc-key-row mutation was not rejected")
+    key_css = css_contrast._rule_body(html, ".key-row")
+    if not re.search(r"(?:^|[;\s])flex-wrap\s*:\s*wrap", key_css):
+        bad.append("index.html: .key-row does not wrap before it overflows")
+    if re.search(r"(?:^|[;\s])white-space\s*:\s*nowrap", key_css):
+        bad.append("index.html: .key-row forces one unbreakable line")
     probe = ROOT / "evals/probes/escalation_key_ui_behavior.js"
     got = subprocess.run(["node", str(probe), str(ui)], cwd=ROOT,
                          capture_output=True, text=True, timeout=10)
     if got.returncode:
         detail = (got.stderr or got.stdout).strip().splitlines()
-        return ["index.html escalation-key behavior: " +
-                (detail[-1] if detail else f"node exited {got.returncode}")]
-    return []
+        bad.append("index.html escalation-key behavior: " +
+                   (detail[-1] if detail else f"node exited {got.returncode}"))
+    return bad
 
 
 def check_ui_cover_navigation(case):
