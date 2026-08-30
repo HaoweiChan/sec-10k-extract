@@ -1,0 +1,33 @@
+D30 red-first, 2026-08-30, offline.
+
+Command:
+python3 -c 'import json; from src.sec10k.eval_adapter import run_case; c=json.load(open("evals/adversarial/d30-multimodel-policy.json")); print(run_case(c))'
+
+Observed result:
+passed: False
+failure: unknown check type 'd30_policy'
+
+No LLM access key, network request, or paid model call was used.
+
+Behavior red rerun before production wiring:
+passed: False
+failure: D30 production planner/Flash role policy is not wired into the route
+
+No LLM access key, network request, or paid model call was used.
+
+Fixed rerun after production wiring:
+passed: True
+evidence: exactly one cached Flash evidence role and three cached Pro planning
+roles, all with the declared structured request shape; a malicious filing
+instruction plus extra evidence-output fields did not alter role, call caps,
+budget, credentials, or publishable offsets.
+
+## Bound live proof
+
+One durable, authorized Intel FY2025 Pro cache record remains: 1,756 input and
+1,610 output tokens (1,529 reasoning), costing $0.002833. It was written after
+the system-prompt projected-budget correction. The Flash cache/provenance was
+lost before audit, so neither a Flash call, an aggregate cost, cache replay, nor
+any semantic resolution is claimed from the live run. The cache itself retains
+provider response text for normal replay; this evidence file retains no key,
+prompt, filing body, or response body. No additional paid call was made.

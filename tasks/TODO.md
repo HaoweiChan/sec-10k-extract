@@ -310,6 +310,51 @@ browser storage, green enabled state, and shared request-header behavior.
 Acceptance: `#esc-key-row` precedes `.modes`; the existing key behavior probe
 still passes; invariant and fast gates stay at 100% with no baseline move.
 
+### D30 — Specialize LangGraph roles with a bounded multi-model policy [status: pr]
+Priority: P1
+Origin: owner architecture request and Intel FY2025 live evidence, 2026-08-30
+Spec: Keep acquisition, normalization, risk routing, offset/hash binding,
+verification, budget enforcement, final status, and publication deterministic.
+Call the verified credential the **LLM access key** in every new or active
+user-facing surface; legacy header/storage identifiers remain compatibility
+details and must not leak back into displayed terminology.
+On an evidence-triggered route, add one bounded structured-evidence pass using
+`deepseek/deepseek-v4-flash-0731`, then use
+`deepseek/deepseek-v4-pro` only for compact planning/re-planning inside the
+LangGraph loop. Centralize each role's model, input cap, completion cap,
+reasoning setting, response schema, and call/cost record in one policy rather
+than scattering model conditionals. Flash evidence must preserve source
+document identity and verbatim ranges; a summary alone is never publishable.
+Simplify terminal disposition proposals to semantic `{item,status}` decisions;
+the deterministic verifier—not either model—must bind the exact existing
+cross-reference entry/pointer offsets and may reject the decision. Retain
+process-local checkpoints, per-item attempts, cache replay, the shared Budget,
+zero-call clean/unverified-LLM-access-key paths, and `review_required` on every
+unresolved target.
+The initial milestone does not move the separate authenticated table-vision
+endpoint into the graph and does not add another framework, agent hierarchy,
+confidence-only routing rule, or model-authored SEC text.
+Validation: add red-first adversarial cases for role/model assignment,
+structured response parameters and cache-key separation, bounded aggregate
+calls, semantic-disposition offset binding, partial rejection/re-plan, zero-call
+$0 behavior for an unverified LLM access key, and truthful per-node trace/cost.
+Cached Intel FY2025 must resolve
+the 11 cross-reference residual targets or leave each unresolved item explicitly
+`review_required`; a bounded live Intel run may use at most one Flash evidence
+call plus three Pro planning calls, stops when spent cost reaches $0.10, records
+tokens/cost/latency, and must never be part of `fast`. Final gates:
+`python3 -m evals.run --suite invariant` = 100% and
+`python3 -m evals.run --suite fast` >= baseline, with no baseline move.
+Status: Cached route proof uses one Flash evidence call plus three
+policy-parameterized Pro plans at $0. Flash is presently bounded to
+cross-reference-residual routes. One durable Intel FY2025 Pro cache entry proves
+1,756 input / 1,610 output (1,529 reasoning) tokens and $0.002833 after the
+system-prompt budget correction. Flash provenance/cache was lost before audit,
+so the live aggregate, replay, and resolution are **UNRUN** rather than
+claimed; see `tasks/reviews/d30-live-intc-2025.json`.
+Final gate: invariant 116/116 and fast 187/187, both 100%; table and
+structure fidelity 1.0, no baseline move, and fast made no paid calls.
+
 ## Debt
 
 Each block is a decision not to build something, not a forgotten task. Every

@@ -988,7 +988,7 @@ function showVisionVerdict(result){
 
 async function verifyVisibleTable(auto=false){
   const key = verifiedKey(), status = $("#vision-status");
-  if(!key){ status.textContent = "verify the escalation key first"; return; }
+  if(!key){ status.textContent = "verify the LLM access key first"; return; }
   const table = auto ? selectedSourceTable() : visibleSourceTable();
   if(!table || !VIEW?.source?.token){ status.textContent = "no visible cached source table"; return; }
   const tableText = (table.innerText || "").trim();

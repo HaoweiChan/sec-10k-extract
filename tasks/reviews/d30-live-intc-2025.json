@@ -1,0 +1,16 @@
+{
+  "date": "2026-08-30",
+  "scope": "authorized bounded public Intel FY2025 fixture proof",
+  "provenance": "local OpenRouter call using a verified LLM access key in an HTTP header; this artifact retains no key, prompt, filing body, or response body. The normal cache retains the provider response text for replay.",
+  "limits": {"flash_max": 1, "pro_max": 3, "document_usd_max": 0.1},
+  "actual": {
+    "verified_live_calls": 1,
+    "verified_usd": 0.002833,
+    "nodes": [
+      {"role": "plan", "model": "deepseek/deepseek-v4-pro", "cached": false,
+       "input_tokens": 1756, "output_tokens": 1610, "reasoning_tokens": 1529, "usd": 0.002833,
+       "action": "not reproduced from the cache body", "rejection": null, "next_route": "not retained in public trace"}
+    ],
+    "limitation": "Flash cache/provenance was lost before audit, so there is no durable Flash replay and no verified aggregate total. This record deliberately makes no resolution or disposition claim from the cached response body. The cache entry timestamp is after the system-prompt projected-budget change; it does not establish which invocation created it. No additional paid call was made."
+  }
+}

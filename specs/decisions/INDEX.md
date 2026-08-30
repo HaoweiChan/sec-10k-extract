@@ -95,3 +95,6 @@ index only cross-references it for scanning.
 - ADR-055 — the configured LLM access-key row appears before every filing input
   while retaining the existing verified-key state machine — enforced by
   `escalation-key-ui-behavior.json`.
+- ADR-056 — [bounded multi-model role policy](ADR-056-multi-model-policy.md):
+  one Flash evidence pass and up to three Pro plans are production-wired with
+  deterministic offset binding and cached-route coverage.

@@ -1,0 +1,9 @@
+{
+  "id": "d30-multimodel-transport",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/intc-2025/filing.htm", "escalate": true},
+  "expect": {"checks": [{"type": "d30_transport"}]},
+  "triage": {"class": "transport-contract", "note": "Offline transport policy, pricing and semantic disposition checks."},
+  "provenance": "D30 offline transport check: no LLM access key, network request, or paid model call."
+}

@@ -49,7 +49,8 @@ DISABLED_MODELS = ("anthropic/claude-opus-5",)
 # bumped whenever a prompt in escalate.py or the request shape changes: it is
 # part of the cache key, so a reworded prompt — or a different provider's
 # request body — cannot be answered from an old response.
-PROMPT_VERSION = "d11.2-openrouter"  # preserve existing text-only cache entries
+D30_PROMPT_VERSION = "d30.1-openrouter"
+PROMPT_VERSION = "d11.2-openrouter"  # legacy default request/cache tuple
 IMAGE_PROMPT_VERSION = "d21.1-openrouter"
 
 # Active text rungs are DeepSeek V4 Pro first and GPT-5 Mini fallback. Opus 5's
@@ -64,6 +65,8 @@ IMAGE_PROMPT_VERSION = "d21.1-openrouter"
 PRICES_FILE = ROOT / "tasks" / "reviews" / "2026-08-27-openrouter-models.json"
 PRICE_CEILING_FILE = (ROOT / "tasks" / "reviews" /
                       "2026-08-30-openrouter-price-ceiling.json")
+FLASH_CATALOGUE_FILE = (ROOT / "tasks" / "reviews" /
+                        "2026-08-30-openrouter-flash-catalogue.json")
 PRICE_CEILING_MODEL = "deepseek/deepseek-v4-pro"
 # Owner-approved 2026-08-30 fallback exception: GPT-5 Mini's output list price
 # is above the ceiling, but it may run only after DeepSeek V4 Pro fails.
@@ -93,6 +96,7 @@ def _catalogue():
         catalogue = json.loads(PRICES_FILE.read_text())
         ceiling = json.loads(PRICE_CEILING_FILE.read_text())["model"]
         catalogue["models"][ceiling["id"]] = ceiling
+        catalogue["models"].update(json.loads(FLASH_CATALOGUE_FILE.read_text())["models"])
         return catalogue
     except OSError as e:
         raise EscalationUnavailable(
@@ -127,6 +131,11 @@ def usd(model, input_tokens, output_tokens):
     """Cost of one response in dollars, from its own reported token counts."""
     cin, cout = price(model)
     return round((input_tokens * cin + output_tokens * cout) / 1_000_000, 6)
+
+
+def token_total(usage):
+    """Reported usage without double-counting reasoning within completion."""
+    return sum((usage.get(key) or 0) for key in ("input_tokens", "output_tokens"))
 
 
 def _enforce_model_policy(model):
@@ -178,25 +187,17 @@ class Budget:
         self.tokens = 0
         self.spent = 0.0
 
-    def take(self):
-        # ponytail: the dollar ceiling is checked against what has ALREADY been
-        # spent, not against what this call is projected to cost, so one call
-        # can overshoot `max_usd` by its own price. That overshoot is BOUNDED
-        # by `escalate.EXTRACT_WINDOW` (PR #58 R12), and the bound is a derived
-        # figure printed by `tasks/reviews/d11_sweep_cost.py` under "§h2 — the
-        # effective deployment ceiling" rather than a number restated here —
-        # this comment used to carry its own, and hand-typed dollar figures in
-        # this branch have a perfect record of being wrong (PR #58 R22).
-        # Upgrade path when it matters: estimate input
-        # tokens from len(user)/4 and refuse before the call. Not built here
-        # because that estimate is the very thing the first live run exists to
-        # replace, and a wrong pre-check refuses affordable work. Debt row.
+    def _check(self, projected_usd=0.0):
         if self.calls >= self.max_calls:
             raise BudgetExceeded(
                 f"budget spent: {self.calls} of {self.max_calls} calls used")
-        if self.spent >= self.max_usd:
+        if self.spent + projected_usd > self.max_usd:
             raise BudgetExceeded(
-                f"budget spent: ${self.spent:.4f} of ${self.max_usd:.2f}")
+                f"budget would exceed ${self.max_usd:.2f} "
+                f"(${self.spent:.4f} spent + ${projected_usd:.4f} projected)")
+
+    def take(self, projected_usd=0.0):
+        self._check(projected_usd)
         self.calls += 1
 
     def charge(self, dollars, tokens):
@@ -208,12 +209,36 @@ class Budget:
                 "usd": round(self.spent, 6)}
 
 
-def _cache_key(model, system, user, max_tokens, image_urls=()):
+class CombinedBudget:
+    """Charge a per-document ceiling and an optional caller-wide ceiling."""
+
+    def __init__(self, *budgets):
+        self.budgets = tuple(b for b in budgets if b is not None)
+
+    def take(self, projected_usd=0.0):
+        for budget in self.budgets:
+            budget._check(projected_usd)
+        for budget in self.budgets:
+            budget.calls += 1
+
+    def charge(self, dollars, tokens):
+        for budget in self.budgets:
+            budget.charge(dollars, tokens)
+
+
+def _cache_key(model, system, user, max_tokens, image_urls=(),
+               reasoning_tokens=None, response_format=None, role=None,
+               reasoning_effort=None):
     # Keep the exact legacy tuple for text calls; image calls need their own
     # request-shape/version and URLs because those are model input.
-    blob = json.dumps(([PROMPT_VERSION, model, system, user, max_tokens]
-                       if not image_urls else
-                       [IMAGE_PROMPT_VERSION, model, system, user, max_tokens, list(image_urls)]),
+    extended = role is not None or reasoning_tokens is not None or response_format is not None or reasoning_effort is not None
+    blob = json.dumps(([D30_PROMPT_VERSION, model, system, user, max_tokens,
+                        reasoning_tokens, response_format, role, reasoning_effort]
+                       if extended else [PROMPT_VERSION, model, system, user, max_tokens])
+                      if not image_urls else
+                      ([D30_PROMPT_VERSION, model, system, user, max_tokens, list(image_urls),
+                        reasoning_tokens, response_format, role, reasoning_effort]
+                       if extended else [IMAGE_PROMPT_VERSION, model, system, user, max_tokens, list(image_urls)]),
                       sort_keys=True, ensure_ascii=False).encode()
     return hashlib.sha256(blob).hexdigest()
 
@@ -234,7 +259,8 @@ def _credential():
     return key
 
 
-def _body(model, system, user, max_tokens, reasoning_tokens=None, image_urls=()):
+def _body(model, system, user, max_tokens, reasoning_tokens=None, image_urls=(),
+          response_format=None, reasoning_effort=None):
     """The OpenAI-shaped request body OpenRouter expects.
 
     Its own function so `_demo` can assert the SHAPE rather than text-match the
@@ -264,6 +290,10 @@ def _body(model, system, user, max_tokens, reasoning_tokens=None, image_urls=())
                          {"role": "user", "content": content}]}
     if reasoning_tokens:
         body["reasoning"] = {"max_tokens": reasoning_tokens}
+    elif reasoning_effort:
+        body["reasoning"] = {"effort": reasoning_effort}
+    if response_format:
+        body["response_format"] = response_format
     return body
 
 
@@ -306,7 +336,8 @@ def _normalize(payload, text, choice, model, max_tokens):
 
 
 def call(model, system, user, max_tokens, budget, timeout=120,
-         reasoning_tokens=None, image_urls=()):
+         reasoning_tokens=None, image_urls=(), response_format=None, role=None,
+         reasoning_effort=None):
     """One OpenRouter chat-completions request.
 
     Returns {"text", "usage", "usd", "model", "cached"}.
@@ -320,14 +351,21 @@ def call(model, system, user, max_tokens, budget, timeout=120,
     if image_urls and "image" not in (_catalogue().get("models", {}).get(model, {})
                                        .get("architecture", {}).get("input_modalities") or []):
         raise EscalationUnavailable(f"model {model!r} has no committed image input modality")
-    key_hash = _cache_key(model, system, user, max_tokens, image_urls)
+    key_hash = _cache_key(model, system, user, max_tokens, image_urls,
+                          reasoning_tokens, response_format, role, reasoning_effort)
     hit = CACHE_DIR / f"{key_hash}.json"
     if hit.exists():
         return {**json.loads(hit.read_text()), "cached": True}
 
-    budget.take()
+    # A character may expand to multiple tokens.  Count both messages and
+    # deliberately overestimate them so the dollar ceiling is a real pre-call
+    # cap. A refused/failed attempted request remains a consumed call: it may
+    # already have reached the paid provider, while only a cache hit is free.
+    projected = usd(model, (len(system) + len(user)) * 4, max_tokens)
+    budget.take(projected)
     api_key = _credential()
-    body = _body(model, system, user, max_tokens, reasoning_tokens, image_urls)
+    body = _body(model, system, user, max_tokens, reasoning_tokens, image_urls,
+                 response_format, reasoning_effort)
     base = os.environ.get("OPENROUTER_BASE_URL") or DEFAULT_BASE_URL
     req = urllib.request.Request(
         base.rstrip("/") + "/chat/completions",
@@ -360,7 +398,7 @@ def call(model, system, user, max_tokens, budget, timeout=120,
         raise EscalationUnavailable("provider refused: finish_reason=content_filter")
 
     got = _normalize(payload, text, choice, model, max_tokens)
-    budget.charge(got["usd"], sum(got["usage"].values()))
+    budget.charge(got["usd"], token_total(got["usage"]))
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     hit.write_text(json.dumps(got, indent=1, sort_keys=True))
     return {**got, "cached": False}
@@ -417,6 +455,7 @@ def _demo():
                                  "completion_tokens_details": {"reasoning_tokens": 6144}}},
                       "", {"finish_reason": "length"}, RUNGS[1][1], 6144)
     assert deep["usage"]["reasoning_tokens"] == 6144, deep
+    assert token_total({"input_tokens": 3, "output_tokens": 7, "reasoning_tokens": 6}) == 10
 
     b = _body("m", "sys", "usr", 7)
     assert set(b) == {"model", "max_tokens", "messages"}, sorted(b)
@@ -429,6 +468,16 @@ def _demo():
     r = _body("m", "s", "u", 6144, reasoning_tokens=4096)
     assert r["reasoning"] == {"max_tokens": 4096} and r["max_tokens"] == 6144
     assert r["max_tokens"] > r["reasoning"]["max_tokens"], "no room left to answer"
+    structured = _body("m", "s", "u", 7, response_format={"type": "json_object"})
+    assert structured["response_format"] == {"type": "json_object"}
+    assert _body("m", "s", "u", 7, reasoning_effort="low")["reasoning"] == {"effort": "low"}
+    legacy = hashlib.sha256(json.dumps([PROMPT_VERSION, "m", "s", "u", 7],
+                                        sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+    assert _cache_key("m", "s", "u", 7) == legacy
+    assert (_cache_key("m", "s", "u", 7, response_format={"type": "json_object"}, role="evidence")
+            != _cache_key("m", "s", "u", 7, response_format={"type": "json_object"}, role="plan"))
+    assert (_cache_key("m", "s", "u", 7, reasoning_tokens=1)
+            != _cache_key("m", "s", "u", 7, reasoning_tokens=2))
 
     # 1. pricing comes from the committed record, and an unknown slug RAISES
     for _, model, _think in RUNGS:
@@ -437,6 +486,10 @@ def _demo():
     # the exact figures ADR-036 §d is derived from, pinned so a re-fetch that
     # moves them cannot silently invalidate every published dollar
     assert price("openai/gpt-5-mini") == (0.25, 2.0), price("openai/gpt-5-mini")
+    assert price("deepseek/deepseek-v4-flash-0731") == (0.065, 0.18)
+    flash = _catalogue()["models"]["deepseek/deepseek-v4-flash-0731"]
+    assert {"response_format", "structured_outputs"} <= set(flash["supported_parameters"])
+    _enforce_model_policy("deepseek/deepseek-v4-flash-0731")
     assert price("anthropic/claude-opus-5") == (5.0, 25.0)
     assert usd("anthropic/claude-opus-5", 1_000_000, 1_000_000) == 30.0
     assert usd("openai/gpt-5-mini", 1_000_000, 0) == 0.25
@@ -505,7 +558,7 @@ def _demo():
                 spent.take()
                 raise AssertionError("a spent dollar budget must refuse")
             except BudgetExceeded as e:
-                assert "$0.1100 of $0.10" in str(e), e
+                assert "would exceed $0.10" in str(e), e
 
             # 4. a cached response is served without budget or credential. This
             #    is the CACHE under test, written through its own key function;
@@ -535,6 +588,11 @@ def _demo():
     try:
         b.take()
         raise AssertionError("a spent call budget must refuse")
+    except BudgetExceeded:
+        pass
+    try:
+        Budget(max_calls=1, max_usd=0.001).take(0.0011)
+        raise AssertionError("a projected call over the dollar ceiling must refuse")
     except BudgetExceeded:
         pass
     print("[llm self-check] ok")
