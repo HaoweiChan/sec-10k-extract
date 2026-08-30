@@ -1,4 +1,4 @@
-# D31 — localhost presentation and source assets
+# D32 — localhost presentation and source assets
 
 ## Material decision
 
@@ -16,7 +16,7 @@ slots before fetch so parallel assets cannot exceed it.
 ## Assumption → Eval contradiction → Correction
 
 - Assumed: a completed graph made raw primary-span warnings safe to show in the
-  main banner. Eval said: `d31-presentation` showed that this reads as an
+  main banner. Eval said: `d32-presentation` showed that this reads as an
   unresolved failure and can be mistaken for a 100% coverage claim. Corrected:
   complete routes show an explicitly limited primary-span summary; details keep
   the raw caveat.

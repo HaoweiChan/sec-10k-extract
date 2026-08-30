@@ -1,6 +1,6 @@
 {
   "date": "2026-08-30",
-  "scope": "localhost proof after D31 source-viewer repair",
+  "scope": "localhost proof after D32 source-viewer repair",
   "source": {
     "intel_url": "https://www.sec.gov/Archives/edgar/data/50863/000005086326000011/intc-20251227.htm",
     "llm_access_key": "authenticated; value omitted",

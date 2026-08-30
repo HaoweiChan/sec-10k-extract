@@ -1,0 +1,15 @@
+{
+  "id": "ui-source-toolbar-compact-regression",
+  "task": "repo_hygiene",
+  "suites": ["invariant", "fast"],
+  "input": {
+    "checks": ["source_toolbar_compact"],
+    "ui_file": "evals/fixtures/repo_hygiene/source-toolbar-overridden.html"
+  },
+  "expect": {"min_failures": 1, "max_failures": 1},
+  "triage": {
+    "class": "false-green-eval",
+    "note": "D31 Terra cold review: a correct first .source-toolbar rule followed by display:flex passes a first-match CSS reader even though the later equal-specificity declaration wins in the browser."
+  },
+  "provenance": "D31 cold-review repair, authored before the effective-declaration parser and watched red at zero detected failures."
+}

@@ -1,9 +1,9 @@
 {
-  "id": "d31-vision-accession",
+  "id": "d32-vision-accession",
   "task": "sec10k",
   "suites": ["fast", "invariant"],
   "input": {"path": "evals/fixtures/xom-2021/filing.htm"},
-  "expect": {"checks": [{"type": "d31", "scenario": "vision_accession"}]},
+  "expect": {"checks": [{"type": "d32", "scenario": "vision_accession"}]},
   "triage": {"class": "input-variant", "note": "SEC Archives images must be bound to the filing accession, not merely the SEC host."},
-  "provenance": "D31 cold-review F2; no provider call."
+  "provenance": "D32 cold-review F2; no provider call."
 }

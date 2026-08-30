@@ -1935,7 +1935,7 @@ def eval_check(result, chk, path=None):
                        for fact in _json.loads(calls[1]["user"]).get("evidence", []))
                 or sum(t["cost"]["llm_calls"] for t in routing["tiers"]) != 0):
             return "production planner/Flash role policy is not wired into the cached route"
-    elif t == "d31":
+    elif t == "d32":
         import copy
         import json as _json
         scenario = chk.get("scenario")
@@ -1966,7 +1966,7 @@ if(!done || pending || !completed.includes("primary-span coverage: <b>58.32%</b>
             target = next(i for i in items if i["item"] == "7")
             at = text.find("Item 7", target["end"])
             if at < 0:
-                return "fixture lacks D31 alternative evidence target"
+                return "fixture lacks D32 alternative evidence target"
             actions = [{"action": "search", "query": "Item 7"},
                        {"action": "read_window", "start": at, "end": at + 4000},
                        {"action": "propose_alternative_regions", "item": "7", "regions": [{"start": at, "end": min(len(text), at + 4000), "reference": "Item 7"}]}]
@@ -1975,7 +1975,7 @@ if(!done || pending || !completed.includes("primary-span coverage: <b>58.32%</b>
                         "usage": {"input_tokens": 0, "output_tokens": 0}, "usd": 0.0, "model": model}
             real, _llm.call = _llm.call, stub
             try:
-                rec, _ = route(text, items, [{"code": "internal_pointer_unreached", "item": "7", "message": "D31"}],
+                rec, _ = route(text, items, [{"code": "internal_pointer_unreached", "item": "7", "message": "D32"}],
                                images=[], source_url="https://www.sec.gov/Archives/edgar/data/1/a.htm", vision_cached="confirm")
             finally:
                 _llm.call = real
@@ -1992,7 +1992,7 @@ if(!done || pending || !completed.includes("primary-span coverage: <b>58.32%</b>
                 return {"cached": cached, "text": text_out, "usage": usage, "usd": dollars, "model": model}
             real, _llm.call = _llm.call, live_stub
             try:
-                rec, _ = route(text, items, [{"code": "internal_pointer_unreached", "item": "7", "message": "D31"}],
+                rec, _ = route(text, items, [{"code": "internal_pointer_unreached", "item": "7", "message": "D32"}],
                                images=[{"src": "https://www.sec.gov/Archives/edgar/data/1/a.jpg", "offset": at}],
                                source_url="https://www.sec.gov/Archives/edgar/data/1/a.htm")
             finally:
@@ -2010,7 +2010,7 @@ if(!done || pending || !completed.includes("primary-span coverage: <b>58.32%</b>
                 return {"cached": cached, "text": text_out, "usage": usage, "usd": dollars, "model": model}
             real, _llm.call = _llm.call, reject_stub
             try:
-                rec, _ = route(text, items, [{"code": "internal_pointer_unreached", "item": "7", "message": "D31"}],
+                rec, _ = route(text, items, [{"code": "internal_pointer_unreached", "item": "7", "message": "D32"}],
                                images=[{"src": "https://www.sec.gov/Archives/edgar/data/1/a.jpg", "offset": at}],
                                source_url="https://www.sec.gov/Archives/edgar/data/1/a.htm")
             finally:
@@ -2084,7 +2084,7 @@ if(!done || pending || !completed.includes("primary-span coverage: <b>58.32%</b>
                 return {"cached": True, "text": _json.dumps(actions.pop(0)), "usage": {"input_tokens": 0, "output_tokens": 0}, "usd": 0.0, "model": model}
             real, _llm.call = _llm.call, stub
             try:
-                rec, _ = route(text, items, [{"code": "internal_pointer_unreached", "item": "7", "message": "D31"}],
+                rec, _ = route(text, items, [{"code": "internal_pointer_unreached", "item": "7", "message": "D32"}],
                                images=[{"src": "https://www.sec.gov/Archives/edgar/data/1/a.jpg", "offset": at}],
                                source_url="https://www.sec.gov/Archives/edgar/data/1/a.htm", vision_cached="reject")
             finally:
@@ -2096,7 +2096,7 @@ if(!done || pending || !completed.includes("primary-span coverage: <b>58.32%</b>
                     or not any("vision rejected" in x for t in rec["tiers"] for x in t.get("rejections", []))):
                 return "vision rejection still permits a complete alternative resolution"
         else:
-            return f"unknown d31 scenario {scenario!r}"
+            return f"unknown d32 scenario {scenario!r}"
     else:
         return f"unknown check type {t!r}"
     return None

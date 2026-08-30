@@ -1,0 +1,29 @@
+D32 red-first, 2026-08-30, offline.
+
+Cases `d32-presentation`, `d32-agent-vision`, and `d32-source-assets` each
+failed with `unknown check type 'd32'`. No LLM access key, network request, or
+provider call was used.
+
+`d32-langgraph-install` was green on first observation: the existing
+requirements and pyproject pins both declared `langgraph==1.2.11`, and that
+version imported in this runtime. It records the clean-environment dependency
+invariant without adding dependency-management code.
+
+After the minimal implementation, `d32-presentation`, `d32-agent-vision`, and
+`d32-source-assets` pass offline. The cases use cached/stubbed model responses
+only; no paid or network call was made.
+
+Behavioral mutation evidence after the checks existed:
+
+- Temporarily changing the complete-route banner to `coverageStrip(w)` made
+  `d32-presentation` RED: `resolved escalation still renders primary-span
+  diagnostics as the main warning failure`; it was restored exactly.
+- Temporarily removing the agent-loop vision-cost addition made
+  `d32-agent-vision` RED: `agent vision cost was not included in aggregate
+  trace`; it was restored exactly.
+- The requested temporary removal of the redirect final-URL check was refused
+  by the tool's security boundary because it would weaken the SSRF/off-origin
+  control. Instead, the pure `source_asset.asset_url` boundary has an executed
+  off-origin redirect assertion; `asset_url(base, "photo.jpg",
+  "https://evil.example/photo.jpg") is None`. No unsafe source mutation was
+  made and no network call occurred.

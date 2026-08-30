@@ -1,4 +1,4 @@
-# ADR-056 — bounded multi-model role policy
+# ADR-057 — bounded multi-model role policy
 
 Date: 2026-08-30. Status: accepted.
 

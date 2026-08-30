@@ -350,11 +350,27 @@ resolved all 11 residual targets, and recorded 2 calls / 4,833 tokens /
 $0.002348 / 52.8 s. Both sanitized cache entries are committed; the final
 localhost replay used 0 live calls and $0. Flash remains bounded to
 cross-reference-residual routes. Evidence:
-`tasks/reviews/d31-localhost-live-proof.json`. Final gate after D31:
-invariant 122/122 and fast 193/193, both 100%; table and structure fidelity
+`tasks/reviews/d32-localhost-live-proof.json`. Final integration gate after D32:
+invariant 125/125 and fast 196/196, both 100%; table and structure fidelity
 1.0, no baseline move, and fast made no paid calls.
 
-### D31 — Present resolved escalation and repair authenticated source assets [status: pr]
+### D31 — Compact the original-filing toolbar [status: done]
+Origin: owner MacBook Air interface review, 2026-08-30
+Spec: Keep the original-filing title, navigation status, and table action
+legible at the narrowest side-by-side width. Remove repeated hints, shorten
+operational messages, and place optional table-verification output on its own
+row instead of squeezing five peers into several word columns.
+Acceptance: the toolbar has three intentional first-row tracks; its title and
+action do not wrap; empty vision output takes no space; invariant and fast
+gates stay at 100% with no baseline move.
+Validation: browser-verified at the narrowest side-by-side viewport (1001x800);
+`python3 -m evals.run --suite invariant` 117/117; fast 188/188; table and
+structure fidelity 1.0000; $0; no baseline move.
+Status: merged by PR #91 after the three-round Terra review breaker. R1/R2 and
+both supplied R3 cascade regressions are verified; the documented full-
+specificity parser ceiling remains in `tasks/reviews/d31-terra-audit.json`.
+
+### D32 — Present resolved escalation and repair authenticated source assets [status: pr]
 Priority: P1
 Origin: owner localhost presentation review, 2026-08-30
 Spec: When every risky target has a verified terminal disposition, keep raw
@@ -372,10 +388,10 @@ LangGraph install/import gate rather than duplicate it.
 Acceptance: red-first adversarial cases for presentation/vision context/source
 asset plus the D28 dependency gate; targeted invariant + fast gate; localhost proof
 with an authenticated source and resolved escalation; cold review; no paid
-model call. Localhost proof: `tasks/reviews/d31-localhost-live-proof.json`.
-Validation: localhost **PASS**; final invariant **122/122** and fast **193/193**
-after the source-cap edit, both 100%, $0, with no baseline move. Table and
-structure fidelity remain 1.0.
+model call. Localhost proof: `tasks/reviews/d32-localhost-live-proof.json`.
+Validation: localhost **PASS**; after integrating main, final invariant
+**125/125** and fast **196/196**, both 100%, $0, with no baseline move. Table
+and structure fidelity remain 1.0.
 
 ## Debt
 
