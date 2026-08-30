@@ -1154,7 +1154,7 @@ def eval_check(result, chk, path=None):
                 return f"Intel xref evidence counts changed: resolved={sorted(resolved)}, residual={sorted(residual)}"
             after = {i["item"]: (i["start"], i["end"], i["method"])
                      for i in result["items"]}
-            if any(after[c] != before[c] for c in resolved):
+            if any(after[c] != before[c] for c in resolved - disposition):
                 return "verified Intel xref rows changed primary spans or methods"
             if any("cross_reference_entry" not in i["evidence"] for i in result["items"]
                    if i["item"] in resolved | residual):

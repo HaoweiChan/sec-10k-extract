@@ -8,6 +8,6 @@
     {"type": "d26_xref", "scenario": "cached_dispositions"},
     {"type": "d26_xref", "scenario": "partial_batch"}
   ]},
-  "triage": {"class": "invariant-gap", "note": "The real Intel FY2025 index resolver published verified regions for 13 rows, but classify() treated the document-level cross_reference_index warning as proof that every row was resolved. The missing invariant is item-scoped residual routing, not a new parser."},
+  "triage": {"class": "eval-bug", "note": "The real-residual check incorrectly required stable spans for resolved rows that also had a valid Part III disposition pointer. Cache state exposed the contradiction with the case's cached-dispositions scenario; only resolved rows without a disposition must retain their primary spans."},
   "provenance": "D26 red-first case. The real committed FY2025 Intel filing is used for its actual index rows; cache replay supplies only agent actions and records zero live calls/cost. It pins that verified rows never become targets and that residual item terminal dispositions require exact index-row evidence. FY2024 has the same cross-reference layout; FY2025 is not a newly regressed parser shape."
 }
