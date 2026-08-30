@@ -1,0 +1,20 @@
+<!-- D31 regression: the first rule is correct but a later same-specificity
+     rule restores flex. A first-match CSS reader false-greens this shape. -->
+<style>
+.source-toolbar{display:grid;grid-template-columns:max-content minmax(0,1fr) max-content;
+  text-transform:none;letter-spacing:0}
+.source-toolbar #anchor-status{white-space:nowrap;text-overflow:ellipsis}
+.source-toolbar #vision-status{grid-column:1/-1}
+.source-toolbar #vision-status:empty{display:none}
+.source-toolbar{display:flex}
+</style>
+<div id="source">
+  <div class="src-hdr source-toolbar"><span class="lbl">original filing</span>
+    <span id="anchor-status" role="status" aria-live="polite"></span>
+    <button id="vision-table" aria-label="Verify visible table">Verify table</button>
+    <span id="vision-status" role="status" aria-live="polite"></span>
+  </div>
+</div>
+<script>
+function spanless(item){ return `No span · Item ${item.item}`; }
+</script>

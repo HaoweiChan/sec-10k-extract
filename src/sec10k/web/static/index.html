@@ -285,6 +285,12 @@ details pre{margin:0;padding:0 13px 13px;font:12px/1.5 var(--mono);
 .src-hdr{padding:9px 13px;border-bottom:1px solid var(--line);font-size:12px;font-weight:600;
   color:var(--dim);text-transform:uppercase;letter-spacing:.1em;display:flex;
   justify-content:space-between;align-items:center;gap:10px}
+.source-toolbar{display:grid;grid-template-columns:max-content minmax(0,1fr) max-content;
+  text-transform:none;letter-spacing:0}
+.source-toolbar #anchor-status{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.source-toolbar #vision-table{padding:6px 9px;font-size:11px;text-transform:none;letter-spacing:0}
+.source-toolbar #vision-status{grid-column:1/-1;text-transform:none;letter-spacing:0}
+.source-toolbar #vision-status:empty{display:none}
 .src-hdr label{font-size:12px;text-transform:none;letter-spacing:0;font-weight:400;
   display:flex;gap:5px;align-items:center;cursor:pointer}
 .src-hdr .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
@@ -387,11 +393,10 @@ footer a{color:var(--accent)}
     <div class="none" style="padding:12px">Select an item to read its extracted text.</div>
   </div>
   <div id="source">
-    <div class="src-hdr"><span>original filing</span>
-      <span id="anchor-status"></span>
-      <span class="hint">verified heading anchor</span>
-      <button type="button" id="vision-table" hidden>Verify visible table</button>
-      <span id="vision-status" class="hint"></span>
+    <div class="src-hdr source-toolbar"><span class="lbl">original filing</span>
+      <span id="anchor-status" role="status" aria-live="polite"></span>
+      <button type="button" id="vision-table" aria-label="Verify visible table" hidden>Verify table</button>
+      <span id="vision-status" class="hint" role="status" aria-live="polite"></span>
     </div>
     <div id="source-body"><div class="none" style="padding:12px">Extract a filing to see its original source.</div></div>
   </div>
@@ -731,7 +736,7 @@ function anchorStatus(msg){
 function scrollSourceToItem(i){
   const item = VIEW && VIEW.items && VIEW.items[i];
   if(item && item.start == null){
-    anchorStatus(`no source span — Item ${item.item} is ${item.status}`);
+    anchorStatus(`No span · Item ${item.item}`);
     return;
   }
   const frame = document.getElementById("src-frame");
@@ -740,10 +745,10 @@ function scrollSourceToItem(i){
   if(!doc) return;
   const region = itemRegion(doc, i);
   if(!region){
-    anchorStatus("unanchored — heading not found in source");
+    anchorStatus("Heading not found");
     return;
   }
-  anchorStatus(`showing Item ${item ? item.item : i}`);
+  anchorStatus(`Item ${item ? item.item : i}`);
   const scroller = doc.scrollingElement || doc.documentElement;
   SYNC_GUARD = true;
   scroller.scrollTop = Math.max(0, region.start - 20);
@@ -816,7 +821,7 @@ function bindSourceScroll(frame){
     buildItemAnchors(doc);
     if(SEL === -1){
       (doc.scrollingElement || doc.documentElement).scrollTop = 0;
-      anchorStatus("showing cover");
+      anchorStatus("Cover");
     }else if(SEL != null) scrollSourceToItem(SEL);
   });
 }
@@ -988,24 +993,23 @@ function showVisionVerdict(result){
 
 async function verifyVisibleTable(auto=false){
   const key = verifiedKey(), status = $("#vision-status");
-  if(!key){ status.textContent = "verify the escalation key first"; return; }
+  if(!key){ status.textContent = "Verify key first"; return; }
   const table = auto ? selectedSourceTable() : visibleSourceTable();
-  if(!table || !VIEW?.source?.token){ status.textContent = "no visible cached source table"; return; }
+  if(!table || !VIEW?.source?.token){ status.textContent = "No visible table"; return; }
   const tableText = (table.innerText || "").trim();
-  if(tableText.length < 16){ status.textContent = "visible table has too little text"; return; }
+  if(tableText.length < 16){ status.textContent = "Table text too short"; return; }
   try{
-    status.textContent = "rasterizing visible table…";
+    status.textContent = "Checking table…";
     const result = await (await fetch("/api/extract/vision-table", {method:"POST",
       headers:{"Content-Type":"application/json", "X-Escalation-Token":key},
       body:JSON.stringify({token:VIEW.source.token, image:tableRaster(table), table_text:tableText,
         table_sha256:await sha256(tableText)})})).json();
     const verdict = result.verdict == null ? "inconclusive" : result.verdict;
-    status.textContent = `vision: ${result.status} · ${result.model || "no model"} · ${result.images || 0} raster · ${verdict}`;
-    if(result.verdict !== "confirm") status.textContent += " — fidelity partial; deterministic Markdown retained";
+    status.textContent = `${result.status} · ${verdict}`;
     showVisionVerdict(result);
     $("#agentic-flow").textContent += "\n\n" + JSON.stringify({vision_table:result}, null, 1);
   }catch(e){
-    status.textContent = "vision table verification failed";
+    status.textContent = "Verification failed";
     showVisionVerdict({status:"failed", verdict:null});
   }
 }
@@ -1231,7 +1235,7 @@ function showCover(){
   const frame = document.getElementById("src-frame");
   let doc; try{ doc = frame && frame.contentDocument; }catch(e){ return; }
   if(doc) (doc.scrollingElement || doc.documentElement).scrollTop = 0;
-  anchorStatus("showing cover");
+  anchorStatus("Cover");
 }
 
 function show(i){

@@ -310,6 +310,23 @@ browser storage, green enabled state, and shared request-header behavior.
 Acceptance: `#esc-key-row` precedes `.modes`; the existing key behavior probe
 still passes; invariant and fast gates stay at 100% with no baseline move.
 
+### D31 — Compact the original-filing toolbar [status: in-progress]
+Origin: owner MacBook Air interface review, 2026-08-30
+Spec: Keep the original-filing title, navigation status, and table action
+legible at the narrowest side-by-side width. Remove repeated hints, shorten
+operational messages, and place optional table-verification output on its own
+row instead of squeezing five peers into several word columns.
+Acceptance: the toolbar has three intentional first-row tracks; its title and
+action do not wrap; empty vision output takes no space; invariant and fast
+gates stay at 100% with no baseline move.
+Validation: browser-verified at the narrowest side-by-side viewport (1001x800);
+`python3 -m evals.run --suite invariant` 117/117; fast 188/188; table and
+structure fidelity 1.0000; $0; no baseline move.
+Status: owner directed PR and merge if CI is green after the three-round Terra
+review breaker. R1/R2 and both supplied R3 cascade regressions are verified;
+review approval remains withheld on the documented full-specificity parser
+ceiling (`tasks/reviews/d31-terra-audit.json`).
+
 ## Debt
 
 Each block is a decision not to build something, not a forgotten task. Every

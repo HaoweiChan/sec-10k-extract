@@ -1,0 +1,15 @@
+{
+  "id": "ui-source-toolbar-important-regression",
+  "task": "repo_hygiene",
+  "suites": ["invariant", "fast"],
+  "input": {
+    "checks": ["source_toolbar_compact"],
+    "ui_file": "evals/fixtures/repo_hygiene/source-toolbar-important.html"
+  },
+  "expect": {"min_failures": 1, "max_failures": 1},
+  "triage": {
+    "class": "false-green-eval",
+    "note": "D31 Terra repair verification: an earlier display:flex !important wins in the browser even when a later normal display:grid fools a source-order-only declaration reader."
+  },
+  "provenance": "D31 cold-review round 2, authored before importance-aware parsing and watched red at zero detected failures."
+}
