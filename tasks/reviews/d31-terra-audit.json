@@ -1,0 +1,41 @@
+{
+  "task": "D31",
+  "reviewer_model": "gpt-5.6-terra",
+  "rounds": [
+    {
+      "round": 1,
+      "result": "CHANGES_REQUESTED",
+      "findings": [
+        "span-less status placed the actionable reason after a truncatable enum",
+        "dynamic source and vision statuses were not announced to assistive technology",
+        "the compact-toolbar check read only the first matching CSS declaration"
+      ],
+      "resolution": "reason-first compact status, polite live regions plus scoped accessible button name, and a later same-specificity override regression"
+    },
+    {
+      "round": 2,
+      "result": "CHANGES_REQUESTED",
+      "verified": ["round-1 status and accessibility repairs", "later same-specificity override regression"],
+      "finding": "source-order parsing ignored an earlier !important declaration",
+      "resolution": "importance-aware declaration resolution plus a dedicated important regression"
+    },
+    {
+      "round": 3,
+      "result": "NOT_APPROVED_CIRCUIT_BREAKER",
+      "verified": [
+        "live compact toolbar case",
+        "exact No span prefix and navigation probe",
+        "polite live regions and Verify visible table accessible name",
+        "later same-specificity override detected exactly once",
+        "earlier important override detected exactly once"
+      ],
+      "remaining_ceiling": "the bounded declaration reader does not implement the full CSS specificity cascade when competing declarations are both !important; actual 1001px browser geometry is independently verified"
+    }
+  ],
+  "delivery_decision": {
+    "by": "owner",
+    "date": "2026-08-30",
+    "instruction": "PR and merge if ci green"
+  },
+  "approval": false
+}

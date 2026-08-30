@@ -1,0 +1,28 @@
+D31 red-first evidence — 2026-08-30
+
+1. Initial contract against origin/main d50cb50:
+   FAIL: index.html: #source has no dedicated .source-toolbar contract
+
+2. Browser check at 1001x800 after the first three-track repair:
+   toolbar width 336px; original filing 126x19; anchor status 28x34;
+   Verify table 136x34. `showing cover` wrapped into two lines because the
+   header still inherited uppercase and wide letter spacing.
+
+3. Strengthened contract before the typography repair:
+   FAIL: inherited uppercase makes the narrow toolbar wider
+   FAIL: inherited wide tracking makes the narrow toolbar wider
+   FAIL: #anchor-status wants one ellipsized line, not stacked words
+
+4. Browser screenshot after that repair still showed `showing cov…` at the
+   narrowest side-by-side width. The contract was strengthened again and
+   watched red on both `showing cover` and `showing Item` before the copy was
+   shortened to `Cover` and `Item <number>`.
+
+Final targeted checks:
+   ui-source-toolbar-compact PASS
+   ui-cover-navigation PASS
+
+Final browser check at 1001x800:
+   first row: original filing | Cover | Verify table
+   optional second row after the empty-table action: No visible table
+   title and action remain on one line; no vertical word columns.

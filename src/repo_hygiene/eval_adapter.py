@@ -4003,6 +4003,75 @@ def check_ui_cover_navigation(case):
     return bad
 
 
+def check_source_toolbar_compact(case):
+    """Keep the source toolbar readable at the narrowest side-by-side width."""
+    html = (ROOT / case.get("input", {}).get("ui_file", UI_STYLESHEET)).read_text()
+    bad = []
+
+    def effective_rule(selector):
+        declarations = {}
+        for rule in re.findall(re.escape(selector) + r"\s*\{([^{}]*)\}", html, re.S):
+            for name, value in re.findall(r"([\w-]+)\s*:\s*([^;}]*)", rule):
+                value = value.strip()
+                important = bool(re.search(r"\s*!important\s*$", value))
+                value = re.sub(r"\s*!important\s*$", "", value).strip()
+                previous = declarations.get(name)
+                if previous is None or important or not previous[1]:
+                    declarations[name] = (value, important)
+        return {name: value for name, (value, _) in declarations.items()}
+
+    toolbar = re.search(
+        r'<div id="source">\s*<div class="src-hdr source-toolbar">(.*?)</div>',
+        html, re.S)
+    if not toolbar:
+        return ["index.html: #source has no dedicated .source-toolbar contract"]
+
+    body = toolbar.group(1)
+    if "verified heading anchor" in body:
+        bad.append("source toolbar keeps redundant copy: 'verified heading anchor'")
+    if ">Verify visible table</button>" in body:
+        bad.append("source toolbar keeps the long visible button label")
+    for stale in ("unanchored — heading not found in source",
+                  "no visible cached source table", "showing cover",
+                  "showing Item"):
+        if stale in html:
+            bad.append(f"source toolbar keeps overlong status: {stale!r}")
+    if ">Verify table</button>" not in body:
+        bad.append("#vision-table: want the compact label 'Verify table'")
+    if not re.search(r'id="vision-table"[^>]*aria-label="Verify visible table"', body):
+        bad.append("#vision-table: compact text lost the visible-table accessible name")
+    for status_id in ("anchor-status", "vision-status"):
+        tag = re.search(r'<span[^>]*id="' + status_id + r'"[^>]*>', body)
+        attrs = tag.group(0) if tag else ""
+        if 'role="status"' not in attrs or 'aria-live="polite"' not in attrs:
+            bad.append(f"#{status_id}: dynamic result is not an announced polite status")
+    if "`Item ${item.item} · ${item.status} · no span`" in html:
+        bad.append("span-less status puts the actionable reason after a truncatable enum")
+    if "`No span · Item ${item.item}`" not in html:
+        bad.append("span-less status does not keep 'No span' in the visible prefix")
+
+    css = effective_rule(".source-toolbar")
+    if css.get("display") != "grid":
+        bad.append(".source-toolbar: want a grid so labels cannot squeeze each other")
+    columns = re.sub(r"\s+", " ", css.get("grid-template-columns", ""))
+    if not re.fullmatch(r"max-content minmax\(\s*0\s*,\s*1fr\s*\) max-content", columns):
+        bad.append(".source-toolbar: want fixed label/action tracks around one shrinkable status")
+    if css.get("text-transform") != "none":
+        bad.append(".source-toolbar: inherited uppercase makes the narrow toolbar wider")
+    if css.get("letter-spacing") != "0":
+        bad.append(".source-toolbar: inherited wide tracking makes the narrow toolbar wider")
+    anchor = effective_rule(".source-toolbar #anchor-status")
+    if anchor.get("white-space") != "nowrap" or anchor.get("text-overflow") != "ellipsis":
+        bad.append("#anchor-status: want one ellipsized line, not stacked words")
+    vision = effective_rule(".source-toolbar #vision-status")
+    if re.sub(r"\s+", "", vision.get("grid-column", "")) != "1/-1":
+        bad.append("#vision-status: want a full-width result row, not a fourth squeezed column")
+    empty = effective_rule(".source-toolbar #vision-status:empty")
+    if empty.get("display") != "none":
+        bad.append("#vision-status: empty result row still consumes toolbar height")
+    return bad
+
+
 def check_edgar_viewer_url(case):
     """Accept SEC's documented URL variants without widening the fetch boundary."""
     try:
@@ -4501,6 +4570,7 @@ CHECKS = {
     "escalation_choke_point": check_escalation_choke_point,
     "escalation_key_ui_behavior": check_escalation_key_ui_behavior,
     "ui_cover_navigation": check_ui_cover_navigation,
+    "source_toolbar_compact": check_source_toolbar_compact,
     "edgar_viewer_url": check_edgar_viewer_url,
     "free_tier_limit": check_free_tier_limit,
     "token_proxy_bound": check_token_proxy_bound,

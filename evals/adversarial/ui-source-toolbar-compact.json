@@ -1,0 +1,12 @@
+{
+  "id": "ui-source-toolbar-compact",
+  "task": "repo_hygiene",
+  "suites": ["invariant", "fast"],
+  "input": {"checks": ["source_toolbar_compact"]},
+  "expect": {},
+  "triage": {
+    "class": "responsive-layout",
+    "note": "Owner MacBook Air review, 2026-08-30: five independently shrinking children plus verbose labels make the original-filing header wrap into several narrow text columns. The toolbar needs three intentional tracks, with optional vision output on its own row and short copy."
+  },
+  "provenance": "D31, authored against the shipped UI before implementation and watched red."
+}

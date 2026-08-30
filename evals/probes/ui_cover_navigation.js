@@ -49,21 +49,27 @@ function main() {
   assert(context.SEL === -1, "cover did not become the default selection");
   assert(pane.innerHTML.includes("FORM 10-K"), "cover did not render front matter");
   assert(scroller.scrollTop === 0, "cover did not return the source to its opening");
-  assert(status.textContent === "showing cover", "cover location was not reported");
+  assert(status.textContent === "Cover", "cover location was not reported");
   assert(attrs.get("aria-current") === "true", "cover row was not marked current");
 
   scroller.scrollTop = 0;
   vm.runInContext("scrollSourceToItem(0)", context);
   assert(scroller.scrollTop === 180, "anchored item did not move the source scroller");
-  assert(status.textContent === "showing Item 1", "successful item jump was silent");
+  assert(status.textContent === "Item 1", "successful item jump was silent");
 
   context.VIEW.items[0] = {item: "1C", status: "omitted", start: null, heading_text: null};
   context.region = null;
   scroller.scrollTop = 33;
   vm.runInContext("scrollSourceToItem(0)", context);
   assert(scroller.scrollTop === 33, "span-less item guessed a source position");
-  assert(status.textContent.includes("no source span") && status.textContent.includes("omitted"),
+  assert(status.textContent === "No span · Item 1C",
          "span-less item did not explain why it cannot jump");
+
+  context.VIEW.items[0] = {item: "1", status: "extracted", start: 20, heading_text: "Item 1"};
+  context.region = null;
+  vm.runInContext("scrollSourceToItem(0)", context);
+  assert(status.textContent === "Heading not found",
+         "a missing heading did not use the compact source status");
 }
 
 try { main(); } catch (error) { console.error(error.message); process.exitCode = 1; }
