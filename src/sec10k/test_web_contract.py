@@ -4,8 +4,8 @@ import json
 from src.sec10k.web import app
 
 
-async def _post(path, payload):
-    body = json.dumps(payload).encode()
+async def _request(method, path, payload=None, headers=()):
+    body = json.dumps(payload).encode() if payload is not None else b""
     sent = False
     messages = []
 
@@ -20,13 +20,21 @@ async def _post(path, payload):
         messages.append(message)
 
     await app.app({"type": "http", "asgi": {"version": "3.0"},
-                   "http_version": "1.1", "method": "POST", "scheme": "http",
+                   "http_version": "1.1", "method": method, "scheme": "http",
                    "path": path, "raw_path": path.encode(), "query_string": b"",
-                   "headers": [(b"content-type", b"application/json")],
+                   "headers": [(b"content-type", b"application/json"), *headers],
                    "client": ("testclient", 0), "server": ("testserver", 80)},
                   receive, send)
     return next(m["status"] for m in messages if m["type"] == "http.response.start"), json.loads(
         b"".join(m.get("body", b"") for m in messages if m["type"] == "http.response.body"))
+
+
+async def _post(path, payload, headers=()):
+    return await _request("POST", path, payload, headers)
+
+
+async def _get(path):
+    return await _request("GET", path)
 
 
 def main():
@@ -45,6 +53,28 @@ def main():
     assert all(targets[item]["review_required"] for item in {"2", "16"})
     assert body["routing"]["tiers"][0]["actions"] == []
     assert body["routing"]["tiers"][0]["observations"] == []
+
+    routing["stages"] = [{"stage": stage, "status": status} for stage, status in (
+        ("classify", "done"), ("plan", "done"), ("route", "done"),
+        ("verify", "failed"), ("decide", "done"))]
+    try:
+        app.extract_items = lambda *a, progress=None, **k: (
+            [progress(stage) for stage in ("prepare", "classify", "plan", "route", "verify", "decide")]
+            and result)
+        status, started = asyncio.run(_post("/api/extract/fixture", {"fixture": "xom-2021"},
+                                             headers=[(b"x-progress", b"1")]))
+        assert status == 202 and set(started) == {"progress_id"}
+        for _ in range(100):
+            status, progress = asyncio.run(_get(f"/api/progress/{started['progress_id']}"))
+            if progress["status"] == "complete":
+                break
+        assert status == 200 and set(progress) == {"status", "stages", "result_url"}
+        assert {s["stage"]: s["status"] for s in progress["stages"]}["verify"] == "failed"
+        status, completed = asyncio.run(_get(progress["result_url"]))
+        assert status == 200 and {i["item"] for i in completed["items"]} == {"2", "16"}
+        assert completed["routing"]["stages"][3]["status"] == "failed"
+    finally:
+        app.extract_items = real
 
 
 if __name__ == "__main__": main()

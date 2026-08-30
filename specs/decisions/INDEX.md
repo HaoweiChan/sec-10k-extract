@@ -102,3 +102,6 @@ index only cross-references it for scanning.
 - ADR-057 — [bounded multi-model role policy](ADR-057-multi-model-policy.md):
   one Flash evidence pass and up to three Pro plans are production-wired with
   deterministic offset binding and cached-route coverage.
+- ADR-058 — [live inspector progress](ADR-058-live-inspector-progress.md):
+  the inspector polls a fixed backend-authored six-stage projection and keeps
+  filing text, prompts, credentials, and model reasoning in the separate result.

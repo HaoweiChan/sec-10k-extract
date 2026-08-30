@@ -1,0 +1,47 @@
+{
+  "date": "2026-08-30",
+  "fixture": "intc-2025",
+  "browser": "Codex in-app browser",
+  "request": {
+    "path": "/api/extract/fixture",
+    "progress_opt_in": true,
+    "llm_access_key_verified": false,
+    "provider_calls_authorized": false
+  },
+  "live": {
+    "visible": true,
+    "nodes": [
+      "prepare filing:active",
+      "classify:pending",
+      "plan:pending",
+      "route:pending",
+      "verify:pending",
+      "decide:pending"
+    ],
+    "active_animation": "progress-pulse 1s",
+    "live_region": "Extracting — prepare filing"
+  },
+  "final_without_verified_key": {
+    "banner": "Extraction complete with warnings — 23 extracted · Deterministic · 0 planning iterations · 0 live / 0 cached · $0.0000",
+    "nodes": [
+      "prepare filing:done",
+      "classify:skipped",
+      "plan:skipped",
+      "route:skipped",
+      "verify:skipped",
+      "decide:done"
+    ]
+  },
+  "response_outcome_probe": "src/sec10k/test_web_contract.py passed: progress polling returned exactly status/stages/result_url, and the separate completed response retained a synthetic response-authored verify:failed stage.",
+  "zero_budget_intel_route_probe": {
+    "source": "committed intc-2025 fixture and committed response cache",
+    "backend_events": ["classify", "plan", "route", "verify", "decide"],
+    "final_stages": ["classify:done", "plan:done", "route:done", "verify:done", "decide:done"],
+    "target_items": 11,
+    "live_provider_calls": 0,
+    "usd": 0.0,
+    "budget": "max_calls=0, max_usd=0; any cache miss fails before transport"
+  },
+  "paid_route": "UNRUN — no credential was entered or exposed; an authenticated localhost request was not authorized because it could trigger a paid external call.",
+  "scope": "This proves the final implementation's visible Intel fixture wait/final states, its real cached Intel routing callback sequence, and the separate result/polling contract at zero cost. It is not an authenticated or live-model proof."
+}

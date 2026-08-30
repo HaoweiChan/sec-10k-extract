@@ -1,0 +1,12 @@
+{
+  "id": "d35-live-progress-flowchart",
+  "task": "sec10k",
+  "suites": ["fast", "invariant"],
+  "input": {"path": "evals/fixtures/intc-2025/filing.htm"},
+  "expect": {"checks": [{"type": "d35"}]},
+  "triage": {
+    "class": "invariant-gap",
+    "note": "The inspector's single blocking fetch exposed only text-only Extracting… state, so no executable contract bound the active node to backend events, retained response-authored skipped/failed outcomes, or constrained progress polling to stage metadata."
+  },
+  "provenance": "D35 red-first UI/backend progress contract, added before implementation after the owner Intel FY2025 retry exposed the static wait state."
+}

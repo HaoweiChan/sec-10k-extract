@@ -2100,6 +2100,67 @@ if(!done || pending || !completed.includes("primary-span coverage: <b>58.32%</b>
                 return "vision rejection still permits a complete alternative resolution"
         else:
             return f"unknown d32 scenario {scenario!r}"
+    elif t == "d35":
+        page = (ROOT / "src/sec10k/web/static/index.html").read_text()
+        server = (ROOT / "src/sec10k/web/app.py").read_text()
+        scenario = chk.get("scenario")
+        if scenario == "live_skips":
+            extract = (ROOT / "src/sec10k/extract.py").read_text()
+            route = (ROOT / "src/sec10k/escalate.py").read_text()
+            if ('def _progress_advance(job_id, stage, status="active"):' not in server
+                    or 'progress("classify", "skipped")' not in extract
+                    or 'progress("plan", "skipped")' not in route
+                    or 'progress("route", "skipped")' not in route
+                    or 'progress("verify", "skipped")' not in route):
+                return "live progress leaves backend-bypassed stages pending or done"
+            from src.sec10k.extract import extract_items
+            events = []
+            def observe(stage, status="active"):
+                events.append((stage, status))
+            quiet = extract_items(path, escalate=True, progress=observe)
+            expected = {("plan", "skipped"), ("route", "skipped"),
+                        ("verify", "skipped")}
+            if quiet["routing"]["trigger"]["fired"] or not expected.issubset(events):
+                return "quiet backend route does not publish its skipped stages live"
+            return None
+        required = (
+            'id="progress-flow"', 'aria-label="Extraction progress"',
+            'function flowStages(', 'function renderProgress(',
+            '"X-Progress": "1"', '/api/progress/',
+            '@keyframes progress-pulse',
+        )
+        if any(pin not in page for pin in required):
+            return "live progress flowchart UI is absent or incomplete"
+        if '{stages:[{stage:"prepare",status:"active"}]}' in page:
+            return "active progress node is guessed by the browser before backend polling"
+        if ('PROGRESS_STAGES = ("prepare", "classify", "plan", "route", "verify", "decide")' not in server
+                or '@app.get("/api/progress/{job_id}")' not in server
+                or '@app.get("/api/progress/{job_id}/result")' not in server):
+            return "backend progress polling contract is absent"
+        if 'if len(PROGRESS_JOBS) >= PROGRESS_MAX:' not in server:
+            return "process-local progress retention is not actually bounded"
+        if 'progress=progress' not in (ROOT / "src/sec10k/extract.py").read_text() or 'progress=None' not in (ROOT / "src/sec10k/escalate.py").read_text():
+            return "extractor routing does not publish live backend stage transitions"
+        start, end = page.find("const FLOW_LABELS"), page.find("function busy(")
+        if start < 0 or end < 0:
+            return "progress stage renderer is not independently testable"
+        script = page[start:end] + r'''
+const response = {routing:{stages:[
+ {stage:"classify",status:"done"},{stage:"plan",status:"skipped"},
+ {stage:"route",status:"skipped"},{stage:"verify",status:"failed"},
+ {stage:"decide",status:"done"}]}};
+const stages = flowStages(response);
+if(stages.map(x=>x.stage).join(",") !== "prepare,classify,plan,route,verify,decide"
+ || stages.find(x=>x.stage==="plan").status !== "skipped"
+ || stages.find(x=>x.stage==="verify").status !== "failed") process.exit(1);
+'''
+        rendered = subprocess.run(["node", "-e", script], capture_output=True, text=True)
+        if rendered.returncode:
+            return "completed progress graph does not retain response stage outcomes"
+        if ('return {"status": job["status"], "stages":' not in server
+                or any(secret in server[server.find('def progress_status('):server.find('def progress_result(')]
+                       for secret in ('normalized_text', 'prompt', 'credential', 'reasoning'))):
+            return "progress polling is not a fixed sanitized projection"
     elif t == "d33":
         scenario = chk.get("scenario")
         if scenario == "intel_xref_warning_resolution":

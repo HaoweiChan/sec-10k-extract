@@ -1,0 +1,193 @@
+{
+  "suite": "invariant",
+  "score": 0.0,
+  "git_sha": "c221812474cde609e0d71a1f89b1891222801808-dirty",
+  "table_cells_fidelity": null,
+  "table_rows_fidelity": null,
+  "structure_blocks_fidelity": null,
+  "structure_bounds_fidelity": null,
+  "results": [
+    {
+      "passed": false,
+      "failures": [
+        {
+          "check": {
+            "type": "d35",
+            "scenario": "live_skips"
+          },
+          "why": "live progress leaves backend-bypassed stages pending or done"
+        }
+      ],
+      "n_items": 23,
+      "n_extracted": 18,
+      "doc_status": "success",
+      "items_summary": [
+        {
+          "item": "1",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 16053
+        },
+        {
+          "item": "1A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 68162
+        },
+        {
+          "item": "1B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 43
+        },
+        {
+          "item": "1C",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2704
+        },
+        {
+          "item": "2",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 520
+        },
+        {
+          "item": "3",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 5408
+        },
+        {
+          "item": "4",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 93
+        },
+        {
+          "item": "5",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 2685
+        },
+        {
+          "item": "6",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 54
+        },
+        {
+          "item": "7",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 18144
+        },
+        {
+          "item": "7A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 3037
+        },
+        {
+          "item": "8",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 61402
+        },
+        {
+          "item": "9",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 101
+        },
+        {
+          "item": "9A",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 4511
+        },
+        {
+          "item": "9B",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 574
+        },
+        {
+          "item": "9C",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 105
+        },
+        {
+          "item": "10",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "11",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "12",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "13",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "14",
+          "status": "incorporated_by_reference",
+          "confidence": 0.85,
+          "method": "heading_strict",
+          "chars": null
+        },
+        {
+          "item": "15",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 11898
+        },
+        {
+          "item": "16",
+          "status": "extracted",
+          "confidence": 0.95,
+          "method": "heading_strict",
+          "chars": 69
+        }
+      ],
+      "seconds": 0.09,
+      "id": "d35-live-skipped-stages",
+      "kind": "d35-live-skips-red.XaArxf"
+    }
+  ],
+  "debt": []
+}

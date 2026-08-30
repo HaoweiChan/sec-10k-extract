@@ -133,7 +133,8 @@ def _envelope(doc_status, text="", items=None, warnings=None, meta=None,
 
 
 def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
-                  images=False, escalate=False, budget=None, source_url=None):
+                  images=False, escalate=False, budget=None, source_url=None,
+                  progress=None):
     """Extract items from a 10-K filing.
 
     Returns {"normalized_text": str, "doc_status": str, "items": [...], ...}
@@ -182,6 +183,8 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
     `budget` is an `llm.Budget` (calls and dollars, both enforced before each
     call). Default: at most 2 calls and $1.00 for one document.
     """
+    if progress:
+        progress("prepare")
     t0 = time.monotonic()
     raw_bytes = Path(path).read_bytes()
     sha = hashlib.sha256(raw_bytes).hexdigest()
@@ -403,7 +406,8 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
         # the import here is what makes `python3 -m evals.run` load no network
         # module at all (ADR-036 §h, pinned by repo_hygiene's escalation_seam)
         routing, extra = route(text, items, warnings, budget=budget, images=imgs,
-                               source_url=source_url, raw=raw_bytes)
+                               source_url=source_url, raw=raw_bytes,
+                               progress=progress)
         warnings += extra
         trace.append({"layer": "escalate", "trigger": routing["trigger"]["fired"],
                       "tiers": [f"{t['tier']}:{t['outcome']}" for t in routing["tiers"]],
@@ -477,6 +481,12 @@ def extract_items(path, exclude_boilerplate=False, tables=False, blocks=False,
     # envelope actually publishes. On every non-escalated run this is the same
     # arithmetic over the same spans and the same value.
     meta["coverage"] = round(coverage(text, items), 4)
+    if progress and not escalate:
+        progress("classify", "skipped")
+        progress("plan", "skipped")
+        progress("route", "skipped")
+        progress("verify", "skipped")
+        progress("decide")
     return _envelope(doc_status, text, items=items, meta=meta,
                      warnings=warnings, trace=trace, t0=t0, boilerplate=chrome,
                      tables=tabs, blocks=blks, images=emit_imgs, routing=routing)
