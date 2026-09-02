@@ -533,8 +533,8 @@ def render(records, perf, cost):
 # artifact and swept by hand in the prose. Integers are skipped: item codes,
 # years and counts share their shape.
 DOC_FILES = ["specs/decisions/ADR-021-benchmark-instrument.md",
-             "docs/analysis-report.md", "README.md", "tasks/TODO.md",
-             "prompts/009-t13-perf-cost-scalability.md"]
+             "docs/analysis-report.md", "README.md",
+             "prompts/009-t13-perf-cost-scalability.md"]  # tasks/TODO.md retired (groundwork GW-017)
 
 # Numbers that are deliberately NOT the artifact of record's: historical values
 # quoted inside a correction, a withdrawal or a v3-vs-now table. Every entry is
@@ -576,23 +576,16 @@ DOC_ALLOW = {
     ("analysis-report.md", "jpm-2024", "0.589"),
     # -- a different quantity that happens to sit beside a fixture name
     ("analysis-report.md", "truncated-download", "0.1"),       # 0.1 ms, i.e. median_s 0.0001 s
-    ("TODO.md", "cvx-2015", "0.95"),                           # a confidence value, not a bench value
     # -- the PR #12 R25 Debt row (struck, PROMOTED to D2) quotes the
     #    20260820-031540 -> 20260820-115810 RSS readings as the evidence of the
     #    contradiction; they are those runs' values by design (94.6 / 105.5 on
     #    the run of record; published as a 94.6–102.4 range since D2)
-    ("TODO.md", "jpm-2024", "102.4"),
-    ("TODO.md", "xom-2021", "107.5"),
-    ("TODO.md", "xom-2021", "112.8"),
     # -- the PR #12 R26-R31 Debt row (struck, PROMOTED to D2): 42.8 is
     #    ksb-2007's withdrawn first-draft maximum, quoted BEFORE the `ksb-2007`
     #    name and so attributed to the preceding `bac-2006`; 0.505 is
     #    bac-2006's 20260820-031540 median (0.5363 now), the row's own example
     #    of a line-wrapped value the check cannot see; 2.104 is the
     #    real_edgar_committed mean MiB beside the `items-stripped` name
-    ("TODO.md", "bac-2006", "42.8"),
-    ("TODO.md", "bac-2006", "0.505"),
-    ("TODO.md", "items-stripped", "2.104"),
 }
 
 DOC_WINDOW = 60  # chars after the closing backtick, same line only
