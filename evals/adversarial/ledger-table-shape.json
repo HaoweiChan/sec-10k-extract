@@ -10,7 +10,6 @@
       "ledger_table_shape"
     ],
     "files": [
-      "tasks/TODO.md",
       "evals/fixtures/README.md"
     ]
   },

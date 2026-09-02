@@ -1776,7 +1776,7 @@ def check_deployed_exclusion_derived(case):
                  "census_corpus": want}
 
 
-LEDGER_FILES = ["tasks/TODO.md", "evals/fixtures/README.md"]
+LEDGER_FILES = ["evals/fixtures/README.md"]  # tasks/TODO.md retired: task state moved to Backlog.md (groundwork GW-017)
 CODE_SPAN_RE = re.compile(r"`[^`\n]*`")
 
 

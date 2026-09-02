@@ -21,7 +21,7 @@ README.md; this file is the working contract.
 .claude/agents/    extraction-auditor (cold-review / eval-adversary / spec-drift
                    passes are run as general subagents, not committed agent files)
 docs/              durable design docs (product, evals, architecture) — descriptive; specs/ binds
-tasks/TODO.md      milestone ledger — status + per-milestone Validation gates (ADR-009)
+backlog/           Backlog.md task store — one file per task, drafts/ = debt; `backlog task list --ready --plain` (groundwork GW-017)
 .claude/hooks/     enforcement — the only layer that can actually block
 .githooks/         pre-commit eval gate (installed via core.hooksPath)
 specs/             ONLY: 000-invariants.md, per-task contracts, decisions/ADR-*.md
@@ -60,14 +60,18 @@ python3 -m evals.run --suite fast --update-baseline   # deliberate baseline move
 2. **Every new failure becomes a case** in `evals/adversarial/` before it is fixed.
    Watch the new case fail first; an eval you've never seen red proves nothing.
 3. **specs/ holds only three kinds of files**: invariants, output contracts, ADRs.
-   No plans there, ever. Task state lives in exactly one file — `tasks/TODO.md`,
-   milestone-level only (ADR-009). Micro-tasks stay in the session. Every ledger
-   row names its Validation gate, and a gate that has not run is written
-   **`UNRUN`** in Status rather than omitted.
+   No plans there, ever. Task state lives only in Backlog.md (`backlog/`;
+   ADR-009 amended by groundwork GW-017). Micro-tasks stay in the session. A
+   task's `Probe:` line names the live check that closes it, and
+   `Live: not run — <reason>` in the PR body replaces the old **`UNRUN`** cell.
 4. **No mocked results.** If a live dependency is unreachable, fail loudly; never
    fabricate output to make a run look green.
 5. Commits go through the pre-commit eval gate. `--no-verify` is for emergencies
    and must be explained in the commit message.
+   Commit subjects and PR titles share one shape: `<type>(<scope>)?: <lowercase
+   summary>` (feat, fix, docs, chore, refactor, test, perf, ci, build, revert);
+   `.githooks/commit-msg` and `.github/pr_check.py` enforce it, and PR bodies
+   follow `.github/PULL_REQUEST_TEMPLATE.md`.
 6. **Preserve material AI decisions.** If an AI interaction materially changes
    architecture, evaluation methodology, failure handling, an output contract, or
    another major implementation decision, preserve the key prompt and outcome in
@@ -89,16 +93,18 @@ python3 -m evals.run --suite fast --update-baseline   # deliberate baseline move
 5. New cases into the eval set → back to 3
 6. Eval gate green → commit
 
-For a full tasks/TODO.md task that should end in a PR, drive it as a delivery
-loop instead of a single pass: implement → gate → review → repair, with the
-roles kept apart. The implementer never approves its own work; the reviewer
-reads the diff with fresh context and never edits; the eval gate is the only
-objective pass/fail and is never skipped; the human writes the spec and merges.
-Findings and their resolutions land as structured artifacts in `tasks/reviews/`
-(`pr<N>-r<K>.json` + `-resolution.json`), and the PR body carries a rolling
-evidence pack — never agent chatter. Stop and escalate after three review
-rounds without approval rather than looping; `tasks/reviews/pr18-r1..r3.json`
-is a worked example, breaker included.
+For a full Backlog.md task that should end in a PR, run the loop through
+**/pr-loop <task-id>** (Claude Code) or **$pr-loop <task-id>** (Codex): one
+orchestrator session drives implement → gate → probe → one independent
+verification → one repair → one delta verification, with the roles kept apart
+(implementer in a worktree, verifier with fresh context, never more than two
+model calls). A finding blocks only with a reproduction and only for unmet
+acceptance, drift from the task, or wrong output; prose never blocks. What is
+still open after the second call goes to the human as `Decision: not met`.
+Debt is one `backlog task create --draft` line naming a case or run id. The PR
+carries the six-section body `.github/pr_check.py` enforces. One pr-loop
+session per repo at a time. Protocol: the `pr-loop` plugin skill (groundwork
+GW-017).
 
 ## Adding a task
 
